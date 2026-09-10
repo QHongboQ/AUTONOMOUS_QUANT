@@ -56,10 +56,12 @@ Display strings are attribution labels, never authentication. Every future autho
 | `display_name` | Human-readable attribution only. |
 | `credential_binding` | Reference/handle to an OS/process-local credential or separately stored capability material; never plaintext secret material. |
 | `authentication_method` | Declared verification method/version, such as local OS principal/process binding. |
-| `created_at`, `status` | UTC lifecycle evidence; inactive actors cannot acquire new capabilities. |
+| `created_at` | UTC registration evidence. |
 | `metadata_schema_version` | Versioned interpretation of identity metadata. |
 
 The ledger database stores no plaintext long-lived secret, token, password, or private credential. Local credential/capability material belongs to OS/process-local controls or a separately protected local secret location, not to the ledger.
+
+`ActorIdentity` is an immutable registration/profile, not a mutable status row. Current effective actor status is derived from its identity plus ordered, append-only `ActorStatusEvent` records: `ACTOR_REGISTERED`, `ACTOR_ACTIVATED`, `ACTOR_SUSPENDED`, and `ACTOR_RETIRED`. No operation disables an actor by updating ActorIdentity. An inactive, suspended, or retired actor fails authorization according to that derived status; historical actor/status evidence remains queryable.
 
 ### 2.2 Capability model
 
@@ -73,6 +75,8 @@ Capabilities are granted to an actor identity by a versioned, auditable local po
 | `ARTIFACT_ATTACH` | Attach a permitted artifact reference. | permitted when granted |
 | `SNAPSHOT_READ` | Read an immutable, scoped ledger snapshot. | no default grant; Certification/owner use read-only access |
 | `MAINTENANCE_ENTER` | Enter exceptional migration/maintenance mode. | prohibited |
+
+Capability changes are also immutable lifecycle evidence: `CAPABILITY_GRANTED` and `CAPABILITY_REVOKED` reference the actor, capability, policy version, grant/revoke actor, UTC time, and reason. Effective authorization is derived from ordered capability events plus current actor status; no historical grant is rewritten in place.
 
 `RESEARCH_GENERATOR` cannot update/delete historical facts, grant itself capabilities, enter maintenance mode, select Certification denominators, or promote. `HUMAN_OWNER` retains administration authority but still uses an explicit, audited maintenance path. `MIGRATION_MAINTENANCE` is disabled by default, short-lived, versioned, and records entry/exit, actor, reason, migration identifier, and backup/anchor references.
 
@@ -120,6 +124,17 @@ It applies to ResearchSpec only, never TrialRegistration metadata. The canonical
 8. Logical/versioned identifiers replace filesystem paths when available. An environment-dependent Windows or WSL path cannot be hashed as an alias for a logical dataset, source, or environment identifier.
 9. `NaN`, `+Inf`, `-Inf`, implicit timezone values, and unknown schema/canonicalization versions are rejected.
 
+### 3.1.1 Exact V1 JSON string bytes
+
+The canonical writer emits permitted Unicode scalar values directly as UTF-8; it does not ASCII-escape ordinary non-ASCII characters and does not optionally escape otherwise valid Unicode. It emits no byte-order mark and no trailing newline.
+
+- Quotation mark `U+0022` is always encoded as `\"`; reverse solidus `U+005C` is always encoded as `\\`.
+- Every control character `U+0000` through `U+001F` is always encoded as a six-byte JSON escape of the form `\u00xx`, using lowercase hexadecimal digits. Short escapes such as `\n`, `\r`, `\t`, `\b`, and `\f` are forbidden in canonical output.
+- Solidus `U+002F` is emitted as `/`, never `\/`.
+- Lone UTF-16 surrogate code points are rejected. Valid non-BMP Unicode scalar values are emitted as their UTF-8 bytes, never as optional surrogate-pair escapes.
+
+The implementation must not rely on a runtime/library serializer default unless its emitted bytes pass the required canonical vectors.
+
 ### 3.2 Numeric V1 rule
 
 Performance-bearing numeric configuration values are represented in the canonical ResearchSpec as normalized **decimal strings**, never uncontrolled binary floating-point values. Input adapters parse a permitted decimal lexical form using exact decimal arithmetic before any native-float conversion.
@@ -142,6 +157,14 @@ The schema must mark which fields are decimal-valued and which are opaque string
 | `DUPLICATE_KEY_REJECTED` | Duplicate JSON key is rejected before canonicalization. |
 | `NAIVE_DATETIME_REJECTED` | Timestamp with no explicit timezone is rejected. |
 | `UNKNOWN_SCHEMA_VERSION_REJECTED` | Unknown schema/canonicalization version is rejected. |
+| `UNICODE_UTF8_CANONICAL` | Permitted non-ASCII Unicode emits direct UTF-8 bytes with no optional ASCII escape. |
+| `ESCAPE_QUOTE_CANONICAL` | Quotation mark emits exactly `\"`. |
+| `ESCAPE_BACKSLASH_CANONICAL` | Reverse solidus emits exactly `\\`. |
+| `CONTROL_CHARACTER_CANONICAL` | Every `U+0000`–`U+001F` control character emits lowercase `\u00xx`, never a short escape. |
+| `SOLIDUS_NOT_ESCAPED` | Solidus emits `/`, never `\/`. |
+| `LONE_SURROGATE_REJECTED` | A lone surrogate is rejected before canonical bytes exist. |
+| `NO_TRAILING_NEWLINE` | Canonical output ends with the final JSON byte, not a newline. |
+| `WINDOWS_WSL_BYTE_IDENTITY` | Supported Windows and WSL contexts emit byte-identical canonical JSON and SHA-256 for the same ResearchSpec. |
 
 ```text
 CANONICALIZATION_VERSION = AQ_RESEARCH_SPEC_CANONICAL_V1
@@ -152,7 +175,7 @@ CANONICALIZATION_V1_CLOSED = YES
 
 Family-policy authority is Certification/Governance policy owned by our code. Research generators supply declared policy inputs; they do not choose favorable families after observing performance.
 
-`FamilyPolicySpec` is immutable and contains `family_policy_id`, `family_policy_version`, `policy_schema_version`, `policy_text_or_rules_hash`, `effective_from`, `registered_at`, `registered_by`, `canonical_policy_hash`, and `status`.
+`FamilyPolicySpec` is one immutable policy version and contains `family_policy_id`, `family_policy_version`, `policy_schema_version`, `policy_text_or_rules_hash`, `effective_from`, `registered_at`, `registered_by`, and `canonical_policy_hash`. A policy meaning/ruleset change requires a new version and a new policy hash.
 
 ```text
 Certification / Governance
@@ -170,6 +193,8 @@ FAMILY_POLICY_REGISTERED_BEFORE_FEEDBACK = YES
 ```
 
 Later policy versions may form a separately labelled analytical view but cannot overwrite the original assignment. The original policy and family evidence remain queryable, the new version has an explicit effective boundary, and retroactive favorable remapping is `NON_CERTIFIABLE` for the affected historical selection claim unless an independent policy allowed that exact use before feedback.
+
+Policy lifecycle is separate append-only evidence: `FAMILY_POLICY_REGISTERED`, `FAMILY_POLICY_ACTIVATED`, and `FAMILY_POLICY_RETIRED`. No immutable FamilyPolicySpec row is updated merely to change status. Retiring a version prevents new use according to the derived current status but never removes its historical queryability.
 
 ### P1 conservative default — design only
 
@@ -197,7 +222,17 @@ A restore drill validates SQLite integrity, schema version, deterministic snapsh
 
 ### 5.1 LedgerAnchorManifest
 
-`LedgerAnchorManifest` is a separately written, canonical artifact containing at least `ledger_id`, `as_of_ledger_sequence`, `global_event_hash`, database/schema version, `created_at`, `created_by`, `manifest_schema_version`, and `manifest_sha256`.
+`LedgerAnchorManifestPayload` is the immutable payload with `ledger_id`, `as_of_ledger_sequence`, `global_event_hash`, database/schema version, `created_at`, `created_by`, and `manifest_schema_version`. Its canonicalization version is `AQ_LEDGER_ANCHOR_CANONICAL_V1`, a separately versioned anchor schema that may reuse primitive JSON rules but is not assumed identical to ResearchSpec.
+
+```text
+manifest_sha256 = SHA256(canonical UTF-8 bytes of LedgerAnchorManifestPayload)
+LedgerAnchorManifest = { payload, manifest_sha256 }
+ANCHOR_MANIFEST_HASH_SELF_REFERENTIAL = NO
+```
+
+`manifest_sha256` never hashes an envelope that already includes `manifest_sha256`. Verification recomputes the digest from payload bytes, rejects a wrong digest, and validates the payload schema/version before trusting an anchor.
+
+Required future tests are `ANCHOR_HASH_EXCLUDES_DIGEST_FIELD`, `ANCHOR_PAYLOAD_MUTATION_CHANGES_HASH`, `ANCHOR_DIGEST_REPRODUCIBLE`, and `ANCHOR_WRONG_DIGEST_REJECTED`.
 
 For P1/local development, a separately written backup/anchor artifact outside the authoritative database directory is sufficient. The primary SQLite database and anchor must not rely solely on the same mutable file. Before production/live authorization, at least one independent backup/anchor destination outside the authoritative database directory is required. This policy selects neither public GitHub storage nor a cloud vendor and never exposes private research metadata or experiment counts publicly.
 
@@ -219,6 +254,7 @@ MIGRATION_BACKUP = MANDATORY
 RETENTION_POLICY = 7_DAILY / 4_WEEKLY / 12_MONTHLY
 RESTORE_DRILL = MONTHLY_ACTIVE_OPERATION_AND_PRE_PRODUCTION
 INDEPENDENT_ANCHOR_DEFINED = YES
+ANCHOR_CANONICALIZATION_VERSION = AQ_LEDGER_ANCHOR_CANONICAL_V1
 ```
 
 ## 6. Implementation readiness
@@ -233,6 +269,8 @@ REMAINING_IMPLEMENTATION_BLOCKERS = NONE
 ```
 
 This means the contract is ready for a separately authorized local runtime implementation task. It does not itself authorize that task, create a database, or start P1.
+
+Future lifecycle tests additionally require `ACTOR_STATUS_APPEND_ONLY`, `SUSPENDED_ACTOR_WRITE_REJECTED`, `CAPABILITY_GRANT_APPEND_ONLY`, `CAPABILITY_REVOKE_EFFECTIVE`, `HISTORICAL_CAPABILITY_EVIDENCE_RETAINED`, `FAMILY_POLICY_STATUS_APPEND_ONLY`, `RETIRED_POLICY_HISTORY_RETAINED`, and `POLICY_RULE_CHANGE_REQUIRES_NEW_VERSION`.
 
 ## 7. Current project state and non-actions
 
