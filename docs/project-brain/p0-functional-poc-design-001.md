@@ -28,7 +28,7 @@ Windows Qlib is not a consumer in the final topology. There is no RPC, shared Py
 
 **Selected path: `QlibCondaEnv` (A).** The checked-out RD-Agent source at `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd` defaults `ModelCoSTEERSettings.env_type` to `conda`. Its `QlibFBWorkspace` selects `QlibCondaEnv` for that value and executes `qrun conf.yaml`, then `python read_exp_res.py`.
 
-`QlibCondaEnv` specifies environment name `rdagent4qlib`, Python 3.10, Qlib commit `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`, and Qlib runtime dependencies including CatBoost, XGBoost, Tables, and Torch. It is the selected upstream-supported path even though Conda is not presently installed.
+`QlibCondaEnv` specifies environment name `rdagent4qlib`, Python 3.10, Qlib commit `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`, and Qlib runtime dependency declarations including CatBoost, XGBoost, Tables, and Torch. It is the selected upstream-supported path even though Conda is not presently installed.
 
 `QTDockerEnv` is rejected for this initial POC: its current `prepare()` method pulls an image and automatically downloads Qlib China daily data when absent. That is incompatible with the intentionally tiny, no-dataset POC boundary and adds Docker/WSL maintenance overhead.
 
@@ -49,7 +49,7 @@ The existing RD-Agent environment runs the control code only. `QlibCondaEnv` own
 
 After separate authorization to install Conda and provision only this environment, create a disposable 3-symbol, 20-session synthetic OHLCV fixture in the workspace. Use the RD-Agent `QlibCondaEnv` path directly (not an RD-Agent loop) to run one tiny Qlib `qrun` workflow with a fixed native factor/model configuration. It must produce `pred.pkl`, `label.pkl`, recorder metadata, and a short result summary. No LLM, hypothesis generation, search, training sweep, or downloaded Qlib dataset is allowed.
 
-Expected lineage is `conf.yaml`, fixture hash, Qlib/RD-Agent versions, command log, recorder reference, `pred.pkl`, `label.pkl`, `qlib_res.csv` and, if the upstream workspace template emits it, `ret.parquet`. `factor.py` and `model.py` are included only if the fixed fixture workflow needs them; they are never agent-generated in this POC. The `ResearchArtifactManifest` also records the resolved Conda prefix and a complete package snapshot/freeze, including the exact resolved versions of upstream-unpinned CatBoost, XGBoost, Tables, and Torch.
+Expected lineage is `conf.yaml`, fixture hash, Qlib/RD-Agent versions, command log, recorder reference, `pred.pkl`, `label.pkl`, `qlib_res.csv` and, if the upstream workspace template emits it, `ret.parquet`. `factor.py` and `model.py` are included only if the fixed fixture workflow needs them; they are never agent-generated in this POC. The `ResearchArtifactManifest` also records the resolved Conda prefix and a complete package snapshot/freeze. For CatBoost, XGBoost, Tables, and Torch, it records installed or absent status and the exact resolved version when installed. Absence is permitted when the fixed POC does not require the package; packages are not installed solely to mirror `QlibCondaEnv.prepare()` declarations.
 
 `QlibCondaEnv.prepare()` catches installation exceptions without re-raising, so its return is not provisioning evidence. **PASS** requires all of the following independent, fail-closed checks after `prepare()`:
 
@@ -87,7 +87,7 @@ OpenBB must run with an explicitly pre-existing isolated settings/cache home und
 
 The artifact uses a sorted pandas MultiIndex `(datetime, instrument)` where `datetime` is a naive session-date timestamp after the timezone/session conversion and `instrument` is the canonical symbol. Columns use Qlib-compatible field groups, at minimum `feature` (`$open`, `$high`, `$low`, `$close`, `$volume`) plus a separately declared label only when a later POC computes one.
 
-**Selected Qlib ingress: `StaticDataLoader` from normalized pandas/Parquet.** Qlib `0.9.7` accepts a pandas `DataFrame` or Parquet path directly. Native provider/storage conversion is deferred because it would build a warehouse rather than prove the final file handoff.
+**Selected Qlib ingress: `StaticDataLoader` from normalized pandas/Parquet.** The authoritative POC-A consumer is the established Linux Qlib runtime: `0.9.8.dev26`, installed from pinned source commit `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`. Future POC-A execution must validate `StaticDataLoader` against that runtime for a pandas `DataFrame` or Parquet path. Windows Qlib `0.9.7` remains historical deployment/audit evidence only, not POC-A consumer authority. Native provider/storage conversion is deferred because it would build a warehouse rather than prove the final file handoff.
 
 **PASS:** one bounded, credential-free response normalizes to the stated schema; the hash/sidecar records the exact adjustment/action request and demonstrated response semantics; Linux reads the same bytes; `StaticDataLoader` loads and filters all three instruments.
 

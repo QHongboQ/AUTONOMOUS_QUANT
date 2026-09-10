@@ -98,7 +98,7 @@ P1 = NOT_STARTED
 
 The initial `QlibCondaEnv.prepare()` failure recorded above is preserved as historical evidence. The owner identified the build blocker as missing WSL `g++`, which prevented Qlib's Cython/C++ wheel build. The owner manually installed Ubuntu `build-essential`, providing `gcc`, `g++`, and `make`; this is a system prerequisite resolution, not an RD-Agent or Qlib source modification.
 
-The owner retained the existing `rdagent4qlib` environment and manually installed Qlib from `/home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src` at exact SHA `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`. The installed editable-package provenance is `file:///home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src`.
+The owner retained the existing `rdagent4qlib` environment and manually installed Qlib from `/home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src` at exact SHA `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`. The local source installation provenance is `file:///home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src`; its `direct_url.json` contains an empty `dir_info` object and does not assert `editable=true`.
 
 ### Revalidated runtime
 

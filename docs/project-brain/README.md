@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P0 — POC-B Blocker Resolution**
+> Current Next: **P0 — POC-A OpenBB → Linux Qlib Handoff**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
