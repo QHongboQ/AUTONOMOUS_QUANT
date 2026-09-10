@@ -11,6 +11,7 @@ import threading
 import unittest
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_DOWN, ROUND_UP, getcontext, setcontext
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
@@ -33,6 +34,7 @@ def spec(**changes):
         "calendar_version": "1", "portfolio_rule_hash": "portfolio-a", "cost_assumption_hash": "cost-a",
         "benchmark_policy_hash": "benchmark-a", "git_commit_sha": "abc123",
         "environment_fingerprint": "env-v1", "random_seed": "7",
+        "research_objective": "test", "evaluation_window_policy": "v1",
         "family_policy_inputs_hash": Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", default_family_inputs),
         "parameters": {"learning_rate": {"type": "decimal", "value": "0.10"}},
     }
@@ -48,7 +50,7 @@ class CanonicalTests(unittest.TestCase):
         self.assertEqual(first_hash, second_hash)
         self.assertEqual(
             first,
-            b'{"canonicalization_version":"AQ_RESEARCH_SPEC_CANONICAL_V1","research_spec":{"benchmark_policy_hash":"benchmark-a","calendar_version":"1","cost_assumption_hash":"cost-a","dataset_snapshot_id":"dataset-1","environment_fingerprint":"env-v1","exchange_calendar":"XNYS","factor_spec_hash":"factor-a","family_policy_inputs_hash":"746327959046b6c8aa542189832af8928bac24c271f5ca8e90ff13d847961d51","feature_set_hash":"features-a","generator":"unit-generator","generator_version":"1","git_commit_sha":"abc123","hyperparameter_hash":"hyper-a","hypothesis_id":"h-1","label_spec_hash":"label-a","model_spec_hash":"model-a","parameters":{"learning_rate":{"type":"decimal","value":"0.1"}},"portfolio_rule_hash":"portfolio-a","random_seed":"7","train_window":"2020-01-01/2020-12-31","universe_id":"us-large","validation_window":"2021-01-01/2021-06-30"}}',
+            b'{"canonicalization_version":"AQ_RESEARCH_SPEC_CANONICAL_V1","research_spec":{"benchmark_policy_hash":"benchmark-a","calendar_version":"1","cost_assumption_hash":"cost-a","dataset_snapshot_id":"dataset-1","environment_fingerprint":"env-v1","evaluation_window_policy":"v1","exchange_calendar":"XNYS","factor_spec_hash":"factor-a","family_policy_inputs_hash":"746327959046b6c8aa542189832af8928bac24c271f5ca8e90ff13d847961d51","feature_set_hash":"features-a","generator":"unit-generator","generator_version":"1","git_commit_sha":"abc123","hyperparameter_hash":"hyper-a","hypothesis_id":"h-1","label_spec_hash":"label-a","model_spec_hash":"model-a","parameters":{"learning_rate":{"type":"decimal","value":"0.1"}},"portfolio_rule_hash":"portfolio-a","random_seed":"7","research_objective":"test","train_window":"2020-01-01/2020-12-31","universe_id":"us-large","validation_window":"2021-01-01/2021-06-30"}}',
         )
         self.assertIn(b'"value":"0.1"', first)
 
@@ -58,6 +60,43 @@ class CanonicalTests(unittest.TestCase):
         self.assertNotEqual(original, changed)
         with self.assertRaises(CanonicalizationError):
             canonicalize_research_spec(spec(trial_id="not-permitted"))
+
+    def test_decimal_identity_is_exact_and_context_independent(self):
+        # HIGH_PRECISION_DECIMAL_DISTINCT / DECIMAL_CONTEXT_PRECISION_DOES_NOT_CHANGE_CANONICAL_BYTES
+        # DECIMAL_CONTEXT_ROUNDING_DOES_NOT_CHANGE_IDENTITY / DECIMAL_OBJECT_EXACT / INTEGER_DECIMAL_EXACT
+        first = spec(parameters={"learning_rate": {"type": "decimal", "value": "1.0000000000000000000000000000000000000001"}})
+        second = spec(parameters={"learning_rate": {"type": "decimal", "value": "1.0000000000000000000000000000000000000002"}})
+        self.assertNotEqual(hash_research_spec(first), hash_research_spec(second))
+        self.assertEqual(
+            hash_research_spec(spec(parameters={"learning_rate": {"type": "decimal", "value": Decimal("0.100")}})),
+            hash_research_spec(spec(parameters={"learning_rate": {"type": "decimal", "value": "0.1"}})),
+        )
+        self.assertIn(
+            b'"value":"17"',
+            canonicalize_research_spec(spec(parameters={"learning_rate": {"type": "decimal", "value": 17}})),
+        )
+        original_context = getcontext().copy()
+        try:
+            getcontext().prec = 5
+            getcontext().rounding = ROUND_DOWN
+            low_precision = hash_research_spec(first)
+            getcontext().prec = 50
+            getcontext().rounding = ROUND_UP
+            high_precision = hash_research_spec(first)
+            self.assertEqual(low_precision, high_precision)
+        finally:
+            setcontext(original_context)
+
+    def test_decimal_rejects_custom_numeric_objects(self):
+        # CUSTOM_NUMERIC_OBJECT_REJECTED
+        class NumericLookingObject:
+            def __str__(self):
+                return "0.10"
+
+        with self.assertRaises(CanonicalizationError):
+            canonicalize_research_spec(spec(parameters={
+                "learning_rate": {"type": "decimal", "value": NumericLookingObject()},
+            }))
 
     def test_unicode_and_escape_vectors(self):
         canonical = canonicalize_research_spec(spec(hypothesis_text="é / \" \\ \n"))
@@ -145,6 +184,26 @@ class CanonicalTests(unittest.TestCase):
         with self.assertRaises(CanonicalizationError):
             canonicalize_research_spec(spec(family_inputs={"nested": {"ratio": 0.1}}))
 
+    def test_research_spec_container_policy_rejects_non_json_arrays(self):
+        # TUPLE_RESEARCH_CONTAINER_REJECTED / TUPLE_NESTED_SEALED_OOS_CANNOT_BYPASS
+        # TUPLE_NESTED_REGISTRATION_METADATA_CANNOT_BYPASS / SET_RESEARCH_CONTAINER_REJECTED
+        # CUSTOM_CONTAINER_REJECTED
+        class CustomContainer:
+            def __iter__(self):
+                return iter(())
+
+        invalid_specs = (
+            spec(extensions=("not", "a", "list")),
+            spec(extensions={"nested": ({"sealed_oos_data": "blocked"},)}),
+            spec(extensions={"nested": ({"trial_id": "blocked"},)}),
+            spec(extensions={"nested": {"values"}}),
+            spec(extensions=CustomContainer()),
+        )
+        for invalid in invalid_specs:
+            with self.subTest(value=repr(invalid)):
+                with self.assertRaises(CanonicalizationError):
+                    canonicalize_research_spec(invalid)
+
     def test_required_identity_axes_and_typed_parameters(self):
         for field in ("model_spec_hash", "hyperparameter_hash", "train_window", "validation_window",
                       "cost_assumption_hash", "benchmark_policy_hash", "factor_spec_hash"):
@@ -161,12 +220,12 @@ class CanonicalTests(unittest.TestCase):
         self.assertIn(b'"001"', canonicalize_research_spec(opaque))
 
     def test_frozen_canonical_vectors(self):
-        self.assertEqual(hash_research_spec(spec())[1], "a200675434f562226d4caf596cedfb41f31a2d3deaf1b8e57f0d2c6ff91f5948")
-        self.assertEqual(hash_research_spec(spec(hypothesis_text="é"))[1], "57342b113c1a1ddbb94063e9d3c85e485e869034145357dfeea67a0d0935af47")
-        self.assertEqual(hash_research_spec(spec(hypothesis_text="line\n"))[1], "9f30f55aecd179f746caa50001a0e78ab0b833702f73d503fc5205851afdae91")
+        self.assertEqual(hash_research_spec(spec())[1], "f5696f2b65788fbe9ba4a2ce26367d7930a1a23be0055bf4710d6a498707ae30")
+        self.assertEqual(hash_research_spec(spec(hypothesis_text="é"))[1], "6d09dc1b9234bf0f529a0d85816594443faf47ff9b91ca886f6e9722c4d592f3")
+        self.assertEqual(hash_research_spec(spec(hypothesis_text="line\n"))[1], "ca762f035691af60a376ce07d4bcf00c42b4c3021e0c0ac43bb535b12b65e913")
         plus_eight = spec(extensions={"instant": datetime(2026, 9, 10, 8, tzinfo=timezone(timedelta(hours=8)))})
         utc = spec(extensions={"instant": datetime(2026, 9, 10, 0, tzinfo=timezone.utc)})
-        self.assertEqual(hash_research_spec(plus_eight)[1], "fdc5bc0e439e624ee1b17cae211de109a980bcab0ebc32d534395f651e3ce174")
+        self.assertEqual(hash_research_spec(plus_eight)[1], "3870002f3bad2c76c30513d452c44f10b94a38f0832e6f9ec21809bc52f0b2b4")
         self.assertEqual(hash_research_spec(plus_eight)[1], hash_research_spec(utc)[1])
 
 
@@ -316,6 +375,43 @@ class LedgerCase(unittest.TestCase):
         with self.assertRaisesRegex(LedgerError, "EXTERNAL_OR_CONCURRENT_WRITER_DETECTED"):
             self.register("external-writer")
 
+    def test_external_non_head_changes_fail_closed_before_authorization(self):
+        # EXTERNAL_NON_HEAD_CHANGE_DETECTED / EXTERNAL_HISTORICAL_CAPABILITY_TAMPER_BLOCKS_WRITE
+        external = sqlite3.connect(self.path)
+        try:
+            external.execute("DROP TRIGGER immutable_capability_events_update")
+            external.execute(
+                "UPDATE capability_events SET reason = ? WHERE actor_id = ? AND capability = ?",
+                ("tampered externally", "human:owner", Capability.TRIAL_REGISTER.value),
+            )
+            external.commit()
+        finally:
+            external.close()
+        with self.assertRaisesRegex(LedgerError, "EXTERNAL_DATABASE_CHANGE_DETECTED"):
+            self.register("external-capability-tamper")
+
+    def test_external_projection_tamper_blocks_write_without_head_change(self):
+        # EXTERNAL_PROJECTION_TAMPER_BLOCKS_WRITE
+        trial = self.register("external-projection")
+        external = sqlite3.connect(self.path)
+        try:
+            external.execute("DROP TRIGGER immutable_trial_registrations_update")
+            external.execute(
+                "UPDATE trial_registrations SET trial_family_id = ? WHERE trial_id = ?",
+                ("externally-tampered-family", trial),
+            )
+            external.commit()
+        finally:
+            external.close()
+        with self.assertRaisesRegex(LedgerError, "EXTERNAL_DATABASE_CHANGE_DETECTED"):
+            self.register("external-projection-followup")
+
+    def test_own_writes_do_not_trigger_false_external_change(self):
+        # OWN_WRITES_DO_NOT_TRIGGER_FALSE_EXTERNAL_CHANGE
+        self.register("own-one")
+        self.register("own-two")
+        self.assertTrue(self.ledger.verify_global_chain())
+
     def test_open_existing_ledger_performs_full_verification(self):
         self.register("reopen")
         self.ledger.close()
@@ -351,6 +447,55 @@ class LedgerCase(unittest.TestCase):
         self.assertTrue(self.ledger.register("human:owner", "matching", matching, family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs=inputs))
         with self.assertRaises(LedgerError):
             self.ledger.register("human:owner", "mismatch", spec(family_policy_inputs_hash="0" * 64), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs=inputs)
+
+    def test_p1_family_axes_are_bound_to_frozen_research_spec(self):
+        # FAMILY_DATASET_DIFFERS_FROM_RESEARCHSPEC_REJECTED
+        # FAMILY_UNIVERSE_DIFFERS_FROM_RESEARCHSPEC_REJECTED
+        # FAMILY_LABEL_DIFFERS_FROM_RESEARCHSPEC_REJECTED
+        # FAMILY_FEATURE_DIFFERS_FROM_RESEARCHSPEC_REJECTED
+        supplied = {
+            "dataset_snapshot_id": "dataset-1", "universe_id": "us-large",
+            "label_spec_hash": "label-a", "feature_set_hash": "features-a",
+            "research_objective": "test", "evaluation_window_policy": "v1",
+        }
+        for key, value in (
+            ("dataset_snapshot_id", "dataset-2"), ("universe_id", "us-small"),
+            ("label_spec_hash", "label-b"), ("feature_set_hash", "features-b"),
+        ):
+            with self.subTest(axis=key):
+                with self.assertRaisesRegex(LedgerError, "P1 family inputs differ from frozen ResearchSpec"):
+                    self.ledger.register(
+                        "human:owner", f"family-mismatch-{key}", spec(**{key: value}),
+                        family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
+                        family_policy_version="1", family_inputs=supplied,
+                    )
+
+    def test_p1_objective_and_window_are_derived_from_research_spec(self):
+        # FAMILY_OBJECTIVE_BOUND_TO_RESEARCHSPEC / FAMILY_WINDOW_POLICY_BOUND_TO_RESEARCHSPEC
+        bound_inputs = {
+            "dataset_snapshot_id": "dataset-1", "universe_id": "us-large",
+            "label_spec_hash": "label-a", "feature_set_hash": "features-a",
+            "research_objective": "bounded-objective", "evaluation_window_policy": "window-v2",
+        }
+        bound_spec = spec(
+            research_objective="bounded-objective", evaluation_window_policy="window-v2",
+            family_policy_inputs_hash=Ledger.family_input_hash(
+                P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", bound_inputs,
+            ),
+        )
+        trial = self.ledger.register(
+            "human:owner", "family-objective-window", bound_spec,
+            family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
+            family_policy_version="1", family_inputs=bound_inputs,
+        )
+        row = self.ledger._db.execute(
+            "SELECT trial_family_id FROM trial_registrations WHERE trial_id = ?", (trial,)
+        ).fetchone()
+        self.assertNotEqual(hash_research_spec(spec())[1], hash_research_spec(bound_spec)[1])
+        self.assertEqual(
+            Ledger.family_id(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", bound_inputs),
+            row["trial_family_id"],
+        )
 
     def test_p1_model_variation_does_not_change_family_input_hash(self):
         # P1_MODEL_VARIATION_DOES_NOT_CHANGE_FAMILY_INPUT_HASH
@@ -588,12 +733,53 @@ class LedgerCase(unittest.TestCase):
         self.assertEqual(snapshot.content_hash, self.ledger.snapshot("human:owner").content_hash)
         anchor = self.ledger.create_anchor("human:owner")
         self.assertTrue(self.ledger.verify_anchor(anchor))
+        backup_snapshot = self.ledger.snapshot("human:owner")
         backup_path = os.path.join(self.temp.name, "backup.db")
         backup(self.ledger, backup_path)
-        self.assertTrue(verify_restored_backup(backup_path, snapshot, anchor))
+        self.assertTrue(verify_restored_backup(backup_path, backup_snapshot, anchor))
         self.ledger.close()
         self.ledger = Ledger(self.path, authenticator=DeterministicFakeAuthenticator({"human:owner": "human:owner"}))
         self.assertTrue(self.ledger.verify_global_chain(anchor))
+
+    def test_anchor_evidence_is_chained_to_post_anchor_record(self):
+        # ANCHOR_DB_WRITE_IS_CHAINED_OR_REMOVED / EXTERNAL_ANCHOR_STILL_VALIDATES_ANCHORED_PRE_RECORD_HEAD
+        self.register("anchor-chain")
+        before_sequence, before_hash = self.ledger._read_persisted_head()
+        anchor = self.ledger.create_anchor("human:owner")
+        row = self.ledger._db.execute("SELECT * FROM anchor_evidence WHERE manifest_sha256 = ?", (anchor.manifest_sha256,)).fetchone()
+        event = self.ledger._db.execute("SELECT * FROM trial_events WHERE event_id = ?", (row["global_event_id"],)).fetchone()
+        self.assertEqual(before_sequence, anchor.payload.as_of_ledger_sequence)
+        self.assertEqual(before_hash, anchor.payload.global_event_hash)
+        self.assertGreater(row["created_ledger_sequence"], anchor.payload.as_of_ledger_sequence)
+        self.assertEqual("ANCHOR_RECORDED", event["event_type"])
+        self.assertTrue(self.ledger.verify_anchor(anchor))
+        self.assertTrue(self.ledger.verify_global_chain())
+
+    def test_anchor_evidence_tampering_is_detected(self):
+        # ANCHOR_EVIDENCE_TAMPER_DETECTED
+        anchor = self.ledger.create_anchor("human:owner")
+        self.ledger._db.execute("DROP TRIGGER immutable_anchor_evidence_update")
+        self.ledger._db.execute(
+            "UPDATE anchor_evidence SET payload_json = ? WHERE manifest_sha256 = ?",
+            ("{}", anchor.manifest_sha256),
+        )
+        self.assertFalse(self.ledger.verify_global_chain())
+        self.assertFalse(self.ledger.verify_anchor(anchor))
+
+    def test_second_writer_anchor_activity_is_detected(self):
+        # SECOND_WRITER_ANCHOR_ACTIVITY_DETECTED
+        self.ledger.create_anchor("human:owner")
+        external = sqlite3.connect(self.path)
+        try:
+            external.execute(
+                "INSERT INTO anchor_evidence VALUES (?, ?, ?, ?, ?, ?)",
+                ("external-manifest", "{}", "2099-01-01T00:00:00.000000Z", "human:owner", 1, "external-event"),
+            )
+            external.commit()
+        finally:
+            external.close()
+        with self.assertRaisesRegex(LedgerError, "EXTERNAL_DATABASE_CHANGE_DETECTED"):
+            self.register("external-anchor-activity")
 
     def test_anchor_rejects_payload_mutation_and_tail_truncation(self):
         self.register()
@@ -628,6 +814,53 @@ class LedgerCase(unittest.TestCase):
         self.assertEqual(1, len(set(duplicate)))
         self.assertTrue(self.ledger.verify_global_chain())
 
+    def test_concurrent_write_and_snapshot_never_observe_partial_state(self):
+        # CONCURRENT_WRITE_AND_SNAPSHOT_NO_PARTIAL_STATE
+        writer_at_commit = threading.Event()
+        release_writer = threading.Event()
+        snapshot_finished = threading.Event()
+        snapshots, failures = [], []
+        original_commit = self.ledger._commit
+
+        def blocking_commit():
+            writer_at_commit.set()
+            release_writer.wait(timeout=5)
+            original_commit()
+
+        def write():
+            try:
+                self.ledger.record_protocol_violation("human:owner", "concurrent-write")
+            except Exception as error:
+                failures.append(error)
+
+        def read_snapshot():
+            try:
+                snapshots.append(self.ledger.snapshot("human:owner"))
+            except Exception as error:
+                failures.append(error)
+            finally:
+                snapshot_finished.set()
+
+        self.ledger._commit = blocking_commit
+        writer = threading.Thread(target=write)
+        reader = threading.Thread(target=read_snapshot)
+        try:
+            writer.start()
+            self.assertTrue(writer_at_commit.wait(timeout=5))
+            reader.start()
+            self.assertFalse(snapshot_finished.wait(timeout=0.1))
+            release_writer.set()
+            writer.join(timeout=5)
+            reader.join(timeout=5)
+        finally:
+            release_writer.set()
+            self.ledger._commit = original_commit
+        self.assertFalse(failures)
+        self.assertEqual(1, len(snapshots))
+        evidence = parse_json_strict(snapshots[0].evidence.decode("utf-8"))
+        self.assertEqual(1, len(evidence["protocol_violations"]))
+        self.assertTrue(self.ledger.verify_global_chain())
+
     def test_historical_snapshot_excludes_future_facts_and_is_stable(self):
         trial = self.register("historic")
         boundary = self.ledger._db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0]
@@ -651,6 +884,44 @@ class LedgerCase(unittest.TestCase):
         self.assertEqual([], evidence["result_references"])
         self.assertEqual([], evidence["artifact_references"])
         self.assertEqual([], evidence["protocol_violations"])
+
+    def test_pre_evaluation_failure_counts_execution_failures_before_results(self):
+        # FAILURE_BEFORE_RESULT_COUNTED / MULTIPLE_PRE_RESULT_FAILURES_DEFINED_AND_TESTED
+        trial = self.register("pre-result-failures")
+        first = self.ledger.start_execution("human:owner", trial)
+        self.ledger.fail_execution("human:owner", first, "first")
+        second = self.ledger.start_execution("human:owner", trial)
+        self.ledger.fail_execution("human:owner", second, "second")
+        evidence = parse_json_strict(self.ledger.snapshot("human:owner").evidence.decode("utf-8"))
+        self.assertEqual(2, evidence["pre_evaluation_failure_count"])
+
+    def test_failure_after_result_is_not_pre_evaluation(self):
+        # FAILURE_AFTER_RESULT_NOT_PRE_EVALUATION
+        trial = self.register("post-result-failure")
+        completed = self.ledger.start_execution("human:owner", trial)
+        self.ledger.complete_execution("human:owner", completed)
+        self.ledger.attach_result("human:owner", trial, completed, "metric", "local://result")
+        later = self.ledger.start_execution("human:owner", trial)
+        self.ledger.fail_execution("human:owner", later, "after performance")
+        evidence = parse_json_strict(self.ledger.snapshot("human:owner").evidence.decode("utf-8"))
+        self.assertEqual(0, evidence["pre_evaluation_failure_count"])
+
+    def test_failed_replay_is_not_pre_evaluation(self):
+        # FAILED_REPLAY_NOT_PRE_EVALUATION
+        trial = self.register("failed-replay")
+        original = self.ledger.start_execution("human:owner", trial)
+        _, research_spec_hash = hash_research_spec(spec())
+        replay = self.ledger.start_execution(
+            "human:owner", trial, execution_kind="REPRODUCIBILITY_REPLAY",
+            original_execution_id=original,
+            replay_identity={
+                "research_spec_sha256": research_spec_hash, "dataset_snapshot_id": "dataset-1",
+                "git_commit_sha": "abc123", "environment_fingerprint": "env-v1", "random_seed": "7",
+            },
+        )
+        self.ledger.fail_execution("human:owner", replay, "replay failed")
+        evidence = parse_json_strict(self.ledger.snapshot("human:owner").evidence.decode("utf-8"))
+        self.assertEqual(0, evidence["pre_evaluation_failure_count"])
 
     def test_event_linkage_field_tampering_is_detected(self):
         mutations = (("execution_id", None), ("occurred_at", "2099-01-01T00:00:00.000000Z"), ("event_id", "bad-event"))
@@ -779,7 +1050,7 @@ class FrozenVectorTests(unittest.TestCase):
                 ledger.register("human:owner", "fixed-key", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
                                 family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"})
                 snapshot = ledger.snapshot("human:owner")
-                self.assertEqual(snapshot.content_hash, "0373ed43143468884390c492ca55de94334109fd80482a2dced5057b6f0cda9e")
+                self.assertEqual(snapshot.content_hash, "82a72ce52fbec7b94a2e158cf864db781465d7a59244644db94dc65b87a9198c")
             finally:
                 ledger.close()
 

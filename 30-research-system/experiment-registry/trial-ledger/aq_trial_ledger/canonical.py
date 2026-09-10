@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import unicodedata
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -42,6 +43,9 @@ _TOP_LEVEL_FIELDS = {
     "random_seed", "family_policy_inputs_hash", "family_inputs", "parameters",
     "research_objective", "semantic_text", "extensions",
 }
+_DECIMAL_LEXICAL = re.compile(
+    r"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$"
+)
 
 
 def parse_json_strict(text: str) -> Any:
@@ -71,18 +75,40 @@ def _validate_scalar_string(value: str) -> str:
 
 
 def _canonical_decimal(value: Any) -> str:
+    """Return an exact, context-independent plain-decimal representation."""
     if isinstance(value, bool) or isinstance(value, float):
         raise CanonicalizationError("binary float decimal identity")
-    try:
-        decimal = Decimal(str(value))
-    except (InvalidOperation, ValueError) as error:
-        raise CanonicalizationError("invalid decimal value") from error
+    if isinstance(value, str):
+        if not _DECIMAL_LEXICAL.fullmatch(value):
+            raise CanonicalizationError("invalid decimal lexical form")
+        decimal = Decimal(value)
+    elif isinstance(value, Decimal):
+        decimal = value
+    elif isinstance(value, int):
+        decimal = Decimal(value)
+    else:
+        raise CanonicalizationError("decimal identity requires str, Decimal, or int")
     if not decimal.is_finite():
         raise CanonicalizationError("non-finite decimal value")
     if decimal.is_zero():
         return "0"
-    result = format(decimal.normalize(), "f")
-    return result.rstrip("0").rstrip(".") if "." in result else result
+
+    sign, digits, exponent = decimal.as_tuple()
+    coefficient = "".join(str(digit) for digit in digits)
+    if exponent >= 0:
+        integer, fractional = coefficient + ("0" * exponent), ""
+    else:
+        fractional_places = -exponent
+        if len(coefficient) <= fractional_places:
+            integer = "0"
+            fractional = ("0" * (fractional_places - len(coefficient))) + coefficient
+        else:
+            integer = coefficient[:-fractional_places]
+            fractional = coefficient[-fractional_places:]
+    integer = integer.lstrip("0") or "0"
+    fractional = fractional.rstrip("0")
+    rendered = integer if not fractional else f"{integer}.{fractional}"
+    return ("-" if sign else "") + rendered
 
 
 def _validate_research_spec(spec: Mapping[str, Any]) -> None:
@@ -122,6 +148,14 @@ def _validate_research_spec(spec: Mapping[str, Any]) -> None:
         elif isinstance(value, list):
             for nested in value:
                 visit(nested)
+        elif isinstance(value, (tuple, set, frozenset)):
+            raise CanonicalizationError("ResearchSpec arrays must be lists")
+        elif isinstance(value, (str, int, bool, type(None), date, datetime, Decimal)):
+            return
+        else:
+            raise CanonicalizationError(
+                f"unsupported ResearchSpec value type: {type(value).__name__}"
+            )
 
     visit(spec)
 

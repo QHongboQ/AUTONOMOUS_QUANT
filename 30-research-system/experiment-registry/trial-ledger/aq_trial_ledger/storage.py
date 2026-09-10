@@ -33,6 +33,10 @@ from .contract import (
 SCHEMA_VERSION = "1"
 GENESIS_PREVIOUS_HASH = "0" * 64
 ALLOWED_TRIAL_KINDS = frozenset({"INDEPENDENT_EVALUATION"})
+_P1_FAMILY_AXIS_KEYS = (
+    "dataset_snapshot_id", "label_spec_hash", "feature_set_hash",
+    "research_objective", "evaluation_window_policy",
+)
 _METADATA_RUNTIME_VALUES = {
     "schema_version": SCHEMA_VERSION,
     "event_hash_domain_version": EVENT_HASH_DOMAIN_V1,
@@ -72,6 +76,7 @@ class Ledger:
         self._full_verify_calls = 0
         self._verified_head_sequence: int | None = None
         self._verified_head_hash: str | None = None
+        self._verified_data_version: int | None = None
         self._db = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
         self._db.row_factory = sqlite3.Row
         self.lock = threading.RLock()
@@ -81,10 +86,11 @@ class Ledger:
             if not self.verify_global_chain():
                 self._db.close()
                 raise LedgerError("OPEN_INTEGRITY_VERIFICATION_FAILED")
-            self._refresh_verified_head()
+            self._refresh_verified_state()
 
     def close(self) -> None:
-        self._db.close()
+        with self.lock:
+            self._db.close()
 
     def _has_initialized_schema(self) -> bool:
         return self._db.execute(
@@ -102,6 +108,7 @@ class Ledger:
 
     def _run_write(self, operation: Any) -> Any:
         with self.lock:
+            self._assert_writer_state()
             self._transaction()
             try:
                 result = operation()
@@ -109,7 +116,7 @@ class Ledger:
                 self._rollback()
                 raise
             self._commit()
-            self._refresh_verified_head()
+            self._refresh_verified_state()
             return result
 
     def _metadata(self, key: str) -> str:
@@ -131,9 +138,20 @@ class Ledger:
     def _refresh_verified_head(self) -> None:
         self._verified_head_sequence, self._verified_head_hash = self._read_persisted_head()
 
-    def _assert_writer_head(self) -> None:
+    def _data_version(self) -> int:
+        return int(self._db.execute("PRAGMA data_version").fetchone()[0])
+
+    def _refresh_verified_state(self) -> None:
+        self._refresh_verified_head()
+        self._verified_data_version = self._data_version()
+
+    def _assert_writer_state(self) -> None:
         if self._verified_head_sequence is None or self._verified_head_hash is None:
             raise LedgerError("WRITER_HEAD_NOT_VERIFIED")
+        if self._verified_data_version is None:
+            raise LedgerError("DATABASE_CHANGE_STATE_NOT_VERIFIED")
+        if self._data_version() != self._verified_data_version:
+            raise LedgerError("EXTERNAL_DATABASE_CHANGE_DETECTED")
         if self._read_persisted_head() != (self._verified_head_sequence, self._verified_head_hash):
             raise LedgerError("EXTERNAL_OR_CONCURRENT_WRITER_DETECTED")
 
@@ -352,7 +370,9 @@ class Ledger:
             );
             CREATE TABLE anchor_evidence (
                 manifest_sha256 TEXT PRIMARY KEY, payload_json TEXT NOT NULL, created_at TEXT NOT NULL,
-                created_by TEXT NOT NULL, FOREIGN KEY(created_by) REFERENCES actor_identities(actor_id)
+                created_by TEXT NOT NULL, created_ledger_sequence INTEGER NOT NULL,
+                global_event_id TEXT NOT NULL UNIQUE,
+                FOREIGN KEY(created_by) REFERENCES actor_identities(actor_id)
             );
         """)
         for table in self._IMMUTABLE_TABLES:
@@ -403,7 +423,7 @@ class Ledger:
                     if capability is not Capability.MAINTENANCE_ENTER:
                         self._append_capability(owner, capability.value, "CAPABILITY_GRANTED", owner, "V1", "genesis")
                 self._commit()
-                self._refresh_verified_head()
+                self._refresh_verified_state()
                 return ledger_id
             except Exception:
                 self._rollback()
@@ -449,7 +469,7 @@ class Ledger:
 
     def _require(self, auth_context: Any, capability: Capability) -> str:
         actor_id = self._authenticate(auth_context)
-        self._assert_writer_head()
+        self._assert_writer_state()
         if (not self._verify_metadata_binding() or not self._actor_is_active(actor_id)
                 or not self._capability_is_active(actor_id, capability.value)):
             raise LedgerError(f"UNAUTHORIZED:{capability.value}")
@@ -614,6 +634,8 @@ class Ledger:
 
     @staticmethod
     def canonical_family_inputs(policy_id: str, version: str, inputs: Mapping[str, Any]) -> bytes:
+        if not isinstance(inputs, Mapping):
+            raise LedgerError("family inputs must be a mapping")
         if policy_id == P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1:
             # The P1 fixture groups model and hyperparameter variants under one
             # predeclared broad family.  Only its declared non-performance axes
@@ -648,6 +670,36 @@ class Ledger:
         return hashlib.sha256(cls.canonical_family_inputs(policy_id, version, inputs)).hexdigest()
 
     @staticmethod
+    def _p1_family_inputs_from_research_spec(spec: Mapping[str, Any]) -> dict[str, Any]:
+        """Derive P1 family axes from the frozen ResearchSpec, never a second copy."""
+        missing = [key for key in _P1_FAMILY_AXIS_KEYS if spec.get(key) in (None, "")]
+        universe_keys = [key for key in ("universe_id", "universe_hash") if spec.get(key) not in (None, "")]
+        if missing or not universe_keys:
+            missing_display = [*missing, *([] if universe_keys else ["universe_id/universe_hash"])]
+            raise LedgerError(
+                f"P1 ResearchSpec missing required family axes: {sorted(missing_display)!r}"
+            )
+        return {
+            **{key: spec[key] for key in _P1_FAMILY_AXIS_KEYS},
+            **{key: spec[key] for key in universe_keys},
+        }
+
+    @classmethod
+    def _bound_p1_family_inputs(
+        cls, version: str, spec: Mapping[str, Any], family_inputs: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        derived = cls._p1_family_inputs_from_research_spec(spec)
+        supplied = cls.canonical_family_inputs(
+            P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, version, family_inputs,
+        )
+        expected = cls.canonical_family_inputs(
+            P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, version, derived,
+        )
+        if supplied != expected:
+            raise LedgerError("P1 family inputs differ from frozen ResearchSpec")
+        return derived
+
+    @staticmethod
     def _replay_identity(spec: Mapping[str, Any], spec_hash: str) -> Mapping[str, Any]:
         return {
             "research_spec_sha256": spec_hash, "dataset_snapshot_id": spec["dataset_snapshot_id"],
@@ -670,8 +722,16 @@ class Ledger:
             if parent_trial_id is not None and not self._db.execute("SELECT 1 FROM trial_registrations WHERE trial_id = ?", (parent_trial_id,)).fetchone():
                 raise LedgerError("unknown parent trial")
             canonical, spec_hash = hash_research_spec(spec)
-            family = self.family_id(family_policy_id, family_policy_version, family_inputs)
-            if spec["family_policy_inputs_hash"] != self.family_input_hash(family_policy_id, family_policy_version, family_inputs):
+            if family_policy_id == P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1:
+                bound_family_inputs = self._bound_p1_family_inputs(
+                    family_policy_version, spec, family_inputs,
+                )
+            else:
+                bound_family_inputs = dict(family_inputs)
+            family = self.family_id(family_policy_id, family_policy_version, bound_family_inputs)
+            if spec["family_policy_inputs_hash"] != self.family_input_hash(
+                family_policy_id, family_policy_version, bound_family_inputs,
+            ):
                 raise LedgerError("family inputs do not match frozen ResearchSpec hash")
             intent = {
                 "research_spec_sha256": spec_hash, "trial_family_id": family,
@@ -831,22 +891,23 @@ class Ledger:
         return self._run_write(operation)
 
     def verify_global_chain(self, anchor: LedgerAnchorManifest | Mapping[str, Any] | None = None) -> bool:
-        self._full_verify_calls += 1
-        try:
-            if not self._verify_metadata_binding():
-                return False
-            previous = GENESIS_PREVIOUS_HASH
-            expected = 1
-            for row in self._db.execute("SELECT * FROM trial_events ORDER BY ledger_sequence"):
-                if row["ledger_sequence"] != expected or not self._event_hash_matches(row, previous):
+        with self.lock:
+            self._full_verify_calls += 1
+            try:
+                if not self._verify_metadata_binding():
                     return False
-                expected += 1
-                previous = row["global_event_hash"]
-            if expected == 1 or not self._verify_lifecycle_linkage() or not self._verify_authoritative_projections():
+                previous = GENESIS_PREVIOUS_HASH
+                expected = 1
+                for row in self._db.execute("SELECT * FROM trial_events ORDER BY ledger_sequence"):
+                    if row["ledger_sequence"] != expected or not self._event_hash_matches(row, previous):
+                        return False
+                    expected += 1
+                    previous = row["global_event_hash"]
+                if expected == 1 or not self._verify_lifecycle_linkage() or not self._verify_authoritative_projections():
+                    return False
+                return anchor is None or self.verify_anchor(anchor, check_chain=False)
+            except (LedgerError, sqlite3.DatabaseError, ValueError):
                 return False
-            return anchor is None or self.verify_anchor(anchor, check_chain=False)
-        except (LedgerError, sqlite3.DatabaseError, ValueError):
-            return False
 
     def _verify_lifecycle_linkage(self) -> bool:
         """Ensure lifecycle projections cannot change without a chained event."""
@@ -944,6 +1005,31 @@ class Ledger:
                 event, payload = events.get(row["created_ledger_sequence"], (None, None))
                 if event is None or event["event_type"] != event_type or any(payload.get(key) != row[value] for key, value in bindings.items()):
                     return False
+        for row in self._db.execute("SELECT * FROM anchor_evidence"):
+            payload = parse_json_strict(row["payload_json"])
+            if hashlib.sha256(canonicalize_anchor_payload(payload)).hexdigest() != row["manifest_sha256"]:
+                return False
+            anchor_sequence = int(payload.get("as_of_ledger_sequence", 0))
+            anchored = events.get(anchor_sequence, (None, None))[0]
+            event = events.get(row["created_ledger_sequence"], (None, None))[0]
+            if (
+                anchored is None or anchored["global_event_hash"] != payload.get("global_event_hash")
+                or event is None or event["event_id"] != row["global_event_id"]
+                or event["event_type"] != "ANCHOR_RECORDED"
+                or event["occurred_at"] != row["created_at"] or event["actor_id"] != row["created_by"]
+                or int(row["created_ledger_sequence"]) <= anchor_sequence
+            ):
+                return False
+            event_payload = events[row["created_ledger_sequence"]][1]
+            expected = {
+                "manifest_sha256": row["manifest_sha256"],
+                "anchored_ledger_sequence": anchor_sequence,
+                "anchored_global_event_hash": payload.get("global_event_hash"),
+                "created_at": row["created_at"], "created_by": row["created_by"],
+                "created_ledger_sequence": row["created_ledger_sequence"],
+            }
+            if any(event_payload.get(key) != value for key, value in expected.items()):
+                return False
         return True
 
     @staticmethod
@@ -955,25 +1041,47 @@ class Ledger:
         return dict(raw["payload"]), str(raw["manifest_sha256"])
 
     def verify_anchor(self, anchor: LedgerAnchorManifest | Mapping[str, Any], *, check_chain: bool = True) -> bool:
-        try:
-            payload, digest = self._anchor_parts(anchor)
-            if hashlib.sha256(canonicalize_anchor_payload(payload)).hexdigest() != digest:
+        with self.lock:
+            try:
+                payload, digest = self._anchor_parts(anchor)
+                if hashlib.sha256(canonicalize_anchor_payload(payload)).hexdigest() != digest:
+                    return False
+                if payload["ledger_id"] != self._metadata("ledger_id") or payload["schema_version"] != SCHEMA_VERSION:
+                    return False
+                anchor_sequence = int(payload["as_of_ledger_sequence"])
+                current = self._db.execute("SELECT MAX(ledger_sequence) AS value FROM trial_events").fetchone()["value"]
+                if current is None or int(current) < anchor_sequence:
+                    return False
+                row = self._db.execute("SELECT global_event_hash FROM trial_events WHERE ledger_sequence = ?", (anchor_sequence,)).fetchone()
+                return row is not None and row["global_event_hash"] == payload["global_event_hash"] and (not check_chain or self.verify_global_chain())
+            except (KeyError, TypeError, ValueError, LedgerError, sqlite3.DatabaseError):
                 return False
-            if payload["ledger_id"] != self._metadata("ledger_id") or payload["schema_version"] != SCHEMA_VERSION:
-                return False
-            anchor_sequence = int(payload["as_of_ledger_sequence"])
-            current = self._db.execute("SELECT MAX(ledger_sequence) AS value FROM trial_events").fetchone()["value"]
-            if current is None or int(current) < anchor_sequence:
-                return False
-            row = self._db.execute("SELECT global_event_hash FROM trial_events WHERE ledger_sequence = ?", (anchor_sequence,)).fetchone()
-            return row is not None and row["global_event_hash"] == payload["global_event_hash"] and (not check_chain or self.verify_global_chain())
-        except (KeyError, TypeError, ValueError, LedgerError, sqlite3.DatabaseError):
-            return False
 
     def snapshot(self, auth_context: Any, *, as_of_ledger_sequence: int | None = None, anchor: LedgerAnchorManifest | Mapping[str, Any] | None = None) -> TrialHistorySnapshot:
         """Issue an authorized snapshot after full integrity verification."""
-        self._require(auth_context, Capability.SNAPSHOT_READ)
-        return self._build_verified_snapshot(as_of_ledger_sequence=as_of_ledger_sequence, anchor=anchor)
+        with self.lock:
+            self._require(auth_context, Capability.SNAPSHOT_READ)
+            return self._build_verified_snapshot(as_of_ledger_sequence=as_of_ledger_sequence, anchor=anchor)
+
+    def _pre_evaluation_failure_count(self, sequence: int) -> int:
+        """Count non-replay execution failures before any result for that trial."""
+        row = self._db.execute(
+            """
+            SELECT COUNT(*) AS value
+            FROM trial_events AS failed
+            JOIN execution_records AS execution ON execution.execution_id = failed.execution_id
+            WHERE failed.event_type = 'TRIAL_FAILED'
+              AND failed.ledger_sequence <= ?
+              AND execution.execution_kind != 'REPRODUCIBILITY_REPLAY'
+              AND NOT EXISTS (
+                  SELECT 1 FROM result_references AS result
+                  WHERE result.trial_id = failed.trial_id
+                    AND result.created_ledger_sequence < failed.ledger_sequence
+              )
+            """,
+            (sequence,),
+        ).fetchone()
+        return int(row["value"])
 
     def _build_verified_snapshot(self, *, as_of_ledger_sequence: int | None = None, anchor: LedgerAnchorManifest | Mapping[str, Any] | None = None) -> TrialHistorySnapshot:
         """Internal verified builder for anchor and restore operations only."""
@@ -1000,7 +1108,7 @@ class Ledger:
             "performance_evaluated_count": self._db.execute(
                 "SELECT COUNT(DISTINCT trial_id) FROM result_references WHERE created_ledger_sequence <= ?", (sequence,)
             ).fetchone()[0],
-            "pre_evaluation_failure_count": sum(event["event_type"] == "TRIAL_FAILED" for event in events),
+            "pre_evaluation_failure_count": self._pre_evaluation_failure_count(sequence),
             "replay_count": self._db.execute(
                 "SELECT COUNT(*) FROM execution_records WHERE execution_kind = 'REPRODUCIBILITY_REPLAY' AND created_ledger_sequence <= ?", (sequence,)
             ).fetchone()[0],
@@ -1033,8 +1141,19 @@ class Ledger:
             )
             payload_dict = asdict(payload)
             digest = hashlib.sha256(canonicalize_anchor_payload(payload_dict)).hexdigest()
-            self._db.execute("INSERT INTO anchor_evidence VALUES (?, ?, ?, ?)",
-                            (digest, canonical_json_bytes(payload_dict).decode("utf-8"), payload.created_at, actor))
+            created_sequence = self._next_sequence()
+            event_id, sequence, _ = self._append_event(None, None, "ANCHOR_RECORDED", actor, {
+                "manifest_sha256": digest,
+                "anchored_ledger_sequence": snapshot.as_of_ledger_sequence,
+                "anchored_global_event_hash": snapshot.global_event_hash,
+                "created_at": payload.created_at, "created_by": actor,
+                "created_ledger_sequence": created_sequence,
+            }, occurred_at=payload.created_at)
+            if sequence != created_sequence:
+                raise LedgerError("anchor sequence assignment changed during transaction")
+            self._db.execute("INSERT INTO anchor_evidence VALUES (?, ?, ?, ?, ?, ?)",
+                            (digest, canonical_json_bytes(payload_dict).decode("utf-8"), payload.created_at,
+                             actor, created_sequence, event_id))
             return LedgerAnchorManifest(payload, digest)
         return self._run_write(operation)
 
