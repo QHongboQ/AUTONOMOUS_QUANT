@@ -1,6 +1,6 @@
 # Trial Ledger runtime foundation 001
 
-**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-INTEGRITY-CLOSURE-001`
+**Latest task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-PREMERGE-HARDENING-001`
 
 The completed standard-library foundation is at
 `30-research-system/experiment-registry/trial-ledger/aq_trial_ledger`.
@@ -43,7 +43,8 @@ the V1 identity. Typed decimal parameters—not callers—govern decimal identit
 Only designated semantic-text fields are NFC-normalized; opaque identifiers are
 left byte-distinct.
 
-The 60-test `unittest` matrix passed under CPython 3.12.14, and required
+Historical integrity-closure evidence: the then-60-test `unittest` matrix
+passed under CPython 3.12.14, and required
 `compileall aq_trial_ledger tests` passed after the same source changes. Fixed
 byte-and-SHA vectors now cover ResearchSpec, event, anchor, deterministic
 snapshot, family-policy identity, actual newline/tab, literal backslash+n/t,
@@ -88,6 +89,66 @@ All test databases and backups were short-lived temporary files and were
 removed after validation. No permanent ledger database, external package,
 Qlib, RD-Agent, OpenBB, Robinhood, P1 research, account action, or trading
 action occurred.
+
+## Runtime pre-merge hardening evidence
+
+Normal mutations now accept an opaque `auth_context`, not a caller-selected
+actor ID. The small project-owned `Authenticator` boundary resolves the acting
+principal; the production-foundation default rejects every normal mutation
+until an authenticator is injected. `DeterministicFakeAuthenticator` is
+test-only and persists neither tokens nor credentials. Tests prove unauthenticated
+and unknown contexts fail, a generator context cannot impersonate the owner,
+and the resolved authenticated actor is what is recorded in chained events.
+This is a local injection boundary, not an HTTP, OAuth, Internet, or credential
+storage implementation.
+
+The runtime no longer exposes a public `db` connection. SQLite is held as
+private `_db`; tests use that explicitly private hook only for privileged-copy
+tamper simulation. Python privacy is not a sandbox, so this removes the normal
+client API write surface without claiming to contain a process with filesystem
+access.
+
+Public `snapshot(auth_context, ...)` now requires an active authenticated actor
+with `SNAPSHOT_READ`. The deterministic internal verified snapshot builder is
+reserved for anchor and restored-backup validation, which do not simulate an
+external principal. A missing capability and a suspended actor both fail closed.
+
+Opening an existing initialized ledger performs one full chain, projection, and
+metadata verification before establishing the in-process verified head. Normal
+writes use `BEGIN IMMEDIATE`, compare the persisted head to that verified head,
+verify the authenticated actor's identity/status/capability against their own
+chained projections, then refresh the in-process head only after commit. An
+external/concurrent head change raises `EXTERNAL_OR_CONCURRENT_WRITER_DETECTED`.
+Full scans remain mandatory for explicit verification, public snapshot issuance,
+anchor/backup/restore validation, and startup; they are not performed once per
+normal registration. The bounded smoke registered 1,000 sequential trials,
+created 1,015 total events, performed one final full verification, and passed.
+
+Trial registration kinds are now an explicit versioned allow-list containing
+`INDEPENDENT_EVALUATION`. `REPRODUCIBILITY_REPLAY` remains an execution kind
+only and cannot create a new trial. Capability grants verify that the target
+actor is currently active; registered-only, suspended, and retired targets are
+rejected, while revocation remains an auditable append-only lifecycle action.
+
+Genesis now chain-binds `ledger_id`, schema version, event-hash domain version,
+ResearchSpec canonicalization version, and anchor canonicalization version.
+Open/full verification requires database metadata, supported runtime constants,
+and genesis metadata to agree; five privileged-copy metadata tamper variants
+are detected. ResearchSpec NFC normalization is explicitly path-scoped in V1:
+only top-level `hypothesis_text`, `research_objective`, and `semantic_text`
+normalize. Same-named or other Unicode values beneath `extensions` remain
+opaque and byte-distinct.
+
+The 72-test `unittest` matrix passed under CPython 3.12.14, including all prior
+60 integrity tests plus authentication, raw-connection surface, `SNAPSHOT_READ`,
+incremental writer-head, scale, trial-kind, active-target capability, metadata,
+and schema-path normalization coverage. `compileall aq_trial_ledger tests`
+passed. Windows CPython 3.12.14 and Ubuntu-24.04 `python3` again produced the
+same canonical bytes and SHA-256:
+
+```text
+a200675434f562226d4caf596cedfb41f31a2d3deaf1b8e57f0d2c6ff91f5948
+```
 
 ## Known limitations
 

@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
+from aq_trial_ledger.auth import DeterministicFakeAuthenticator
 from aq_trial_ledger.backup import backup, load_anchor_artifact, verify_restored_backup, write_anchor_artifact
 from aq_trial_ledger.canonical import CanonicalizationError, canonical_json_bytes, canonicalize_anchor_payload, canonicalize_research_spec, event_hash, hash_research_spec, parse_json_strict
 from aq_trial_ledger.contract import Capability, P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1
@@ -108,6 +109,22 @@ class CanonicalTests(unittest.TestCase):
         with self.assertRaises(CanonicalizationError):
             canonicalize_research_spec(spec(extensions={"sealed_oos_data": "no"}))
 
+    def test_semantic_normalization_is_schema_path_scoped(self):
+        # TOP_LEVEL_SEMANTIC_TEXT_NFC_NORMALIZED
+        self.assertEqual(
+            canonicalize_research_spec(spec(hypothesis_text="e\u0301")),
+            canonicalize_research_spec(spec(hypothesis_text="é")),
+        )
+        # NESTED_EXTENSION_SAME_NAME_REMAINS_OPAQUE / OPAQUE_EXTENSION_UNICODE_DISTINCT
+        self.assertNotEqual(
+            canonicalize_research_spec(spec(extensions={"hypothesis_text": "e\u0301"})),
+            canonicalize_research_spec(spec(extensions={"hypothesis_text": "é"})),
+        )
+        self.assertNotEqual(
+            canonicalize_research_spec(spec(extensions={"opaque": "e\u0301"})),
+            canonicalize_research_spec(spec(extensions={"opaque": "é"})),
+        )
+
     def test_negative_canonical_inputs(self):
         with self.assertRaises(CanonicalizationError):
             canonicalize_research_spec(spec(unknown="no"))
@@ -159,7 +176,10 @@ class LedgerCase(unittest.TestCase):
         temporary_root.mkdir(exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=temporary_root)
         self.path = os.path.join(self.temp.name, "ledger.db")
-        self.ledger = Ledger(self.path)
+        self.ledger = Ledger(self.path, authenticator=DeterministicFakeAuthenticator({
+            "human:owner": "human:owner", "generator:one": "generator:one",
+            "generator:retire": "generator:retire",
+        }))
         self.ledger.init()
         self.ledger.register_family_policy("human:owner", P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", {"version": "1"})
         self.ledger.activate_family_policy("human:owner", P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1")
@@ -169,20 +189,22 @@ class LedgerCase(unittest.TestCase):
         self.temp.cleanup()
 
     def register(self, key="one", **kwargs):
+        trial_kind = kwargs.pop("trial_kind", "INDEPENDENT_EVALUATION")
         return self.ledger.register(
             "human:owner", key, spec(**kwargs), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
-            family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"},
+            family_policy_version="1", trial_kind=trial_kind,
+            family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"},
         )
 
     def _drop_update_trigger(self, table):
-        self.ledger.db.execute(f"DROP TRIGGER immutable_{table}_update")
+        self.ledger._db.execute(f"DROP TRIGGER immutable_{table}_update")
 
     def _assert_tamper_blocks_integrity(self, table, statement, values=()):
         self._drop_update_trigger(table)
-        self.ledger.db.execute(statement, values)
+        self.ledger._db.execute(statement, values)
         self.assertFalse(self.ledger.verify_global_chain())
         with self.assertRaises(LedgerError):
-            self.ledger.snapshot()
+            self.ledger.snapshot("human:owner")
 
     def _terminal_evidence(self):
         trial = self.register("evidence")
@@ -192,6 +214,135 @@ class LedgerCase(unittest.TestCase):
         artifact = self.ledger.attach_artifact("human:owner", trial, execution, "manifest", "local://artifact")
         violation = self.ledger.record_protocol_violation("human:owner", "evidence violation", "local://violation")
         return trial, execution, result, artifact, violation
+
+    def _use_strict_authenticator(self):
+        self.ledger._authenticator = DeterministicFakeAuthenticator({
+            "owner-token": "human:owner", "generator-token": "generator:strict",
+            "reader-token": "generator:reader",
+        })
+
+    def test_authentication_boundary_rejects_untrusted_actor_strings(self):
+        # UNAUTHENTICATED_WRITE_REJECTED / UNKNOWN_CREDENTIAL_REJECTED
+        # GENERATOR_CANNOT_IMPERSONATE_OWNER / AUTHENTICATED_OWNER_ADMIN_ACCEPTED
+        self._use_strict_authenticator()
+        with self.assertRaises(LedgerError):
+            self.ledger.register(None, "unauthenticated", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"})
+        with self.assertRaises(LedgerError):
+            self.ledger.register("unknown-token", "unknown", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"})
+        self.ledger.register_actor("owner-token", "generator:strict")
+        self.ledger.set_actor_status("owner-token", "generator:strict", "ACTOR_ACTIVATED")
+        self.ledger.grant_capability("owner-token", "generator:strict", Capability.TRIAL_REGISTER)
+        with self.assertRaises(LedgerError):
+            self.ledger.register("human:owner", "impersonation", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"})
+
+    def test_authenticated_generator_scoped_write_records_authenticated_actor(self):
+        # AUTHENTICATED_GENERATOR_SCOPED_WRITE_ACCEPTED / AUTHENTICATED_ACTOR_ID_RECORDED_IN_EVENT
+        self._use_strict_authenticator()
+        self.ledger.register_actor("owner-token", "generator:strict")
+        self.ledger.set_actor_status("owner-token", "generator:strict", "ACTOR_ACTIVATED")
+        self.ledger.grant_capability("owner-token", "generator:strict", Capability.TRIAL_REGISTER)
+        inputs = {"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"}
+        trial = self.ledger.register("generator-token", "scoped", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs=inputs)
+        event = self.ledger._db.execute("SELECT actor_id FROM trial_events WHERE trial_id = ? AND event_type = 'TRIAL_REGISTERED'", (trial,)).fetchone()
+        self.assertEqual("generator:strict", event["actor_id"])
+
+    def test_public_runtime_has_no_raw_sqlite_connection(self):
+        self.assertFalse(hasattr(self.ledger, "db"))
+        self.assertTrue(hasattr(self.ledger, "_db"))  # Explicit private test-only hook.
+
+    def test_snapshot_read_authorization_and_suspension(self):
+        # SNAPSHOT_WITHOUT_CAPABILITY_REJECTED / SNAPSHOT_WITH_READ_CAPABILITY_ACCEPTED
+        # SUSPENDED_ACTOR_SNAPSHOT_REJECTED
+        self._use_strict_authenticator()
+        self.ledger.register_actor("owner-token", "generator:reader")
+        self.ledger.set_actor_status("owner-token", "generator:reader", "ACTOR_ACTIVATED")
+        with self.assertRaises(LedgerError):
+            self.ledger.snapshot("reader-token")
+        self.ledger.grant_capability("owner-token", "generator:reader", Capability.SNAPSHOT_READ)
+        self.assertTrue(self.ledger.snapshot("reader-token"))
+        self.ledger.set_actor_status("owner-token", "generator:reader", "ACTOR_SUSPENDED")
+        with self.assertRaises(LedgerError):
+            self.ledger.snapshot("reader-token")
+
+    def test_trial_kind_allowlist_blocks_replay_as_new_trial(self):
+        # REGISTER_REPLAY_AS_NEW_TRIAL_REJECTED / UNKNOWN_TRIAL_KIND_REJECTED
+        # VALID_INDEPENDENT_TRIAL_KIND_ACCEPTED / REPLAY_EXECUTION_STILL_ACCEPTED
+        with self.assertRaises(LedgerError):
+            self.register("replay-kind", trial_kind="REPRODUCIBILITY_REPLAY")
+        with self.assertRaises(LedgerError):
+            self.register("unknown-kind", trial_kind="INVENTED_KIND")
+        self.assertTrue(self.register("independent-kind", trial_kind="INDEPENDENT_EVALUATION"))
+
+    def test_capability_grant_requires_active_target(self):
+        # CAPABILITY_GRANT_TO_INACTIVE_ACTOR_REJECTED
+        # CAPABILITY_GRANT_TO_SUSPENDED_ACTOR_REJECTED
+        # CAPABILITY_GRANT_TO_RETIRED_ACTOR_REJECTED
+        # ACTIVE_ACTOR_CAPABILITY_GRANT_ACCEPTED
+        self.ledger.register_actor("human:owner", "generator:target")
+        with self.assertRaises(LedgerError):
+            self.ledger.grant_capability("human:owner", "generator:target", Capability.TRIAL_REGISTER)
+        self.ledger.set_actor_status("human:owner", "generator:target", "ACTOR_ACTIVATED")
+        self.ledger.grant_capability("human:owner", "generator:target", Capability.TRIAL_REGISTER)
+        self.ledger.set_actor_status("human:owner", "generator:target", "ACTOR_SUSPENDED")
+        with self.assertRaises(LedgerError):
+            self.ledger.grant_capability("human:owner", "generator:target", Capability.RESULT_ATTACH)
+        self.ledger.set_actor_status("human:owner", "generator:target", "ACTOR_RETIRED")
+        with self.assertRaises(LedgerError):
+            self.ledger.grant_capability("human:owner", "generator:target", Capability.ARTIFACT_ATTACH)
+
+    def test_normal_registration_uses_incremental_head_guard(self):
+        # NORMAL_REGISTRATION_DOES_NOT_FULL_SCAN_HISTORY
+        baseline = self.ledger._full_verify_calls
+        for index in range(5):
+            self.register(f"incremental-{index}", hypothesis_id=f"incremental-{index}")
+        self.assertEqual(baseline, self.ledger._full_verify_calls)
+        self.assertTrue(self.ledger.verify_global_chain())
+
+    def test_scale_smoke_1000_sequential_registrations(self):
+        baseline = self.ledger._full_verify_calls
+        for index in range(1000):
+            self.register(f"scale-{index}", hypothesis_id=f"scale-{index}")
+        self.assertEqual(baseline, self.ledger._full_verify_calls)
+        self.assertTrue(self.ledger.verify_global_chain())
+        self.assertEqual(1000, self.ledger._db.execute("SELECT COUNT(*) FROM trial_registrations").fetchone()[0])
+        self.assertEqual(1015, self.ledger._db.execute("SELECT COUNT(*) FROM trial_events").fetchone()[0])
+
+    def test_external_writer_head_change_fails_closed(self):
+        self.ledger._db.execute(
+            "INSERT INTO trial_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("external-event", self.ledger._verified_head_sequence + 1, None, None, "EXTERNAL_WRITE",
+             "human:owner", "2099-01-01T00:00:00.000000Z", "{}", self.ledger._verified_head_hash, "0" * 64),
+        )
+        with self.assertRaisesRegex(LedgerError, "EXTERNAL_OR_CONCURRENT_WRITER_DETECTED"):
+            self.register("external-writer")
+
+    def test_open_existing_ledger_performs_full_verification(self):
+        self.register("reopen")
+        self.ledger.close()
+        self.ledger = Ledger(
+            self.path, authenticator=DeterministicFakeAuthenticator({"human:owner": "human:owner"})
+        )
+        self.assertEqual(1, self.ledger._full_verify_calls)
+
+    def test_schema_metadata_tampering_is_detected(self):
+        # SCHEMA_VERSION_METADATA_TAMPER_DETECTED / EVENT_HASH_DOMAIN_METADATA_TAMPER_DETECTED
+        # RESEARCH_CANONICAL_VERSION_METADATA_TAMPER_DETECTED / ANCHOR_CANONICAL_VERSION_METADATA_TAMPER_DETECTED
+        # LEDGER_ID_METADATA_TAMPER_DETECTED
+        mutations = (
+            ("schema_version", "2"), ("event_hash_domain_version", "wrong-domain"),
+            ("research_canonicalization_version", "wrong-research"),
+            ("anchor_canonicalization_version", "wrong-anchor"), ("ledger_id", "wrong-ledger"),
+        )
+        for index, (key, value) in enumerate(mutations):
+            if index:
+                self.ledger.close()
+                self.temp.cleanup()
+                self.setUp()
+            self.ledger._db.execute("DROP TRIGGER immutable_schema_metadata_update")
+            self.ledger._db.execute("UPDATE schema_metadata SET value = ? WHERE key = ?", (value, key))
+            self.assertFalse(self.ledger.verify_global_chain(), key)
+            with self.assertRaises(LedgerError):
+                self.ledger.snapshot("human:owner")
 
     def test_family_input_hash_match_accepted_and_mismatch_rejected(self):
         # FAMILY_INPUT_HASH_MATCH_ACCEPTED / FAMILY_INPUT_HASH_MISMATCH_REJECTED
@@ -214,14 +365,14 @@ class LedgerCase(unittest.TestCase):
 
     def test_policy_rules_hash_is_distinct_from_policy_spec_hash(self):
         # POLICY_RULES_HASH_DISTINCT_FROM_POLICY_SPEC_HASH
-        initial = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = ?", (P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,)).fetchone()
+        initial = self.ledger._db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = ?", (P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,)).fetchone()
         self.assertNotEqual(initial["policy_rules_hash"], initial["canonical_policy_hash"])
         self.ledger.register_family_policy("human:owner", "policy-other", "1", {"version": "1"})
         self.ledger.register_family_policy("human:owner", "policy-other", "2", {"version": "1"})
         self.ledger.register_family_policy("human:owner", "policy-rules-changed", "1", {"version": "2"})
-        by_id = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-other' AND family_policy_version = '1'").fetchone()
-        by_version = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-other' AND family_policy_version = '2'").fetchone()
-        by_rules = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-rules-changed'").fetchone()
+        by_id = self.ledger._db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-other' AND family_policy_version = '1'").fetchone()
+        by_version = self.ledger._db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-other' AND family_policy_version = '2'").fetchone()
+        by_rules = self.ledger._db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-rules-changed'").fetchone()
         self.assertNotEqual(initial["canonical_policy_hash"], by_id["canonical_policy_hash"])
         self.assertNotEqual(by_id["canonical_policy_hash"], by_version["canonical_policy_hash"])
         self.assertNotEqual(initial["policy_rules_hash"], by_rules["policy_rules_hash"])
@@ -247,24 +398,28 @@ class LedgerCase(unittest.TestCase):
     def test_chained_capability_target_mutation_detected(self):
         # CHAINED_CAPABILITY_TARGET_MUTATION_DETECTED
         self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.set_actor_status("human:owner", "generator:one", "ACTOR_ACTIVATED")
         self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER)
         self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET actor_id = ? WHERE actor_id = ?", ("human:owner", "generator:one"))
 
     def test_chained_capability_name_mutation_detected(self):
         # CHAINED_CAPABILITY_NAME_MUTATION_DETECTED
         self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.set_actor_status("human:owner", "generator:one", "ACTOR_ACTIVATED")
         self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER)
         self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET capability = ? WHERE actor_id = ?", ("TAMPERED", "generator:one"))
 
     def test_chained_capability_policy_version_mutation_detected(self):
         # CHAINED_CAPABILITY_POLICY_VERSION_MUTATION_DETECTED
         self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.set_actor_status("human:owner", "generator:one", "ACTOR_ACTIVATED")
         self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER)
         self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET policy_version = ? WHERE actor_id = ?", ("V2", "generator:one"))
 
     def test_chained_capability_reason_mutation_detected(self):
         # CHAINED_CAPABILITY_REASON_MUTATION_DETECTED
         self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.set_actor_status("human:owner", "generator:one", "ACTOR_ACTIVATED")
         self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER, "granted")
         self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET reason = ? WHERE actor_id = ?", ("tampered", "generator:one"))
 
@@ -294,7 +449,7 @@ class LedgerCase(unittest.TestCase):
     def test_research_spec_blob_mutation_detected(self):
         # RESEARCH_SPEC_BLOB_MUTATION_DETECTED
         trial = self.register()
-        row = self.ledger.db.execute("SELECT canonical_research_spec_sha256 FROM trial_registrations WHERE trial_id = ?", (trial,)).fetchone()
+        row = self.ledger._db.execute("SELECT canonical_research_spec_sha256 FROM trial_registrations WHERE trial_id = ?", (trial,)).fetchone()
         self._assert_tamper_blocks_integrity("research_specs", "UPDATE research_specs SET canonical_blob = ? WHERE canonical_research_spec_sha256 = ?", (b"{}", row["canonical_research_spec_sha256"]))
 
     def test_idempotency_mapping_mutation_detected(self):
@@ -332,11 +487,11 @@ class LedgerCase(unittest.TestCase):
     def test_historical_snapshot_tamper_fails_closed(self):
         # HISTORICAL_SNAPSHOT_TAMPER_FAIL_CLOSED
         trial = self.register("historic-tamper")
-        boundary = self.ledger.db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0]
+        boundary = self.ledger._db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0]
         self.ledger.start_execution("human:owner", trial)
         self._assert_tamper_blocks_integrity("trial_registrations", "UPDATE trial_registrations SET trial_family_id = ? WHERE trial_id = ?", ("tampered-family", trial))
         with self.assertRaises(LedgerError):
-            self.ledger.snapshot(as_of_ledger_sequence=boundary)
+            self.ledger.snapshot("human:owner", as_of_ledger_sequence=boundary)
 
     def test_initialization_is_atomic_and_rejects_second_init(self):
         self.assertTrue(self.ledger.verify_global_chain())
@@ -354,7 +509,7 @@ class LedgerCase(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.register("generator:one", "other", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs=inputs)
         self.ledger.set_actor_status("human:owner", "generator:one", "ACTOR_SUSPENDED")
-        self.assertGreater(self.ledger.db.execute("SELECT COUNT(*) FROM capability_events").fetchone()[0], 1)
+        self.assertGreater(self.ledger._db.execute("SELECT COUNT(*) FROM capability_events").fetchone()[0], 1)
 
     def test_family_identity_and_retired_policy(self):
         family_inputs = {"dataset_snapshot_id": "a", "universe_id": "u", "label_spec_hash": "b", "feature_set_hash": "f", "research_objective": "o", "evaluation_window_policy": "w", "model": "ridge", "hyperparameter": "1"}
@@ -408,36 +563,36 @@ class LedgerCase(unittest.TestCase):
     def test_protocol_violation_does_not_create_trial(self):
         violation = self.ledger.record_protocol_violation("human:owner", "unregistered result", "external://opaque")
         self.assertTrue(violation)
-        self.assertEqual(0, self.ledger.db.execute("SELECT COUNT(*) FROM trial_registrations").fetchone()[0])
+        self.assertEqual(0, self.ledger._db.execute("SELECT COUNT(*) FROM trial_registrations").fetchone()[0])
 
     def test_all_authoritative_rows_reject_update_and_delete(self):
         self.register()
         for table in self.ledger._IMMUTABLE_TABLES:
-            triggers = self.ledger.db.execute(
+            triggers = self.ledger._db.execute(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name IN (?, ?)",
                 (f"immutable_{table}_update", f"immutable_{table}_delete"),
             ).fetchone()[0]
             self.assertEqual(2, triggers, table)
         for table in ("schema_metadata", "actor_identities", "research_specs", "trial_registrations", "registration_idempotency", "trial_events"):
             with self.assertRaises(sqlite3.DatabaseError, msg=table):
-                self.ledger.db.execute(f"DELETE FROM {table}")
+                self.ledger._db.execute(f"DELETE FROM {table}")
 
     def test_foreign_keys_prevent_orphans(self):
         with self.assertRaises(sqlite3.IntegrityError):
-            self.ledger.db.execute("INSERT INTO execution_records VALUES ('orphan', 'missing', 'NORMAL', NULL, 't', 'human:owner', 1)")
+            self.ledger._db.execute("INSERT INTO execution_records VALUES ('orphan', 'missing', 'NORMAL', NULL, 't', 'human:owner', 1)")
 
     def test_chain_anchor_snapshot_backup_and_clean_reopen(self):
         self.register()
-        snapshot = self.ledger.snapshot()
-        self.assertEqual(snapshot.as_of_ledger_sequence, self.ledger.db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0])
-        self.assertEqual(snapshot.content_hash, self.ledger.snapshot().content_hash)
+        snapshot = self.ledger.snapshot("human:owner")
+        self.assertEqual(snapshot.as_of_ledger_sequence, self.ledger._db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0])
+        self.assertEqual(snapshot.content_hash, self.ledger.snapshot("human:owner").content_hash)
         anchor = self.ledger.create_anchor("human:owner")
         self.assertTrue(self.ledger.verify_anchor(anchor))
         backup_path = os.path.join(self.temp.name, "backup.db")
         backup(self.ledger, backup_path)
         self.assertTrue(verify_restored_backup(backup_path, snapshot, anchor))
         self.ledger.close()
-        self.ledger = Ledger(self.path)
+        self.ledger = Ledger(self.path, authenticator=DeterministicFakeAuthenticator({"human:owner": "human:owner"}))
         self.assertTrue(self.ledger.verify_global_chain(anchor))
 
     def test_anchor_rejects_payload_mutation_and_tail_truncation(self):
@@ -446,14 +601,14 @@ class LedgerCase(unittest.TestCase):
         altered = asdict(anchor)
         altered["payload"]["ledger_id"] = "wrong"
         self.assertFalse(self.ledger.verify_anchor(altered))
-        self.ledger.db.execute("DROP TRIGGER immutable_trial_events_delete")
-        self.ledger.db.execute("DELETE FROM trial_events WHERE ledger_sequence = (SELECT MAX(ledger_sequence) FROM trial_events)")
+        self.ledger._db.execute("DROP TRIGGER immutable_trial_events_delete")
+        self.ledger._db.execute("DELETE FROM trial_events WHERE ledger_sequence = (SELECT MAX(ledger_sequence) FROM trial_events)")
         self.assertFalse(self.ledger.verify_global_chain(anchor))
 
     def test_chain_detects_privileged_payload_tamper(self):
         self.register()
-        self.ledger.db.execute("DROP TRIGGER immutable_trial_events_update")
-        self.ledger.db.execute("UPDATE trial_events SET payload_json = '{}' WHERE ledger_sequence = 1")
+        self.ledger._db.execute("DROP TRIGGER immutable_trial_events_update")
+        self.ledger._db.execute("UPDATE trial_events SET payload_json = '{}' WHERE ledger_sequence = 1")
         self.assertFalse(self.ledger.verify_global_chain())
 
     def test_real_concurrent_distinct_and_duplicate_registration(self):
@@ -475,8 +630,8 @@ class LedgerCase(unittest.TestCase):
 
     def test_historical_snapshot_excludes_future_facts_and_is_stable(self):
         trial = self.register("historic")
-        boundary = self.ledger.db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0]
-        before = self.ledger.snapshot(as_of_ledger_sequence=boundary)
+        boundary = self.ledger._db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0]
+        before = self.ledger.snapshot("human:owner", as_of_ledger_sequence=boundary)
         execution = self.ledger.start_execution("human:owner", trial)
         self.ledger.complete_execution("human:owner", execution)
         self.ledger.attach_result("human:owner", trial, execution, "metric", "external://result")
@@ -486,7 +641,7 @@ class LedgerCase(unittest.TestCase):
         self.ledger.start_execution("human:owner", trial, execution_kind="REPRODUCIBILITY_REPLAY", original_execution_id=execution, replay_identity=replay_identity)
         self.ledger.record_protocol_violation("human:owner", "future violation")
         self.register("future", hypothesis_id="future")
-        after = self.ledger.snapshot(as_of_ledger_sequence=boundary)
+        after = self.ledger.snapshot("human:owner", as_of_ledger_sequence=boundary)
         self.assertEqual(before.evidence, after.evidence)
         self.assertEqual(before.content_hash, after.content_hash)
         evidence = parse_json_strict(before.evidence.decode())
@@ -505,9 +660,9 @@ class LedgerCase(unittest.TestCase):
                 self.temp.cleanup()
                 self.setUp()
             execution = self.ledger.start_execution("human:owner", self.register())
-            sequence = self.ledger.db.execute("SELECT ledger_sequence FROM trial_events WHERE execution_id = ?", (execution,)).fetchone()[0]
-            self.ledger.db.execute("DROP TRIGGER IF EXISTS immutable_trial_events_update")
-            self.ledger.db.execute(f"UPDATE trial_events SET {field} = ? WHERE ledger_sequence = ?", (value, sequence))
+            sequence = self.ledger._db.execute("SELECT ledger_sequence FROM trial_events WHERE execution_id = ?", (execution,)).fetchone()[0]
+            self.ledger._db.execute("DROP TRIGGER IF EXISTS immutable_trial_events_update")
+            self.ledger._db.execute(f"UPDATE trial_events SET {field} = ? WHERE ledger_sequence = ?", (value, sequence))
             self.assertFalse(self.ledger.verify_global_chain(), field)
 
     def test_unchained_lifecycle_projection_is_detected(self):
@@ -518,12 +673,12 @@ class LedgerCase(unittest.TestCase):
         )
         for table, statement in constructors:
             with self.subTest(table=table):
-                self.ledger.db.execute(f"DROP TRIGGER immutable_{table}_update")
-                self.ledger.db.execute(f"DROP TRIGGER immutable_{table}_delete")
-                self.ledger.db.execute(statement)
+                self.ledger._db.execute(f"DROP TRIGGER immutable_{table}_update")
+                self.ledger._db.execute(f"DROP TRIGGER immutable_{table}_delete")
+                self.ledger._db.execute(statement)
                 self.assertFalse(self.ledger.verify_global_chain())
                 with self.assertRaises(LedgerError):
-                    self.ledger.snapshot()
+                    self.ledger.snapshot("human:owner")
                 self.ledger.close()
                 self.temp.cleanup()
                 self.setUp()
@@ -550,8 +705,8 @@ class LedgerCase(unittest.TestCase):
             write_anchor_artifact(artifact, anchor)
             loaded = load_anchor_artifact(artifact)
             self.assertTrue(self.ledger.verify_anchor(loaded))
-            self.ledger.db.execute("DROP TRIGGER immutable_trial_events_delete")
-            self.ledger.db.execute("DELETE FROM trial_events WHERE ledger_sequence = (SELECT MAX(ledger_sequence) FROM trial_events)")
+            self.ledger._db.execute("DROP TRIGGER immutable_trial_events_delete")
+            self.ledger._db.execute("DELETE FROM trial_events WHERE ledger_sequence = (SELECT MAX(ledger_sequence) FROM trial_events)")
             self.assertFalse(self.ledger.verify_anchor(loaded))
 
 
@@ -615,6 +770,7 @@ class FrozenVectorTests(unittest.TestCase):
             ledger = Ledger(
                 Path(directory) / "fixed.db", clock=lambda: "2026-09-10T12:34:56.000000Z",
                 id_factory=lambda: next(identifiers), ledger_id_factory=lambda: "ledger-fixed",
+                authenticator=DeterministicFakeAuthenticator({"human:owner": "human:owner"}),
             )
             try:
                 ledger.init()
@@ -622,8 +778,8 @@ class FrozenVectorTests(unittest.TestCase):
                 ledger.activate_family_policy("human:owner", P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1")
                 ledger.register("human:owner", "fixed-key", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
                                 family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"})
-                snapshot = ledger.snapshot()
-                self.assertEqual(snapshot.content_hash, "0ef2d4f8bcba7f1154666e4a7b3281c39cd6f998c37667bdf0468696e5457eb2")
+                snapshot = ledger.snapshot("human:owner")
+                self.assertEqual(snapshot.content_hash, "0373ed43143468884390c492ca55de94334109fd80482a2dced5057b6f0cda9e")
             finally:
                 ledger.close()
 

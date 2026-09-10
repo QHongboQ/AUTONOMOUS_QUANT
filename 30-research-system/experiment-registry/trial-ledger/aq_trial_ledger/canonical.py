@@ -24,7 +24,13 @@ _FORBIDDEN_RESEARCH_FIELDS = {
     "sealed_oos_data", "sealed_oos_payload", "account_data",
     "broker_credentials",
 }
-_SEMANTIC_TEXT_FIELDS = {"hypothesis_text", "research_objective", "semantic_text"}
+# V1 semantic normalization is intentionally schema-path scoped.  A matching
+# key inside an opaque extension is not silently granted semantic behavior.
+_SEMANTIC_TEXT_PATHS = {
+    ("hypothesis_text",),
+    ("research_objective",),
+    ("semantic_text",),
+}
 _TOP_LEVEL_FIELDS = {
     "generator", "generator_version", "hypothesis_id", "hypothesis_hash",
     "hypothesis_text", "factor_spec_hash", "model_spec_hash",
@@ -133,8 +139,6 @@ def _validate_research_spec(spec: Mapping[str, Any]) -> None:
 
 
 def _normalise(value: Any, path: tuple[str, ...] = ()) -> Any:
-    field = path[-1] if path else ""
-    dotted = ".".join(path)
     if isinstance(value, Mapping):
         if any(not isinstance(key, str) for key in value):
             raise CanonicalizationError("non-string object key")
@@ -159,7 +163,7 @@ def _normalise(value: Any, path: tuple[str, ...] = ()) -> Any:
         raise CanonicalizationError("native float is not a ResearchSpec identity value")
     if isinstance(value, str):
         value = _validate_scalar_string(value)
-        return unicodedata.normalize("NFC", value) if field in _SEMANTIC_TEXT_FIELDS else value
+        return unicodedata.normalize("NFC", value) if path in _SEMANTIC_TEXT_PATHS else value
     return value
 
 
