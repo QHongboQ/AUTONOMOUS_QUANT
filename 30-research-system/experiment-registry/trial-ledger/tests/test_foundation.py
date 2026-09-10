@@ -292,9 +292,14 @@ class LedgerCase(unittest.TestCase):
         self.assertEqual([], evidence["protocol_violations"])
 
     def test_event_linkage_field_tampering_is_detected(self):
-        execution = self.ledger.start_execution("human:owner", self.register())
-        sequence = self.ledger.db.execute("SELECT ledger_sequence FROM trial_events WHERE execution_id = ?", (execution,)).fetchone()[0]
-        for field, value in (("execution_id", None), ("occurred_at", "2099-01-01T00:00:00.000000Z"), ("event_id", "bad-event")):
+        mutations = (("execution_id", None), ("occurred_at", "2099-01-01T00:00:00.000000Z"), ("event_id", "bad-event"))
+        for index, (field, value) in enumerate(mutations):
+            if index:
+                self.ledger.close()
+                self.temp.cleanup()
+                self.setUp()
+            execution = self.ledger.start_execution("human:owner", self.register())
+            sequence = self.ledger.db.execute("SELECT ledger_sequence FROM trial_events WHERE execution_id = ?", (execution,)).fetchone()[0]
             self.ledger.db.execute("DROP TRIGGER IF EXISTS immutable_trial_events_update")
             self.ledger.db.execute(f"UPDATE trial_events SET {field} = ? WHERE ledger_sequence = ?", (value, sequence))
             self.assertFalse(self.ledger.verify_global_chain(), field)
@@ -370,7 +375,9 @@ class FrozenVectorTests(unittest.TestCase):
         self.assertEqual(__import__("hashlib").sha256(canonicalize_anchor_payload(payload)).hexdigest(), "e68a6d9793db3d52c3270ff4cfb820ab6d5af580b31881a30a3160fafd3c5f07")
 
     def test_deterministic_snapshot_vector_is_frozen(self):
-        with tempfile.TemporaryDirectory(dir=Path(__file__).parent / ".temporary-ledger-tests") as directory:
+        temporary_root = Path(__file__).parent / ".temporary-ledger-tests"
+        temporary_root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as directory:
             identifiers = iter(f"id-{number}" for number in range(100))
             ledger = Ledger(
                 Path(directory) / "fixed.db", clock=lambda: "2026-09-10T12:34:56.000000Z",
