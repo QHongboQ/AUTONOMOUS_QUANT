@@ -63,6 +63,8 @@ No remaining **interface-schema** blocker. RD-Agent's Qlib runtime remains a sep
 
 `P0_FUNCTIONAL_POC_DESIGN`: design separately authorized, bounded POCs for the co-located Linux Qlib/RD-Agent runtime and the execution planner. No Robinhood account-data or order-tool call is authorized by this schema audit.
 
+### Historical status at quick-wiring-audit completion
+
 ```text
 P0 = IN_PROGRESS
 P0_INTERFACE_AUDIT = COMPLETE
