@@ -86,3 +86,53 @@ CURRENT_NEXT = P0_POC_A_BLOCKER_RESOLUTION
 P0 = IN_PROGRESS
 P1 = NOT_STARTED
 ```
+
+## PyArrow blocker resolution 001 — blocked by absent environment pip
+
+**Task:** `AUTONOMOUS-QUANT-P0-POC-A-PYARROW-BLOCKER-RESOLUTION-001`
+
+The initial missing Windows Parquet-writer blocker is preserved above as historical evidence. This resolution task authorized exactly one package change: `pyarrow` in the existing isolated `D:\AQ_ENVS\openbb` environment, with no global installation or other package change.
+
+### Required pre-install record
+
+| Item | Observed value |
+|---|---|
+| OpenBB Python | `3.12.14` |
+| pandas | `3.0.5` |
+| OpenBB | `4.7.2` |
+| `openbb-yfinance` | `1.6.3` |
+| `pyarrow` before installation | absent |
+| Existing `pip` module | absent |
+| Existing `pip*` executable in `D:\AQ_ENVS\openbb\Scripts` | absent |
+| Pre-install package snapshot | `D:\AQ_DATA\poc\poc-a-openbb-qlib\openbb-pre-pyarrow-freeze.txt` |
+| Snapshot SHA-256 | `2296e252d3af4ded3cda3d8627129c8bcd69e01ed59c1fd0fb1de5b023d3038b` |
+
+The snapshot was produced with Python's read-only `importlib.metadata` because the environment has no pip module. The attempted required preflight command, `D:\AQ_ENVS\openbb\Scripts\python.exe -m pip freeze --all`, failed with `No module named pip`.
+
+### Fail-closed result
+
+`D:\AQ_ENVS\openbb\Scripts\python.exe -m pip install pyarrow` cannot be performed because the required isolated environment lacks pip. Bootstrapping pip with `ensurepip`, using another installer, or using a global pip would add a second unapproved package-management change and is outside this task's authority. No installation was attempted after this preflight failure.
+
+The POC-A provider call count remains zero. No OpenBB/yfinance data request, Parquet roundtrip, cross-runtime hash check, or Linux Qlib ingestion was attempted. The POC evidence directory now contains only the pre-install package snapshot; no `market_data.parquet` or market-data sidecar exists.
+
+```text
+PYARROW_INSTALL = BLOCKED (isolated OpenBB environment has no pip)
+PYARROW_VERSION = NOT_INSTALLED
+PARQUET_ROUNDTRIP = NOT_ATTEMPTED
+PIP_CHECK = NOT_AVAILABLE (pip module absent)
+OPENBB_PROVIDER_CALL_COUNT = 0
+MARKET_DATA_DOWNLOADED = NO
+PACKAGES_CHANGED = NO
+OTHER_PACKAGES_CHANGED = NO
+OPENBB_VERSION_CHANGED = NO
+QLIB_CHANGED = NO
+RDAGENT_CHANGED = NO
+LLM_CALLS = NONE
+ROBINHOOD_TOOLS_INVOKED = NONE
+ACCOUNT_DATA_ACCESSED = NO
+TRADING_ACTIONS = NONE
+POC_A = BLOCKED (OpenBB environment pip prerequisite absent)
+CURRENT_NEXT = P0_POC_A_BLOCKER_RESOLUTION
+P0 = IN_PROGRESS
+P1 = NOT_STARTED
+```
