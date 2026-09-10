@@ -64,7 +64,7 @@ The established Linux consumer authority was inspected read-only:
 
 The Linux runtime is ready to consume a valid Parquet or pandas-compatible normalized artifact, but ingestion was not attempted because no compliant Windows artifact exists.
 
-## Final state
+## Historical initial state
 
 ```text
 OPENBB_PROVIDER_CALL_COUNT = 0
@@ -87,7 +87,7 @@ P0 = IN_PROGRESS
 P1 = NOT_STARTED
 ```
 
-## PyArrow blocker resolution 001 — blocked by absent environment pip
+## Historical PyArrow blocker resolution 001 — blocked by absent environment pip
 
 **Task:** `AUTONOMOUS-QUANT-P0-POC-A-PYARROW-BLOCKER-RESOLUTION-001`
 
@@ -132,6 +132,77 @@ ROBINHOOD_TOOLS_INVOKED = NONE
 ACCOUNT_DATA_ACCESSED = NO
 TRADING_ACTIONS = NONE
 POC_A = BLOCKED (OpenBB environment pip prerequisite absent)
+CURRENT_NEXT = P0_POC_A_BLOCKER_RESOLUTION
+P0 = IN_PROGRESS
+P1 = NOT_STARTED
+```
+
+## UV/PyArrow blocker resolution 002 — new OpenBB result-schema blocker
+
+**Task:** `AUTONOMOUS-QUANT-P0-POC-A-UV-PYARROW-BLOCKER-RESOLUTION-001`
+
+### Authorized package resolution
+
+The existing system `uv 0.12.9` targeted the exact existing interpreter `D:\AQ_ENVS\openbb\Scripts\python.exe` (Python `3.12.14`) without installing pip or recreating the environment. The authorized command resolved and installed exactly one package:
+
+```text
+uv pip install --python "D:\AQ_ENVS\openbb\Scripts\python.exe" pyarrow
+pyarrow==25.0.1
+```
+
+OpenBB remained `4.7.2`, pandas remained `3.0.5`, and pip remained absent. A disposable pandas `to_parquet` → `read_parquet` exact roundtrip passed. `uv pip check --python "D:\AQ_ENVS\openbb\Scripts\python.exe"` checked 100 packages and reported all compatible. The post-install snapshot is `openbb-post-pyarrow-freeze.txt` (SHA-256 `f14cbfd144b4c2d3c218d859a60efee6e6a38e99de4fba60c4b22e11a98e61fc`); a normalized-name comparison with the pre-install snapshot found only `pyarrow` added, with no removals or version changes.
+
+### One bounded POC-A OpenBB attempt
+
+After the Parquet precondition passed, the task made exactly two OpenBB calls in the verified isolated home: one yfinance multi-symbol equity profile call to establish `USD` for AAPL, MSFT, and SPY, and one yfinance multi-symbol historical-price call with these explicit parameters:
+
+```text
+symbol = AAPL,MSFT,SPY
+start_date = 2026-08-12
+end_date = 2026-09-10
+provider = yfinance
+interval = 1d
+adjustment = splits_only
+include_actions = true
+```
+
+The profile currency assertion passed. The historical call returned an `OBBject.to_df()` frame whose observed columns were exactly:
+
+```text
+open, high, low, close, volume, dividend, symbol
+```
+
+The expected `date` column was absent. The deterministic normalization explicitly requires the source date/session field before it can derive the required naive `(datetime, instrument)` index. The assertion failed before any `market_data.parquet` or `market_data.json` write. This is a new runtime result-schema blocker. Per task authority, no retry, index-recovery patch, provider switch, raw-yfinance fallback, or other repair was attempted.
+
+The evidence directory contains only the pre- and post-install package snapshots; it contains no normalized market-data artifact. Linux Qlib ingestion was not attempted.
+
+```text
+UV_VERSION = 0.12.9
+PYARROW_INSTALL = PASS (only pyarrow 25.0.1)
+PARQUET_ROUNDTRIP = PASS
+UV_PIP_CHECK = PASS
+OPENBB_PROVIDER_CALL_COUNT = 2
+OPENBB_PROVIDER = yfinance
+PROFILE_CURRENCY_ASSERTION = PASS (USD for AAPL, MSFT, SPY)
+HISTORICAL_REQUEST = EXECUTED_ONCE
+HISTORICAL_RESULT_SCHEMA = BLOCKED (date column absent)
+MARKET_DATA_DOWNLOADED = YES (bounded provider response; no normalized artifact retained)
+WINDOWS_ARTIFACT = NOT_CREATED
+LINUX_ARTIFACT = NOT_CREATED
+CROSS_RUNTIME_HASH_MATCH = NOT_APPLICABLE
+QLIB_INGESTION = NOT_ATTEMPTED
+PACKAGES_CHANGED = pyarrow==25.0.1
+OTHER_PACKAGES_CHANGED = NO
+OPENBB_VERSION_CHANGED = NO
+PANDAS_VERSION_CHANGED = NO
+QLIB_CHANGED = NO
+RDAGENT_CHANGED = NO
+LLM_CALLS = NONE
+ROBINHOOD_TOOLS_INVOKED = NONE
+ACCOUNT_DATA_ACCESSED = NO
+TRADING_ACTIONS = NONE
+POC_A = BLOCKED (OpenBB historical result date/session schema)
+P0_POC_A_OPENBB_LINUX_QLIB_HANDOFF = BLOCKED
 CURRENT_NEXT = P0_POC_A_BLOCKER_RESOLUTION
 P0 = IN_PROGRESS
 P1 = NOT_STARTED
