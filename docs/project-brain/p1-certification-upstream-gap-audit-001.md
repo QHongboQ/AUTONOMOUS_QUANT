@@ -1,6 +1,6 @@
 # P1 Certification Upstream Gap Audit 001
 
-**Task:** `AUTONOMOUS-QUANT-P1-CERTIFICATION-UPSTREAM-GAP-AUDIT-001`  
+**Task:** `AUTONOMOUS-QUANT-P1-CERTIFICATION-UPSTREAM-GAP-AUDIT-001`
 **Scope:** bounded upstream audit only, performed 2026-09-10. This is a P1 entry prerequisite and makes no implementation, installation, model-training, data-provider, Qlib, RD-Agent, broker, account, or trading authorization.
 
 ## Decision boundary
