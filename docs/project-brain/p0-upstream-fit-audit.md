@@ -524,57 +524,37 @@ Expected custom ownership should remain thin:
 
 ---
 
-## 15. Revised P0 local-POC order
+## 15. Authoritative P0 sequence
 
-To minimize local pollution and disk usage, do **not** install everything at once.
+```text
+P0 desk audit
+    ↓
+P0 core/challenger deployment staging
+    ↓
+P0 Interface Audit
+    ↓
+functional POCs against the selected interfaces
+    ↓
+final upstream KEEP / CHALLENGER / DEFER / REJECT decision
+```
 
-### P0-A — Qlib POC
+Deployment staging establishes isolated, removable local artifacts where appropriate, records exact versions and blockers, and does not itself establish functional or interface fitness. A candidate does **not** imply mandatory deployment.
 
-Goal: prove core US-equity research workflow.
+### Current deployment tiers
 
-Exit evidence:
-- clean isolated environment;
-- one US dataset path;
-- one Alpha158-style workflow;
-- Linear + LightGBM run;
-- reproducible report;
-- disk/RAM/time measured.
+| Tier | Candidates |
+|---|---|
+| Core | Qlib; RD-Agent; skfolio; OpenBB; Robinhood MCP |
+| Challenger / fallback | FinRL-X; LEAN |
+| Deferred | TradingAgents; FinGPT; FinBERT; AlphaGen |
 
-### P0-B — RD-Agent(Q) POC
+### P0 Interface Audit
 
-Only after Qlib passes.
+The next P0 stage defines and verifies the selected public interfaces and replacement boundaries. It does not start functional POCs, P1 research, broker authentication, or trading.
 
-Goal: prove autonomous research can operate against the selected research substrate without owning production.
+### Functional POCs
 
-### P0-C — FinRL-X challenger POC
-
-Run independently, not merged into the Qlib environment.
-
-Goal: determine whether a single stack can replace enough components to justify switching architecture.
-
-### P0-D — Robinhood Trading MCP POC
-
-Read-only first.
-
-Then paper/sandbox-like safety path if available; no unrestricted live capital.
-
-Verify account read, quote read, order preview, order lifecycle and reconciliation semantics.
-
-### P0-E — LEAN POC
-
-Run only if needed as alternate/reference execution after Robinhood MCP findings.
-
-### P0-F — OpenBB/provider POC
-
-Verify gateway and provider quality. Do not download large historical datasets until provider choice is made.
-
-### Deferred to later phases
-
-- TradingAgents
-- FinGPT
-- FinBERT
-- AlphaGen
-- advanced portfolio models
+After Interface Audit, functional POCs test the selected interfaces under their own bounded evidence plans. Functional POC results, rather than deployment order, inform the final KEEP / CHALLENGER / DEFER / REJECT decision.
 
 ---
 
@@ -602,13 +582,14 @@ ORDERBOOK_RECORDER          = REJECT / OUT OF SCOPE
 
 ```text
 P0_REMOTE_DESK_AUDIT = COMPLETE
-P0_LOCAL_POC = NOT STARTED
+P0 = IN_PROGRESS
+P0_DEPLOYMENT_STAGING = COMPLETE_WITH_DOCUMENTED_BLOCKERS
+P0_INTERFACE_AUDIT = NOT_STARTED
+P0_FUNCTIONAL_POC = NOT STARTED
 PRODUCTION_TRADING = NOT AUTHORIZED
 LIVE_CAPITAL = NOT AUTHORIZED
 ```
 
 ### Current Next
 
-**P0-A — Qlib isolated local POC design and execution.**
-
-No other upstream should be installed locally before P0-A evidence is reviewed.
+**P0 Interface Audit.**
