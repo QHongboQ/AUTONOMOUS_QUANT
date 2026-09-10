@@ -1,6 +1,6 @@
 # P0 POC-D TargetPortfolio to ExecutionPlan 001
 
-**Task:** `AUTONOMOUS-QUANT-P0-POC-D-TARGETPORTFOLIO-EXECUTIONPLAN-001`  
+**Task:** `AUTONOMOUS-QUANT-P0-POC-D-TARGETPORTFOLIO-EXECUTIONPLAN-001`
 **Result:** `POC_D = PASS` — deterministic local planning and static schema compatibility validation only.
 
 ## Scope and lineage boundary
