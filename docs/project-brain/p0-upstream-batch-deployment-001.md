@@ -234,13 +234,15 @@ The active runtime is entirely in the Linux filesystem, not under `/mnt/c` or `/
 
 - Official user-package path used: `pip install rdagent` in the isolated CPython 3.11.16 environment.
 - Installed package: `rdagent 0.8.0`; `pip check` reported no broken requirements and `import rdagent` passed.
-- `rdagent --help` did **not** complete: the current package load raised `ImportError` for `MCPServerStreamableHTTP` from `pydantic_ai.mcp` with installed `pydantic-ai-slim 2.31.1`. No dependency pin, source edit, API key, LLM call, or execution scenario was attempted to repair or work around this upstream package-compatibility blocker.
+- `AUTONOMOUS-QUANT-P0-RDAGENT-DEPENDENCY-ALIGNMENT-001` read the checked-out source requirement `pydantic-ai-slim[mcp,openai,prefect]==1.66.0` and aligned only the isolated environment from `pydantic-ai-slim 2.31.1` to `1.66.0`. `rdagent --help` then passed (with a non-failing `fitz` deprecation warning). No source edit, API key, LLM call, or execution scenario was attempted.
 - The checked-out official documentation identifies Docker as the primary code-execution environment and documents Docker/Conda selection through `MODEL_COSTEER_ENV_TYPE` and `DS_CODER_COSTEER_ENV_TYPE`. Docker and Conda are not installed; no `.env` file, credentials, model call, Quant loop, factor generation, model training, dataset, or image pull was created or run.
 
 ```text
 RD_AGENT_WSL_RUNTIME = STAGED
 PACKAGE_INSTALL = PASS
-PACKAGE_HEALTH = PASS_IMPORT_ONLY_WITH_DOCUMENTED_CLI_COMPATIBILITY_BLOCKER
+PACKAGE_HEALTH = PASS
+PYDANTIC_AI_SLIM = 1.66.0 (ALIGNED_TO_CHECKED_OUT_UPSTREAM_REQUIREMENT)
+RDAGENT_CLI_HELP = PASS
 QUANT_EXECUTION_RUNTIME = DEFERRED_DOCKER_OR_CONDA
 DOCKER_INSTALLED = NO
 CONDA_INSTALLED = NO
