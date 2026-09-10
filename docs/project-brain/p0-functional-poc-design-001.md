@@ -49,11 +49,18 @@ The existing RD-Agent environment runs the control code only. `QlibCondaEnv` own
 
 After separate authorization to install Conda and provision only this environment, create a disposable 3-symbol, 20-session synthetic OHLCV fixture in the workspace. Use the RD-Agent `QlibCondaEnv` path directly (not an RD-Agent loop) to run one tiny Qlib `qrun` workflow with a fixed native factor/model configuration. It must produce `pred.pkl`, `label.pkl`, recorder metadata, and a short result summary. No LLM, hypothesis generation, search, training sweep, or downloaded Qlib dataset is allowed.
 
-Expected lineage is `conf.yaml`, fixture hash, Qlib/RD-Agent versions, command log, recorder reference, `pred.pkl`, `label.pkl`, `qlib_res.csv` and, if the upstream workspace template emits it, `ret.parquet`. `factor.py` and `model.py` are included only if the fixed fixture workflow needs them; they are never agent-generated in this POC.
+Expected lineage is `conf.yaml`, fixture hash, Qlib/RD-Agent versions, command log, recorder reference, `pred.pkl`, `label.pkl`, `qlib_res.csv` and, if the upstream workspace template emits it, `ret.parquet`. `factor.py` and `model.py` are included only if the fixed fixture workflow needs them; they are never agent-generated in this POC. The `ResearchArtifactManifest` also records the resolved Conda prefix and a complete package snapshot/freeze, including the exact resolved versions of upstream-unpinned CatBoost, XGBoost, Tables, and Torch.
 
-**PASS:** `QlibCondaEnv` prepares; the fixed `qrun` completes; expected artifacts are present and manifestable; RD-Agent and Qlib stay co-located.
+`QlibCondaEnv.prepare()` catches installation exceptions without re-raising, so its return is not provisioning evidence. **PASS** requires all of the following independent, fail-closed checks after `prepare()`:
 
-**FAIL:** Conda/QLib provision fails, the configuration requires a downloaded provider dataset, `qrun` fails, expected artifacts are missing, or any unapproved network/LLM action is attempted.
+1. `conda env list` contains exactly the intended `rdagent4qlib` environment and the resolved prefix is recorded.
+2. `conda run -n rdagent4qlib python --version` reports Python 3.10.
+3. `conda run -n rdagent4qlib python -c "import qlib"` succeeds.
+4. Installed Qlib provenance resolves to RD-Agent's pinned commit `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`.
+5. `conda run -n rdagent4qlib qrun --help` and `conda run -n rdagent4qlib pip check` both succeed.
+6. The fixed `qrun` completes; expected artifacts, package snapshot, and manifest are present; RD-Agent and Qlib remain co-located.
+
+**FAIL:** any independent verification fails, provenance cannot be resolved to the pinned commit, the configuration requires a downloaded provider dataset, `qrun` fails, expected artifacts are missing, or any unapproved network/LLM action is attempted.
 **Rollback:** stop the foreground command, preserve logs/manifest, remove only the named disposable workspace and the named `rdagent4qlib` environment after recording its resolved prefix. Do not touch `/home/zhou/AQ_ENVS/rdagent` or upstream source.
 
 ## 4. POC-A — Windows OpenBB to Linux Qlib
@@ -62,7 +69,7 @@ Expected lineage is `conf.yaml`, fixture hash, Qlib/RD-Agent versions, command l
 
 The installed Windows environment contains OpenBB `4.7.2` and `openbb-yfinance 1.6.3`. Its registered yfinance provider has `EquityHistorical` support, daily `1d` interval, `include_actions`, and declared `splits_only` / `splits_and_dividends` adjustment modes. It is the credential-free candidate for the future POC; no provider request was made in this task.
 
-The future POC obtains only AAPL, MSFT, and SPY daily bars for 20 completed US sessions, calls `OBBject.to_df()`, normalizes once on Windows, and writes one Parquet artifact plus sidecar metadata to `D:\AQ_DATA\poc\poc-a-openbb-qlib\market_data.parquet`. Linux reads exactly `/mnt/d/AQ_DATA/poc/poc-a-openbb-qlib/market_data.parquet`.
+The future POC obtains only AAPL, MSFT, and SPY daily bars for 20 completed US sessions with explicit yfinance request parameters `adjustment="splits_only"` and `include_actions=true`. It calls `OBBject.to_df()`, normalizes once on Windows, and writes one Parquet artifact plus sidecar metadata to `D:\AQ_DATA\poc\poc-a-openbb-qlib\market_data.parquet`. Linux reads exactly `/mnt/d/AQ_DATA/poc/poc-a-openbb-qlib/market_data.parquet`.
 
 OpenBB must run with an explicitly pre-existing isolated settings/cache home under `D:\AQ_CACHE\openbb-home`; the standard user-profile default is not an approved artifact location.
 
@@ -73,18 +80,18 @@ OpenBB must run with an explicitly pre-existing isolated settings/cache home und
 | `symbol` | uppercase canonical ticker: `AAPL`, `MSFT`, `SPY` |
 | `datetime` | timezone-aware source timestamp converted to `America/New_York`, then stored as the completed exchange **session date** with no intraday rows |
 | OHLCV | numeric `open`, `high`, `low`, `close`, non-negative `volume`; reject duplicate `(datetime, symbol)` |
-| adjusted close | preserve provider `close` as delivered and record `adjustment_policy`; do not silently substitute an adjusted series |
-| actions | retain split/dividend columns when returned; record whether actions were included |
+| adjusted close | request and require `adjustment="splits_only"`; preserve provider `close` as delivered and do not silently substitute an adjusted series |
+| actions | request and require `include_actions=true`; retain split/dividend columns when returned |
 | currency | `USD`, otherwise fail |
-| provenance | provider `yfinance`, OpenBB/version, request parameters, UTC retrieval timestamp, artifact SHA-256 |
+| provenance | provider `yfinance`, OpenBB/version, exact request `adjustment="splits_only"` and `include_actions=true`, demonstrated response semantics/metadata, UTC retrieval timestamp, artifact SHA-256 |
 
 The artifact uses a sorted pandas MultiIndex `(datetime, instrument)` where `datetime` is a naive session-date timestamp after the timezone/session conversion and `instrument` is the canonical symbol. Columns use Qlib-compatible field groups, at minimum `feature` (`$open`, `$high`, `$low`, `$close`, `$volume`) plus a separately declared label only when a later POC computes one.
 
 **Selected Qlib ingress: `StaticDataLoader` from normalized pandas/Parquet.** Qlib `0.9.7` accepts a pandas `DataFrame` or Parquet path directly. Native provider/storage conversion is deferred because it would build a warehouse rather than prove the final file handoff.
 
-**PASS:** one bounded, credential-free response normalizes to the stated schema; the hash/sidecar exists; Linux reads the same bytes; `StaticDataLoader` loads and filters all three instruments.
+**PASS:** one bounded, credential-free response normalizes to the stated schema; the hash/sidecar records the exact adjustment/action request and demonstrated response semantics; Linux reads the same bytes; `StaticDataLoader` loads and filters all three instruments.
 
-**FAIL:** unavailable provider, credentials required, missing/invalid fields, duplicate dates, non-USD data, unreadable Linux path, or any implicit adjustment ambiguity.
+**FAIL:** unavailable provider, credentials required, missing/invalid fields, duplicate dates, non-USD data, unreadable Linux path, or adjustment/action semantics that cannot be demonstrated from request/result metadata.
 **Rollback:** delete only `D:\AQ_DATA\poc\poc-a-openbb-qlib\` after preserving the failure metadata; no provider cache is promoted.
 
 ## 5. POC-C — Qlib to Certification to skfolio
@@ -126,7 +133,7 @@ This is deterministic local planning and schema validation only. It does not inv
 |---|---|
 | Account identifier | `RH_ACCOUNT_PLACEHOLDER` only |
 | Account equity | $1,000 |
-| Buying power | $650 |
+| Buying power | $750 |
 | Cash reserve | 10% ($100) |
 | Reference prices | AAPL $100; MSFT $200; SPY $500 |
 | Current positions | AAPL 1; MSFT 0; SPY 1 |
@@ -137,7 +144,7 @@ Target dollars are $400, $300, and $200; current dollars are $100, $0, and $500;
 ### Deterministic planner rules
 
 - Use `target_dollars = account_equity * target_weight`; current dollars use the synthetic reference price; delta determines side.
-- Reject a plan below a $5 absolute delta, a price older than five minutes, non-positive/unknown price, non-USD instrument, unsupported side/type/session, or insufficient buying power after reserve.
+- Reject a plan below a $5 absolute delta, a price older than five minutes, non-positive/unknown price, non-USD instrument, unsupported side/type/session, or insufficient buying power after reserve. Planned sell proceeds must not be counted as available buying power; only a later confirmed broker/account-state snapshot may increase spendable buying power.
 - Buy notional is allowed only for market/regular-hours orders. Fractional quantities are allowed only where the verified schema permits them; sell quantity is rounded down to six decimals and never exceeds the current position.
 - Canonicalize and sort the TargetPortfolio before hashing. A duplicate canonical target/state snapshot produces no new plan.
 - Generate `ref_id` as a deterministic UUIDv5 from the plan snapshot, symbol, side, and canonical order fields. Reuse that same UUID only for retrying that exact logical order; any material state/target change creates a new logical order and UUID.
