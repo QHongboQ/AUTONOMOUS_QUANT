@@ -1,6 +1,6 @@
 # P0 Upstream Batch Deployment 001
 
-> Status: **PAUSED PENDING QLIB P0-A EVIDENCE REVIEW**
+> Status: **CORE SET RECORDED WITH BLOCKERS AND DEFERRED CANDIDATES**
 >
 > Task: `AUTONOMOUS-QUANT-P0-UPSTREAM-BATCH-DEPLOYMENT-001`
 >
@@ -15,13 +15,13 @@
 - `AGENTS.md`: not present.
 - Read-first documents: `docs/project-brain/README.md` and `docs/project-brain/p0-upstream-fit-audit.md`.
 
-### Authoritative sequencing gate
+### Superseded sequencing note
 
 The Project Brain is authoritative and states in the current P0 local-POC order:
 
 > No other upstream should be installed locally before P0-A evidence is reviewed.
 
-This conflicts with the task's batch-deploy-all request. Per the task's own authority rule, the Brain takes precedence. This deployment therefore performed only the non-dataset, non-training Qlib deployment-health substep. The remaining candidates are deliberately not deployed until this evidence is reviewed. This is a safety/sequencing pause, not a failure of those upstreams.
+This was the initial sequencing constraint. On 2026-09-09, the owner explicitly superseded it for the deployment strategy, then instructed an immediate stop to all further installation or repair work. The current, authoritative deployment state is the addendum in section 9; earlier sections preserve the initial evidence rather than deleting it.
 
 ## 2. Machine preflight
 
@@ -43,7 +43,7 @@ This conflicts with the task's batch-deploy-all request. Per the task's own auth
 | WSL | unavailable; no distributions installed |
 | Docker | unavailable (`docker` not found) |
 
-## 3. Local layout and storage
+## 3. Initial local layout and storage snapshot
 
 All third-party content is outside the authoritative repository.
 
@@ -64,7 +64,7 @@ All third-party content is outside the authoritative repository.
 
 Qlib was validated against the [Microsoft Qlib repository](https://github.com/microsoft/qlib) and its current [installation guidance](https://github.com/microsoft/qlib/blob/main/README.md). The current project metadata declares Python `>=3.8`; the README documents Python 3.8 through 3.12 and both package and source installation paths. Python 3.12.14 was selected from an existing local uv interpreter.
 
-## 5. Deployment result matrix
+## 5. Initial deployment result matrix (superseded by section 9)
 
 | Upstream | Source | Environment | Install | Health | SHA/version | Disk | Classification |
 |---|---|---|---|---|---|---|---|
@@ -102,8 +102,58 @@ Qlib was validated against the [Microsoft Qlib repository](https://github.com/mi
 - No API keys, tokens, credentials, or secrets were requested or written.
 - No upstream tracked source was modified.
 
-## 8. Readiness and next gate
+## 8. Initial readiness and next-gate statement (superseded)
 
 Qlib's lightweight deployment health is ready for P0-A evidence review, with the source-build C++ compiler prerequisite documented. It is **not** a completed Qlib data/workflow POC and does not authorize P1.
 
-The next authorized step is user/owner review of this Qlib evidence and an explicit update or waiver of the Project Brain's Qlib-first gate before deploying RD-Agent, skfolio, OpenBB, FinRL-X, LEAN, Robinhood MCP, TradingAgents, FinGPT, FinBERT, or AlphaGen. P0 Interface Audit remains **NOT STARTED**.
+The owner subsequently waived the Qlib-first deployment sequence, then stopped all further installation and repair work. P0 Interface Audit remains **NOT STARTED**.
+
+## 9. Strategy-update addendum — exact state at stop
+
+### Current upstream tiers
+
+| Tier | Candidates |
+|---|---|
+| Core | Qlib, RD-Agent, skfolio, OpenBB, Robinhood MCP |
+| Challenger / fallback | FinRL-X, LEAN |
+| Deferred | TradingAgents, FinGPT, FinBERT, AlphaGen |
+
+### Exact local disk state
+
+| Path | Size |
+|---|---:|
+| `D:\AQ_UPSTREAM` | 760,882,712 B |
+| `D:\AQ_ENVS` | 2,384,160,172 B |
+| `D:\AQ_DATA` | empty |
+| `D:\AQ_CACHE` | 2,006,596,623 B |
+| `D:\AQ_CACHE\uv` | 2,006,596,519 B |
+| `D:\AQ_CACHE\huggingface` | empty |
+| `D:\AQ_CACHE\openbb-home` | 104 B |
+| D: free space | 272.57 GiB (292,667,248,640 B) |
+
+`D:\AQ_CACHE\openbb-home` contains only OpenBB's non-secret local settings. No model weights or datasets were downloaded.
+
+### Exact source and environment state
+
+| Upstream | Tier | Source state | Environment state | Health / blocker | Classification |
+|---|---|---|---|---|---|
+| Qlib | Core | `main` `79633dd9506ea689e5400dea0197717b5b3d74b7`; 19,497,995 B | `D:\AQ_ENVS\qlib`, Python 3.12.14, 761,540,605 B | `pyqlib 0.9.7`; import and CLI help pass. Source build requires C++ Build Tools. | PASS_WITH_WARNING |
+| RD-Agent | Core | `main` `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd`; 24,266,102 B | none | Official Linux/Docker requirement recorded. No WSL, Docker, install, or repair attempted. | BLOCKED_PLATFORM_PREREQUISITE |
+| skfolio | Core | package-only | `D:\AQ_ENVS\skfolio`, Python 3.12.14, 268,156,796 B | `skfolio 1.0.6`; WalkForward, CombinatorialPurgedCV, and MeanRisk imports pass. | PASS |
+| OpenBB | Core | package-only | `D:\AQ_ENVS\openbb`, Python 3.12.14, 196,714,954 B | `openbb 4.7.2`; `from openbb import obb` passes with isolated settings; no provider credentials. | PASS_WITH_WARNING |
+| Robinhood MCP | Core | remote connector only | none | Official endpoint identified; no connector added, authentication, account access, or order action. | MANUAL_AUTH_REQUIRED |
+| FinRL-X | Challenger | `master` `e65d6f0483ead7d2ef4a5fc940cdf960392a25c1`; 138,977,891 B | `D:\AQ_ENVS\finrlx`, Python 3.12.14, 551,702 B | Source install resolver found declared `finnhub>=2.4.19` unsatisfiable. No repair attempted. | UPSTREAM_BROKEN |
+| LEAN | Challenger | `master` `01215376568960c912c1296de26b5a8005d6a525`; 531,493,516 B | none | No .NET SDK and no Docker. No installation or repair attempted. | BLOCKED_PLATFORM_PREREQUISITE |
+| TradingAgents | Deferred | `main` `be952b8eccb49720509af544c6675233bc1f10d0`; 9,013,510 B | `D:\AQ_ENVS\tradingagents`, Python 3.13.15, 226,503,862 B | Installed before deferral; import and CLI help pass. No LLM/data API call. | DEFERRED_BY_STRATEGY |
+| FinGPT | Deferred | `master` `781a7c020da977092f2f2c4916024a412c5e3801`; 36,202,502 B | `D:\AQ_ENVS\fingpt`, Python 3.11.16, 929,477,285 B | Installed before deferral; package, Transformers, and CPU PyTorch imports pass. No model or inference run. | DEFERRED_LARGE_ARTIFACT |
+| FinBERT | Deferred | `master` `44995e0c5870c4ab37a189d756550654ae87cdf0`; 197,891 B | none | Official environment locks Python 3.7; no supported local runtime. No installation or repair attempted. | DEFERRED_BY_STRATEGY |
+| AlphaGen | Deferred | `master` `259687e8f316994426416c530a94842a2fe6405e`; 1,233,305 B | `D:\AQ_ENVS\alphagen`, Python 3.8.20, 1,214,968 B | Environment and non-writing syntax scan completed before deferral. Locked requirements are unsatisfiable: stable-baselines3 2.0.0 requires NumPy >=1.21 while source pins 1.20.1. No repair attempted. | DEFERRED_BY_STRATEGY |
+
+### Created directories and safety state
+
+- Source clones present: `qlib`, `rd-agent`, `finrl-x`, `lean`, `tradingagents`, `fingpt`, `finbert`, `alphagen` under `D:\AQ_UPSTREAM`.
+- Environments present: `qlib`, `skfolio`, `openbb`, `finrlx`, `tradingagents`, `fingpt`, `alphagen` under `D:\AQ_ENVS`.
+- No source checkout exists for package-distributed skfolio or OpenBB; Robinhood MCP has no local-source requirement.
+- All existing upstream tracked worktrees are clean. No created source clone or environment was deleted.
+- No further installation or repair work occurred after the stop instruction.
+- Interface Audit and P1 remain **NOT STARTED**. No services, scheduled tasks, startup entries, datasets, model weights, credentials, broker authentication, paper trading, or live trading were created or performed.
