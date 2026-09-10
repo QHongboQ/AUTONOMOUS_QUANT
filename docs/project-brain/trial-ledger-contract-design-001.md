@@ -27,6 +27,10 @@ The Trial Ledger is the project-owned, authoritative record of research attempt 
 TRIAL_LEDGER_OWNER = OUR_CODE
 TRIAL_LEDGER_ROLE = authoritative attempt and selection history
 CERTIFICATION_ROLE = read-only policy consumer and decision authority
+DSR_DENOMINATOR_OWNER = CERTIFICATION_POLICY / OUR_CODE
+PBO_SELECTION_SET_OWNER = CERTIFICATION_POLICY / OUR_CODE
+SPA_MODEL_SET_OWNER = CERTIFICATION_POLICY / OUR_CODE
+PROMOTION_AUTHORITY = CERTIFICATION / OUR_CODE
 ```
 
 The ledger is not a Qlib, RD-Agent, future AlphaGPT, arch, skfolio, or MLflow subsystem. Those systems are clients or evidence producers. Neither a research generator nor an upstream package receives authority to delete history, rewrite a frozen specification, reduce attempted/evaluated history, choose Certification's statistical denominator, redefine a favorable trial family after feedback, or promote a candidate.
@@ -50,7 +54,7 @@ The ledger holds durable metadata and immutable references. Artifact deletion th
 
 | Actor | Allowed through the public contract | Prohibited through the public contract |
 |---|---|---|
-| Research generator (Qlib, RD-Agent, future AlphaGPT, or human tool) | request registration; append allowed lifecycle events; attach references | mutate a frozen TrialSpec; remove history; choose a Certification denominator; promote |
+| Research generator (Qlib, RD-Agent, future AlphaGPT, or human tool) | request registration; append allowed lifecycle events; attach references | mutate a frozen ResearchSpec or historical TrialRegistration; remove history; choose a Certification denominator; promote |
 | Trial Ledger | validate contract invariants; retain append-only history; return versioned snapshots | perform statistical tests; silently classify policy trial sets; access sealed OOS |
 | Certification | read snapshots; derive versioned, policy-specific sets/counts; issue decisions outside the ledger | silently edit the ledger or overwrite historical family assignment |
 | MLflow / Qlib Recorder | expose metrics/artifacts through stable references | become the authoritative attempt/selection history |
@@ -79,14 +83,14 @@ Every attempt is recorded, but a process execution is not automatically one stat
 
 | Classification | Meaning | Ledger treatment | Automatic DSR/PBO inclusion |
 |---|---|---|---|
-| `REGISTERED_ATTEMPT` | A proposed TrialSpec was accepted before performance feedback. | Immutable TrialSpec and registration event retained. | No; policy-derived only. |
+| `REGISTERED_ATTEMPT` | One TrialRegistration referencing a proposed ResearchSpec was accepted before performance feedback. | Immutable ResearchSpec, TrialRegistration, and registration event retained. | No; policy-derived only. |
 | `PERFORMANCE_EVALUATED_TRIAL` | A registered trial obtained a performance-bearing research/validation result. | Observation/result events and evidence references retained. | No; it is eligible for policy evaluation, not automatically counted. |
 | `REPRODUCIBILITY_REPLAY` | Exact frozen specification/data/code/seed rerun solely to verify reproducibility. | Recorded as a linked execution of the original trial. | No; never an independent hypothesis merely because it ran again. |
 | `INFRASTRUCTURE_FAILURE` | Execution failed before meaningful performance feedback. | Failure reason, time, and attempt remain visible permanently. | No automatic inclusion; policy may classify it separately. |
-| `MUTATED_TRIAL` | A material post-feedback specification change. | New TrialSpec and new `trial_id`, with lineage to its parent, are required. | Policy-derived; the old record remains unchanged. |
+| `MUTATED_TRIAL` | A material post-feedback ResearchSpec change. | New ResearchSpec hash and new `trial_id`, with lineage to its parent, are required. | Policy-derived; the old record remains unchanged. |
 | `UNREGISTERED_RESULT` | Performance evidence observed without prior accepted registration. | Retain a protocol-violation/result-reference record where safely available. | **NON_CERTIFIABLE**. |
 
-An *execution record* is distinct from a TrialSpec. A registered trial may have several recorded executions: a transient transport retry, an infrastructure failure, or a reproducibility replay. This preserves every attempt without falsely multiplying research hypotheses.
+An *execution record* is distinct from both ResearchSpec and TrialRegistration. A registered trial may have several recorded executions: a transient transport retry, an infrastructure failure, or a reproducibility replay. This preserves every attempt without falsely multiplying research hypotheses.
 
 ## 5. Pre-registration and admissibility
 
@@ -94,7 +98,7 @@ For a performance result to be admissible to a future Certification policy, regi
 
 ```text
 REGISTER
-  -> freeze canonical TrialSpec hash
+  -> freeze canonical ResearchSpec hash
   -> execute
   -> observe performance result
   -> append immutable result event
@@ -110,29 +114,37 @@ The contract records timestamps as UTC ISO-8601 instants with sufficient precisi
 
 `UNREGISTERED_RESULT = NON_CERTIFIABLE`. It is not silently discarded: a `PROTOCOL_VIOLATION_RECORDED` event preserves that a result existed and why it is ineligible, without importing sealed-OOS contents or confidential artifact payloads.
 
-## 6. Immutable TrialSpec contract
+## 6. Immutable ResearchSpec and TrialRegistration contract
 
-`TrialSpec` is canonicalized and frozen on successful registration. Canonicalization uses a versioned, deterministic representation: stable field ordering, explicit null handling, normalized identifiers, normalized UTC times, and no presentation-only fields. `canonical_trial_spec_sha256` is calculated from that representation and recorded with `schema_version`.
+`ResearchSpec` is the performance-bearing immutable research specification. It is canonicalized with a versioned, deterministic representation: stable field ordering, explicit null handling, normalized identifiers, normalized UTC times, and no presentation-only fields. `canonical_research_spec_sha256` is calculated from **ResearchSpec only**.
 
-`trial_id` is a ledger-generated opaque immutable identifier, not a content hash. `trial_id` remains stable even when another intentional evaluation uses the same specification. A later implementation may use UUIDv7 under a recorded identifier-format version; consumers must treat it as opaque.
+`TrialRegistration` is one intended research-evaluation instance that references the frozen ResearchSpec. `trial_id` is a ledger-generated opaque immutable registration identity, not a content hash. A later implementation may use UUIDv7 under a recorded identifier-format version; consumers must treat it as opaque.
 
-| Field group | Required frozen fields | Contract rule |
+| ResearchSpec field group | Required fields or fingerprints | Contract rule |
 |---|---|---|
-| Identity and lineage | `trial_id`, `trial_family_id`, `parent_trial_id`, `trial_kind`, `schema_version` | `parent_trial_id` records lineage only; it never converts the child into an update of its parent. |
-| Generator | `generator`, `generator_version`, `registration_actor` | Generator identity/version are evidence, not authority. |
-| Hypothesis | `hypothesis_id` or `hypothesis_hash`, `factor_spec_hash`, `model_spec_hash`, `hyperparameter_hash` | A material change to any declared research-bearing field is a new TrialSpec. |
-| Data and labels | `dataset_snapshot_id`, `universe_id` or `universe_hash`, `label_spec_hash`, `feature_set_hash` | References are immutable and versioned; the raw data is stored outside the ledger. |
-| Windows | `train_window`, `validation_window`, exchange/calendar convention | Bounds, inclusivity, timezone, and calendar version must be explicit. |
-| Portfolio/evaluation assumptions | `portfolio_rule_hash`, `cost_assumption_hash`, `benchmark_policy_hash` | Policy-bearing assumptions cannot be rewritten after feedback. |
-| Runtime provenance | `git_commit_sha`, `environment_fingerprint`, `random_seed` | Fingerprints identify the actual runnable context; a missing seed is explicitly recorded, never implied. |
-| Registration | `registered_at`, `registration_actor`, `canonical_trial_spec_sha256` | Registration time and canonical hash are immutable evidence. |
-| Family policy | `family_policy_id`, `family_policy_version`, `family_assignment_basis` | The original assignment is retained even if a later policy creates an additional audited view. |
+| Generator and hypothesis | `generator`, `generator_version`, `hypothesis_id` or `hypothesis_hash` | Generator identity/version are evidence, not authority. |
+| Factor, model, and parameters | `factor_spec_hash`, `model_spec_hash`, `hyperparameter_hash` | A material change creates a new ResearchSpec hash. |
+| Data and labels | `dataset_snapshot_id`, `universe_id` or `universe_hash`, `label_spec_hash`, `feature_set_hash` | References are immutable and versioned; raw data stays outside the ledger. |
+| Windows and calendar | `train_window`, `validation_window`, exchange/calendar convention | Bounds, inclusivity, timezone, and calendar version must be explicit. |
+| Portfolio/evaluation assumptions | `portfolio_rule_hash`, `cost_assumption_hash`, `benchmark_policy_hash` | Performance-bearing assumptions cannot be rewritten after feedback. |
+| Runtime provenance | `git_commit_sha`, `environment_fingerprint`, `random_seed` | A missing seed is explicitly recorded, never implied. |
+| Family-policy inputs | `family_policy_inputs_hash` and declared inputs as applicable | Inputs support a deterministic family assignment; the resulting registration membership is separate. |
 
-The TrialSpec must not contain sealed-OOS contents, dates/data that reveal sealed OOS material beyond an already-authorized opaque reference, account data, broker credentials, or artifact payloads. If a future certification linkage is needed, only an opaque Certification-controlled identifier may be present.
+`canonical_research_spec_sha256` **must not include** `trial_id`, `idempotency_key`, `request_id`, `registered_at`, `registration_actor`, `execution_id`, a result, or performance metrics. It also excludes sealed-OOS contents, account data, broker credentials, and artifact payloads. A future Certification linkage may carry only an opaque Certification-controlled identifier.
+
+| TrialRegistration field | Contract rule |
+|---|---|
+| `trial_id` | Opaque, ledger-generated registration identity. |
+| `canonical_research_spec_sha256` | Immutable reference to exactly one ResearchSpec. |
+| `trial_family_id`, `parent_trial_id`, `trial_kind` | Registration/lineage facts; `parent_trial_id` never turns a child into an update of its parent. |
+| `registration_actor`, `registered_at`, `schema_version` | Immutable registration evidence. |
+| idempotency evidence | Stores the actor-scoped idempotency key and canonical registration-request hash; it is never part of the ResearchSpec hash. |
+
+Two intentional independent evaluations may validly use the same `canonical_research_spec_sha256` with different `trial_id` and different idempotency keys. A material ResearchSpec change requires both a new `canonical_research_spec_sha256` and a new `trial_id`. An exact reproducibility replay remains an execution linked to the original ResearchSpec and TrialRegistration, not a new independent hypothesis.
 
 ## 7. Lifecycle and append-only event model
 
-The authoritative lifecycle is an ordered append-only event stream. Public contract operations never update or delete an existing TrialSpec or event.
+The authoritative lifecycle is a globally ordered, append-only event stream. Public contract operations never update or delete an existing ResearchSpec, TrialRegistration, execution record, or event.
 
 ```text
 TRIAL_REGISTERED
@@ -146,9 +158,13 @@ PROTOCOL_VIOLATION_RECORDED
 FAMILY_POLICY_APPLIED
 ```
 
-An event contains at least: `event_id`, `trial_id` (or protocol-violation linkage), monotonically ordered `event_sequence`, event type, UTC `occurred_at`, actor, contract/schema version, canonical event-payload hash, and prior-event hash for that trial stream. Hash linking is tamper-evident evidence, not a claim that a local file alone prevents a privileged operator from altering storage; backup/export manifests and controlled writer access are still required.
+Each authoritative event contains at least: `event_id`, `trial_id` (or protocol-violation linkage), per-trial `event_sequence`, globally monotonic `ledger_sequence`, event type, UTC `occurred_at`, actor, contract/schema version, canonical event-payload hash, `previous_global_event_hash`, and `global_event_hash`. Per-trial sequence remains useful for lifecycle reads; the global sequence is the authoritative ordering across every trial stream.
 
-Valid transition checks fail closed. For example, a `RESULT_ATTACHED` must link to an already registered trial and a declared execution record; it cannot alter any field in the stored TrialSpec. A failure does not disappear if a later execution succeeds. A cancellation is a retained terminal event for that execution, not deletion of the trial.
+`ledger_sequence` is assigned once and never reused by the normal public API. `global_event_hash` commits to the canonical event payload, its `ledger_sequence`, and `previous_global_event_hash`. Consequently, a deletion, insertion, or reordering of an event—including deletion of an entire trial stream—creates a sequence gap or global-chain mismatch when verified against retained snapshot/export anchors. Snapshot manifests and backups record the latest `ledger_sequence` and `global_event_hash` so that the chain has an externally retained verification point.
+
+This is tamper-evident evidence, not a claim that a privileged storage administrator cannot alter the database and every unanchored copy. The future implementation may use a SQLite transaction to atomically assign the global sequence and hashes; it must not rely on caller discipline.
+
+Valid transition checks fail closed. For example, a `RESULT_ATTACHED` must link to an already registered trial and a declared execution record; it cannot alter any field in the stored ResearchSpec or TrialRegistration. A failure does not disappear if a later execution succeeds. A cancellation is a retained terminal event for that execution, not deletion of the trial.
 
 ## 8. Idempotency, repeats, and replays
 
@@ -158,13 +174,13 @@ Registration accepts three distinct identifiers:
 |---|---|---|
 | `request_id` | One transport delivery/correlation record. It may differ on a retransmission. | Trace only; never creates trial identity. |
 | `idempotency_key` | Stable client key for one intended registration request, scoped to `registration_actor`. | Same key plus identical canonical registration request returns the original `trial_id`. |
-| `canonical_trial_spec_sha256` | Frozen content identity of the TrialSpec. | Evidence of identical specifications; it is not globally unique trial identity. |
+| `canonical_research_spec_sha256` | Frozen content identity of ResearchSpec only. | Evidence of identical research specifications; it is not globally unique trial identity. |
 
-The ledger records a canonical registration-request hash that includes the idempotency key's intended registration semantics. A unique constraint on `(registration_actor, idempotency_key)` makes exact transport retry idempotent. Reusing that key with a different canonical request is rejected and recorded as a protocol error; it must never silently register a changed specification.
+The ledger records a canonical registration-request hash that includes registration semantics and its ResearchSpec reference, but not as an input to `canonical_research_spec_sha256`. A unique constraint on `(registration_actor, idempotency_key)` makes exact transport retry idempotent. Reusing that key with a different canonical request is rejected and recorded as a protocol error; it must never silently register a changed specification.
 
-An **intentional independent evaluation** uses a new idempotency key, a new `trial_id`, and `trial_kind = INDEPENDENT_EVALUATION`; it may reference the same canonical TrialSpec hash and a parent/lineage trial. Certification decides whether and how it contributes to a selected trial set.
+An **intentional independent evaluation** uses a new idempotency key, a new `trial_id`, and `trial_kind = INDEPENDENT_EVALUATION`; it may reference the same `canonical_research_spec_sha256` and a parent/lineage trial. Certification decides whether and how it contributes to a selected trial set.
 
-An **exact reproducibility replay** creates a new immutable execution record, not a new independent hypothesis trial. It must use `trial_kind = REPRODUCIBILITY_REPLAY`, link to the original `trial_id`, and assert the same frozen specification/data/code/environment/seed inputs. Any mismatch is a material mutation and requires a new trial.
+An **exact reproducibility replay** creates a new immutable execution record, not a new independent hypothesis trial. It must use `trial_kind = REPRODUCIBILITY_REPLAY`, link to the original `trial_id`, and assert the same frozen ResearchSpec/data/code/environment/seed inputs. Any mismatch is a material mutation and requires a new ResearchSpec hash and trial.
 
 ## 9. Trial families and anti-gaming rules
 
@@ -180,11 +196,11 @@ The ledger provides immutable, versioned snapshots rather than statistical concl
 
 | Output | Contents | Explicitly excluded |
 |---|---|---|
-| `TrialHistorySnapshot` | Ordered registrations, execution/lifecycle events, result/artifact references, failure and violation counts, lineage, provenance hashes | DSR, PBO, promotion decision, sealed-OOS contents |
+| `TrialHistorySnapshot` | Globally ordered registrations, execution/lifecycle events, result/artifact references, failure and violation counts, lineage, ResearchSpec provenance hashes, and global-chain anchor | DSR, PBO, promotion decision, sealed-OOS contents |
 | `TrialFamilySnapshot` | Registered and policy-versioned family membership, variation history, family assignment evidence | A declaration that a family is the correct statistical denominator |
 | `SelectionHistorySummary` | Total registered attempts, performance-evaluated count, pre-evaluation failures, replay count, parameter/model/factor/data/window history | `DSR_NB_TRIALS`, `PBO_SELECTION_SET`, `SPA_MODEL_SET` |
 
-Every snapshot includes `snapshot_id`, `as_of_event_id`, UTC creation time, canonical query/policy reference, schema versions, deterministic ordering, and a content hash. Certification consumes the snapshot read-only and records the snapshot ID/hash with its independently owned policy and decision. A snapshot is a fact boundary: it cannot issue `CertificationDecision` or mutate the ledger.
+Every snapshot includes `snapshot_id`, `as_of_event_id`, `as_of_ledger_sequence`, `global_event_hash`, UTC creation time, canonical query/policy reference, schema versions, deterministic ordering, and a content hash. Certification consumes the snapshot read-only and records the snapshot ID/hash with its independently owned policy and decision. A snapshot is a fact boundary: it cannot issue `CertificationDecision` or mutate the ledger.
 
 ```text
 Trial Ledger
@@ -221,34 +237,36 @@ An MLflow or Qlib Recorder failure must not remove the registered trial. The led
 | Table / view | Purpose and key constraints |
 |---|---|
 | `schema_metadata` | Schema and migration versions; never infer interpretation from application version alone. |
-| `trial_specs` | One immutable TrialSpec per `trial_id`; unique canonical record identity; no public update/delete operation. |
-| `registration_idempotency` | `(registration_actor, idempotency_key)` unique; stores canonical registration-request hash and admitted `trial_id`. |
+| `research_specs` | One immutable canonical ResearchSpec per `canonical_research_spec_sha256`; no public update/delete operation. |
+| `trial_registrations` | One immutable registration per `trial_id`, referencing `canonical_research_spec_sha256`, lineage/family/kind facts, and registration metadata. |
+| `registration_idempotency` | `(registration_actor, idempotency_key)` unique; stores canonical registration-request hash and admitted `trial_id`, separate from ResearchSpec identity. |
 | `execution_records` | Every execution/replay/attempt with immutable execution ID, kind, original-trial linkage, and lifecycle state evidence. |
-| `trial_events` | Append-only ordered event stream; unique `(trial_id, event_sequence)` and event hash linkage. |
+| `trial_events` | Append-only stream with unique `ledger_sequence`, unique `(trial_id, event_sequence)`, `previous_global_event_hash`, and `global_event_hash`. |
 | `result_references` / `artifact_references` | Immutable external references, content hashes, and provenance; artifact retention state does not delete history. |
 | `family_policy_versions` | Registered family-policy texts/hashes and versions. |
 | `family_assignment_events` | Immutable registered and later policy-versioned membership observations. |
-| `snapshot_manifests` | Deterministic snapshot query/policy/hash/as-of evidence. |
+| `snapshot_manifests` | Deterministic snapshot query/policy/hash/as-of evidence, including global sequence/hash anchors. |
 
-Foreign keys prevent orphaned event/reference records. Registration commits the TrialSpec, idempotency record, and `TRIAL_REGISTERED` event in one transaction; an incomplete transaction is not a registration. Appending an event validates the state transition and sequence in one transaction. Required query indexes include trial family/policy, event time/sequence, parent lineage, generator/version, dataset/window references, and immutable snapshot `as_of_event_id` lookup.
+Foreign keys prevent orphaned event/reference records. Registration commits the ResearchSpec (if not already retained), TrialRegistration, idempotency record, and `TRIAL_REGISTERED` event in one transaction; an incomplete transaction is not a registration. Appending an event validates the state transition and atomically assigns both per-trial and global sequence/hash values. Required query indexes include trial family/policy, global and per-trial event sequence, parent lineage, generator/version, dataset/window references, and immutable snapshot `as_of_ledger_sequence` lookup.
 
 ### 12.2 Durability, concurrency, migration, and export
 
 - The implementation must use SQLite transactions and run `PRAGMA integrity_check` in a recorded maintenance/backup procedure; a failed check blocks authoritative snapshot issuance until investigated.
 - Concurrent registration uses a documented local single-writer/transaction policy. It must be tested; no caller may implement read-modify-write outside the ledger transaction boundary.
+- Append-only enforcement uses both a narrow application/public write API **and** database-level controls where practical: no public `UPDATE`/`DELETE` path; SQLite constraints and foreign keys; and triggers that reject `UPDATE`/`DELETE` on immutable authoritative tables unless an explicit, versioned migration/maintenance mode is invoked. Such maintenance mode is itself recorded and may never silently erase historical semantics.
 - WAL is a conditional implementation choice, not an automatic requirement. It may be enabled only after local concurrent-reader/crash/backup tests demonstrate it is appropriate. If used, online backup/checkpoint handling must be documented so copied backups are consistent. A rollback-journal configuration remains acceptable if it meets the same durability tests.
 - Schema migration is append-preserving: pre-migration database copy, versioned migration plan, integrity check, deterministic before/after export comparison, and rollback procedure. No migration may delete or rewrite historical semantics.
-- Backup/export produces a SQLite backup plus deterministic, canonical JSONL/CSV-style manifests ordered by stable identifiers/event sequence. Export includes schema/policy versions and content hashes, never sealed-OOS content.
+- Backup/export produces a SQLite backup plus deterministic, canonical JSONL/CSV-style manifests ordered by `ledger_sequence`. Export includes schema/policy versions, content hashes, and global-chain anchors, never sealed-OOS content.
 
 ## 13. Fail-closed invariants
 
 1. No Certification-eligible result exists without prior committed registration.
-2. A frozen TrialSpec cannot be edited through the normal contract.
-3. A result/event cannot change its original TrialSpec.
+2. A frozen ResearchSpec and TrialRegistration cannot be edited through the normal contract.
+3. A result/event cannot change its original ResearchSpec or TrialRegistration.
 4. Failed and cancelled attempts remain visible.
 5. Exact transport retries are idempotent.
 6. Replays are linked and classified; they cannot masquerade as independent hypotheses.
-7. A material specification mutation creates a new `trial_id`.
+7. A material ResearchSpec mutation creates a new `canonical_research_spec_sha256` and a new `trial_id`.
 8. A generator cannot reduce trial history through public operations.
 9. A trial family cannot be opportunistically rewritten after feedback; later mappings are versioned events.
 10. Certification reads immutable snapshots and has no silent ledger-write path.
@@ -258,7 +276,9 @@ Foreign keys prevent orphaned event/reference records. Registration commits the 
 14. All recorded clock fields use the canonical UTC representation and record their time-source policy.
 15. Every schema, canonicalization, family-policy, and interpretation-affecting policy version is recorded.
 16. An idempotency key reused for different canonical registration content is rejected, never repurposed.
-17. A snapshot carries an immutable as-of boundary and deterministic content hash.
+17. A snapshot carries an immutable as-of boundary, `ledger_sequence`, global hash anchor, and deterministic content hash.
+18. Every authoritative event has a unique, monotonically increasing `ledger_sequence` and commits to the prior global event hash.
+19. Public API and database-level controls reject normal updates/deletes of immutable authoritative records.
 
 Any violation blocks Certification eligibility for the affected evidence until an independently recorded policy disposition exists. Recording a violation does not erase it.
 
@@ -266,28 +286,36 @@ Any violation blocks Certification eligibility for the affected evidence until a
 
 | Test | Required future assertion |
 |---|---|
-| `REGISTER_BEFORE_EXECUTION` | Registration commits TrialSpec/hash/event before an execution record may start. |
+| `REGISTER_BEFORE_EXECUTION` | Registration commits ResearchSpec/hash, TrialRegistration, and event before an execution record may start. |
 | `DUPLICATE_TRANSPORT_RETRY` | Same actor/idempotency key/canonical request returns the original `trial_id` and adds no independent trial. |
 | `INTENTIONAL_REPEAT` | New idempotency key and independent-evaluation intent create a distinct trial with explicit lineage. |
+| `SAME_RESEARCH_SPEC_INTENTIONAL_REPEAT` | Same `canonical_research_spec_sha256` with a new intentional idempotency key creates a different `trial_id`. |
+| `RESEARCH_SPEC_HASH_EXCLUDES_REGISTRATION_METADATA` | Changing `trial_id`, `request_id`, `idempotency_key`, `registered_at`, actor, execution ID, result, or metrics does not change the ResearchSpec hash. |
+| `RESEARCH_SPEC_MUTATION_CHANGES_HASH` | A material performance-bearing ResearchSpec change produces a different canonical ResearchSpec hash. |
 | `EXACT_REPLAY` | Exact frozen inputs create a linked replay execution, not a new independent hypothesis trial. |
-| `SPEC_MUTATION_REJECTED` | Attempted update of frozen fields fails and is audited. |
-| `NEW_SPEC_NEW_TRIAL` | Material changed spec produces a new `trial_id`; parent remains unchanged. |
+| `SPEC_MUTATION_REJECTED` | Attempted update of frozen ResearchSpec/TrialRegistration fields fails and is audited. |
+| `NEW_SPEC_NEW_TRIAL` | Material changed ResearchSpec produces a new hash and `trial_id`; parent remains unchanged. |
 | `FAILURE_RETAINED` | Pre-evaluation infrastructure failure persists in snapshot/export after subsequent activity. |
 | `RESULT_WITHOUT_REGISTRATION_REJECTED` | Eligible result append fails; violation evidence is retained as non-certifiable. |
 | `FAMILY_REWRITE_REJECTED` | Original family membership cannot be overwritten after feedback. |
 | `CRASH_RESTART_PRESERVES_HISTORY` | Interrupted transactions do not create partial registration/event state; committed history survives restart. |
 | `CONCURRENT_REGISTRATION` | Competing registrations preserve unique idempotency and valid event ordering. |
+| `GLOBAL_EVENT_DELETE_DETECTED` | Removal of any anchored global event, including a whole trial stream, creates a sequence/hash-anchor verification failure. |
+| `GLOBAL_EVENT_REORDER_DETECTED` | Reordered events fail global sequence/hash-chain verification. |
+| `GLOBAL_EVENT_INSERTION_DETECTED` | Inserted event without a valid globally chained transaction fails verification. |
+| `DATABASE_UPDATE_IMMUTABILITY` | Database-level controls reject normal `UPDATE` of authoritative immutable rows. |
+| `DATABASE_DELETE_IMMUTABILITY` | Database-level controls reject normal `DELETE` of authoritative immutable rows. |
 | `READ_ONLY_CERTIFICATION_SNAPSHOT` | Certification consumer can reproduce a snapshot but has no mutation operation. |
 | `MLFLOW_RUN_MISSING_HISTORY_RETAINED` | Missing/failed MLflow linkage does not remove registration/lifecycle history. |
 | `ARTIFACT_DELETED_METADATA_RETAINED` | Artifact retention-state change leaves trial/result metadata and prior reference auditable. |
 | `SEALED_OOS_DATA_REJECTED` | Sealed-OOS payloads/contents are rejected; only authorized opaque IDs can be linked. |
 | `DETERMINISTIC_EXPORT` | Same as-of boundary produces byte-stable canonical export/hash. |
-| `SCHEMA_MIGRATION_PRESERVES_HISTORY` | Versioned migration preserves all historical TrialSpecs/events and validates before/after manifests. |
+| `SCHEMA_MIGRATION_PRESERVES_HISTORY` | Versioned migration preserves all historical ResearchSpecs, TrialRegistrations, and events and validates before/after manifests. |
 
 ## 15. Open design questions before implementation authorization
 
 1. Define the authenticated local actor model and how a human, local generator, and future service identity are represented without granting raw database write access.
-2. Select the canonical serialization standard and identifier format version, then publish test vectors before an implementation is accepted.
+2. Select the canonical ResearchSpec serialization standard and identifier format version, then publish test vectors before an implementation is accepted.
 3. Define the Certification-owned family-policy registration workflow, including how a late policy-version event is marked ineligible for retroactive favorable remapping.
 4. Set concrete local backup cadence, retention, restore drill cadence, and storage-budget thresholds under the 256 GB policy.
 5. Define the artifact-reference retention-state vocabulary and evidence location rules while preserving no sealed-OOS content in Research storage.
