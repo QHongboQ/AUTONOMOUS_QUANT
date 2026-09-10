@@ -1,21 +1,63 @@
 # Trial Ledger runtime foundation 001
 
-**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-FOUNDATION-001`
+**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-FOUNDATION-COMPLETION-001`
 
-The standard-library foundation is implemented at `30-research-system/experiment-registry/trial-ledger/aq_trial_ledger` with leaf-local `unittest` tests. Schema version is `1`; canonicalization versions are `AQ_RESEARCH_SPEC_CANONICAL_V1` and `AQ_LEDGER_ANCHOR_CANONICAL_V1`.
+The completed standard-library foundation is at
+`30-research-system/experiment-registry/trial-ledger/aq_trial_ledger`.
+The compact module tree separates canonical bytes (`canonical.py`), frozen
+contract values (`contract.py`), lifecycle helpers (`lifecycle.py`), SQLite
+writer/storage (`storage.py`), snapshots (`snapshot.py`), and backup/restore
+verification (`backup.py`). Schema version is `1`.
 
-The public foundation provides strict ResearchSpec bytes/SHA-256, strict JSON parsing, explicit SQLite-path construction, atomic initialization/registration, actor-scoped idempotency, immutable trial rows, append-only global events, global-chain verification, deterministic snapshots, self-excluding anchor digests, and SQLite backup primitives. Genesis uses a 64-zero previous hash. The SQLite connection enables foreign keys and a busy timeout; no WAL mode is selected.
+## Evidence
 
-Executed with CPython 3.12.14:
+The append-only SQLite schema protects identities, actor and capability
+lifecycle facts, policy specs/events, ResearchSpec blobs, registrations and
+idempotency evidence, executions, global events, references, violations, and
+anchor evidence from normal UPDATE or DELETE. Actor status and capability
+state are derived from ordered immutable events. Foreign keys block ordinary
+orphan references.
+
+`AQ_LEDGER_EVENT_HASH_V1` hashes a canonical event envelope containing the
+ledger identity, schema version, global sequence, prior global hash, event
+type, actor, trial identity/null, and canonical payload. Chain verification
+requires sequence one, contiguous sequence, the zero-hash genesis predecessor,
+and recomputed hashes. A retained anchor also fails verification if the local
+database is truncated below its sequence.
+
+ResearchSpec canonicalization is `AQ_RESEARCH_SPEC_CANONICAL_V1`; anchor
+canonicalization is `AQ_LEDGER_ANCHOR_CANONICAL_V1`. The explicit ResearchSpec
+boundary rejects registration/result/sealed-OOS metadata including nested
+forms, non-string mapping keys, lone surrogates, unknown top-level fields, and
+native binary floats in declared decimal fields. Only designated semantic-text
+fields are NFC-normalized; opaque identifiers are left byte-distinct.
+
+The 17-test `unittest` matrix passed under CPython 3.12.14. It covers canonical
+vectors and rejection cases; genesis; actor/capability/policy lifecycle;
+idempotency; registration; execution, replay and references; protocol
+violations; foreign keys; all table trigger coverage; tamper/anchor detection;
+deterministic snapshots; backup/restore and clean-process reopen; and actual
+multi-threaded distinct and duplicate registration races. The required
+`compileall` command passed after the same source changes.
+
+Windows CPython 3.12.14 and Ubuntu-24.04 `python3` produced identical bytes
+and this SHA-256 for the shared committed canonical vector:
 
 ```text
-py -V:Astral/CPython3.12.14 -m unittest discover -s tests -v
-Ran 4 tests ... OK
-py -V:Astral/CPython3.12.14 -m compileall aq_trial_ledger tests
-PASS
+11a98432b8ce042da7620003344499b1796a1b27cf1f82b40a74457991dc996b
 ```
 
-The tests use only temporary SQLite databases/backups. No permanent database, external dependency, Qlib, RD-Agent, OpenBB, Robinhood, P1 research, or trading action occurred. WSL byte-identity was not executed in this bounded Windows test run; it remains a required follow-up validation before cross-runtime handoff use.
+All test databases and backups were short-lived temporary files and were
+removed after validation. No permanent ledger database, external package,
+Qlib, RD-Agent, OpenBB, Robinhood, P1 research, account action, or trading
+action occurred.
+
+## Known limitations
+
+The foundation is a one-process local writer rather than a deployed service.
+It does not authorize P1 research, sealed-OOS access, statistical selection,
+Certification decisions, or production operation. Anchor independence and
+backup retention are operational policies for a later authorized deployment.
 
 ```text
 P0 = COMPLETE

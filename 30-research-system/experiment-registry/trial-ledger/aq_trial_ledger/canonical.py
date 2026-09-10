@@ -1,49 +1,196 @@
 """AQ canonical JSON V1; no serializer defaults define identity."""
 from __future__ import annotations
-import hashlib,json,math,unicodedata
-from datetime import date,datetime,timezone
-from decimal import Decimal,InvalidOperation
-RESEARCH_CANONICAL_V1="AQ_RESEARCH_SPEC_CANONICAL_V1"; ANCHOR_CANONICAL_V1="AQ_LEDGER_ANCHOR_CANONICAL_V1"
-class CanonicalizationError(ValueError): pass
-def parse_json_strict(text):
- def pairs(items):
-  d={}
-  for k,v in items:
-   if k in d: raise CanonicalizationError("duplicate key")
-   d[k]=v
-  return d
- def bad(x): raise CanonicalizationError("non-finite number")
- try:return json.loads(text,object_pairs_hook=pairs,parse_constant=bad)
- except (ValueError,json.JSONDecodeError) as e:raise CanonicalizationError(str(e))
-def _decimal(v):
- try:d=Decimal(str(v))
- except InvalidOperation as e:raise CanonicalizationError("invalid decimal") from e
- if not d.is_finite():raise CanonicalizationError("non-finite number")
- if not d:return "0"
- s=format(d.normalize(),"f");return s.rstrip("0").rstrip(".") if "." in s else s
-def _norm(v,dec,f=None):
- if isinstance(v,dict):return {str(k):_norm(x,dec,str(k)) for k,x in v.items()}
- if isinstance(v,list):return [_norm(x,dec,f) for x in v]
- if isinstance(v,datetime):
-  if v.tzinfo is None or v.utcoffset() is None:raise CanonicalizationError("naive datetime")
-  return v.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
- if isinstance(v,date):return v.isoformat()
- if isinstance(v,float) and not math.isfinite(v):raise CanonicalizationError("non-finite number")
- if f in dec:return _decimal(v)
- if isinstance(v,str):
-  if any(0xd800<=ord(x)<=0xdfff for x in v):raise CanonicalizationError("lone surrogate")
-  return unicodedata.normalize("NFC",v)
- return v
-def _emit(v):
- s=json.dumps(v,ensure_ascii=False,sort_keys=True,separators=(",",":"),allow_nan=False)
- s=s.replace("\\b","\\u0008").replace("\\f","\\u000c").replace("\\n","\\u000a").replace("\\r","\\u000d").replace("\\t","\\u0009")
- return "".join(f"\\u{ord(c):04x}" if ord(c)<=31 else c for c in s).encode()
-def canonicalize_research_spec(spec,*,decimal_fields=(),version=RESEARCH_CANONICAL_V1):
- if version!=RESEARCH_CANONICAL_V1:raise CanonicalizationError("unknown canonicalization version")
- if set(spec)&{"trial_id","idempotency_key","request_id","registered_at","registration_actor","execution_id","result","performance_metrics"}:raise CanonicalizationError("registration metadata")
- return _emit({"canonicalization_version":version,"research_spec":_norm(spec,set(decimal_fields))})
-def hash_research_spec(spec,**kw):
- b=canonicalize_research_spec(spec,**kw);return b,hashlib.sha256(b).hexdigest()
-def canonicalize_anchor_payload(payload):
- if payload.get("canonicalization_version",ANCHOR_CANONICAL_V1)!=ANCHOR_CANONICAL_V1:raise CanonicalizationError("unknown anchor version")
- return _emit({"canonicalization_version":ANCHOR_CANONICAL_V1,"payload":_norm(payload,set())})
+
+import hashlib
+import json
+import math
+import unicodedata
+from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
+from typing import Any, Mapping
+
+RESEARCH_CANONICAL_V1 = "AQ_RESEARCH_SPEC_CANONICAL_V1"
+ANCHOR_CANONICAL_V1 = "AQ_LEDGER_ANCHOR_CANONICAL_V1"
+EVENT_HASH_DOMAIN_V1 = "AQ_LEDGER_EVENT_HASH_V1"
+
+
+class CanonicalizationError(ValueError):
+    """Raised for an input outside a V1 canonical contract."""
+
+
+_FORBIDDEN_RESEARCH_FIELDS = {
+    "trial_id", "idempotency_key", "request_id", "registered_at",
+    "registration_actor", "execution_id", "result", "results",
+    "performance", "performance_metrics", "sealed_oos_content",
+    "sealed_oos_data", "sealed_oos_payload", "account_data",
+    "broker_credentials",
+}
+_SEMANTIC_TEXT_FIELDS = {"hypothesis_text", "research_objective", "semantic_text"}
+_TOP_LEVEL_FIELDS = {
+    "generator", "generator_version", "hypothesis_id", "hypothesis_hash",
+    "hypothesis_text", "factor_spec_hash", "model_spec_hash",
+    "hyperparameter_hash", "dataset_snapshot_id", "universe_id",
+    "universe_hash", "label_spec_hash", "feature_set_hash", "train_window",
+    "validation_window", "evaluation_window_policy", "exchange_calendar",
+    "calendar_version", "portfolio_rule_hash", "cost_assumption_hash",
+    "benchmark_policy_hash", "git_commit_sha", "environment_fingerprint",
+    "random_seed", "family_policy_inputs_hash", "family_inputs", "parameters",
+    "research_objective", "semantic_text", "extensions",
+}
+
+
+def parse_json_strict(text: str) -> Any:
+    """Parse JSON while rejecting duplicate object keys and non-finite numbers."""
+
+    def object_pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in items:
+            if key in result:
+                raise CanonicalizationError("duplicate JSON object key")
+            result[key] = value
+        return result
+
+    def reject_constant(_: str) -> None:
+        raise CanonicalizationError("non-finite JSON number")
+
+    try:
+        return json.loads(text, object_pairs_hook=object_pairs, parse_constant=reject_constant)
+    except (TypeError, ValueError, json.JSONDecodeError) as error:
+        raise CanonicalizationError(str(error)) from error
+
+
+def _validate_scalar_string(value: str) -> str:
+    if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+        raise CanonicalizationError("lone UTF-16 surrogate")
+    return value
+
+
+def _canonical_decimal(value: Any) -> str:
+    if isinstance(value, bool) or isinstance(value, float):
+        raise CanonicalizationError("binary float decimal identity")
+    try:
+        decimal = Decimal(str(value))
+    except (InvalidOperation, ValueError) as error:
+        raise CanonicalizationError("invalid decimal value") from error
+    if not decimal.is_finite():
+        raise CanonicalizationError("non-finite decimal value")
+    if decimal.is_zero():
+        return "0"
+    result = format(decimal.normalize(), "f")
+    return result.rstrip("0").rstrip(".") if "." in result else result
+
+
+def _validate_research_spec(spec: Mapping[str, Any]) -> None:
+    if not spec:
+        raise CanonicalizationError("ResearchSpec cannot be empty")
+    if any(not isinstance(key, str) for key in spec):
+        raise CanonicalizationError("ResearchSpec keys must be strings")
+    unknown = set(spec) - _TOP_LEVEL_FIELDS
+    if unknown:
+        raise CanonicalizationError(f"undeclared ResearchSpec field: {sorted(unknown)!r}")
+    forbidden = set(spec) & _FORBIDDEN_RESEARCH_FIELDS
+    if forbidden:
+        raise CanonicalizationError(f"forbidden field: {sorted(forbidden)!r}")
+    required = {
+        "generator", "generator_version", "dataset_snapshot_id", "label_spec_hash",
+        "feature_set_hash", "git_commit_sha", "environment_fingerprint", "random_seed",
+    }
+    missing = required - set(spec)
+    if missing:
+        raise CanonicalizationError(f"missing ResearchSpec field: {sorted(missing)!r}")
+    if not ({"hypothesis_id", "hypothesis_hash", "hypothesis_text"} & set(spec)):
+        raise CanonicalizationError("ResearchSpec needs hypothesis identity")
+    if not ({"universe_id", "universe_hash"} & set(spec)):
+        raise CanonicalizationError("ResearchSpec needs universe identity")
+
+    def visit(value: Any) -> None:
+        if isinstance(value, Mapping):
+            for key, nested in value.items():
+                if not isinstance(key, str):
+                    raise CanonicalizationError("ResearchSpec keys must be strings")
+                if key in _FORBIDDEN_RESEARCH_FIELDS:
+                    raise CanonicalizationError(f"forbidden nested field: {key}")
+                visit(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                visit(nested)
+
+    visit(spec)
+
+
+def _normalise(value: Any, decimal_fields: set[str], path: tuple[str, ...] = ()) -> Any:
+    field = path[-1] if path else ""
+    dotted = ".".join(path)
+    if isinstance(value, Mapping):
+        if any(not isinstance(key, str) for key in value):
+            raise CanonicalizationError("non-string object key")
+        return {key: _normalise(item, decimal_fields, path + (key,)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalise(item, decimal_fields, path) for item in value]
+    if isinstance(value, datetime):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise CanonicalizationError("naive datetime")
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    if isinstance(value, date):
+        return value.isoformat()
+    if field in decimal_fields or dotted in decimal_fields:
+        return _canonical_decimal(value)
+    if isinstance(value, float) and not math.isfinite(value):
+        raise CanonicalizationError("non-finite number")
+    if isinstance(value, str):
+        value = _validate_scalar_string(value)
+        return unicodedata.normalize("NFC", value) if field in _SEMANTIC_TEXT_FIELDS else value
+    return value
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    """Emit fixed V1 JSON: direct UTF-8, lower-case control escapes, no newline."""
+
+    try:
+        encoded = json.dumps(
+            value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+    except (TypeError, ValueError) as error:
+        raise CanonicalizationError(str(error)) from error
+    encoded = (encoded.replace("\\b", "\\u0008").replace("\\f", "\\u000c")
+               .replace("\\n", "\\u000a").replace("\\r", "\\u000d")
+               .replace("\\t", "\\u0009"))
+    return "".join(
+        f"\\u{ord(character):04x}" if ord(character) <= 0x1F else character
+        for character in encoded
+    ).encode("utf-8")
+
+
+def canonicalize_research_spec(
+    spec: Mapping[str, Any], *, decimal_fields: set[str] | tuple[str, ...] = (),
+    version: str = RESEARCH_CANONICAL_V1,
+) -> bytes:
+    if version != RESEARCH_CANONICAL_V1:
+        raise CanonicalizationError("unknown canonicalization version")
+    if not isinstance(spec, Mapping):
+        raise CanonicalizationError("ResearchSpec must be an object")
+    _validate_research_spec(spec)
+    return canonical_json_bytes({
+        "canonicalization_version": version,
+        "research_spec": _normalise(spec, set(decimal_fields)),
+    })
+
+
+def hash_research_spec(spec: Mapping[str, Any], **kwargs: Any) -> tuple[bytes, str]:
+    canonical = canonicalize_research_spec(spec, **kwargs)
+    return canonical, hashlib.sha256(canonical).hexdigest()
+
+
+def canonicalize_anchor_payload(payload: Mapping[str, Any]) -> bytes:
+    if payload.get("canonicalization_version", ANCHOR_CANONICAL_V1) != ANCHOR_CANONICAL_V1:
+        raise CanonicalizationError("unknown anchor canonicalization version")
+    return canonical_json_bytes({
+        "canonicalization_version": ANCHOR_CANONICAL_V1,
+        "payload": _normalise(payload, set()),
+    })
+
+
+def event_hash(event_envelope: Mapping[str, Any]) -> str:
+    if event_envelope.get("hash_domain_version") != EVENT_HASH_DOMAIN_V1:
+        raise CanonicalizationError("unknown event hash domain")
+    return hashlib.sha256(canonical_json_bytes(event_envelope)).hexdigest()
