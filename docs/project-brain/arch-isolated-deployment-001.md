@@ -8,6 +8,8 @@
 | Item | Recorded value |
 |---|---|
 | Upstream | [`bashtage/arch`](https://github.com/bashtage/arch) |
+| Upstream tag | `v8.0.0` |
+| Upstream tag commit | `038d78b709e75f2590890757af32705817a6fad8` |
 | Pinned release | `v8.0.0`, published 2025-10-21 |
 | Installed package | `arch==8.0.0` |
 | Environment | `D:\AQ_ENVS\arch` |
@@ -40,10 +42,13 @@ tzdata==2026.3
 wrapt==2.4.0
 ```
 
-`uv pip check` passed for all 15 resolved packages. The exact `LICENSE.md` bytes at tag `v8.0.0` have SHA-256 `c6e622bd89db4e13315f4e91605ff96fcbb9012d78ee74e429855870b203eed6`.
+`uv pip check` passed for all 15 resolved packages. The exact `LICENSE.md` bytes at verified tag `v8.0.0` (`038d78b709e75f2590890757af32705817a6fad8`) have SHA-256 `c6e622bd89db4e13315f4e91605ff96fcbb9012d78ee74e429855870b203eed6`.
 
 ```text
-LICENSE_CLASSIFICATION = PERMISSIVE_CUSTOM_BSD_STYLE
+UPSTREAM_TAG = v8.0.0
+UPSTREAM_TAG_COMMIT = 038d78b709e75f2590890757af32705817a6fad8
+LICENSE_IDENTIFIER = NCSA
+LICENSE_CLASSIFICATION = PERMISSIVE
 LICENSE_METADATA_NON_SPDX = YES
 LICENSE_TEXT_PERMISSIVE = YES
 LICENSE_PIN_REQUIREMENT = exact LICENSE.md text with selected version/commit
@@ -91,7 +96,7 @@ Before/after normalized freeze hashes confirmed no change to the existing Window
 | `D:\AQ_ENVS\skfolio` | `7ac5cafe011551728c0433e5ae6dbd76c751a8a1c2a3900501f7bccde2cbe19b` | same | unchanged |
 | `D:\AQ_ENVS\qlib` | `4a4beaca6ac3c1dae58fbedc2f1fe8c2ae4870f0ec2311f536efdb78a021f0ee` | same | unchanged |
 | `D:\AQ_ENVS\openbb` | `bc7e569e27c384f12b56db2720f57972feaf1ade6f3cb16656223f5973fa13bf` | same | unchanged |
-| `D:\AQ_ENVS\rdagent` | not present on Windows | not touched | unchanged by scope |
+| `D:\AQ_ENVS\rdagent` | no Windows environment in this deployment target | not invoked or touched | unchanged by scope |
 
 ```text
 CODE_CHANGED = NO
