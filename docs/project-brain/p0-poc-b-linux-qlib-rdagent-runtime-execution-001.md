@@ -89,3 +89,67 @@ P0_POC_B_LINUX_QLIB_RDAGENT_RUNTIME = FAIL
 CURRENT_NEXT = P0_POC_B_BLOCKER_RESOLUTION
 P1 = NOT_STARTED
 ```
+
+## Blocker resolution 001 — owner-resolved Qlib build, final qrun result
+
+### Historical initial failure and manual prerequisite resolution
+
+The initial `QlibCondaEnv.prepare()` failure recorded above is preserved as historical evidence. The owner identified the build blocker as missing WSL `g++`, which prevented Qlib's Cython/C++ wheel build. The owner manually installed Ubuntu `build-essential`, providing `gcc`, `g++`, and `make`; this is a system prerequisite resolution, not an RD-Agent or Qlib source modification.
+
+The owner retained the existing `rdagent4qlib` environment and manually installed Qlib from `/home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src` at exact SHA `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`. The installed editable-package provenance is `file:///home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src`.
+
+### Revalidated runtime
+
+| Check | Result |
+|---|---|
+| RD-Agent source SHA | `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd` |
+| Qlib source SHA | `2fb9380b342556ddb50a4b24e4fe8655d548b2b8` |
+| Qlib version | `0.9.8.dev26` |
+| Python | `3.10.21` |
+| `import qlib` | PASS |
+| `qrun --help` | PASS |
+| `pip check` | PASS |
+| Minimum model package | existing `lightgbm 4.7.0` |
+| Deferred package gaps | `catboost`, `xgboost`, `tables`, `torch` not installed; not required and not installed for this POC |
+
+### Single fixed synthetic qrun
+
+The task created exactly one disposable fixture: AAPL, MSFT, and SPY across 20 synthetic business sessions (60 rows), with two feature columns and one label column. Fixture SHA-256: `19b79bff147c020a5f8521f809061bc8becfe0c57c07769df354fe5ebc267c6c`. Fixed configuration SHA-256: `ed72fe2fe22552035ebb2bbff2ef6494c51d35c555bde92fa70a8255f3a50c33`.
+
+The one invocation used `RD-Agent QlibCondaEnv.run()` with `retry_count = 0` and entry:
+
+```text
+qrun conf.yaml -e poc_b_synthetic -u mlruns
+```
+
+It exited `1` after 2.627 seconds. Qlib initialized its client settings and the configured empty local provider path, then MLflow `3.16.0` rejected the filesystem tracking backend before experiment creation:
+
+```text
+MlflowException: The filesystem tracking backend ... is in maintenance mode ...
+set MLFLOW_ALLOW_FILE_STORE=true to opt out of this exception.
+```
+
+No second qrun was attempted and no MLflow setting, package, source, or system configuration was changed. This is a new qrun-runtime blocker, not a Qlib source-build failure.
+
+### Evidence handoff and final status
+
+`/mnt/d/AQ_DATA/poc/poc-b-qlib-rdagent/` contains five evidence artifacts: `fixture.pkl`, `conf.yaml`, `manifest.json`, `package-freeze.txt`, and `qrun-result.json`. No `pred.pkl`, `label.pkl`, recorder reference, `qlib_res.csv`, or `ret.parquet` exists because workflow execution stopped before training/recording.
+
+```text
+QLIB_SOURCE_BUILD = PASS
+RUNTIME_VALIDATION = PASS
+SYNTHETIC_FIXTURE = CREATED
+QRUN_EXECUTION_COUNT = 1
+QRUN_RESULT = FAIL (MLflow filesystem-backend policy)
+PRED_ARTIFACT = NOT_CREATED
+LABEL_ARTIFACT = NOT_CREATED
+RECORDER_EVIDENCE = NOT_CREATED
+MARKET_DATA_DOWNLOADED = NO
+LLM_CALLS = NONE
+OPENBB_CALLED = NO
+ROBINHOOD_TOOLS_INVOKED = NONE
+TRADING_ACTIONS = NONE
+POC_B = FAIL
+CURRENT_NEXT = P0_POC_B_BLOCKER_RESOLUTION
+P1 = NOT_STARTED
+```
