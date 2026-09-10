@@ -204,6 +204,8 @@ Every execution POC uses a uniquely named disposable workspace or `D:\AQ_DATA\po
 
 `P0_POC_B_LINUX_QLIB_RDAGENT_RUNTIME_EXECUTION` is the first task. It requires a new, explicit authorization for Conda installation and isolated `rdagent4qlib` provisioning. Until then the design is complete but execution is blocked by the intentionally uninstalled upstream runtime prerequisite.
 
+### Historical status at POC design completion
+
 ```text
 P0 = IN_PROGRESS
 P0_INTERFACE_AUDIT = COMPLETE
