@@ -1,6 +1,6 @@
 # P0 functional POC design 001
 
-**Task:** `AUTONOMOUS-QUANT-P0-FUNCTIONAL-POC-DESIGN-001`  
+**Task:** `AUTONOMOUS-QUANT-P0-FUNCTIONAL-POC-DESIGN-001`
 **Scope:** executable POC design and source/runtime inspection only. This document authorizes no installation, data access, LLM call, account access, order action, or P1 work.
 
 ## 1. Objective
@@ -51,8 +51,9 @@ After separate authorization to install Conda and provision only this environmen
 
 Expected lineage is `conf.yaml`, fixture hash, Qlib/RD-Agent versions, command log, recorder reference, `pred.pkl`, `label.pkl`, `qlib_res.csv` and, if the upstream workspace template emits it, `ret.parquet`. `factor.py` and `model.py` are included only if the fixed fixture workflow needs them; they are never agent-generated in this POC.
 
-**PASS:** `QlibCondaEnv` prepares; the fixed `qrun` completes; expected artifacts are present and manifestable; RD-Agent and Qlib stay co-located.  
-**FAIL:** Conda/QLib provision fails, the configuration requires a downloaded provider dataset, `qrun` fails, expected artifacts are missing, or any unapproved network/LLM action is attempted.  
+**PASS:** `QlibCondaEnv` prepares; the fixed `qrun` completes; expected artifacts are present and manifestable; RD-Agent and Qlib stay co-located.
+
+**FAIL:** Conda/QLib provision fails, the configuration requires a downloaded provider dataset, `qrun` fails, expected artifacts are missing, or any unapproved network/LLM action is attempted.
 **Rollback:** stop the foreground command, preserve logs/manifest, remove only the named disposable workspace and the named `rdagent4qlib` environment after recording its resolved prefix. Do not touch `/home/zhou/AQ_ENVS/rdagent` or upstream source.
 
 ## 4. POC-A — Windows OpenBB to Linux Qlib
@@ -81,8 +82,9 @@ The artifact uses a sorted pandas MultiIndex `(datetime, instrument)` where `dat
 
 **Selected Qlib ingress: `StaticDataLoader` from normalized pandas/Parquet.** Qlib `0.9.7` accepts a pandas `DataFrame` or Parquet path directly. Native provider/storage conversion is deferred because it would build a warehouse rather than prove the final file handoff.
 
-**PASS:** one bounded, credential-free response normalizes to the stated schema; the hash/sidecar exists; Linux reads the same bytes; `StaticDataLoader` loads and filters all three instruments.  
-**FAIL:** unavailable provider, credentials required, missing/invalid fields, duplicate dates, non-USD data, unreadable Linux path, or any implicit adjustment ambiguity.  
+**PASS:** one bounded, credential-free response normalizes to the stated schema; the hash/sidecar exists; Linux reads the same bytes; `StaticDataLoader` loads and filters all three instruments.
+
+**FAIL:** unavailable provider, credentials required, missing/invalid fields, duplicate dates, non-USD data, unreadable Linux path, or any implicit adjustment ambiguity.
 **Rollback:** delete only `D:\AQ_DATA\poc\poc-a-openbb-qlib\` after preserving the failure metadata; no provider cache is promoted.
 
 ## 5. POC-C — Qlib to Certification to skfolio
@@ -109,8 +111,9 @@ For the first tiny POC, run no optimizer in this task. The future execution may 
 
 The resulting `TargetPortfolio` is a sorted asset-to-target-weight set whose approved risky weights satisfy the explicit budget and whose source points to the `CertificationDecision`. It contains no broker fields.
 
-**PASS:** Qlib artifacts load on Windows; Certification emits the approved panels and decision; skfolio consumes the `(observations, assets)` return matrix and yields finite, asset-mapped weights; the TargetPortfolio can be reproduced from evidence.  
-**FAIL:** artifact/provenance gap, temporal or NaN failure, panel/weight-order mismatch, optimizer failure, or a certification rejection.  
+**PASS:** Qlib artifacts load on Windows; Certification emits the approved panels and decision; skfolio consumes the `(observations, assets)` return matrix and yields finite, asset-mapped weights; the TargetPortfolio can be reproduced from evidence.
+
+**FAIL:** artifact/provenance gap, temporal or NaN failure, panel/weight-order mismatch, optimizer failure, or a certification rejection.
 **Rollback:** remove only POC-C copied artifacts and generated local reports; retain failure metadata and do not alter the Qlib recorder source artifacts.
 
 ## 6. POC-D — TargetPortfolio to ExecutionPlan
@@ -141,8 +144,9 @@ Target dollars are $400, $300, and $200; current dollars are $100, $0, and $500;
 - `ExecutionPlan` is local output only. Its schema check requires `account_number`, `symbol`, `side`, `type`, and exactly one of `quantity`/`dollar_amount`; it validates price, time-in-force, session, and tax-lot rules without calling the broker.
 - Future reconciliation treats `order.id`, `state`, cumulative quantity, executions, and timestamps as the authority after a separately authorized order-status capability. A cancellation is only a future, separately authorized request using account number and order ID. There is no replace capability: a changed plan fails closed until prior-order state is known.
 
-**PASS:** the synthetic fixture produces a deterministic, schema-valid local plan; no account or MCP call occurs; TargetPortfolio remains broker-neutral.  
-**FAIL:** a required field or invariant fails, duplicate handling is non-deterministic, a trade violates cash/price/fractional rules, or a broker field appears in TargetPortfolio.  
+**PASS:** the synthetic fixture produces a deterministic, schema-valid local plan; no account or MCP call occurs; TargetPortfolio remains broker-neutral.
+
+**FAIL:** a required field or invariant fails, duplicate handling is non-deterministic, a trade violates cash/price/fractional rules, or a broker field appears in TargetPortfolio.
 **Rollback:** delete only synthetic plan files; no remote state exists.
 
 ## 7. Final glue contracts
