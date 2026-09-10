@@ -92,8 +92,11 @@ def _validate_research_spec(spec: Mapping[str, Any]) -> None:
     if forbidden:
         raise CanonicalizationError(f"forbidden field: {sorted(forbidden)!r}")
     required = {
-        "generator", "generator_version", "dataset_snapshot_id", "label_spec_hash",
-        "feature_set_hash", "git_commit_sha", "environment_fingerprint", "random_seed",
+        "generator", "generator_version", "factor_spec_hash", "model_spec_hash",
+        "hyperparameter_hash", "dataset_snapshot_id", "label_spec_hash", "feature_set_hash",
+        "train_window", "validation_window", "exchange_calendar", "calendar_version",
+        "portfolio_rule_hash", "cost_assumption_hash", "benchmark_policy_hash",
+        "git_commit_sha", "environment_fingerprint", "random_seed", "family_policy_inputs_hash",
     }
     missing = required - set(spec)
     if missing:
@@ -117,24 +120,42 @@ def _validate_research_spec(spec: Mapping[str, Any]) -> None:
 
     visit(spec)
 
+    parameters = spec.get("parameters")
+    if parameters is not None:
+        if not isinstance(parameters, Mapping) or any(not isinstance(key, str) for key in parameters):
+            raise CanonicalizationError("parameters must be a string-keyed object")
+        for name, parameter in parameters.items():
+            if not isinstance(parameter, Mapping) or set(parameter) != {"type", "value"}:
+                raise CanonicalizationError(f"parameter {name!r} needs exactly type and value")
+            if parameter["type"] not in {"decimal", "string"}:
+                raise CanonicalizationError(f"parameter {name!r} has unsupported type")
+            if parameter["type"] == "string" and not isinstance(parameter["value"], str):
+                raise CanonicalizationError(f"string parameter {name!r} needs a string value")
 
-def _normalise(value: Any, decimal_fields: set[str], path: tuple[str, ...] = ()) -> Any:
+
+def _normalise(value: Any, path: tuple[str, ...] = ()) -> Any:
     field = path[-1] if path else ""
     dotted = ".".join(path)
     if isinstance(value, Mapping):
         if any(not isinstance(key, str) for key in value):
             raise CanonicalizationError("non-string object key")
-        return {key: _normalise(item, decimal_fields, path + (key,)) for key, item in value.items()}
+        if path == ("parameters",):
+            return {
+                key: {
+                    "type": item["type"],
+                    "value": _canonical_decimal(item["value"]) if item["type"] == "decimal" else _validate_scalar_string(item["value"]),
+                }
+                for key, item in value.items()
+            }
+        return {key: _normalise(item, path + (key,)) for key, item in value.items()}
     if isinstance(value, list):
-        return [_normalise(item, decimal_fields, path) for item in value]
+        return [_normalise(item, path) for item in value]
     if isinstance(value, datetime):
         if value.tzinfo is None or value.utcoffset() is None:
             raise CanonicalizationError("naive datetime")
         return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     if isinstance(value, date):
         return value.isoformat()
-    if field in decimal_fields or dotted in decimal_fields:
-        return _canonical_decimal(value)
     if isinstance(value, float) and not math.isfinite(value):
         raise CanonicalizationError("non-finite number")
     if isinstance(value, str):
@@ -162,8 +183,7 @@ def canonical_json_bytes(value: Any) -> bytes:
 
 
 def canonicalize_research_spec(
-    spec: Mapping[str, Any], *, decimal_fields: set[str] | tuple[str, ...] = (),
-    version: str = RESEARCH_CANONICAL_V1,
+    spec: Mapping[str, Any], *, version: str = RESEARCH_CANONICAL_V1,
 ) -> bytes:
     if version != RESEARCH_CANONICAL_V1:
         raise CanonicalizationError("unknown canonicalization version")
@@ -172,12 +192,12 @@ def canonicalize_research_spec(
     _validate_research_spec(spec)
     return canonical_json_bytes({
         "canonicalization_version": version,
-        "research_spec": _normalise(spec, set(decimal_fields)),
+        "research_spec": _normalise(spec),
     })
 
 
-def hash_research_spec(spec: Mapping[str, Any], **kwargs: Any) -> tuple[bytes, str]:
-    canonical = canonicalize_research_spec(spec, **kwargs)
+def hash_research_spec(spec: Mapping[str, Any]) -> tuple[bytes, str]:
+    canonical = canonicalize_research_spec(spec)
     return canonical, hashlib.sha256(canonical).hexdigest()
 
 
@@ -186,7 +206,7 @@ def canonicalize_anchor_payload(payload: Mapping[str, Any]) -> bytes:
         raise CanonicalizationError("unknown anchor canonicalization version")
     return canonical_json_bytes({
         "canonicalization_version": ANCHOR_CANONICAL_V1,
-        "payload": _normalise(payload, set()),
+        "payload": _normalise(payload),
     })
 
 

@@ -50,8 +50,14 @@ class Ledger:
         "anchor_evidence",
     )
 
-    def __init__(self, path: str | Path):
+    def __init__(
+        self, path: str | Path, *, clock: Any = utc_now, id_factory: Any = lambda: str(uuid.uuid4()),
+        ledger_id_factory: Any | None = None,
+    ):
         self.path = str(path)
+        self._clock = clock
+        self._id_factory = id_factory
+        self._ledger_id_factory = ledger_id_factory or id_factory
         self.db = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
         self.db.row_factory = sqlite3.Row
         self.lock = threading.RLock()
@@ -102,13 +108,14 @@ class Ledger:
             CREATE TABLE actor_status_events (
                 status_event_id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, event_type TEXT NOT NULL,
                 occurred_at TEXT NOT NULL, actor_id_by TEXT NOT NULL, reason TEXT NOT NULL,
+                global_event_id TEXT NOT NULL UNIQUE,
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id),
                 FOREIGN KEY(actor_id_by) REFERENCES actor_identities(actor_id)
             );
             CREATE TABLE capability_events (
                 capability_event_id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, capability TEXT NOT NULL,
                 event_type TEXT NOT NULL, policy_version TEXT NOT NULL, occurred_at TEXT NOT NULL,
-                actor_id_by TEXT NOT NULL, reason TEXT NOT NULL,
+                actor_id_by TEXT NOT NULL, reason TEXT NOT NULL, global_event_id TEXT NOT NULL UNIQUE,
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id),
                 FOREIGN KEY(actor_id_by) REFERENCES actor_identities(actor_id)
             );
@@ -125,19 +132,21 @@ class Ledger:
                 policy_event_id TEXT PRIMARY KEY, family_policy_id TEXT NOT NULL,
                 family_policy_version TEXT NOT NULL, event_type TEXT NOT NULL,
                 occurred_at TEXT NOT NULL, actor_id TEXT NOT NULL, reason TEXT NOT NULL,
+                global_event_id TEXT NOT NULL UNIQUE,
                 FOREIGN KEY(family_policy_id, family_policy_version)
                     REFERENCES family_policy_specs(family_policy_id, family_policy_version),
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id)
             );
             CREATE TABLE research_specs (
-                canonical_research_spec_sha256 TEXT PRIMARY KEY, canonical_blob BLOB NOT NULL
+                canonical_research_spec_sha256 TEXT PRIMARY KEY, canonical_blob BLOB NOT NULL,
+                created_ledger_sequence INTEGER NOT NULL
             );
             CREATE TABLE trial_registrations (
                 trial_id TEXT PRIMARY KEY, canonical_research_spec_sha256 TEXT NOT NULL,
                 trial_family_id TEXT NOT NULL, parent_trial_id TEXT, trial_kind TEXT NOT NULL,
                 registration_actor TEXT NOT NULL, registered_at TEXT NOT NULL, schema_version TEXT NOT NULL,
                 family_policy_id TEXT NOT NULL, family_policy_version TEXT NOT NULL,
-                frozen_replay_identity_hash TEXT NOT NULL,
+                frozen_replay_identity_hash TEXT NOT NULL, created_ledger_sequence INTEGER NOT NULL,
                 FOREIGN KEY(canonical_research_spec_sha256) REFERENCES research_specs(canonical_research_spec_sha256),
                 FOREIGN KEY(parent_trial_id) REFERENCES trial_registrations(trial_id),
                 FOREIGN KEY(registration_actor) REFERENCES actor_identities(actor_id),
@@ -154,6 +163,7 @@ class Ledger:
             CREATE TABLE execution_records (
                 execution_id TEXT PRIMARY KEY, trial_id TEXT NOT NULL, execution_kind TEXT NOT NULL,
                 original_execution_id TEXT, created_at TEXT NOT NULL, actor_id TEXT NOT NULL,
+                created_ledger_sequence INTEGER NOT NULL,
                 FOREIGN KEY(trial_id) REFERENCES trial_registrations(trial_id),
                 FOREIGN KEY(original_execution_id) REFERENCES execution_records(execution_id),
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id)
@@ -170,7 +180,7 @@ class Ledger:
             CREATE TABLE result_references (
                 reference_id TEXT PRIMARY KEY, trial_id TEXT NOT NULL, execution_id TEXT NOT NULL,
                 reference_type TEXT NOT NULL, locator TEXT NOT NULL, content_hash TEXT,
-                created_at TEXT NOT NULL, actor_id TEXT NOT NULL,
+                created_at TEXT NOT NULL, actor_id TEXT NOT NULL, created_ledger_sequence INTEGER NOT NULL,
                 FOREIGN KEY(trial_id) REFERENCES trial_registrations(trial_id),
                 FOREIGN KEY(execution_id) REFERENCES execution_records(execution_id),
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id)
@@ -178,7 +188,7 @@ class Ledger:
             CREATE TABLE artifact_references (
                 reference_id TEXT PRIMARY KEY, trial_id TEXT NOT NULL, execution_id TEXT NOT NULL,
                 reference_type TEXT NOT NULL, locator TEXT NOT NULL, content_hash TEXT,
-                created_at TEXT NOT NULL, actor_id TEXT NOT NULL,
+                created_at TEXT NOT NULL, actor_id TEXT NOT NULL, created_ledger_sequence INTEGER NOT NULL,
                 FOREIGN KEY(trial_id) REFERENCES trial_registrations(trial_id),
                 FOREIGN KEY(execution_id) REFERENCES execution_records(execution_id),
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id)
@@ -186,6 +196,7 @@ class Ledger:
             CREATE TABLE protocol_violations (
                 violation_id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, occurred_at TEXT NOT NULL,
                 reason TEXT NOT NULL, external_reference TEXT, content_hash TEXT,
+                created_ledger_sequence INTEGER NOT NULL,
                 FOREIGN KEY(actor_id) REFERENCES actor_identities(actor_id)
             );
             CREATE TABLE anchor_evidence (
@@ -212,7 +223,7 @@ class Ledger:
             if tables:
                 raise LedgerError("ALREADY_INITIALIZED_OR_UNRELATED_DATABASE")
             self._create_schema()
-            ledger_id = str(uuid.uuid4())
+            ledger_id = str(self._ledger_id_factory())
             try:
                 self.db.executemany(
                     "INSERT INTO schema_metadata(key, value) VALUES (?, ?)",
@@ -222,7 +233,7 @@ class Ledger:
                 self.db.execute(
                     "INSERT INTO actor_identities VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (owner, "HUMAN_OWNER", "V1", "Initial human owner", "LOCAL_BOOTSTRAP",
-                     "LOCAL_OWNER", utc_now(), "V1"),
+                     "LOCAL_OWNER", self._clock(), "V1"),
                 )
                 self._append_event(None, None, "GENESIS", owner, {"ledger_id": ledger_id})
                 self._append_actor_status(owner, "ACTOR_REGISTERED", owner, "genesis")
@@ -236,29 +247,36 @@ class Ledger:
                 self._rollback()
                 raise
 
+    def _next_sequence(self) -> int:
+        row = self.db.execute("SELECT MAX(ledger_sequence) AS value FROM trial_events").fetchone()
+        return 1 if row["value"] is None else int(row["value"]) + 1
+
     def _append_event(
         self, trial_id: str | None, execution_id: str | None, event_type: str,
         actor_id: str, payload: Mapping[str, Any],
-    ) -> tuple[int, str]:
+    ) -> tuple[str, int, str]:
         last = self.db.execute(
             "SELECT ledger_sequence, global_event_hash FROM trial_events ORDER BY ledger_sequence DESC LIMIT 1"
         ).fetchone()
         sequence = 1 if last is None else int(last["ledger_sequence"]) + 1
         previous = GENESIS_PREVIOUS_HASH if last is None else str(last["global_event_hash"])
+        event_id = str(self._id_factory())
+        occurred_at = self._clock()
         envelope = {
             "hash_domain_version": EVENT_HASH_DOMAIN_V1,
             "ledger_id": self._metadata("ledger_id"), "schema_version": SCHEMA_VERSION,
             "ledger_sequence": sequence, "previous_global_event_hash": previous,
+            "event_id": event_id, "execution_id": execution_id, "occurred_at": occurred_at,
             "event_type": event_type, "actor_id": actor_id, "trial_id": trial_id,
             "payload": payload,
         }
         digest = event_hash(envelope)
         self.db.execute(
             "INSERT INTO trial_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), sequence, trial_id, execution_id, event_type, actor_id, utc_now(),
+            (event_id, sequence, trial_id, execution_id, event_type, actor_id, occurred_at,
              canonical_json_bytes(payload).decode("utf-8"), previous, digest),
         )
-        return sequence, digest
+        return event_id, sequence, digest
 
     def _actor_is_active(self, actor_id: str) -> bool:
         row = self.db.execute(
@@ -275,35 +293,42 @@ class Ledger:
         return row is not None and row["event_type"] == "CAPABILITY_GRANTED"
 
     def _require(self, actor_id: str, capability: Capability) -> None:
-        if not self._actor_is_active(actor_id) or not self._capability_is_active(actor_id, capability.value):
+        if (not self.verify_global_chain() or not self._actor_is_active(actor_id)
+                or not self._capability_is_active(actor_id, capability.value)):
             raise LedgerError(f"UNAUTHORIZED:{capability.value}")
 
     def _append_actor_status(self, actor_id: str, event_type: str, by: str, reason: str) -> None:
+        status_event_id = str(self._id_factory())
+        occurred_at = self._clock()
+        global_event_id, _, _ = self._append_event(None, None, event_type, by, {
+            "status_event_id": status_event_id, "actor_id": actor_id, "reason": reason,
+        })
         self.db.execute(
-            "INSERT INTO actor_status_events VALUES (?, ?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), actor_id, event_type, utc_now(), by, reason),
+            "INSERT INTO actor_status_events VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (status_event_id, actor_id, event_type, occurred_at, by, reason, global_event_id),
         )
-        self._append_event(None, None, event_type, by, {"actor_id": actor_id, "reason": reason})
 
     def _append_capability(
         self, actor_id: str, capability: str, event_type: str, by: str,
         policy_version: str, reason: str,
     ) -> None:
-        self.db.execute(
-            "INSERT INTO capability_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), actor_id, capability, event_type, policy_version, utc_now(), by, reason),
-        )
-        self._append_event(None, None, event_type, by, {
-            "actor_id": actor_id, "capability": capability,
+        capability_event_id = str(self._id_factory())
+        occurred_at = self._clock()
+        global_event_id, _, _ = self._append_event(None, None, event_type, by, {
+            "capability_event_id": capability_event_id, "actor_id": actor_id, "capability": capability,
             "policy_version": policy_version, "reason": reason,
         })
+        self.db.execute(
+            "INSERT INTO capability_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (capability_event_id, actor_id, capability, event_type, policy_version, occurred_at, by, reason, global_event_id),
+        )
 
     def register_actor(self, by: str, actor_id: str, actor_type: str = "RESEARCH_GENERATOR") -> None:
         def operation() -> None:
             self._require(by, Capability.ACTOR_ADMIN)
             self.db.execute(
                 "INSERT INTO actor_identities VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (actor_id, actor_type, "V1", actor_id, "LOCAL", "LOCAL", utc_now(), "V1"),
+                (actor_id, actor_type, "V1", actor_id, "LOCAL", "LOCAL", self._clock(), "V1"),
             )
             self._append_actor_status(actor_id, "ACTOR_REGISTERED", by, "registered")
 
@@ -312,8 +337,17 @@ class Ledger:
     def set_actor_status(self, by: str, actor_id: str, status: str, reason: str = "") -> None:
         if status not in {"ACTOR_ACTIVATED", "ACTOR_SUSPENDED", "ACTOR_RETIRED"}:
             raise LedgerError("invalid actor status")
-        self._run_write(lambda: (self._require(by, Capability.ACTOR_ADMIN),
-                                 self._append_actor_status(actor_id, status, by, reason)))
+        def operation() -> None:
+            self._require(by, Capability.ACTOR_ADMIN)
+            current = self.db.execute("SELECT event_type FROM actor_status_events WHERE actor_id = ? ORDER BY rowid DESC LIMIT 1", (actor_id,)).fetchone()
+            transition = (None if current is None else current["event_type"], status)
+            allowed = {("ACTOR_REGISTERED", "ACTOR_ACTIVATED"), ("ACTOR_ACTIVATED", "ACTOR_SUSPENDED"),
+                       ("ACTOR_SUSPENDED", "ACTOR_ACTIVATED"), ("ACTOR_ACTIVATED", "ACTOR_RETIRED"),
+                       ("ACTOR_SUSPENDED", "ACTOR_RETIRED")}
+            if transition not in allowed:
+                raise LedgerError("illegal or terminal actor lifecycle transition")
+            self._append_actor_status(actor_id, status, by, reason)
+        self._run_write(operation)
 
     def grant_capability(self, by: str, actor_id: str, capability: Capability, reason: str = "") -> None:
         self._run_write(lambda: (self._require(by, Capability.CAPABILITY_ADMIN),
@@ -337,13 +371,17 @@ class Ledger:
             rules_hash = hashlib.sha256(rules_blob).hexdigest()
             self.db.execute(
                 "INSERT INTO family_policy_specs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (policy_id, version, "V1", rules_hash, rules_blob, utc_now(), utc_now(), actor, rules_hash),
+                (policy_id, version, "V1", rules_hash, rules_blob, self._clock(), self._clock(), actor, rules_hash),
             )
+            policy_event_id = str(self._id_factory())
+            occurred_at = self._clock()
+            global_event_id, _, _ = self._append_event(None, None, "FAMILY_POLICY_REGISTERED", actor, {
+                "policy_event_id": policy_event_id, "policy_id": policy_id, "version": version,
+            })
             self.db.execute(
-                "INSERT INTO family_policy_events VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (str(uuid.uuid4()), policy_id, version, "FAMILY_POLICY_REGISTERED", utc_now(), actor, "registered"),
+                "INSERT INTO family_policy_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (policy_event_id, policy_id, version, "FAMILY_POLICY_REGISTERED", occurred_at, actor, "registered", global_event_id),
             )
-            self._append_event(None, None, "FAMILY_POLICY_REGISTERED", actor, {"policy_id": policy_id, "version": version})
 
         self._run_write(operation)
 
@@ -352,9 +390,18 @@ class Ledger:
             self._require(actor, Capability.FAMILY_POLICY_ADMIN)
             if not self.db.execute("SELECT 1 FROM family_policy_specs WHERE family_policy_id = ? AND family_policy_version = ?", (policy_id, version)).fetchone():
                 raise LedgerError("unknown family policy")
-            self.db.execute("INSERT INTO family_policy_events VALUES (?, ?, ?, ?, ?, ?, ?)",
-                            (str(uuid.uuid4()), policy_id, version, event_type, utc_now(), actor, event_type))
-            self._append_event(None, None, event_type, actor, {"policy_id": policy_id, "version": version})
+            current = self.db.execute("SELECT event_type FROM family_policy_events WHERE family_policy_id = ? AND family_policy_version = ? ORDER BY rowid DESC LIMIT 1", (policy_id, version)).fetchone()
+            allowed = {("FAMILY_POLICY_REGISTERED", "FAMILY_POLICY_ACTIVATED"),
+                       ("FAMILY_POLICY_ACTIVATED", "FAMILY_POLICY_RETIRED")}
+            if current is None or (current["event_type"], event_type) not in allowed:
+                raise LedgerError("illegal or terminal family-policy lifecycle transition")
+            policy_event_id = str(self._id_factory())
+            occurred_at = self._clock()
+            global_event_id, _, _ = self._append_event(None, None, event_type, actor, {
+                "policy_event_id": policy_event_id, "policy_id": policy_id, "version": version,
+            })
+            self.db.execute("INSERT INTO family_policy_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                            (policy_event_id, policy_id, version, event_type, occurred_at, actor, event_type, global_event_id))
 
         self._run_write(operation)
 
@@ -378,6 +425,13 @@ class Ledger:
                 )
                 if key in inputs
             }
+            required = {"dataset_snapshot_id", "label_spec_hash", "feature_set_hash",
+                        "research_objective", "evaluation_window_policy"}
+            if not ({"universe_id", "universe_hash"} & set(selected)):
+                raise LedgerError("P1 family requires universe identity")
+            missing = required - set(selected)
+            if missing or any(selected.get(key) in (None, "") for key in required):
+                raise LedgerError(f"P1 family missing required axes: {sorted(missing)!r}")
         else:
             selected = dict(inputs)
         return hashlib.sha256(canonical_json_bytes({
@@ -396,7 +450,7 @@ class Ledger:
         self, actor: str, idempotency_key: str, spec: Mapping[str, Any], *,
         family_policy_id: str, family_policy_version: str, family_inputs: Mapping[str, Any],
         trial_kind: str = "INDEPENDENT_EVALUATION", parent_trial_id: str | None = None,
-        request_id: str | None = None, decimal_fields: set[str] | tuple[str, ...] = (),
+        request_id: str | None = None,
     ) -> str:
         def operation() -> str:
             self._require(actor, Capability.TRIAL_REGISTER)
@@ -404,7 +458,7 @@ class Ledger:
                 raise LedgerError("inactive or retired family policy")
             if parent_trial_id is not None and not self.db.execute("SELECT 1 FROM trial_registrations WHERE trial_id = ?", (parent_trial_id,)).fetchone():
                 raise LedgerError("unknown parent trial")
-            canonical, spec_hash = hash_research_spec(spec, decimal_fields=decimal_fields)
+            canonical, spec_hash = hash_research_spec(spec)
             family = self.family_id(family_policy_id, family_policy_version, family_inputs)
             intent = {
                 "research_spec_sha256": spec_hash, "trial_family_id": family,
@@ -420,17 +474,20 @@ class Ledger:
                 if existing["request_hash"] != request_hash:
                     raise LedgerError("idempotency key has different registration intent")
                 return str(existing["trial_id"])
-            self.db.execute("INSERT OR IGNORE INTO research_specs VALUES (?, ?)", (spec_hash, canonical))
-            trial_id = str(uuid.uuid4())
+            created_sequence = self._next_sequence()
+            self.db.execute("INSERT OR IGNORE INTO research_specs VALUES (?, ?, ?)", (spec_hash, canonical, created_sequence))
+            trial_id = str(self._id_factory())
             replay_hash = hashlib.sha256(canonical_json_bytes(self._replay_identity(spec, spec_hash))).hexdigest()
             self.db.execute(
-                "INSERT INTO trial_registrations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (trial_id, spec_hash, family, parent_trial_id, trial_kind, actor, utc_now(), SCHEMA_VERSION,
-                 family_policy_id, family_policy_version, replay_hash),
+                "INSERT INTO trial_registrations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (trial_id, spec_hash, family, parent_trial_id, trial_kind, actor, self._clock(), SCHEMA_VERSION,
+                 family_policy_id, family_policy_version, replay_hash, created_sequence),
             )
             self.db.execute("INSERT INTO registration_idempotency VALUES (?, ?, ?, ?)",
                             (actor, idempotency_key, request_hash, trial_id))
-            self._append_event(trial_id, None, "TRIAL_REGISTERED", actor, {**intent, "request_id": request_id})
+            _, sequence, _ = self._append_event(trial_id, None, "TRIAL_REGISTERED", actor, {**intent, "request_id": request_id})
+            if sequence != created_sequence:
+                raise LedgerError("registration sequence assignment changed during transaction")
             return trial_id
 
         return self._run_write(operation)
@@ -460,9 +517,10 @@ class Ledger:
                     raise LedgerError("replay identity differs from frozen registration")
             elif original_execution_id is not None:
                 raise LedgerError("only reproducibility replay may link original execution")
-            execution_id = str(uuid.uuid4())
-            self.db.execute("INSERT INTO execution_records VALUES (?, ?, ?, ?, ?, ?)",
-                            (execution_id, trial_id, execution_kind, original_execution_id, utc_now(), actor))
+            execution_id = str(self._id_factory())
+            created_sequence = self._next_sequence()
+            self.db.execute("INSERT INTO execution_records VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            (execution_id, trial_id, execution_kind, original_execution_id, self._clock(), actor, created_sequence))
             if execution_kind == "REPRODUCIBILITY_REPLAY":
                 self._append_event(trial_id, execution_id, "REPLAY_LINKED", actor, {"original_execution_id": original_execution_id})
             self._append_event(trial_id, execution_id, "TRIAL_STARTED", actor, {"execution_kind": execution_kind})
@@ -501,14 +559,17 @@ class Ledger:
                 raise LedgerError("reference has unknown or mismatched execution")
             if event_type == "RESULT_ATTACHED" and self._execution_status(execution_id) != "TRIAL_COMPLETED":
                 raise LedgerError("performance result requires completed execution")
-            reference_id = str(uuid.uuid4())
-            self.db.execute(f"INSERT INTO {table} VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            reference_id = str(self._id_factory())
+            created_sequence = self._next_sequence()
+            self.db.execute(f"INSERT INTO {table} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                             (reference_id, trial_id, execution_id, reference_type, locator,
-                             content_hash, utc_now(), actor))
-            self._append_event(trial_id, execution_id, event_type, actor, {
+                             content_hash, self._clock(), actor, created_sequence))
+            _, sequence, _ = self._append_event(trial_id, execution_id, event_type, actor, {
                 "reference_id": reference_id, "reference_type": reference_type,
                 "locator": locator, "content_hash": content_hash,
             })
+            if sequence != created_sequence:
+                raise LedgerError("reference sequence assignment changed during transaction")
             return reference_id
         return self._run_write(operation)
 
@@ -523,13 +584,16 @@ class Ledger:
     def record_protocol_violation(self, actor: str, reason: str, external_reference: str | None = None, content_hash: str | None = None) -> str:
         def operation() -> str:
             self._require(actor, Capability.PROTOCOL_VIOLATION_RECORD)
-            violation_id = str(uuid.uuid4())
-            self.db.execute("INSERT INTO protocol_violations VALUES (?, ?, ?, ?, ?, ?)",
-                            (violation_id, actor, utc_now(), reason, external_reference, content_hash))
-            self._append_event(None, None, "PROTOCOL_VIOLATION_RECORDED", actor, {
+            violation_id = str(self._id_factory())
+            created_sequence = self._next_sequence()
+            self.db.execute("INSERT INTO protocol_violations VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            (violation_id, actor, self._clock(), reason, external_reference, content_hash, created_sequence))
+            _, sequence, _ = self._append_event(None, None, "PROTOCOL_VIOLATION_RECORDED", actor, {
                 "violation_id": violation_id, "reason": reason,
                 "external_reference": external_reference, "content_hash": content_hash,
             })
+            if sequence != created_sequence:
+                raise LedgerError("violation sequence assignment changed during transaction")
             return violation_id
         return self._run_write(operation)
 
@@ -544,17 +608,36 @@ class Ledger:
                     "hash_domain_version": EVENT_HASH_DOMAIN_V1, "ledger_id": ledger_id,
                     "schema_version": SCHEMA_VERSION, "ledger_sequence": row["ledger_sequence"],
                     "previous_global_event_hash": previous, "event_type": row["event_type"],
-                    "actor_id": row["actor_id"], "trial_id": row["trial_id"], "payload": payload,
+                    "event_id": row["event_id"], "execution_id": row["execution_id"],
+                    "occurred_at": row["occurred_at"], "actor_id": row["actor_id"],
+                    "trial_id": row["trial_id"], "payload": payload,
                 }
                 if row["ledger_sequence"] != expected or row["previous_global_event_hash"] != previous or row["global_event_hash"] != event_hash(envelope):
                     return False
                 expected += 1
                 previous = row["global_event_hash"]
-            if expected == 1:
+            if expected == 1 or not self._verify_lifecycle_linkage():
                 return False
             return anchor is None or self.verify_anchor(anchor, check_chain=False)
         except (LedgerError, sqlite3.DatabaseError, ValueError):
             return False
+
+    def _verify_lifecycle_linkage(self) -> bool:
+        """Ensure lifecycle projections cannot change without a chained event."""
+        projections = (
+            ("actor_status_events", "status_event_id", "actor_id_by"),
+            ("capability_events", "capability_event_id", "actor_id_by"),
+            ("family_policy_events", "policy_event_id", "actor_id"),
+        )
+        for table, identifier, actor_column in projections:
+            for row in self.db.execute(f"SELECT * FROM {table}"):
+                event = self.db.execute("SELECT * FROM trial_events WHERE event_id = ?", (row["global_event_id"],)).fetchone()
+                if event is None or event["event_type"] != row["event_type"] or event["actor_id"] != row[actor_column]:
+                    return False
+                payload = parse_json_strict(event["payload_json"])
+                if payload.get(identifier) != row[identifier]:
+                    return False
+        return True
 
     @staticmethod
     def _anchor_parts(anchor: LedgerAnchorManifest | Mapping[str, Any]) -> tuple[dict[str, Any], str]:
@@ -594,19 +677,33 @@ class Ledger:
         events = []
         for row in self.db.execute("SELECT ledger_sequence, trial_id, execution_id, event_type, actor_id, payload_json, global_event_hash FROM trial_events WHERE ledger_sequence <= ? ORDER BY ledger_sequence", (sequence,)):
             events.append({key: (parse_json_strict(row[key]) if key == "payload_json" else row[key]) for key in row.keys()})
-        trials = [dict(row) for row in self.db.execute("SELECT * FROM trial_registrations ORDER BY trial_id")]
+        trials = [dict(row) for row in self.db.execute(
+            "SELECT * FROM trial_registrations WHERE created_ledger_sequence <= ? ORDER BY trial_id", (sequence,)
+        )]
         evidence = {
             "snapshot_schema_version": "1", "ledger_id": self._metadata("ledger_id"),
             "schema_version": SCHEMA_VERSION, "as_of_ledger_sequence": sequence,
             "global_event_hash": boundary["global_event_hash"], "registered_attempt_count": len(trials),
-            "performance_evaluated_count": self.db.execute("SELECT COUNT(DISTINCT trial_id) FROM result_references").fetchone()[0],
+            "performance_evaluated_count": self.db.execute(
+                "SELECT COUNT(DISTINCT trial_id) FROM result_references WHERE created_ledger_sequence <= ?", (sequence,)
+            ).fetchone()[0],
             "pre_evaluation_failure_count": sum(event["event_type"] == "TRIAL_FAILED" for event in events),
-            "replay_count": self.db.execute("SELECT COUNT(*) FROM execution_records WHERE execution_kind = 'REPRODUCIBILITY_REPLAY'").fetchone()[0],
+            "replay_count": self.db.execute(
+                "SELECT COUNT(*) FROM execution_records WHERE execution_kind = 'REPRODUCIBILITY_REPLAY' AND created_ledger_sequence <= ?", (sequence,)
+            ).fetchone()[0],
             "trial_membership": trials,
-            "research_spec_hashes": [row[0] for row in self.db.execute("SELECT canonical_research_spec_sha256 FROM research_specs ORDER BY canonical_research_spec_sha256")],
-            "protocol_violations": [dict(row) for row in self.db.execute("SELECT * FROM protocol_violations ORDER BY violation_id")],
-            "result_references": [dict(row) for row in self.db.execute("SELECT * FROM result_references ORDER BY reference_id")],
-            "artifact_references": [dict(row) for row in self.db.execute("SELECT * FROM artifact_references ORDER BY reference_id")],
+            "research_spec_hashes": [row[0] for row in self.db.execute(
+                "SELECT canonical_research_spec_sha256 FROM research_specs WHERE created_ledger_sequence <= ? ORDER BY canonical_research_spec_sha256", (sequence,)
+            )],
+            "protocol_violations": [dict(row) for row in self.db.execute(
+                "SELECT * FROM protocol_violations WHERE created_ledger_sequence <= ? ORDER BY violation_id", (sequence,)
+            )],
+            "result_references": [dict(row) for row in self.db.execute(
+                "SELECT * FROM result_references WHERE created_ledger_sequence <= ? ORDER BY reference_id", (sequence,)
+            )],
+            "artifact_references": [dict(row) for row in self.db.execute(
+                "SELECT * FROM artifact_references WHERE created_ledger_sequence <= ? ORDER BY reference_id", (sequence,)
+            )],
             "events": events,
         }
         evidence_bytes = canonical_json_bytes(evidence)
@@ -619,7 +716,7 @@ class Ledger:
             snapshot = self.snapshot()
             payload = LedgerAnchorManifestPayload(
                 snapshot.ledger_id, snapshot.as_of_ledger_sequence, snapshot.global_event_hash,
-                snapshot.schema_version, utc_now(), actor,
+                snapshot.schema_version, self._clock(), actor,
             )
             payload_dict = asdict(payload)
             digest = hashlib.sha256(canonicalize_anchor_payload(payload_dict)).hexdigest()

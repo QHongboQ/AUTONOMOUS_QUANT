@@ -1,6 +1,6 @@
 # Trial Ledger runtime foundation 001
 
-**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-FOUNDATION-COMPLETION-001`
+**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-FOUNDATION-FINAL-CLOSURE-001`
 
 The completed standard-library foundation is at
 `30-research-system/experiment-registry/trial-ledger/aq_trial_ledger`.
@@ -19,32 +19,45 @@ state are derived from ordered immutable events. Foreign keys block ordinary
 orphan references.
 
 `AQ_LEDGER_EVENT_HASH_V1` hashes a canonical event envelope containing the
-ledger identity, schema version, global sequence, prior global hash, event
-type, actor, trial identity/null, and canonical payload. Chain verification
-requires sequence one, contiguous sequence, the zero-hash genesis predecessor,
-and recomputed hashes. A retained anchor also fails verification if the local
-database is truncated below its sequence.
+ledger identity, schema version, global sequence, prior global hash, immutable
+event ID, execution ID/null, occurred-at instant, event type, actor, trial
+identity/null, and canonical payload. Chain verification requires sequence one,
+contiguous sequence, the zero-hash genesis predecessor, recomputed hashes, and
+one-to-one lifecycle-to-global-event linkage. A retained anchor also fails
+verification if the local database is truncated below its sequence.
 
 ResearchSpec canonicalization is `AQ_RESEARCH_SPEC_CANONICAL_V1`; anchor
 canonicalization is `AQ_LEDGER_ANCHOR_CANONICAL_V1`. The explicit ResearchSpec
-boundary rejects registration/result/sealed-OOS metadata including nested
-forms, non-string mapping keys, lone surrogates, unknown top-level fields, and
-native binary floats in declared decimal fields. Only designated semantic-text
-fields are NFC-normalized; opaque identifiers are left byte-distinct.
+boundary now requires all V1 performance-bearing axes (factor/model/hyperparameter,
+data, windows, calendar, portfolio/cost/benchmark, provenance and family input
+hash). It rejects registration/result/sealed-OOS metadata including nested forms,
+non-string mapping keys, lone surrogates, unknown top-level fields, and native
+binary floats in schema-declared decimal parameters. Typed parameters—not callers—
+govern decimal identity. Only designated semantic-text fields are NFC-normalized;
+opaque identifiers are left byte-distinct.
 
-The 17-test `unittest` matrix passed under CPython 3.12.14. It covers canonical
-vectors and rejection cases; genesis; actor/capability/policy lifecycle;
+The 28-test `unittest` matrix passed under CPython 3.12.14. It covers frozen
+canonical, anchor, event-hash and deterministic-snapshot digests; V1 identity
+and typed-parameter rejection; genesis; actor/capability/policy lifecycle;
 idempotency; registration; execution, replay and references; protocol
-violations; foreign keys; all table trigger coverage; tamper/anchor detection;
-deterministic snapshots; backup/restore and clean-process reopen; and actual
-multi-threaded distinct and duplicate registration races. The required
+violations; foreign keys; table trigger coverage; privileged linkage tampering;
+historical as-of snapshot stability after future facts; external anchor-artifact
+round trip/truncation detection; backup/restore and clean-process reopen; and
+actual multi-threaded distinct and duplicate registration races. The required
 `compileall` command passed after the same source changes.
+
+Historical snapshots now filter every authoritative object/reference by its
+immutable `created_ledger_sequence`, rather than only filtering global events.
+Lifecycle projections include immutable global event IDs and fail verification
+if a privileged unchained status, capability, or policy record is injected.
+The external anchor primitive writes/loads a canonical manifest artifact; tests
+place it in a temporary directory distinct from the temporary database.
 
 Windows CPython 3.12.14 and Ubuntu-24.04 `python3` produced identical bytes
 and this SHA-256 for the shared committed canonical vector:
 
 ```text
-11a98432b8ce042da7620003344499b1796a1b27cf1f82b40a74457991dc996b
+6043aedb32b23df715f61d9f2f9ce12d9305f0a14172c6266db9ae38ceb5dd61
 ```
 
 All test databases and backups were short-lived temporary files and were
