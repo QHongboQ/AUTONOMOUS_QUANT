@@ -49,7 +49,7 @@ def run_reconstruct(args: argparse.Namespace) -> int:
         "logical_identity_excludes_absolute_paths": True,
     }
     report: dict[str, object] = {
-        "schema_version": "SP500_PIT_VALIDATION_V1",
+        "schema_version": "SP500_PIT_VALIDATION_V2",
         "interval_semantics": "half_open_start_inclusive_end_exclusive",
         "period_start": args.start,
         "period_end_inclusive": args.cutoff,
@@ -69,6 +69,7 @@ def run_reconstruct(args: argparse.Namespace) -> int:
     }
     if args.baseline_sp500:
         report["qlib_overlap"] = compare_qlib_overlap(intervals, parse_qlib_sp500(Path(args.baseline_sp500)), QLIB_SAMPLE_DATES)
+        report["qlib_overlap_unexplained_unique_identities"] = sorted({identity for row in report["qlib_overlap"] for key in ("new_only", "old_only") for identity in row[key]})
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     if not terminal["matches"]:
@@ -78,7 +79,11 @@ def run_reconstruct(args: argparse.Namespace) -> int:
         write_json(out / "validation_report.json", report)
         print(json.dumps({"pit_universe": "BLOCKED", "terminal_state": terminal}, sort_keys=True))
         return 2
-    report["pit_universe"] = "PASS"
+    if report.get("qlib_overlap_unexplained_unique_identities"):
+        report["pit_universe"] = "BLOCKED"
+        report["blocker"] = "QLIB_OVERLAP_IDENTITY_DIFFERENCES_REQUIRE_FIRST_PARTY_RESOLUTION"
+    else:
+        report["pit_universe"] = "PASS"
     write_json(out / "membership_intervals.json", membership_value)
     write_json(out / "symbol_mapping.json", mapping_value)
     write_json(out / "source_evidence_manifest.json", source_manifest)

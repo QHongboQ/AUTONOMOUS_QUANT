@@ -8,11 +8,7 @@ from typing import Iterable
 
 from .canonical import sha256
 from .parser import ChangeEvent, CurrentConstituent
-
-
-# Versioned, narrow identity aliases. They are not a blanket ticker rewrite.
-LOGICAL_ALIASES = {"FB": "META", "ANTM": "ELV", "VIAC": "PARA", "HFC": "DINO", "FLT": "CPAY"}
-DOT_DASH = {"BRK.B": "BRK-B", "BF.B": "BF-B"}
+from .identity import CORPORATE_MEMBERSHIP_TRANSITIONS, FROZEN_SOURCE_URL, SecurityIdentityMapping, logical_identity, provider_symbol, transition_mappings
 
 
 @dataclass(frozen=True)
@@ -25,38 +21,7 @@ class MembershipInterval:
     source_change_evidence: tuple[str, ...]
 
 
-@dataclass(frozen=True)
-class SymbolMapping:
-    index_source_symbol: str
-    logical_security_identity: str
-    market_data_symbol: str
-    effective_from: str
-    effective_to: str
-    mapping_reason: str
-    evidence: str
-
-
-def logical_identity(symbol: str, security: str | None = None) -> str:
-    """Return a security identity, not merely a ticker string.
-
-    The 2014/2016 Under Armour rows reuse ``UA`` for two share classes.  The
-    source security text distinguishes them, so the adapter preserves that
-    distinction rather than turning two eligible securities into one ticker.
-    """
-
-    ticker = symbol.upper()
-    name = (security or "").casefold()
-    if ticker == "IR" and "ingersoll-rand" in name:
-        return "INGERSOLL_RAND_LEGACY"
-    if ticker == "TT" and "trane" in name:
-        return "INGERSOLL_RAND_LEGACY"
-    if ticker == "IR" and "ingersoll rand" in name:
-        return "INGERSOLL_RAND_2020"
-    if ticker == "UAA" or (ticker == "UA" and "under armour" in name and "class c" not in name):
-        return "UNDER_ARMOUR_CLASS_A"
-    if ticker == "UA" and "class c" in name:
-        return "UNDER_ARMOUR_CLASS_C"
-    return LOGICAL_ALIASES.get(ticker, ticker)
+SymbolMapping = SecurityIdentityMapping
 
 
 def reconstruct_membership(current: Iterable[CurrentConstituent], changes: Iterable[ChangeEvent], start: str, cutoff: str) -> list[MembershipInterval]:
@@ -69,28 +34,50 @@ def reconstruct_membership(current: Iterable[CurrentConstituent], changes: Itera
 
     start_day, cutoff_day = date.fromisoformat(start), date.fromisoformat(cutoff)
     events = sorted((item for item in changes if date.fromisoformat(item.effective_date) <= cutoff_day), key=lambda item: (item.effective_date, item.source_row))
-    state = {logical_identity(item.symbol, item.security) for item in current}
-    for event in reversed(events):
-        if date.fromisoformat(event.effective_date) <= start_day:
+    state = {logical_identity(item.symbol, item.security, cutoff): item.symbol for item in current}
+    reverse_timeline = [(event.effective_date, "source", event) for event in events]
+    reverse_timeline += [(item.effective_date, "corporate", item) for item in CORPORATE_MEMBERSHIP_TRANSITIONS]
+    for _, kind, event in sorted(reverse_timeline, key=lambda item: (item[0], item[1]), reverse=True):
+        if not (start_day < date.fromisoformat(event.effective_date) <= cutoff_day):
+            continue
+        if kind == "corporate":
+            if event.successor_id in state:
+                state.pop(event.successor_id)
+                for predecessor, symbol in zip(event.predecessor_ids, event.predecessor_symbols):
+                    state[predecessor] = symbol
             continue
         if event.added_symbol:
-            state.discard(logical_identity(event.added_symbol, event.added_security))
+            state.pop(logical_identity(event.added_symbol, event.added_security, event.effective_date), None)
         if event.removed_symbol:
-            state.add(logical_identity(event.removed_symbol, event.removed_security))
+            state[logical_identity(event.removed_symbol, event.removed_security, event.effective_date)] = event.removed_symbol
 
-    opened = {identity: (start, identity, ("terminal-state-reversed",)) for identity in state}
+    opened = {identity: (start, symbol, ("terminal-state-reversed",)) for identity, symbol in state.items()}
     intervals: list[MembershipInterval] = []
-    for event in events:
+    timeline = [(event.effective_date, "source", event) for event in events if start_day <= date.fromisoformat(event.effective_date) <= cutoff_day]
+    timeline += [(item.effective_date, "corporate", item) for item in CORPORATE_MEMBERSHIP_TRANSITIONS if start_day <= date.fromisoformat(item.effective_date) <= cutoff_day]
+    for _, kind, event in sorted(timeline, key=lambda item: (item[0], item[1])):
+        if kind == "corporate":
+            active_predecessors = [identity for identity in event.predecessor_ids if identity in opened]
+            if not active_predecessors:
+                continue
+            for identity in active_predecessors:
+                prior = opened.pop(identity, None)
+                if prior is not None:
+                    intervals.append(MembershipInterval(prior[1], identity, identity, prior[0], event.effective_date, prior[2] + (event.transition_type, event.evidence_url)))
+            if event.successor_id in opened:
+                raise ValueError(f"duplicate corporate successor: {event.successor_id}")
+            opened[event.successor_id] = (event.effective_date, event.successor_symbol, (event.transition_type, event.evidence_url))
+            continue
         event_day = date.fromisoformat(event.effective_date)
         if event_day < start_day or event_day > cutoff_day:
             continue
         if event.removed_symbol:
-            identity = logical_identity(event.removed_symbol, event.removed_security)
+            identity = logical_identity(event.removed_symbol, event.removed_security, event.effective_date)
             prior = opened.pop(identity, None)
             if prior is not None and prior[0] < event.effective_date:
                 intervals.append(MembershipInterval(prior[1], identity, identity, prior[0], event.effective_date, prior[2] + (f"removed-row-{event.source_row}",)))
         if event.added_symbol:
-            identity = logical_identity(event.added_symbol, event.added_security)
+            identity = logical_identity(event.added_symbol, event.added_security, event.effective_date)
             if identity in opened:
                 raise ValueError(f"duplicate active addition: {identity} at {event.effective_date}")
             opened[identity] = (event.effective_date, event.added_symbol, (f"added-row-{event.source_row}",))
@@ -101,20 +88,15 @@ def reconstruct_membership(current: Iterable[CurrentConstituent], changes: Itera
 
 
 def build_symbol_mapping(intervals: Iterable[MembershipInterval], start: str, end_exclusive: str) -> list[SymbolMapping]:
-    mappings = []
-    for identity in sorted({item.logical_security_identity for item in intervals}):
-        if identity == "UNDER_ARMOUR_CLASS_A":
-            market, reason = "UAA", "TICKER_RENAME_SHARE_CLASS"
-        elif identity == "UNDER_ARMOUR_CLASS_C":
-            market, reason = "UA", "SHARE_CLASS_IDENTITY"
-        elif identity == "INGERSOLL_RAND_LEGACY":
-            market, reason = "TT", "TICKER_RENAME_CORPORATE_IDENTITY"
-        elif identity == "INGERSOLL_RAND_2020":
-            market, reason = "IR", "TICKER_REUSE_NEW_SECURITY"
-        else:
-            market, reason = DOT_DASH.get(identity, identity), "DOT_DASH_PROVIDER_FORMAT" if identity in DOT_DASH else "SOURCE_SYMBOL_DIRECT"
-        mappings.append(SymbolMapping(identity, identity, market, start, end_exclusive, reason, "SP500_PIT_MAPPING_V1"))
-    return mappings
+    active = {item.logical_security_identity for item in intervals}
+    mappings = [item for item in transition_mappings() if item.logical_security_id in active and item.effective_from < end_exclusive and start < item.effective_to]
+    covered = {item.logical_security_id for item in mappings}
+    for item in sorted(intervals, key=lambda value: (value.logical_security_identity, value.source_symbol)):
+        if item.logical_security_identity in covered:
+            continue
+        mappings.append(SecurityIdentityMapping(item.logical_security_identity, item.source_symbol, item.source_symbol, provider_symbol(item.source_symbol), start, end_exclusive, "DOT_DASH_PROVIDER_FORMAT" if provider_symbol(item.source_symbol) != item.source_symbol else "SOURCE_SYMBOL_DIRECT", None, None, FROZEN_SOURCE_URL, "2024-12-26", None, "MEDIUM", "RESOLVED"))
+        covered.add(item.logical_security_identity)
+    return sorted(mappings, key=lambda value: (value.logical_security_id, value.effective_from, value.source_symbol))
 
 
 def active_symbols(intervals: Iterable[MembershipInterval], on_date: str) -> set[str]:
@@ -130,4 +112,4 @@ def mapping_hash(mappings: Iterable[SymbolMapping]) -> str:
 
 
 def universe_hash(intervals: Iterable[MembershipInterval], mappings: Iterable[SymbolMapping]) -> str:
-    return sha256({"schema_version": "SP500_PIT_V1", "membership_intervals": [asdict(item) for item in intervals], "symbol_mapping": [asdict(item) for item in mappings]})
+    return sha256({"schema_version": "SP500_PIT_V2", "membership_intervals": [asdict(item) for item in intervals], "symbol_mapping": [asdict(item) for item in mappings]})

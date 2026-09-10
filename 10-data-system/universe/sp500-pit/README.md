@@ -12,6 +12,17 @@ then replays changes forward. Symbol mapping is a separate versioned artifact;
 dot/dash format changes and corporate aliases are explicit rather than silent
 historical rewrites.
 
+Security identity is project-owned and opaque (`AQSEC-*`), separate from both
+the index source symbol and the provider symbol. Evidence-backed mappings are
+date-effective and include transition type, predecessor/successor references,
+evidence URL/date/hash, confidence, and resolution state. Corporate successors
+and ticker reuse are not global aliases. Provider-only dot/dash formatting is
+kept separate from corporate identity.
+
+The terminal invariant and normalized legacy-Qlib comparison are separate
+gates. Exact terminal equality does not accept the universe while any Qlib
+reference difference lacks first-party membership or identity evidence.
+
 The CLI only writes compact JSON evidence outside Git. It never downloads price
 data, trains a model, predicts, calculates returns, or inspects performance.
 
