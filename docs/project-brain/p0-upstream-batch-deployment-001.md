@@ -15,13 +15,9 @@
 - `AGENTS.md`: not present.
 - Read-first documents: `docs/project-brain/README.md` and `docs/project-brain/p0-upstream-fit-audit.md`.
 
-### Superseded sequencing note
+### Historical deployment record
 
-The Project Brain is authoritative and states in the current P0 local-POC order:
-
-> No other upstream should be installed locally before P0-A evidence is reviewed.
-
-This was the initial sequencing constraint. On 2026-09-09, the owner explicitly superseded it for the deployment strategy, then instructed an immediate stop to all further installation or repair work. The current, authoritative deployment state is the addendum in section 9; earlier sections preserve the initial evidence rather than deleting it.
+Earlier staging evidence was collected under a prior deployment policy that no longer governs P0. The authoritative sequence is now deployment staging, then Interface Audit, then functional POCs. The current state is recorded in the later addenda; the initial observations remain as historical evidence only.
 
 ## 2. Machine preflight
 
@@ -69,16 +65,16 @@ Qlib was validated against the [Microsoft Qlib repository](https://github.com/mi
 | Upstream | Source | Environment | Install | Health | SHA/version | Disk | Classification |
 |---|---|---|---|---|---|---|---|
 | Qlib | `D:\AQ_UPSTREAM\qlib` | `D:\AQ_ENVS\qlib` | Official package fallback installed after source-build attempt | `import qlib`; `python -m qlib.cli.run --help` passed | source `79633dd9506ea689e5400dea0197717b5b3d74b7` / package `pyqlib 0.9.7` | source 19,497,995 B; env 761,540,605 B | PASS_WITH_WARNING |
-| RD-Agent | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| skfolio | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| OpenBB | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| FinRL-X | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| LEAN | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| Robinhood MCP | no local artifact assessed | no environment | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| TradingAgents | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| FinGPT | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| FinBERT | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
-| AlphaGen | not deployed | not deployed | prohibited by Qlib-first review gate | not run | not recorded | 0 B | NOT_STARTED_BY_BRAIN_GATE |
+| RD-Agent | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| skfolio | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| OpenBB | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| FinRL-X | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| LEAN | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| Robinhood MCP | no local artifact assessed | no environment | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| TradingAgents | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| FinGPT | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| FinBERT | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
+| AlphaGen | not deployed | not deployed | pending under prior staging policy | not run | not recorded | 0 B | HISTORICAL_SNAPSHOT |
 
 ## 6. Qlib detail
 
@@ -104,9 +100,9 @@ Qlib was validated against the [Microsoft Qlib repository](https://github.com/mi
 
 ## 8. Initial readiness and next-gate statement (superseded)
 
-Qlib's lightweight deployment health is ready for P0-A evidence review, with the source-build C++ compiler prerequisite documented. It is **not** a completed Qlib data/workflow POC and does not authorize P1.
+Qlib's lightweight deployment health is recorded, with the source-build C++ compiler prerequisite documented. It is **not** a completed functional POC and does not authorize P1.
 
-The owner subsequently waived the Qlib-first deployment sequence, then stopped all further installation and repair work. P0 Interface Audit remains **NOT STARTED**.
+The owner subsequently updated the P0 sequence to deployment staging, Interface Audit, then functional POCs, and then stopped further installation and repair work. P0 Interface Audit remains **NOT STARTED**.
 
 ## 9. Strategy-update addendum — exact state at stop
 
@@ -141,7 +137,7 @@ The owner subsequently waived the Qlib-first deployment sequence, then stopped a
 | RD-Agent | Core | `main` `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd`; 24,266,102 B | none | Official Linux/Docker requirement recorded. No WSL, Docker, install, or repair attempted. | BLOCKED_PLATFORM_PREREQUISITE |
 | skfolio | Core | package-only | `D:\AQ_ENVS\skfolio`, Python 3.12.14, 268,156,796 B | `skfolio 1.0.6`; WalkForward, CombinatorialPurgedCV, and MeanRisk imports pass. | PASS |
 | OpenBB | Core | package-only | `D:\AQ_ENVS\openbb`, Python 3.12.14, 196,714,954 B | `openbb 4.7.2`; `from openbb import obb` passes with isolated settings; no provider credentials. | PASS_WITH_WARNING |
-| Robinhood MCP | Core | remote connector only | none | Official endpoint identified; no connector added, authentication, account access, or order action. | MANUAL_AUTH_REQUIRED |
+| Robinhood MCP | Core | existing Codex connector configuration | none | Configured connector recorded; authentication and account access were not assessed, and no trading action occurred. | CONNECTOR_CONFIGURED |
 | FinRL-X | Challenger | `master` `e65d6f0483ead7d2ef4a5fc940cdf960392a25c1`; 138,977,891 B | `D:\AQ_ENVS\finrlx`, Python 3.12.14, 551,702 B | Source install resolver found declared `finnhub>=2.4.19` unsatisfiable. No repair attempted. | UPSTREAM_BROKEN |
 | LEAN | Challenger | `master` `01215376568960c912c1296de26b5a8005d6a525`; 531,493,516 B | none | No .NET SDK and no Docker. No installation or repair attempted. | BLOCKED_PLATFORM_PREREQUISITE |
 | TradingAgents | Deferred | `main` `be952b8eccb49720509af544c6675233bc1f10d0`; 9,013,510 B | `D:\AQ_ENVS\tradingagents`, Python 3.13.15, 226,503,862 B | Installed before deferral; import and CLI help pass. No LLM/data API call. | DEFERRED_BY_STRATEGY |
@@ -176,7 +172,16 @@ On 2026-09-09, `AUTONOMOUS-QUANT-P0-LAB-PRUNE-001` performed deterministic clean
 - `D:\AQ_UPSTREAM\finbert` — recorded SHA `44995e0c5870c4ab37a189d756550654ae87cdf0`
 - `D:\AQ_UPSTREAM\alphagen` — recorded SHA `259687e8f316994426416c530a94842a2fe6405e`
 
-`D:\AQ_CACHE` and `D:\AQ_DATA` were not deleted. Robinhood MCP configuration was not read or modified.
+`D:\AQ_CACHE` and `D:\AQ_DATA` were not deleted. The existing Robinhood MCP configuration was not read or modified.
+
+### Robinhood connector record
+
+```text
+CONNECTOR_CONFIGURED = YES
+AUTH_STATE = NOT_ASSESSED_IN_THIS_TASK
+ACCOUNT_ACCESS = NOT_PERFORMED
+TRADING_ACTION = NONE
+```
 
 ### Final directory whitelist
 
