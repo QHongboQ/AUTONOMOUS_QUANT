@@ -1,7 +1,7 @@
 # P0 POC-A OpenBB/Linux Qlib handoff 001
 
-**Task:** `AUTONOMOUS-QUANT-P0-POC-A-OPENBB-LINUX-QLIB-HANDOFF-001`
-**Result:** `POC_A = BLOCKED` before any provider request.
+**Initial task:** `AUTONOMOUS-QUANT-P0-POC-A-OPENBB-LINUX-QLIB-HANDOFF-001`
+**Current result:** `POC_A = PASS` (OpenBB/yfinance → Parquet → Linux Qlib ingestion)
 
 ## Scope and preflight
 
@@ -137,7 +137,7 @@ P0 = IN_PROGRESS
 P1 = NOT_STARTED
 ```
 
-## UV/PyArrow blocker resolution 002 — new OpenBB result-schema blocker
+## Historical UV/PyArrow blocker resolution 002 — OpenBB result-schema interpretation
 
 **Task:** `AUTONOMOUS-QUANT-P0-POC-A-UV-PYARROW-BLOCKER-RESOLUTION-001`
 
@@ -204,6 +204,78 @@ TRADING_ACTIONS = NONE
 POC_A = BLOCKED (OpenBB historical result date/session schema)
 P0_POC_A_OPENBB_LINUX_QLIB_HANDOFF = BLOCKED
 CURRENT_NEXT = P0_POC_A_BLOCKER_RESOLUTION
+P0 = IN_PROGRESS
+P1 = NOT_STARTED
+```
+
+## OpenBB date-index blocker resolution 003 — authoritative POC-A PASS
+
+**Task:** `AUTONOMOUS-QUANT-P0-POC-A-OPENBB-DATE-INDEX-BLOCKER-RESOLUTION-001`
+
+### Root cause confirmation
+
+The installed OpenBB `OBBject.to_df` and `to_dataframe` signatures default `index="date"`. Their implementation calls `df.set_index(index, inplace=True)` when that field is in the result columns. The installed `EquityHistoricalData` schema explicitly defines `date`. Therefore the preceding blocker was a date-index interpretation error: default `result.to_df()` had moved the returned provider-standard `date` field into the pandas index; it was not a provider-data omission.
+
+### One resumed historical call and normalization
+
+Exactly one newly authorized OpenBB/yfinance historical call was made with `AAPL,MSFT,SPY`, `start_date=2026-08-12`, `end_date=2026-09-10`, `interval="1d"`, `adjustment="splits_only"`, and `include_actions=true`. It used the verified isolated OpenBB home and explicitly converted with `result.to_df(index=None)`.
+
+The observed raw frame had a `RangeIndex` and these exact columns/dtypes:
+
+```text
+date:object; open:float64; high:float64; low:float64; close:float64;
+volume:int64; dividend:float64; symbol:str
+```
+
+It contained AAPL, MSFT, and SPY; 60 rows; 20 completed US trading sessions per symbol from 2026-08-12 through 2026-09-09; and zero duplicate `(date, symbol)` rows. OHLC values were finite and positive, volume was finite and non-negative, and no forward fill or synthetic rows were used. `dividend` was returned and retained in the normalized artifact; no split field was returned in this bounded interval. USD semantics remain directly supported by the prior successful OpenBB/yfinance multi-symbol profile evidence.
+
+The normalized `market_data.parquet` has sorted naive `(datetime, instrument)` MultiIndex rows and feature fields `$open`, `$high`, `$low`, `$close`, and `$volume`. Its sidecar records the explicit request, runtime versions, provider, adjustment/actions semantics, normalization rules, row/session counts, action field, currency evidence, and SHA-256.
+
+### Cross-runtime integrity and Linux Qlib ingestion
+
+| Check | Observed result |
+|---|---|
+| Windows SHA-256 | `49090594039da38d39d38156d5921539f6b609fe3a090c5621dcf4f2aeee8d23` |
+| Linux SHA-256 | `49090594039da38d39d38156d5921539f6b609fe3a090c5621dcf4f2aeee8d23` |
+| Byte integrity | PASS |
+| Linux Qlib | `0.9.8.dev26` from `2fb9380b342556ddb50a4b24e4fe8655d548b2b8` |
+| `StaticDataLoader(config=<parquet path>).load()` | PASS |
+| Loader output | exactly equals the directly read 60x6 Parquet dataframe; index, columns, and dtypes equal |
+
+No qrun, model training, MLflow action, package change, source change, LLM call, Robinhood invocation, account access, or trading action occurred in this task.
+
+```text
+DATE_INDEX_ROOT_CAUSE = CONFIRMED (OpenBB default to_df(index="date") sets date as pandas index)
+TO_DF_MODE = index=None
+OPENBB_CALL_COUNT_TOTAL = 3
+OPENBB_PROVIDER = yfinance
+SYMBOLS = AAPL, MSFT, SPY
+REQUESTED_RANGE = 2026-08-12 through 2026-09-10
+RETURNED_RANGE = 2026-08-12 through 2026-09-09
+SESSION_COUNT = 20
+ROW_COUNT = 60
+DUPLICATES = 0
+ADJUSTMENT = splits_only
+INCLUDE_ACTIONS = true
+CURRENCY = USD
+WINDOWS_ARTIFACT = D:\AQ_DATA\poc\poc-a-openbb-qlib\market_data.parquet
+LINUX_ARTIFACT = /mnt/d/AQ_DATA/poc/poc-a-openbb-qlib/market_data.parquet
+CROSS_RUNTIME_HASH_MATCH = YES
+STATIC_DATALOADER = PASS
+QLIB_INGESTION = PASS
+PACKAGES_CHANGED = NO (this task)
+OPENBB_CHANGED = NO
+PANDAS_CHANGED = NO
+PYARROW_CHANGED = NO
+QLIB_CHANGED = NO
+RDAGENT_CHANGED = NO
+LLM_CALLS = NONE
+ROBINHOOD_TOOLS_INVOKED = NONE
+ACCOUNT_DATA_ACCESSED = NO
+TRADING_ACTIONS = NONE
+POC_A = PASS
+P0_POC_A_OPENBB_LINUX_QLIB_HANDOFF = PASS
+CURRENT_NEXT = P0_POC_C_QLIB_CERTIFICATION_SKFOLIO
 P0 = IN_PROGRESS
 P1 = NOT_STARTED
 ```
