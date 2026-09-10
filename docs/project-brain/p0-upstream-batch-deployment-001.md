@@ -157,3 +157,50 @@ The owner subsequently waived the Qlib-first deployment sequence, then stopped a
 - All existing upstream tracked worktrees are clean. No created source clone or environment was deleted.
 - No further installation or repair work occurred after the stop instruction.
 - Interface Audit and P1 remain **NOT STARTED**. No services, scheduled tasks, startup entries, datasets, model weights, credentials, broker authentication, paper trading, or live trading were created or performed.
+
+## 10. Lab prune 001 — final local state
+
+On 2026-09-09, `AUTONOMOUS-QUANT-P0-LAB-PRUNE-001` performed deterministic cleanup only. Before deletion, the four removed upstream worktrees were verified clean, and all removed-source SHA and blocker evidence was confirmed present in this document.
+
+### Removed environments
+
+- `D:\AQ_ENVS\finrlx`
+- `D:\AQ_ENVS\tradingagents`
+- `D:\AQ_ENVS\fingpt`
+- `D:\AQ_ENVS\alphagen`
+
+### Removed deferred source clones
+
+- `D:\AQ_UPSTREAM\tradingagents` — recorded SHA `be952b8eccb49720509af544c6675233bc1f10d0`
+- `D:\AQ_UPSTREAM\fingpt` — recorded SHA `781a7c020da977092f2f2c4916024a412c5e3801`
+- `D:\AQ_UPSTREAM\finbert` — recorded SHA `44995e0c5870c4ab37a189d756550654ae87cdf0`
+- `D:\AQ_UPSTREAM\alphagen` — recorded SHA `259687e8f316994426416c530a94842a2fe6405e`
+
+`D:\AQ_CACHE` and `D:\AQ_DATA` were not deleted. Robinhood MCP configuration was not read or modified.
+
+### Final directory whitelist
+
+| Root | Final directories |
+|---|---|
+| `D:\AQ_UPSTREAM` | `finrl-x`, `lean`, `qlib`, `rd-agent` |
+| `D:\AQ_ENVS` | `openbb`, `qlib`, `skfolio` |
+
+### Retained health checks
+
+| Component | Command / result |
+|---|---|
+| Qlib | `import qlib` reported `0.9.7`; `python -m qlib.cli.run --help` passed. |
+| skfolio | `import skfolio` reported `1.0.6`; `WalkForward`, `CombinatorialPurgedCV`, and `MeanRisk` imports passed. |
+| OpenBB | `from openbb import obb` passed with its isolated cache home; package version `4.7.2`, root object `App`. |
+
+### Final resource and persistence audit
+
+- `D:\AQ_CACHE`: 2,006,596,623 B
+- D: free space: 292,768,395,264 B (272.66 GiB)
+- Active uv/pip installer processes: **NONE**
+- AQ Windows services: **NONE**
+- AQ scheduled tasks: **NONE**
+- AQ startup entries: **NONE**
+- Machine/user PATH entries beginning `D:\AQ`: **NONE**
+
+No installation, Interface Audit, P1 work, PR merge, scheduled work, service, startup entry, broker authentication, paper trading, or live trading was performed during this cleanup.
