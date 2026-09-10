@@ -567,13 +567,17 @@ Default rules:
 
 ---
 
-## 20. P0 — Current Next
+## 20. P0 — Complete
 
-**P0 is the only active engineering phase.**
+P0 upstream fit, interface audit, and four functional POCs are complete.
 
-No production system should be written before P0 concludes.
+P0 established the selected upstream topology and verified its bounded integration contracts. It did not authorize production trading.
 
-P0 must independently test Qlib, RD-Agent(Q), FinRL-X, LEAN, OpenBB/information providers and information models. Every candidate must be evaluated for functionality, maturity, reproducibility, local operational cost, replacement boundaries and overlap with other upstream components.
+Current next is P1 Minimal Quant, which is not started.
+
+### Historical P0 evaluation requirements
+
+During P0, Qlib, RD-Agent(Q), FinRL-X, LEAN, OpenBB/information providers, and information models were evaluated for functionality, maturity, reproducibility, local operational cost, replacement boundaries, and overlap with other upstream components.
 
 ---
 
