@@ -102,7 +102,7 @@ Qlib was validated against the [Microsoft Qlib repository](https://github.com/mi
 
 Qlib's lightweight deployment health is recorded, with the source-build C++ compiler prerequisite documented. It is **not** a completed functional POC and does not authorize P1.
 
-The owner subsequently updated the P0 sequence to deployment staging, Interface Audit, then functional POCs, and then stopped further installation and repair work. P0 Interface Audit remains **NOT STARTED**.
+The owner subsequently updated the P0 sequence to deployment staging, Interface Audit, then functional POCs, and then stopped further installation and repair work. At this historical stop, P0 Interface Audit was **NOT STARTED**.
 
 ## 9. Strategy-update addendum — exact state at stop
 
@@ -152,7 +152,7 @@ The owner subsequently updated the P0 sequence to deployment staging, Interface 
 - No source checkout exists for package-distributed skfolio or OpenBB; Robinhood MCP has no local-source requirement.
 - All existing upstream tracked worktrees are clean. No created source clone or environment was deleted.
 - No further installation or repair work occurred after the stop instruction.
-- Interface Audit and P1 remain **NOT STARTED**. No services, scheduled tasks, startup entries, datasets, model weights, credentials, broker authentication, paper trading, or live trading were created or performed.
+- At this historical stop, Interface Audit and P1 were **NOT STARTED**. No services, scheduled tasks, startup entries, datasets, model weights, credentials, broker authentication, paper trading, or live trading were created or performed.
 
 ## 10. Lab prune 001 — final local state
 
@@ -258,7 +258,7 @@ LLM_CALL_PERFORMED = NO
 
 ```text
 P0 = IN_PROGRESS
-CURRENT_NEXT = P0_INTERFACE_AUDIT
-P0_INTERFACE_AUDIT = NOT_STARTED
+CURRENT_NEXT = P0_FUNCTIONAL_POC_DESIGN
+P0_INTERFACE_AUDIT = COMPLETE
 P1 = NOT_STARTED
 ```
