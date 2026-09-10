@@ -68,6 +68,8 @@ One and only one MeanRisk fit used the 14x3 TRAIN return matrix, with explicit l
 
 `D:\AQ_DATA\poc\poc-c-qlib-certification-skfolio\` contains `research-artifact-manifest.json`, `certification-decision.json`, `approved-predictions.parquet`, `approved-returns.parquet`, `target-portfolio.json`, `evidence-manifest.json`, and pre/post package snapshots. Total output is `12,811` bytes, below the 50 MiB cap.
 
+### Historical state at POC-C completion
+
 ```text
 QLIB_EXECUTED = NO
 RDAGENT_EXECUTED = NO
