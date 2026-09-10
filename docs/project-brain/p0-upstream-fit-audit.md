@@ -550,7 +550,7 @@ Deployment staging establishes isolated, removable local artifacts where appropr
 
 ### P0 Interface Audit
 
-The next P0 stage defines and verifies the selected public interfaces and replacement boundaries. It does not start functional POCs, P1 research, broker authentication, or trading.
+Completed: the P0 Interface Audit defined and verified the selected public interfaces and replacement boundaries. It did not start functional POCs, P1 research, broker authentication, or trading.
 
 ### Functional POCs
 
@@ -584,8 +584,8 @@ ORDERBOOK_RECORDER          = REJECT / OUT OF SCOPE
 P0_REMOTE_DESK_AUDIT = COMPLETE
 P0 = IN_PROGRESS
 P0_DEPLOYMENT_STAGING = COMPLETE_WITH_DOCUMENTED_BLOCKERS
-P0_INTERFACE_AUDIT = COMPLETE_WITH_BLOCKERS
-CURRENT_NEXT = P0_INTERFACE_BLOCKER_RESOLUTION
+P0_INTERFACE_AUDIT = COMPLETE
+CURRENT_NEXT = P0_FUNCTIONAL_POC_DESIGN
 P0_FUNCTIONAL_POC = NOT STARTED
 PRODUCTION_TRADING = NOT AUTHORIZED
 LIVE_CAPITAL = NOT AUTHORIZED
@@ -593,4 +593,4 @@ LIVE_CAPITAL = NOT AUTHORIZED
 
 ### Current Next
 
-**P0 Interface Audit.**
+**P0 Functional POC Design.**
