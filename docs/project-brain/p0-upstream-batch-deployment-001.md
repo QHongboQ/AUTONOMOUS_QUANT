@@ -209,3 +209,54 @@ TRADING_ACTION = NONE
 - Machine/user PATH entries beginning `D:\AQ`: **NONE**
 
 No installation, Interface Audit, P1 work, PR merge, scheduled work, service, startup entry, broker authentication, paper trading, or live trading was performed during this cleanup.
+
+## 11. RD-Agent WSL deployment 001 — runtime staging
+
+On 2026-09-09, `AUTONOMOUS-QUANT-P0-RDAGENT-WSL-DEPLOYMENT-001` staged a separate Linux runtime in the WSL distribution filesystem. This supersedes only the historical RD-Agent Windows-runtime status in section 9; the historical Windows clone is retained and unmodified.
+
+### WSL runtime and source evidence
+
+| Item | Recorded state |
+|---|---|
+| Distribution | `Ubuntu-24.04`, Ubuntu 24.04.4 LTS, WSL 2 |
+| Linux user / home | `zhou` / `/home/zhou` |
+| Linux layout | `/home/zhou/AQ_UPSTREAM`, `/home/zhou/AQ_ENVS`, `/home/zhou/AQ_CACHE` |
+| RD-Agent source | `/home/zhou/AQ_UPSTREAM/rd-agent` |
+| Remote / default branch | `https://github.com/microsoft/RD-Agent.git` / `main` |
+| Linux source HEAD / worktree | `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd` / clean |
+| Windows retained source HEAD | `D:\AQ_UPSTREAM\rd-agent` — `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd`, clean |
+| Source SHA comparison | MATCH |
+| Runtime environment | `/home/zhou/AQ_ENVS/rdagent`, uv-managed CPython 3.11.16 |
+
+The active runtime is entirely in the Linux filesystem, not under `/mnt/c` or `/mnt/d`. The existing Windows clone was not deleted or modified.
+
+### Package and execution-runtime evidence
+
+- Official user-package path used: `pip install rdagent` in the isolated CPython 3.11.16 environment.
+- Installed package: `rdagent 0.8.0`; `pip check` reported no broken requirements and `import rdagent` passed.
+- `rdagent --help` did **not** complete: the current package load raised `ImportError` for `MCPServerStreamableHTTP` from `pydantic_ai.mcp` with installed `pydantic-ai-slim 2.31.1`. No dependency pin, source edit, API key, LLM call, or execution scenario was attempted to repair or work around this upstream package-compatibility blocker.
+- The checked-out official documentation identifies Docker as the primary code-execution environment and documents Docker/Conda selection through `MODEL_COSTEER_ENV_TYPE` and `DS_CODER_COSTEER_ENV_TYPE`. Docker and Conda are not installed; no `.env` file, credentials, model call, Quant loop, factor generation, model training, dataset, or image pull was created or run.
+
+```text
+RD_AGENT_WSL_RUNTIME = STAGED
+PACKAGE_INSTALL = PASS
+PACKAGE_HEALTH = PASS_IMPORT_ONLY_WITH_DOCUMENTED_CLI_COMPATIBILITY_BLOCKER
+QUANT_EXECUTION_RUNTIME = DEFERRED_DOCKER_OR_CONDA
+DOCKER_INSTALLED = NO
+CONDA_INSTALLED = NO
+LLM_CALL_PERFORMED = NO
+```
+
+### Interop and persistence evidence
+
+- From WSL, `/mnt/d/AUTONOMOUS_QUANT` and `/mnt/d/AQ_DATA` were visible.
+- The Windows-side `\\wsl.localhost\Ubuntu-24.04\home\zhou\AQ_UPSTREAM\rd-agent` resolver check was denied by the Codex filesystem sandbox. This does not indicate an absent Linux source or a WSL failure; no Windows-side access control was changed for this task.
+- No Windows service, Scheduled Task, startup entry, system/user PATH entry, AQ environment variable, Linux systemd service, cron job, background daemon, Docker installation, or CUDA installation was created.
+- Final WSL process inspection found no RD-Agent process running.
+
+```text
+P0 = IN_PROGRESS
+CURRENT_NEXT = P0_INTERFACE_AUDIT
+P0_INTERFACE_AUDIT = NOT_STARTED
+P1 = NOT_STARTED
+```
