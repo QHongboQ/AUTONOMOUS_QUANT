@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P0 — POC-D TargetPortfolio → ExecutionPlan**
+> Current Next: **P1 — Minimal Quant (not started)**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -567,13 +567,17 @@ Default rules:
 
 ---
 
-## 20. P0 — Current Next
+## 20. P0 — Complete
 
-**P0 is the only active engineering phase.**
+P0 upstream fit, interface audit, and four functional POCs are complete.
 
-No production system should be written before P0 concludes.
+P0 established the selected upstream topology and verified its bounded integration contracts. It did not authorize production trading.
 
-P0 must independently test Qlib, RD-Agent(Q), FinRL-X, LEAN, OpenBB/information providers and information models. Every candidate must be evaluated for functionality, maturity, reproducibility, local operational cost, replacement boundaries and overlap with other upstream components.
+Current next is P1 Minimal Quant, which is not started.
+
+### Historical P0 evaluation requirements
+
+During P0, Qlib, RD-Agent(Q), FinRL-X, LEAN, OpenBB/information providers, and information models were evaluated for functionality, maturity, reproducibility, local operational cost, replacement boundaries, and overlap with other upstream components.
 
 ---
 
@@ -702,14 +706,16 @@ HIGH_FREQUENCY_TRADING = OUT OF SCOPE
 TICK_RECORDER = OUT OF SCOPE
 
 TARGET_ARCHITECTURE = DEFINED
-P0 = IN_PROGRESS
+P0 = COMPLETE
 P0_UPSTREAM_BATCH_DEPLOYMENT = COMPLETE_WITH_DOCUMENTED_BLOCKERS
 P0_INTERFACE_AUDIT = COMPLETE
 P0_FUNCTIONAL_POC_DESIGN = COMPLETE
 P0_POC_B_LINUX_QLIB_RDAGENT_RUNTIME = PASS
 P0_POC_A_OPENBB_LINUX_QLIB_HANDOFF = PASS
 P0_POC_C_QLIB_CERTIFICATION_SKFOLIO = PASS
-CURRENT_NEXT = P0_POC_D_TARGETPORTFOLIO_EXECUTIONPLAN
+P0_POC_D_TARGETPORTFOLIO_EXECUTIONPLAN = PASS
+P0_FUNCTIONAL_POC = COMPLETE
+CURRENT_NEXT = P1_MINIMAL_QUANT
 P1 = NOT_STARTED
 P1_MINIMAL_QUANT = PLANNED / NOT STARTED
 P2_CERTIFICATION = PLANNED / NOT STARTED
