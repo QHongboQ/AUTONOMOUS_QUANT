@@ -1,7 +1,9 @@
 # P0 POC-B Linux Qlib/RD-Agent runtime execution 001
 
-**Task:** `AUTONOMOUS-QUANT-P0-POC-B-LINUX-QLIB-RDAGENT-RUNTIME-EXECUTION-001`
-**Result:** `POC_B = FAIL` (fail-closed; no repair attempted)
+**Initial task:** `AUTONOMOUS-QUANT-P0-POC-B-LINUX-QLIB-RDAGENT-RUNTIME-EXECUTION-001`
+**Current result:** `POC_B = PASS` (SQLite-backed synthetic runtime proof)
+
+The sections through the historical filesystem-backend result preserve earlier fail-closed observations. The authoritative current state is the final SQLite blocker-resolution section below.
 
 ## Scope
 
@@ -74,10 +76,10 @@ OPENBB_CALLED = NO
 ROBINHOOD_TOOLS_INVOKED = NONE
 ACCOUNT_DATA_ACCESSED = NO
 TRADING_ACTIONS = NONE
-POC_B = FAIL
+HISTORICAL_POC_B = FAIL
 ```
 
-## Blocker and next action
+## Historical initial blocker and next action
 
 The blocker is incomplete upstream-declared `QlibCondaEnv` provisioning: the required Qlib package and `qrun` command are absent after `prepare()`. The task prohibits silent repair, so the next action is evidence-led blocker resolution before another separately authorized POC-B attempt.
 
@@ -85,12 +87,12 @@ The blocker is incomplete upstream-declared `QlibCondaEnv` provisioning: the req
 P0 = IN_PROGRESS
 P0_INTERFACE_AUDIT = COMPLETE
 P0_FUNCTIONAL_POC_DESIGN = COMPLETE
-P0_POC_B_LINUX_QLIB_RDAGENT_RUNTIME = FAIL
-CURRENT_NEXT = P0_POC_B_BLOCKER_RESOLUTION
+HISTORICAL_P0_POC_B_LINUX_QLIB_RDAGENT_RUNTIME = FAIL
+HISTORICAL_CURRENT_NEXT = P0_POC_B_BLOCKER_RESOLUTION
 P1 = NOT_STARTED
 ```
 
-## Blocker resolution 001 — owner-resolved Qlib build, final qrun result
+## Historical blocker resolution 001 — owner-resolved Qlib build and filesystem qrun result
 
 ### Historical initial failure and manual prerequisite resolution
 
@@ -131,7 +133,7 @@ set MLFLOW_ALLOW_FILE_STORE=true to opt out of this exception.
 
 No second qrun was attempted and no MLflow setting, package, source, or system configuration was changed. This is a new qrun-runtime blocker, not a Qlib source-build failure.
 
-### Evidence handoff and final status
+### Historical evidence handoff and status
 
 `/mnt/d/AQ_DATA/poc/poc-b-qlib-rdagent/` contains five evidence artifacts: `fixture.pkl`, `conf.yaml`, `manifest.json`, `package-freeze.txt`, and `qrun-result.json`. No `pred.pkl`, `label.pkl`, recorder reference, `qlib_res.csv`, or `ret.parquet` exists because workflow execution stopped before training/recording.
 
@@ -149,7 +151,67 @@ LLM_CALLS = NONE
 OPENBB_CALLED = NO
 ROBINHOOD_TOOLS_INVOKED = NONE
 TRADING_ACTIONS = NONE
-POC_B = FAIL
-CURRENT_NEXT = P0_POC_B_BLOCKER_RESOLUTION
+HISTORICAL_POC_B = FAIL
+HISTORICAL_CURRENT_NEXT = P0_POC_B_BLOCKER_RESOLUTION
+P1 = NOT_STARTED
+```
+
+## MLflow SQLite blocker resolution 001 — authoritative current result
+
+**Task:** `AUTONOMOUS-QUANT-P0-POC-B-MLFLOW-SQLITE-BLOCKER-RESOLUTION-001`
+
+The previous two failures remain historical evidence: (1) Qlib provisioning did not complete because WSL `g++` was absent, and (2) MLflow 3.16.0 rejected Qlib's automatically constructed filesystem tracking URI before experiment creation. Neither upstream source was modified.
+
+### Configuration and source confirmation
+
+The pinned Qlib source at `2fb9380b342556ddb50a4b24e4fe8655d548b2b8` was inspected before execution. In `qlib/cli/run.py`, `qrun` calls `qlib.init(**config["qlib_init"])` when `qlib_init.exp_manager` is present; only the alternate branch constructs `file:<cwd>/<uri_folder>`. `qlib.workflow.expm.MLflowExpManager` passes its configured `uri` to `MlflowClient`.
+
+Only the disposable `/home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-rdagent/conf.yaml` was changed, adding:
+
+```yaml
+qlib_init:
+  exp_manager:
+    class: MLflowExpManager
+    module_path: qlib.workflow.expm
+    kwargs:
+      uri: sqlite:////home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-rdagent/mlflow.db
+      default_exp_name: Experiment
+```
+
+No `MLFLOW_ALLOW_FILE_STORE` setting was used, no `-u mlruns` tracking authority was passed, and no package, Miniforge, Qlib, RD-Agent, Docker, provider, broker, or system setting was changed.
+
+### Single SQLite-backed qrun and evidence
+
+Exactly one new `RD-Agent QlibCondaEnv.run()` invocation was made with `retry_count = 0` and entry `qrun conf.yaml -e poc_b_synthetic`. It exited `0` after 9.208 seconds. The unchanged fixture SHA-256 was `19b79bff147c020a5f8521f809061bc8becfe0c57c07769df354fe5ebc267c6c`; the SQLite configuration SHA-256 was `d47683dffffdcfb3159511fb357671744d9939fcb3ca675489127cb9ee469d59`.
+
+| Requirement | Directly observed result |
+|---|---|
+| Tracking database | `/home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-rdagent/mlflow.db` created |
+| MLflow experiment | `poc_b_synthetic` (ID `1`) |
+| Qlib recorder | `b563ff37fda84161b835f9c19774eac6`, `FINISHED` |
+| Prediction artifact | `pred.pkl` present |
+| Label artifact | `label.pkl` present |
+| Package snapshot | retained as `/mnt/d/AQ_DATA/poc/poc-b-qlib-rdagent/package-freeze.txt` |
+| Result evidence | `qrun-sqlite-result.json` and updated `manifest.json` retained in the same handoff directory |
+
+The handoff directory now also retains `conf-sqlite.yaml`, `pred.pkl`, and `label.pkl`, alongside the original failed-run `conf.yaml` and `qrun-result.json`. The RD-Agent and Qlib source worktrees were both verified clean after execution.
+
+```text
+QLIB_SOURCE_BUILD = PASS
+RUNTIME_VALIDATION = PASS
+SYNTHETIC_FIXTURE = REUSED_UNCHANGED
+QRUN_EXECUTION_COUNT = 2_TOTAL (1 historical filesystem failure, 1 SQLite success)
+QRUN_RESULT = PASS (SQLite tracking backend)
+MLFLOW_EXPERIMENT = poc_b_synthetic
+RECORDER_EVIDENCE = b563ff37fda84161b835f9c19774eac6
+PRED_ARTIFACT = PRESENT
+LABEL_ARTIFACT = PRESENT
+MARKET_DATA_DOWNLOADED = NO
+LLM_CALLS = NONE
+OPENBB_CALLED = NO
+ROBINHOOD_TOOLS_INVOKED = NONE
+TRADING_ACTIONS = NONE
+POC_B = PASS
+CURRENT_NEXT = P0_POC_A_OPENBB_LINUX_QLIB_HANDOFF
 P1 = NOT_STARTED
 ```
