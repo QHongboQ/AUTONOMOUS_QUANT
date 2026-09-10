@@ -1,6 +1,6 @@
 # Trial Ledger runtime foundation 001
 
-**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-FOUNDATION-FINAL-CLOSURE-001`
+**Task:** `AUTONOMOUS-QUANT-TRIAL-LEDGER-RUNTIME-INTEGRITY-CLOSURE-001`
 
 The completed standard-library foundation is at
 `30-research-system/experiment-registry/trial-ledger/aq_trial_ledger`.
@@ -27,37 +27,61 @@ one-to-one lifecycle-to-global-event linkage. A retained anchor also fails
 verification if the local database is truncated below its sequence.
 
 ResearchSpec canonicalization is `AQ_RESEARCH_SPEC_CANONICAL_V1`; anchor
-canonicalization is `AQ_LEDGER_ANCHOR_CANONICAL_V1`. The explicit ResearchSpec
-boundary now requires all V1 performance-bearing axes (factor/model/hyperparameter,
-data, windows, calendar, portfolio/cost/benchmark, provenance and family input
-hash). It rejects registration/result/sealed-OOS metadata including nested forms,
-non-string mapping keys, lone surrogates, unknown top-level fields, and native
-binary floats in schema-declared decimal parameters. Typed parameters—not callers—
-govern decimal identity. Only designated semantic-text fields are NFC-normalized;
-opaque identifiers are left byte-distinct.
+canonicalization is `AQ_LEDGER_ANCHOR_CANONICAL_V1`. Its token-aware JSON encoder
+emits direct UTF-8, a solidus unchanged, lower-case `\\u00xx` control escapes,
+and separately escapes quotes and literal backslashes. It does not rewrite an
+already serialized JSON string. Thus actual newline/tab values, literal `\\n` /
+`\\t`, and literal `\\u000a` remain injectively distinct and strictly round-trip
+through `parse_json_strict`.
 
-The 28-test `unittest` matrix passed under CPython 3.12.14. It covers frozen
-canonical, anchor, event-hash and deterministic-snapshot digests; V1 identity
-and typed-parameter rejection; genesis; actor/capability/policy lifecycle;
-idempotency; registration; execution, replay and references; protocol
-violations; foreign keys; table trigger coverage; privileged linkage tampering;
-historical as-of snapshot stability after future facts; external anchor-artifact
-round trip/truncation detection; backup/restore and clean-process reopen; and
-actual multi-threaded distinct and duplicate registration races. The required
-`compileall` command passed after the same source changes.
+The explicit ResearchSpec boundary requires all V1 performance-bearing axes
+(factor/model/hyperparameter, data, windows, calendar, portfolio/cost/benchmark,
+provenance and family input hash). It rejects registration/result/sealed-OOS
+metadata including nested forms, non-string mapping keys, lone surrogates,
+unknown top-level fields, and any native Python float recursively anywhere in
+the V1 identity. Typed decimal parameters—not callers—govern decimal identity.
+Only designated semantic-text fields are NFC-normalized; opaque identifiers are
+left byte-distinct.
 
-Historical snapshots now filter every authoritative object/reference by its
-immutable `created_ledger_sequence`, rather than only filtering global events.
-Lifecycle projections include immutable global event IDs and fail verification
-if a privileged unchained status, capability, or policy record is injected.
-The external anchor primitive writes/loads a canonical manifest artifact; tests
-place it in a temporary directory distinct from the temporary database.
+The 60-test `unittest` matrix passed under CPython 3.12.14, and required
+`compileall aq_trial_ledger tests` passed after the same source changes. Fixed
+byte-and-SHA vectors now cover ResearchSpec, event, anchor, deterministic
+snapshot, family-policy identity, actual newline/tab, literal backslash+n/t,
+and literal backslash+u000a. The matrix also proves rejection of finite floats
+in extensions and nested research fields; family-input hash match/mismatch;
+model/hyperparameter invariance and required-axis sensitivity; and distinct
+policy rules/spec hashes.
 
-Windows CPython 3.12.14 and Ubuntu-24.04 `python3` produced identical bytes
-and this SHA-256 for the shared committed canonical vector:
+Every authorization-, idempotency-, lineage-, replay-, reference-, violation-,
+and snapshot-relevant projection is content-bound to its global event; this
+includes actor identity, actor status, capability, family-policy specification
+and lifecycle, ResearchSpec, trial registration, idempotency mapping, execution,
+result/artifact references, and protocol violations. Lifecycle projection rows
+and their chained events use one occurred-at value. Privileged disposable-copy
+tamper tests cover actor target/time; capability target/name/policy/reason;
+family-policy ID/version; trial sequence/family; ResearchSpec blob; idempotency;
+execution trial; result sequence/locator; artifact locator; and violation
+content. Each fails both chain verification and snapshot issuance.
+
+`Ledger.canonical_family_inputs` is the single deterministic source for family
+assignment and `ResearchSpec.family_policy_inputs_hash`; registration rejects a
+mismatch. Family policy identity separately hashes policy ID, version, schema
+version, rules hash, and effective-from. Consequently `policy_rules_hash` is
+not aliased as `canonical_policy_hash`.
+
+Historical snapshots filter every authoritative object/reference by its
+immutable `created_ledger_sequence` only after content/sequence binding is
+verified. A snapshot at boundary N remains byte-identical after future activity,
+whereas privileged mutation of an authoritative historical projection blocks
+all snapshot issuance. The external anchor primitive writes/loads a canonical
+manifest artifact; tests place it in a temporary directory distinct from the
+temporary database.
+
+Windows CPython 3.12.14 and Ubuntu-24.04 `python3` produced byte-for-byte
+identical output and this SHA-256 for the shared committed canonical vector:
 
 ```text
-6043aedb32b23df715f61d9f2f9ce12d9305f0a14172c6266db9ae38ceb5dd61
+a200675434f562226d4caf596cedfb41f31a2d3deaf1b8e57f0d2c6ff91f5948
 ```
 
 All test databases and backups were short-lived temporary files and were

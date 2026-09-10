@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import unicodedata
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -156,8 +155,8 @@ def _normalise(value: Any, path: tuple[str, ...] = ()) -> Any:
         return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     if isinstance(value, date):
         return value.isoformat()
-    if isinstance(value, float) and not math.isfinite(value):
-        raise CanonicalizationError("non-finite number")
+    if isinstance(value, float):
+        raise CanonicalizationError("native float is not a ResearchSpec identity value")
     if isinstance(value, str):
         value = _validate_scalar_string(value)
         return unicodedata.normalize("NFC", value) if field in _SEMANTIC_TEXT_FIELDS else value
@@ -167,19 +166,44 @@ def _normalise(value: Any, path: tuple[str, ...] = ()) -> Any:
 def canonical_json_bytes(value: Any) -> bytes:
     """Emit fixed V1 JSON: direct UTF-8, lower-case control escapes, no newline."""
 
-    try:
-        encoded = json.dumps(
-            value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
-        )
-    except (TypeError, ValueError) as error:
-        raise CanonicalizationError(str(error)) from error
-    encoded = (encoded.replace("\\b", "\\u0008").replace("\\f", "\\u000c")
-               .replace("\\n", "\\u000a").replace("\\r", "\\u000d")
-               .replace("\\t", "\\u0009"))
-    return "".join(
-        f"\\u{ord(character):04x}" if ord(character) <= 0x1F else character
-        for character in encoded
-    ).encode("utf-8")
+    def quote(text: str) -> str:
+        text = _validate_scalar_string(text)
+        escaped: list[str] = ['"']
+        for character in text:
+            codepoint = ord(character)
+            if character == '"':
+                escaped.append('\\"')
+            elif character == "\\":
+                escaped.append("\\\\")
+            elif codepoint <= 0x1F:
+                escaped.append(f"\\u{codepoint:04x}")
+            else:
+                escaped.append(character)
+        escaped.append('"')
+        return "".join(escaped)
+
+    def encode(item: Any) -> str:
+        if item is None:
+            return "null"
+        if item is True:
+            return "true"
+        if item is False:
+            return "false"
+        if isinstance(item, str):
+            return quote(item)
+        if isinstance(item, int) and not isinstance(item, bool):
+            return str(item)
+        if isinstance(item, list) or isinstance(item, tuple):
+            return "[" + ",".join(encode(element) for element in item) + "]"
+        if isinstance(item, Mapping):
+            if any(not isinstance(key, str) for key in item):
+                raise CanonicalizationError("non-string object key")
+            return "{" + ",".join(
+                quote(key) + ":" + encode(item[key]) for key in sorted(item)
+            ) + "}"
+        raise CanonicalizationError(f"unsupported canonical JSON type: {type(item).__name__}")
+
+    return encode(value).encode("utf-8")
 
 
 def canonicalize_research_spec(

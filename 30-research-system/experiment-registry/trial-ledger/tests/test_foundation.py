@@ -22,6 +22,7 @@ from aq_trial_ledger.storage import Ledger, LedgerError
 
 
 def spec(**changes):
+    default_family_inputs = {"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"}
     value = {
         "generator": "unit-generator", "generator_version": "1", "hypothesis_id": "h-1",
         "factor_spec_hash": "factor-a", "model_spec_hash": "model-a", "hyperparameter_hash": "hyper-a",
@@ -30,7 +31,8 @@ def spec(**changes):
         "validation_window": "2021-01-01/2021-06-30", "exchange_calendar": "XNYS",
         "calendar_version": "1", "portfolio_rule_hash": "portfolio-a", "cost_assumption_hash": "cost-a",
         "benchmark_policy_hash": "benchmark-a", "git_commit_sha": "abc123",
-        "environment_fingerprint": "env-v1", "random_seed": "7", "family_policy_inputs_hash": "family-a",
+        "environment_fingerprint": "env-v1", "random_seed": "7",
+        "family_policy_inputs_hash": Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", default_family_inputs),
         "parameters": {"learning_rate": {"type": "decimal", "value": "0.10"}},
     }
     value.update(changes)
@@ -45,7 +47,7 @@ class CanonicalTests(unittest.TestCase):
         self.assertEqual(first_hash, second_hash)
         self.assertEqual(
             first,
-            b'{"canonicalization_version":"AQ_RESEARCH_SPEC_CANONICAL_V1","research_spec":{"benchmark_policy_hash":"benchmark-a","calendar_version":"1","cost_assumption_hash":"cost-a","dataset_snapshot_id":"dataset-1","environment_fingerprint":"env-v1","exchange_calendar":"XNYS","factor_spec_hash":"factor-a","family_policy_inputs_hash":"family-a","feature_set_hash":"features-a","generator":"unit-generator","generator_version":"1","git_commit_sha":"abc123","hyperparameter_hash":"hyper-a","hypothesis_id":"h-1","label_spec_hash":"label-a","model_spec_hash":"model-a","parameters":{"learning_rate":{"type":"decimal","value":"0.1"}},"portfolio_rule_hash":"portfolio-a","random_seed":"7","train_window":"2020-01-01/2020-12-31","universe_id":"us-large","validation_window":"2021-01-01/2021-06-30"}}',
+            b'{"canonicalization_version":"AQ_RESEARCH_SPEC_CANONICAL_V1","research_spec":{"benchmark_policy_hash":"benchmark-a","calendar_version":"1","cost_assumption_hash":"cost-a","dataset_snapshot_id":"dataset-1","environment_fingerprint":"env-v1","exchange_calendar":"XNYS","factor_spec_hash":"factor-a","family_policy_inputs_hash":"746327959046b6c8aa542189832af8928bac24c271f5ca8e90ff13d847961d51","feature_set_hash":"features-a","generator":"unit-generator","generator_version":"1","git_commit_sha":"abc123","hyperparameter_hash":"hyper-a","hypothesis_id":"h-1","label_spec_hash":"label-a","model_spec_hash":"model-a","parameters":{"learning_rate":{"type":"decimal","value":"0.1"}},"portfolio_rule_hash":"portfolio-a","random_seed":"7","train_window":"2020-01-01/2020-12-31","universe_id":"us-large","validation_window":"2021-01-01/2021-06-30"}}',
         )
         self.assertIn(b'"value":"0.1"', first)
 
@@ -62,6 +64,36 @@ class CanonicalTests(unittest.TestCase):
         self.assertIn(b"/", canonical)
         self.assertIn(b"\\u000a", canonical)
         self.assertNotIn(b"\\n", canonical)
+
+    def test_actual_newline_vs_literal_backslash_n_distinct(self):
+        # ACTUAL_NEWLINE_VS_LITERAL_BACKSLASH_N_DISTINCT
+        actual = canonical_json_bytes({"value": "\n"})
+        literal = canonical_json_bytes({"value": "\\n"})
+        self.assertEqual(actual, b'{"value":"\\u000a"}')
+        self.assertEqual(literal, b'{"value":"\\\\n"}')
+        self.assertNotEqual(actual, literal)
+
+    def test_actual_tab_vs_literal_backslash_t_distinct(self):
+        # ACTUAL_TAB_VS_LITERAL_BACKSLASH_T_DISTINCT
+        actual = canonical_json_bytes({"value": "\t"})
+        literal = canonical_json_bytes({"value": "\\t"})
+        self.assertEqual(actual, b'{"value":"\\u0009"}')
+        self.assertEqual(literal, b'{"value":"\\\\t"}')
+        self.assertNotEqual(actual, literal)
+
+    def test_literal_backslash_u_escape_distinct(self):
+        # LITERAL_BACKSLASH_U_ESCAPE_DISTINCT
+        self.assertNotEqual(
+            canonical_json_bytes({"value": "\n"}),
+            canonical_json_bytes({"value": "\\u000a"}),
+        )
+
+    def test_canonical_string_roundtrip(self):
+        # CANONICAL_STRING_ROUNDTRIP
+        for value in ("\n", "\\n", "\t", "\\t", "\r", "\\r", "\b", "\\b", "\f", "\\f", "\\u000a", '"', "\\", "/", "é"):
+            with self.subTest(value=repr(value)):
+                encoded = canonical_json_bytes({"value": value})
+                self.assertEqual(parse_json_strict(encoded.decode("utf-8")), {"value": value})
 
     def test_schema_aware_opaque_string_and_decimal_rejections(self):
         opaque_one = canonicalize_research_spec(spec(hypothesis_id="e\u0301"))
@@ -86,6 +118,16 @@ class CanonicalTests(unittest.TestCase):
         with self.assertRaises(CanonicalizationError):
             parse_json_strict('{"x":1,"x":2}')
 
+    def test_finite_float_in_extension_rejected(self):
+        # FINITE_FLOAT_IN_EXTENSION_REJECTED
+        with self.assertRaises(CanonicalizationError):
+            canonicalize_research_spec(spec(extensions={"ratio": 0.1}))
+
+    def test_finite_float_in_nested_research_field_rejected(self):
+        # FINITE_FLOAT_IN_NESTED_RESEARCH_FIELD_REJECTED
+        with self.assertRaises(CanonicalizationError):
+            canonicalize_research_spec(spec(family_inputs={"nested": {"ratio": 0.1}}))
+
     def test_required_identity_axes_and_typed_parameters(self):
         for field in ("model_spec_hash", "hyperparameter_hash", "train_window", "validation_window",
                       "cost_assumption_hash", "benchmark_policy_hash", "factor_spec_hash"):
@@ -102,12 +144,12 @@ class CanonicalTests(unittest.TestCase):
         self.assertIn(b'"001"', canonicalize_research_spec(opaque))
 
     def test_frozen_canonical_vectors(self):
-        self.assertEqual(hash_research_spec(spec())[1], "6043aedb32b23df715f61d9f2f9ce12d9305f0a14172c6266db9ae38ceb5dd61")
-        self.assertEqual(hash_research_spec(spec(hypothesis_text="é"))[1], "ec4374cd8a46ca65e50d4cb98cfcb2a2cd24ba258ccdcbe14dbbf23eec942258")
-        self.assertEqual(hash_research_spec(spec(hypothesis_text="line\n"))[1], "a6e13511a3cac6ad862b7e46fffd4569ae1763f0735a890beeeb91bd5b068448")
+        self.assertEqual(hash_research_spec(spec())[1], "a200675434f562226d4caf596cedfb41f31a2d3deaf1b8e57f0d2c6ff91f5948")
+        self.assertEqual(hash_research_spec(spec(hypothesis_text="é"))[1], "57342b113c1a1ddbb94063e9d3c85e485e869034145357dfeea67a0d0935af47")
+        self.assertEqual(hash_research_spec(spec(hypothesis_text="line\n"))[1], "9f30f55aecd179f746caa50001a0e78ab0b833702f73d503fc5205851afdae91")
         plus_eight = spec(extensions={"instant": datetime(2026, 9, 10, 8, tzinfo=timezone(timedelta(hours=8)))})
         utc = spec(extensions={"instant": datetime(2026, 9, 10, 0, tzinfo=timezone.utc)})
-        self.assertEqual(hash_research_spec(plus_eight)[1], "27585662bb37d79a56d329a09771e64a39493533a298dd7eded7f5e150704106")
+        self.assertEqual(hash_research_spec(plus_eight)[1], "fdc5bc0e439e624ee1b17cae211de109a980bcab0ebc32d534395f651e3ce174")
         self.assertEqual(hash_research_spec(plus_eight)[1], hash_research_spec(utc)[1])
 
 
@@ -131,6 +173,170 @@ class LedgerCase(unittest.TestCase):
             "human:owner", key, spec(**kwargs), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
             family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"},
         )
+
+    def _drop_update_trigger(self, table):
+        self.ledger.db.execute(f"DROP TRIGGER immutable_{table}_update")
+
+    def _assert_tamper_blocks_integrity(self, table, statement, values=()):
+        self._drop_update_trigger(table)
+        self.ledger.db.execute(statement, values)
+        self.assertFalse(self.ledger.verify_global_chain())
+        with self.assertRaises(LedgerError):
+            self.ledger.snapshot()
+
+    def _terminal_evidence(self):
+        trial = self.register("evidence")
+        execution = self.ledger.start_execution("human:owner", trial)
+        self.ledger.complete_execution("human:owner", execution)
+        result = self.ledger.attach_result("human:owner", trial, execution, "metric", "local://result")
+        artifact = self.ledger.attach_artifact("human:owner", trial, execution, "manifest", "local://artifact")
+        violation = self.ledger.record_protocol_violation("human:owner", "evidence violation", "local://violation")
+        return trial, execution, result, artifact, violation
+
+    def test_family_input_hash_match_accepted_and_mismatch_rejected(self):
+        # FAMILY_INPUT_HASH_MATCH_ACCEPTED / FAMILY_INPUT_HASH_MISMATCH_REJECTED
+        inputs = {"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"}
+        matching = spec(family_policy_inputs_hash=Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", inputs))
+        self.assertTrue(self.ledger.register("human:owner", "matching", matching, family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs=inputs))
+        with self.assertRaises(LedgerError):
+            self.ledger.register("human:owner", "mismatch", spec(family_policy_inputs_hash="0" * 64), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, family_policy_version="1", family_inputs=inputs)
+
+    def test_p1_model_variation_does_not_change_family_input_hash(self):
+        # P1_MODEL_VARIATION_DOES_NOT_CHANGE_FAMILY_INPUT_HASH
+        inputs = {"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1", "model": "ridge", "hyperparameter": "a"}
+        changed = {**inputs, "model": "lightgbm", "hyperparameter": "b"}
+        self.assertEqual(Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", inputs), Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", changed))
+
+    def test_p1_required_axis_change_changes_family_input_hash(self):
+        # P1_REQUIRED_AXIS_CHANGE_CHANGES_FAMILY_INPUT_HASH
+        inputs = {"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"}
+        self.assertNotEqual(Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", inputs), Ledger.family_input_hash(P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "1", {**inputs, "label_spec_hash": "label-b"}))
+
+    def test_policy_rules_hash_is_distinct_from_policy_spec_hash(self):
+        # POLICY_RULES_HASH_DISTINCT_FROM_POLICY_SPEC_HASH
+        initial = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = ?", (P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,)).fetchone()
+        self.assertNotEqual(initial["policy_rules_hash"], initial["canonical_policy_hash"])
+        self.ledger.register_family_policy("human:owner", "policy-other", "1", {"version": "1"})
+        self.ledger.register_family_policy("human:owner", "policy-other", "2", {"version": "1"})
+        self.ledger.register_family_policy("human:owner", "policy-rules-changed", "1", {"version": "2"})
+        by_id = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-other' AND family_policy_version = '1'").fetchone()
+        by_version = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-other' AND family_policy_version = '2'").fetchone()
+        by_rules = self.ledger.db.execute("SELECT * FROM family_policy_specs WHERE family_policy_id = 'policy-rules-changed'").fetchone()
+        self.assertNotEqual(initial["canonical_policy_hash"], by_id["canonical_policy_hash"])
+        self.assertNotEqual(by_id["canonical_policy_hash"], by_version["canonical_policy_hash"])
+        self.assertNotEqual(initial["policy_rules_hash"], by_rules["policy_rules_hash"])
+        self.assertNotEqual(initial["canonical_policy_hash"], by_rules["canonical_policy_hash"])
+
+    def test_family_policy_spec_mutation_detected(self):
+        self._assert_tamper_blocks_integrity("family_policy_specs", "UPDATE family_policy_specs SET canonical_policy_hash = ? WHERE family_policy_id = ?", ("0" * 64, P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1))
+
+    def test_chained_actor_target_mutation_detected(self):
+        # CHAINED_ACTOR_TARGET_MUTATION_DETECTED
+        self.ledger.register_actor("human:owner", "generator:one")
+        self._assert_tamper_blocks_integrity("actor_status_events", "UPDATE actor_status_events SET actor_id = ? WHERE actor_id = ?", ("human:owner", "generator:one"))
+
+    def test_actor_identity_mutation_detected(self):
+        self.ledger.register_actor("human:owner", "generator:one")
+        self._assert_tamper_blocks_integrity("actor_identities", "UPDATE actor_identities SET actor_type = ? WHERE actor_id = ?", ("TAMPERED", "generator:one"))
+
+    def test_chained_actor_occurred_at_mutation_detected(self):
+        # CHAINED_ACTOR_OCCURRED_AT_MUTATION_DETECTED
+        self.ledger.register_actor("human:owner", "generator:one")
+        self._assert_tamper_blocks_integrity("actor_status_events", "UPDATE actor_status_events SET occurred_at = ? WHERE actor_id = ?", ("2099-01-01T00:00:00.000000Z", "generator:one"))
+
+    def test_chained_capability_target_mutation_detected(self):
+        # CHAINED_CAPABILITY_TARGET_MUTATION_DETECTED
+        self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER)
+        self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET actor_id = ? WHERE actor_id = ?", ("human:owner", "generator:one"))
+
+    def test_chained_capability_name_mutation_detected(self):
+        # CHAINED_CAPABILITY_NAME_MUTATION_DETECTED
+        self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER)
+        self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET capability = ? WHERE actor_id = ?", ("TAMPERED", "generator:one"))
+
+    def test_chained_capability_policy_version_mutation_detected(self):
+        # CHAINED_CAPABILITY_POLICY_VERSION_MUTATION_DETECTED
+        self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER)
+        self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET policy_version = ? WHERE actor_id = ?", ("V2", "generator:one"))
+
+    def test_chained_capability_reason_mutation_detected(self):
+        # CHAINED_CAPABILITY_REASON_MUTATION_DETECTED
+        self.ledger.register_actor("human:owner", "generator:one")
+        self.ledger.grant_capability("human:owner", "generator:one", Capability.TRIAL_REGISTER, "granted")
+        self._assert_tamper_blocks_integrity("capability_events", "UPDATE capability_events SET reason = ? WHERE actor_id = ?", ("tampered", "generator:one"))
+
+    def test_chained_family_policy_id_mutation_detected(self):
+        # CHAINED_FAMILY_POLICY_ID_MUTATION_DETECTED
+        self.ledger.register_family_policy("human:owner", "policy-other", "1", {"version": "1"})
+        self.ledger.activate_family_policy("human:owner", "policy-other", "1")
+        self._assert_tamper_blocks_integrity("family_policy_events", "UPDATE family_policy_events SET family_policy_id = ? WHERE family_policy_id = ? AND event_type = ?", (P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1, "policy-other", "FAMILY_POLICY_ACTIVATED"))
+
+    def test_chained_family_policy_version_mutation_detected(self):
+        # CHAINED_FAMILY_POLICY_VERSION_MUTATION_DETECTED
+        self.ledger.register_family_policy("human:owner", "policy-other", "1", {"version": "1"})
+        self.ledger.register_family_policy("human:owner", "policy-other", "2", {"version": "1"})
+        self.ledger.activate_family_policy("human:owner", "policy-other", "2")
+        self._assert_tamper_blocks_integrity("family_policy_events", "UPDATE family_policy_events SET family_policy_version = ? WHERE family_policy_id = ? AND family_policy_version = ? AND event_type = ?", ("1", "policy-other", "2", "FAMILY_POLICY_ACTIVATED"))
+
+    def test_trial_created_sequence_mutation_detected(self):
+        # TRIAL_CREATED_SEQUENCE_MUTATION_DETECTED
+        trial = self.register()
+        self._assert_tamper_blocks_integrity("trial_registrations", "UPDATE trial_registrations SET created_ledger_sequence = ? WHERE trial_id = ?", (1, trial))
+
+    def test_trial_family_mutation_detected(self):
+        # TRIAL_FAMILY_MUTATION_DETECTED
+        trial = self.register()
+        self._assert_tamper_blocks_integrity("trial_registrations", "UPDATE trial_registrations SET trial_family_id = ? WHERE trial_id = ?", ("tampered-family", trial))
+
+    def test_research_spec_blob_mutation_detected(self):
+        # RESEARCH_SPEC_BLOB_MUTATION_DETECTED
+        trial = self.register()
+        row = self.ledger.db.execute("SELECT canonical_research_spec_sha256 FROM trial_registrations WHERE trial_id = ?", (trial,)).fetchone()
+        self._assert_tamper_blocks_integrity("research_specs", "UPDATE research_specs SET canonical_blob = ? WHERE canonical_research_spec_sha256 = ?", (b"{}", row["canonical_research_spec_sha256"]))
+
+    def test_idempotency_mapping_mutation_detected(self):
+        # IDEMPOTENCY_MAPPING_MUTATION_DETECTED
+        self.register("first")
+        self._assert_tamper_blocks_integrity("registration_idempotency", "UPDATE registration_idempotency SET idempotency_key = ? WHERE idempotency_key = ?", ("tampered", "first"))
+
+    def test_execution_trial_mutation_detected(self):
+        # EXECUTION_TRIAL_MUTATION_DETECTED
+        first = self.register("first")
+        second = self.register("second", hypothesis_id="second")
+        execution = self.ledger.start_execution("human:owner", first)
+        self._assert_tamper_blocks_integrity("execution_records", "UPDATE execution_records SET trial_id = ? WHERE execution_id = ?", (second, execution))
+
+    def test_result_created_sequence_mutation_detected(self):
+        # RESULT_CREATED_SEQUENCE_MUTATION_DETECTED
+        _, _, result, _, _ = self._terminal_evidence()
+        self._assert_tamper_blocks_integrity("result_references", "UPDATE result_references SET created_ledger_sequence = ? WHERE reference_id = ?", (1, result))
+
+    def test_result_locator_mutation_detected(self):
+        # RESULT_LOCATOR_MUTATION_DETECTED
+        _, _, result, _, _ = self._terminal_evidence()
+        self._assert_tamper_blocks_integrity("result_references", "UPDATE result_references SET locator = ? WHERE reference_id = ?", ("local://tampered", result))
+
+    def test_artifact_locator_mutation_detected(self):
+        # ARTIFACT_LOCATOR_MUTATION_DETECTED
+        _, _, _, artifact, _ = self._terminal_evidence()
+        self._assert_tamper_blocks_integrity("artifact_references", "UPDATE artifact_references SET locator = ? WHERE reference_id = ?", ("local://tampered", artifact))
+
+    def test_protocol_violation_mutation_detected(self):
+        # PROTOCOL_VIOLATION_MUTATION_DETECTED
+        _, _, _, _, violation = self._terminal_evidence()
+        self._assert_tamper_blocks_integrity("protocol_violations", "UPDATE protocol_violations SET reason = ? WHERE violation_id = ?", ("tampered", violation))
+
+    def test_historical_snapshot_tamper_fails_closed(self):
+        # HISTORICAL_SNAPSHOT_TAMPER_FAIL_CLOSED
+        trial = self.register("historic-tamper")
+        boundary = self.ledger.db.execute("SELECT MAX(ledger_sequence) FROM trial_events").fetchone()[0]
+        self.ledger.start_execution("human:owner", trial)
+        self._assert_tamper_blocks_integrity("trial_registrations", "UPDATE trial_registrations SET trial_family_id = ? WHERE trial_id = ?", ("tampered-family", trial))
+        with self.assertRaises(LedgerError):
+            self.ledger.snapshot(as_of_ledger_sequence=boundary)
 
     def test_initialization_is_atomic_and_rejects_second_init(self):
         self.assertTrue(self.ledger.verify_global_chain())
@@ -350,6 +556,33 @@ class LedgerCase(unittest.TestCase):
 
 
 class FrozenVectorTests(unittest.TestCase):
+    def test_string_escape_vectors_are_frozen(self):
+        # Exact byte and SHA vectors prevent canonical escape regressions.
+        vectors = (
+            ("\n", b'{"value":"\\u000a"}', "bd3ba95c9aa5b05ad84b98e21d40803a7c78d39bf85747bfc3f2dfdded73d57e"),
+            ("\\n", b'{"value":"\\\\n"}', "dd3bb0194cbd1deaecde8cdaa38a87579850ae9061ca9ca25cc44c2d7905e826"),
+            ("\t", b'{"value":"\\u0009"}', "7b628ddf0b215926ccfb0795f9568cb6df7ff1d7dfa222dd2e030f09771dc1cf"),
+            ("\\t", b'{"value":"\\\\t"}', "fae4f67c44f9c51bdc8eccbc9c1ef6a04ddb20654ba2caf25fd8c9f99a2d72b8"),
+            ("\\u000a", b'{"value":"\\\\u000a"}', "68cb5bb8c7014c6fb20192bb08fb58ceda5c8d41662741bafd49063e192f9d6f"),
+        )
+        for value, expected, digest in vectors:
+            with self.subTest(value=repr(value)):
+                self.assertEqual(canonical_json_bytes({"value": value}), expected)
+                self.assertEqual(__import__("hashlib").sha256(expected).hexdigest(), digest)
+                self.assertEqual(parse_json_strict(expected.decode("utf-8")), {"value": value})
+
+    def test_family_policy_spec_hash_vector_is_frozen(self):
+        rules_hash = "aa5bc61f44d5f633935d04cbccf2654c56806fc924b0083a6cb6b7545369ad64"
+        identity = {
+            "family_policy_id": "policy-fixed", "family_policy_version": "1",
+            "policy_schema_version": "V1", "policy_rules_hash": rules_hash,
+            "effective_from": "2026-09-10T12:34:56.000000Z",
+        }
+        expected = b'{"effective_from":"2026-09-10T12:34:56.000000Z","family_policy_id":"policy-fixed","family_policy_version":"1","policy_rules_hash":"aa5bc61f44d5f633935d04cbccf2654c56806fc924b0083a6cb6b7545369ad64","policy_schema_version":"V1"}'
+        self.assertEqual(canonical_json_bytes(identity), expected)
+        self.assertEqual(__import__("hashlib").sha256(expected).hexdigest(), "06f1c6486b8fd31884c2425ad195cf2848dcfb1d20a7fb052253c33bc0da8359")
+        self.assertNotEqual(rules_hash, "06f1c6486b8fd31884c2425ad195cf2848dcfb1d20a7fb052253c33bc0da8359")
+
     def test_event_hash_vector_is_frozen(self):
         envelope = {
             "hash_domain_version": "AQ_LEDGER_EVENT_HASH_V1", "ledger_id": "ledger-fixed",
@@ -390,7 +623,7 @@ class FrozenVectorTests(unittest.TestCase):
                 ledger.register("human:owner", "fixed-key", spec(), family_policy_id=P1_MODEL_TOURNAMENT_FAMILY_POLICY_V1,
                                 family_policy_version="1", family_inputs={"dataset_snapshot_id": "dataset-1", "universe_id": "us-large", "label_spec_hash": "label-a", "feature_set_hash": "features-a", "research_objective": "test", "evaluation_window_policy": "v1"})
                 snapshot = ledger.snapshot()
-                self.assertEqual(snapshot.content_hash, "56e10ce6fd86f0719fbb360b64ab36327646c99236567eb0ea637453bcd0b88f")
+                self.assertEqual(snapshot.content_hash, "0ef2d4f8bcba7f1154666e4a7b3281c39cd6f998c37667bdf0468696e5457eb2")
             finally:
                 ledger.close()
 
