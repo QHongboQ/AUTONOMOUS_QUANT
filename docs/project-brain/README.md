@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P1 — Minimal Quant (not started)**
+> Current Next: **P1 — PIT US Universe/Data Recovery (not started)**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -715,7 +715,7 @@ P0_POC_A_OPENBB_LINUX_QLIB_HANDOFF = PASS
 P0_POC_C_QLIB_CERTIFICATION_SKFOLIO = PASS
 P0_POC_D_TARGETPORTFOLIO_EXECUTIONPLAN = PASS
 P0_FUNCTIONAL_POC = COMPLETE
-CURRENT_NEXT = P1_MINIMAL_QUANT
+CURRENT_NEXT = P1_PIT_DATA_RECOVERY
 P1 = NOT_STARTED
 P1_MINIMAL_QUANT = PLANNED / NOT STARTED
 P2_CERTIFICATION = PLANNED / NOT STARTED
