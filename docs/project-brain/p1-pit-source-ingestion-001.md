@@ -55,12 +55,18 @@ Four manifests were recorded:
 | `fja05680/sp500` historical CSV | `a2430f2af0c79ddf0748e91de11bdeb1616ab5a7` | `HISTORICAL_SEED` | `646b2e47284abfb675abebacd4a4035ba22a79ea1ccdeccce7fbe5f0e27bab3a` | none |
 | exact snapshot-difference stream | algorithm v1 | `PRECISE_MEMBERSHIP_EVENTS` | `87367613d9e8a55f3c9cf9ace0cd2cbf3999acc5634d6cef122eb690a33dc62b` | FJA source ID |
 | Wikipedia late-December roster | oldid `1265285344`, 2024-12-26 04:36:28Z | `DIAGNOSTIC_REFERENCE` | `597d7d170a35c6ec4ade33fc56b38d6f0c45db9029c515216ec03deee106b065` | none |
-| `pitindex-dev/pitindex` diagnostic bundle | `2df030e5c9be7c83cf4b28c3d8597d74d274757e` | `DIAGNOSTIC_REFERENCE` | `4f006c5cac4665745c3067f0a5279a285d20fd7277169e7750e83fb2d5becb50` | FJA source ID |
+| `arielNacamulli/pitindex` diagnostic bundle | `2df030e5c9be7c83cf4b28c3d8597d74d274757e` | `DIAGNOSTIC_REFERENCE` | `cd08b26d7354ab2fae33d8c3d18651dee35b67f653a64941ecc14515c573c88b` | FJA source ID |
 
-The terminal Wikipedia table parsed to 502 unique symbols. The FJA terminal
-state has 503; its only extra symbol is `CBOE`. The difference is preserved as
-an unresolved finding. It was not repaired. Wikipedia content terms were
-observed as CC BY-SA 4.0/GFDL; the reference remains diagnostic.
+The corrected bounded parser recognizes NYSE, Nasdaq, and the revision's
+`{{BZX link|CBOE}}` constituent form. The terminal Wikipedia table and FJA
+terminal state both contain 503 unique symbols with no set difference.
+Wikipedia content terms were observed as CC BY-SA 4.0/GFDL; the reference
+remains diagnostic.
+
+The pitindex repository identity is `arielNacamulli/pitindex`. Its pinned
+`build_metadata.json` establishes S&P 500 diagnostic coverage from
+`2004-12-30` through `2026-09-07`; coverage is read from those frozen bytes,
+not a later hard-coded date.
 
 The Shardul repository was inspected only as an evidence-workflow locator at
 `7920e8e5a9c62d2a39c9df30dea0e133684b43f5`. Its own README says the historical
@@ -103,12 +109,25 @@ Year continuity was checked by applying the exact first snapshot transition of
 each following year to the preceding year's last snapshot. All 14 boundaries
 reproduced the next source state.
 
-## Identity probes and real-source behavior
+## Identity probes and complete diagnostic scan
 
-The runtime's generic detector evaluated every normalized observation against
-the frozen audit boundaries. It produced 948 individual
-`FUTURE_TICKER_BEFORE_RENAME` observations, represented in the unresolved
-ledger as three exact date ranges, and zero stale-predecessor observations.
+The seven frozen Project Brain boundaries remain explicit audit probes. In
+addition, all 31 rename rows dated 2010–2024 in the pinned pitindex
+`data/ticker_renames.csv` were loaded as diagnostic-only candidates. Exact
+candidate duplicates were merged, producing 37 combined boundary probes. Each
+probe was passed to the existing generic detector across all FJA observations.
+No candidate was passed to `compile_universe`.
+
+The scan produced 1,387 individual successor-before-boundary observations and
+82 individual stale-predecessor observations. Deterministic aggregation and
+semantic deduplication produced 11 future-ticker ranges and 4 stale-ticker
+ranges.
+
+Three pitindex candidate boundaries disagree with frozen Project Brain probes:
+`WLTW/WTW` (`2022-01-21` versus frozen `2022-01-10`), `RE/EG`
+(`2023-03-09` versus frozen `2023-07-10`), and `CDAY/DAY` (`2024-08-28`
+versus frozen `2024-02-01`). These disagreements are diagnostic evidence only;
+the frozen boundaries were not overridden.
 
 | Probe | Raw FJA behavior | Result |
 |---|---|---|
@@ -121,25 +140,42 @@ ledger as three exact date ranges, and zero stale-predecessor observations.
 | `DLPH / APTV` | no DLPH in window; APTV from 2012-12-24 | future-label backfill + rename evidence required |
 | `DISCK / WBD` | DISCK 2014-08-07–2022-04-04; WBD from 2022-04-11 | membership REMOVE/ADD only; corporate identity unresolved |
 
-No diagnostic row was promoted to `TickerIdentityEventV1` compile authority.
-No overlay or correction was applied.
+Diagnostic rows were represented as transient detector inputs only. None was
+promoted to compile authority, and no overlay or correction was created or
+applied.
 
 ## Complete unresolved ledger
 
-The external canonical ledger contains 26 blocking issue records: 3 future
-ticker backfill ranges, 7 rename-evidence requirements, 15 ticker re-entry/reuse
-reviews, and 1 terminal-set difference. Its SHA-256 is
-`c69e7dc5d87f3734f047f6b9029c8a3afb726765d117910e63923309a9550b9e`.
+The external canonical ledger contains 37 blocking issue records: 11 future
+ticker backfill ranges, 4 stale-predecessor ranges, 7 frozen-probe
+rename-evidence requirements, and 15 ticker re-entry/reuse reviews. The
+terminal-set difference count is zero. The ledger SHA-256 is
+`d227a9c514e4a13752b0f35ddfc3a7e7292270570b96ff9f4342dfcbaed38734`.
 
 Future-label ranges:
 
+- `P1UNRES-4832f5f16e7010888c70c73c7422cc0c8cc1143a16056d8e1e66298c93b287fb`: `SAI/LDOS`, 2010-01-04–2013-09-17.
 - `P1UNRES-f22b3e08be015d9a35779e72e65aa7eda0578671f7996f8ca61eaeef772f4e1a`: `DLPH/APTV`, 2012-12-24–2017-11-30.
 - `P1UNRES-7e41f91402a63331e6a83cf02687f62b65cdf4f01080dba62e38af33451aa4a3`: `KORS/CPRI`, 2016-01-04–2018-12-24.
 - `P1UNRES-19ba9629a68b280c4b3a79e9c000632add44af2bfc969cdb2c53b52c090e7f82`: `Q/IQV`, 2017-08-29–2017-11-10.
+- `P1UNRES-c97580aea4add50bdba8f674bc44727a979b99d3b082cb27ab222a0f631aa9ae`: `HRS/LHX`, 2019-06-01–2019-06-07.
+- `P1UNRES-d60dccba136042ea9451a84e0b11ac9be793a8073db3907980f1863a89de1779`: `HCP/PEAK`, 2019-11-05–2019-11-21.
+- `P1UNRES-88132abda2ee4f905b3baa835415fbdb1b45f5307ab332172143b1139b9de84c`: `JEC/J`, 2019-12-10.
+- `P1UNRES-441793fb26c1082d6f85f4f526ba7db58940a21c15db6c0b1b04a735176e9d01`: `WLTW/WTW`, 2022-01-10.
+- `P1UNRES-5b72c2b6e24abc909949ebe589aa97b798bec714f49f4bb5cb2d3c5906b8635c`: `BLL/BALL`, 2022-05-10–2024-07-08.
+- `P1UNRES-dee00eb7ebb9ba75dcfa98d1dea474edd56d4abc4f32fcabdcd1dd6bc3c60a4a`: `CDAY/DAY`, 2024-02-01–2024-07-08.
+- `P1UNRES-a557f491e80c76a4331d18db2029ae35092c1764755491169330283124bcffd2`: `FLT/CPAY`, 2024-03-25–2024-04-02.
+
+Stale-predecessor ranges:
+
+- `P1UNRES-103b09784924f53fdb8707681ce657701f66666e05462f2475b27ed003d2a753`: `BHGE/BKR`, 2019-09-26–2019-10-03.
+- `P1UNRES-b059daaf24be8a6f5f8e1ee5a45e39a5c7fc1466cbcf341c8ef0af7c50f9fc14`: `IR/TT`, 2020-03-03–2024-12-23.
+- `P1UNRES-449a816300c71f8097a9313d8d2faf34592e42a29e7af6f472187d1b43c9750b`: `VIAC/PARA`, 2022-02-15.
+- `P1UNRES-5c04d73b193384e73172f589ecac80b267d0c2a270d4895563c830035d653084`: `RE/EG`, 2023-03-15–2023-06-20.
 
 Rename-evidence records:
 
-- `P1UNRES-6bea7d7f6a178c4895b809cb4a53315a0929f5033f374390df2a055838b52338` (`FB/META`).
+- `P1UNRES-522d3241c86c63c26182aec1a95b62428d2947d8b36b6d4082bb5605bcb7cf19` (`FB/META`).
 - `P1UNRES-3e0ce479f4121e28f93f9e9c8e3edac006ab91e7f7684074d9e4118a8e9ea465` (`CDAY/DAY`).
 - `P1UNRES-c4b25345aadff7227b91e5092d2c4b904354e21bdf60f462ed24c946fba74c3c` (`RE/EG`).
 - `P1UNRES-931b474f3462d03170621e8d228b92c862015b1da691272de064358376a7eb8d` (`WLTW/WTW`).
@@ -167,13 +203,9 @@ Ticker re-entry/reuse review records:
 | EQT | 2018-11-13–2022-10-03 | `P1UNRES-fd4e1677129e8b0bc7e0d1053eb022a6a9bd32b2de48a8b6cbe6f88fce3f9334` |
 | PCG | 2019-01-18–2022-10-03 | `P1UNRES-9e335320d7d71faecd774732e6133d30ba30c5c3eea45e55f270ee7fcf27c2d5` |
 
-Terminal record:
-
-- `P1UNRES-6c271d6802b3b54f7dad813ebdce376175201a96567e9a31477dd30d84c5c071`: FJA-only `CBOE`, 2024-12-23–2024-12-31.
-
 Each ledger record includes source IDs, evidence leads, first/last affected
 dates, and `blocking = YES`. There are no `ADD_PRESENT`, `REMOVE_ABSENT`,
-stale-ticker, source-gap, duplicate, overlap, or year-continuity issues in this
+terminal-set, source-gap, duplicate, overlap, or year-continuity issues in this
 run.
 
 ## FJA versus pitindex diagnostic
@@ -200,11 +232,11 @@ hashes.
 
 | Logical artifact | SHA-256 |
 |---|---|
-| compilation summary | `bf39bd80ec8712c583fdf57ea9fa68705cea8091b89bcccae64c3866483297be` |
-| source manifests | `2da2bd0de01d67811199254f9fa59bf8f709b408a7c46b347d27a084af14f5f3` |
+| compilation summary | `dc6faf98eae6099e073720ea714d0b514d9e45c31931992800489f6c6549a593` |
+| source manifests | `5e3be7f611ae883b03590b9e2383478bc6c2cd833cc15f9be3ad62f4e3b07258` |
 | normalized observations | `80d126014f24933f7fd43c630e2f73a9363784d3cd8e1e50764eab42e5834da8` |
 | derived membership events | `28dd35f6fa1801f2bfa673c410e080e660df6e722494befc1ef43b694c843f46` |
-| unresolved ledger | `c69e7dc5d87f3734f047f6b9029c8a3afb726765d117910e63923309a9550b9e` |
+| unresolved ledger | `d227a9c514e4a13752b0f35ddfc3a7e7292270570b96ff9f4342dfcbaed38734` |
 | FJA/pitindex comparison | `72bb69d4f7dc4783f87e36704689803d7f5a8f49014f7ecaf16b2f6c0aa35776` |
 
 Both pinned Git source worktrees were clean after evidence generation. Raw
@@ -212,21 +244,33 @@ bytes were not modified.
 
 ## Verification and non-actions
 
-The 51 pre-existing tests, all 13 frozen regressions, and 8 focused adapter /
-real-ingestion-semantics tests passed (59 total). The new tests cover
+The 59 pre-closeout tests, all 13 frozen regressions, and 5 focused closeout
+tests passed (64 total). The original ingestion tests cover
 deterministic parse, as-of seed carry, exact snapshot diff, raw immutability,
 same-byte/different-byte hashes, visible future ticker backfill, event and
-compile determinism, and manifest mismatch rejection.
+compile determinism, and manifest mismatch rejection. Closeout tests cover BZX
+parsing, the real 503-member terminal revision, pitindex repository/coverage
+identity, a non-frozen diagnostic candidate, and proof that diagnostic rename
+rows cannot mutate compile state.
 
 No market data, model training, backtest, Qlib, RD-Agent, OpenBB, broker,
 account, or trading action occurred. Price-provider mapping, delisted prices,
 pre-membership prices, and cross-ticker price stitching remain explicitly
 deferred.
 
+## Independent-review closeout
+
+Independent review found three bounded evidence defects: the terminal parser
+omitted the BZX template used by CBOE, the pitindex manifest named the wrong
+GitHub repository and stale coverage end, and the rename anomaly scan covered
+only the seven frozen probes. The closeout fixes all three without changing PIT
+contracts or compile authority. It adds no overlay, correction, Security
+Master, ticker-specific runtime branch, or identity reconciliation.
+
 ## Current authority
 
 Ingestion succeeds because the frozen source, normalization, event derivation,
-real compile, repeatability proof, and complete issue ledger all exist. The 26
+real compile, repeatability proof, and complete issue ledger all exist. The 37
 unresolved records correctly prevent certification; they do not make source
 ingestion itself fail.
 

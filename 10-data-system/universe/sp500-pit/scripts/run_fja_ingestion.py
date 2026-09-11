@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import argparse
 import csv
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
+from datetime import date
 import hashlib
 import json
 from pathlib import Path
@@ -33,6 +34,7 @@ from aq_pit.sources.fja_sp500 import (
 
 FJA_COMMIT = "a2430f2af0c79ddf0748e91de11bdeb1616ab5a7"
 PITINDEX_COMMIT = "2df030e5c9be7c83cf4b28c3d8597d74d274757e"
+PITINDEX_REPOSITORY = "arielNacamulli/pitindex"
 WIKIPEDIA_REVISION = "1265285344"
 WIKIPEDIA_TIMESTAMP = "2024-12-26T04:36:28Z"
 FJA_SOURCE_FILE = "S&P 500 Historical Components & Changes (Updated).csv"
@@ -58,6 +60,15 @@ IDENTITY_AUDIT_PROBES = (
 MEMBERSHIP_SUCCESSION_AUDIT_PROBES = (
     ("DISCK", "WBD", "2022-04-11"),
 )
+
+
+@dataclass(frozen=True, slots=True)
+class DiagnosticRenameCandidate:
+    old_ticker: str
+    new_ticker: str
+    boundary: str
+    source_ids: tuple[str, ...]
+    frozen_probe: bool = False
 
 
 def _file_hash(path: Path) -> str:
@@ -98,13 +109,20 @@ def _write_jsonl(path: Path, values: tuple[object, ...]) -> None:
     temporary.replace(path)
 
 
-def _terminal_roster(raw: bytes) -> tuple[str, ...]:
+def _parse_terminal_symbols(raw: bytes) -> tuple[str, ...]:
     text = raw.decode("utf-8")
     start = text.index('id="constituents"')
     end = text.index("\n|}", start)
     table = text[start:end]
-    symbols = re.findall(r"\{\{(?:Nyse|Nasdaq)Symbol\|([^}|]+)", table)
+    symbols = re.findall(
+        r"\{\{(?:(?:Nyse|Nasdaq)Symbol|BZX link)\|([^}|]+)", table,
+    )
     roster = tuple(sorted(symbol.strip().upper().replace("-", ".") for symbol in symbols))
+    return roster
+
+
+def _terminal_roster(raw: bytes) -> tuple[str, ...]:
+    roster = _parse_terminal_symbols(raw)
     if len(roster) != len(set(roster)) or len(roster) < 500:
         raise ValueError("terminal Wikipedia roster did not parse as a unique S&P 500 set")
     return roster
@@ -136,28 +154,31 @@ def _terminal_manifest(raw: bytes, retrieved_at: str) -> SourceManifestV1:
 
 def _pitindex_manifest(repo: Path, retrieved_at: str, fja_source_id: str) -> SourceManifestV1:
     files = (
+        repo / "pitindex" / "data" / "build_metadata.json",
         repo / "pitindex" / "data" / "sp500_seed.csv",
         repo / "pitindex" / "data" / "sp500_changes.csv",
         repo / "data" / "ticker_renames.csv",
     )
     digest, byte_length = _tree_hash(files, repo)
+    metadata = json.loads(files[0].read_text(encoding="utf-8"))
+    sp500_metadata = metadata["indices"]["sp500"]
     return SourceManifestV1(
         source_id=deterministic_id("P1SRC-", {
             "files_sha256": digest,
-            "repo": "pitindex-dev/pitindex",
+            "repo": PITINDEX_REPOSITORY,
             "revision": PITINDEX_COMMIT,
         }),
         source_role=SourceRole.DIAGNOSTIC_REFERENCE,
         source_type="pinned_repository_diagnostic_bundle",
-        source_url_or_repo="https://github.com/pitindex-dev/pitindex",
+        source_url_or_repo=f"https://github.com/{PITINDEX_REPOSITORY}",
         source_commit_or_revision=PITINDEX_COMMIT,
         retrieved_at=retrieved_at,
         media_type="text/csv",
         byte_length=byte_length,
         sha256=digest,
         license_observation="MIT (repository LICENSE at pinned commit)",
-        coverage_start="2004-12-30",
-        coverage_end="2026-09-04",
+        coverage_start=sp500_metadata["start_date"],
+        coverage_end=sp500_metadata["end_date"],
         ancestry=(fja_source_id,),
         adapter_version="pitindex-diagnostic-replay-v1",
     )
@@ -193,19 +214,76 @@ def _observation_on_or_before(observations, session: str):
     return matches[-1]
 
 
-def _make_probe_events() -> tuple[TickerIdentityEventV1, ...]:
+def _load_pitindex_rename_candidates(
+    path: Path,
+    source_id: str,
+) -> tuple[DiagnosticRenameCandidate, ...]:
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames != ["date", "old_ticker", "new_ticker", "reason"]:
+            raise ValueError("unexpected pitindex ticker_renames.csv schema")
+        candidates = []
+        for row in reader:
+            boundary = row["date"].strip()
+            date.fromisoformat(boundary)
+            if not WINDOW_START <= boundary <= WINDOW_END:
+                continue
+            old_ticker = row["old_ticker"].strip().upper()
+            new_ticker = row["new_ticker"].strip().upper()
+            candidates.append(DiagnosticRenameCandidate(
+                old_ticker, new_ticker, boundary, (source_id,), False,
+            ))
+    return tuple(candidates)
+
+
+def _merge_diagnostic_candidates(
+    pitindex_candidates: tuple[DiagnosticRenameCandidate, ...],
+) -> tuple[DiagnosticRenameCandidate, ...]:
+    merged: dict[tuple[str, str, str], dict[str, object]] = {}
+    for candidate in pitindex_candidates:
+        key = (candidate.old_ticker, candidate.new_ticker, candidate.boundary)
+        merged[key] = {
+            "source_ids": set(candidate.source_ids),
+            "frozen_probe": False,
+        }
+    for old_ticker, new_ticker, boundary in IDENTITY_AUDIT_PROBES:
+        key = (old_ticker, new_ticker, boundary)
+        item = merged.setdefault(key, {"source_ids": set(), "frozen_probe": False})
+        item["source_ids"].add("project-brain-frozen-audit-probes")
+        item["frozen_probe"] = True
+    return tuple(
+        DiagnosticRenameCandidate(
+            old_ticker=key[0],
+            new_ticker=key[1],
+            boundary=key[2],
+            source_ids=tuple(sorted(item["source_ids"])),
+            frozen_probe=bool(item["frozen_probe"]),
+        )
+        for key, item in sorted(merged.items())
+    )
+
+
+def _candidate_events(
+    candidates: tuple[DiagnosticRenameCandidate, ...],
+) -> tuple[TickerIdentityEventV1, ...]:
     result = []
-    for old, new, boundary in IDENTITY_AUDIT_PROBES:
-        logical = {"old": old, "new": new, "boundary": boundary, "role": "diagnostic-audit-probe"}
+    for candidate in candidates:
+        logical = {
+            "old": candidate.old_ticker,
+            "new": candidate.new_ticker,
+            "boundary": candidate.boundary,
+            "sources": candidate.source_ids,
+            "role": "diagnostic-only-rename-candidate",
+        }
         result.append(TickerIdentityEventV1(
             event_id=deterministic_id("P1PROBE-", logical),
-            old_ticker=old,
-            new_ticker=new,
+            old_ticker=candidate.old_ticker,
+            new_ticker=candidate.new_ticker,
             announcement_date=None,
-            effective_date=boundary,
-            effective_session=boundary,
+            effective_date=candidate.boundary,
+            effective_session=candidate.boundary,
             boundary_semantics=SessionBoundary.EFFECTIVE_SESSION,
-            source_id="project-brain-frozen-audit-probes",
+            source_id="diagnostic-only-rename-scan",
             evidence_hash=sha256_hex(logical),
             identity_anchor=None,
             ambiguity_state=AmbiguityState.CLEAR,
@@ -226,10 +304,15 @@ def _issue(kind: str, tickers: tuple[str, ...], first: str, last: str, source_id
     return {"finding_id": deterministic_id("P1UNRES-", payload), **payload}
 
 
-def _probe_report(observations, probe_events, fja_source_id: str):
+def _diagnostic_rename_report(observations, candidates, fja_source_id: str):
+    probe_events = _candidate_events(candidates)
     detector = detect_future_ticker_backfill(observations, probe_events)
     observation_dates = {item.observation_id: item.effective_session for item in observations}
     event_map = {item.event_id: item for item in probe_events}
+    candidate_map = {
+        (item.old_ticker, item.new_ticker, item.boundary): item
+        for item in candidates
+    }
     grouped: dict[tuple[str, str], list[str]] = {}
     for finding in detector:
         event_id = next(item for item in finding.affected_ids if item in event_map)
@@ -238,14 +321,17 @@ def _probe_report(observations, probe_events, fja_source_id: str):
     ledger = []
     for (event_id, runtime_kind), dates in sorted(grouped.items()):
         event = event_map[event_id]
+        candidate = candidate_map[(event.old_ticker, event.new_ticker, event.effective_session)]
         kind = "FUTURE_TICKER_BACKFILL" if runtime_kind == FindingType.FUTURE_TICKER_BEFORE_RENAME.value else "STALE_PREDECESSOR_TICKER"
         ledger.append(_issue(
             kind, (event.old_ticker, event.new_ticker), min(dates), max(dates),
-            (fja_source_id, event.source_id),
+            (fja_source_id, *candidate.source_ids),
             ("official S&P constituent-change notice", "issuer/SEC identity evidence", "pinned pitindex row as non-independent locator"),
         ))
     behavior = {}
-    for event in probe_events:
+    for candidate, event in zip(candidates, probe_events):
+        if not candidate.frozen_probe:
+            continue
         old_dates = [item.effective_session for item in observations if event.old_ticker in item.tickers]
         new_dates = [item.effective_session for item in observations if event.new_ticker in item.tickers]
         key = f"{event.old_ticker}_{event.new_ticker}"
@@ -260,10 +346,48 @@ def _probe_report(observations, probe_events, fja_source_id: str):
         ledger.append(_issue(
             "TICKER_RENAME_EVIDENCE_REQUIRED", (event.old_ticker, event.new_ticker),
             min((*old_dates, *new_dates)), max((*old_dates, *new_dates)),
-            (fja_source_id, event.source_id),
+            (fja_source_id, *candidate.source_ids),
             ("official effective-date notice", "issuer/SEC identity evidence"),
         ))
     return detector, behavior, ledger
+
+
+def _boundary_disagreements(
+    pitindex_candidates: tuple[DiagnosticRenameCandidate, ...],
+) -> tuple[dict, ...]:
+    frozen = {(old, new): boundary for old, new, boundary in IDENTITY_AUDIT_PROBES}
+    return tuple(
+        {
+            "old_ticker": candidate.old_ticker,
+            "new_ticker": candidate.new_ticker,
+            "frozen_boundary": frozen[(candidate.old_ticker, candidate.new_ticker)],
+            "pitindex_boundary": candidate.boundary,
+            "authority_change": "NONE",
+        }
+        for candidate in pitindex_candidates
+        if (candidate.old_ticker, candidate.new_ticker) in frozen
+        and candidate.boundary != frozen[(candidate.old_ticker, candidate.new_ticker)]
+    )
+
+
+def _deduplicate_issues(issues: list[dict]) -> list[dict]:
+    grouped: dict[tuple[object, ...], dict[str, set[str]]] = {}
+    for item in issues:
+        key = (
+            item["finding_type"], tuple(item["tickers"]),
+            item["first_affected_date"], item["last_affected_date"], item["blocking"],
+        )
+        merged = grouped.setdefault(key, {"source_ids": set(), "leads": set()})
+        merged["source_ids"].update(item["source_ids"])
+        merged["leads"].update(item["candidate_evidence_leads"])
+    result = [
+        _issue(
+            key[0], key[1], key[2], key[3], tuple(sorted(value["source_ids"])),
+            tuple(sorted(value["leads"])), blocking=key[4] == "YES",
+        )
+        for key, value in grouped.items()
+    ]
+    return sorted(result, key=lambda item: item["finding_id"])
 
 
 def run(args: argparse.Namespace) -> dict:
@@ -284,6 +408,11 @@ def run(args: argparse.Namespace) -> dict:
     events = derive_membership_events(observations, event_manifest)
     terminal_manifest = _terminal_manifest(terminal_raw, args.retrieved_at)
     pitindex_manifest = _pitindex_manifest(pitindex_repo, args.retrieved_at, seed_manifest.source_id)
+    pitindex_candidates = _load_pitindex_rename_candidates(
+        pitindex_repo / "data" / "ticker_renames.csv", pitindex_manifest.source_id,
+    )
+    diagnostic_candidates = _merge_diagnostic_candidates(pitindex_candidates)
+    boundary_disagreements = _boundary_disagreements(pitindex_candidates)
     manifests = (seed_manifest, event_manifest, terminal_manifest, pitindex_manifest)
     compile_manifests = (seed_manifest, event_manifest)
     start_session = observations[0].effective_session
@@ -306,8 +435,9 @@ def run(args: argparse.Namespace) -> dict:
     actual_terminal = observations[-1].tickers
     terminal_only_actual = tuple(sorted(set(actual_terminal) - set(terminal_roster)))
     terminal_only_expected = tuple(sorted(set(terminal_roster) - set(actual_terminal)))
-    probe_events = _make_probe_events()
-    detector, probe_behavior, ledger = _probe_report(observations, probe_events, seed_manifest.source_id)
+    detector, probe_behavior, ledger = _diagnostic_rename_report(
+        observations, diagnostic_candidates, seed_manifest.source_id,
+    )
 
     if terminal_only_actual or terminal_only_expected:
         ledger.append(_issue(
@@ -394,9 +524,7 @@ def run(args: argparse.Namespace) -> dict:
             "independent_confirmation": False,
         })
 
-    ledger = sorted(ledger, key=lambda item: item["finding_id"])
-    if len({item["finding_id"] for item in ledger}) != len(ledger):
-        raise RuntimeError("duplicate unresolved finding identity")
+    ledger = _deduplicate_issues(ledger)
     normalized_input_hash = sha256_hex({
         "manifests": compile_manifests,
         "observations": observations,
@@ -406,6 +534,8 @@ def run(args: argparse.Namespace) -> dict:
     remove_count = sum(item.action is MembershipAction.REMOVE for item in events)
     future_count = sum(item.finding_type is FindingType.FUTURE_TICKER_BEFORE_RENAME for item in detector)
     stale_count = sum(item.finding_type is FindingType.STALE_OLD_TICKER_AFTER_RENAME for item in detector)
+    future_range_count = sum(item["finding_type"] == "FUTURE_TICKER_BACKFILL" for item in ledger)
+    stale_range_count = sum(item["finding_type"] == "STALE_PREDECESSOR_TICKER" for item in ledger)
     summary = {
         "schema_version": "P1PitSourceIngestionEvidenceV1",
         "fja": {
@@ -427,12 +557,17 @@ def run(args: argparse.Namespace) -> dict:
         "counts": {
             "derived_add": add_count,
             "derived_remove": remove_count,
+            "diagnostic_rename_candidate_count": len(pitindex_candidates),
+            "diagnostic_rename_candidate_count_with_frozen_probes": len(diagnostic_candidates),
             "future_ticker_backfill_occurrences": future_count,
+            "future_ticker_backfill_ranges": future_range_count,
             "snapshot_count": len(observations),
             "stale_ticker_occurrences": stale_count,
+            "stale_ticker_ranges": stale_range_count,
             "unresolved_ledger_records": len(ledger),
             "year_continuity_findings": len(year_findings),
         },
+        "diagnostic_boundary_disagreements": boundary_disagreements,
         "manifests": manifests,
         "probe_behavior": probe_behavior,
         "rosters": {
