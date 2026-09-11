@@ -84,7 +84,7 @@ The full local suite passed under CPython 3.13.15 and the existing uv-managed
 CPython 3.12.14:
 
 ```text
-TOTAL_TEST_COUNT = 43
+TOTAL_TEST_COUNT = 51
 TEST_RESULT = PASS
 REGRESSION_COUNT = 13
 REGRESSION_RESULT = PASS
@@ -117,6 +117,30 @@ enforcement; add/remove failure; re-entry; ambiguous boundaries; duplicate
 canonical events; unresolved correction/publication; accepted correction;
 overlap; overlay provenance mutation; raw-input immutability; and identical
 output from repeated compilation.
+
+## Independent-review closeout
+
+The initial foundation at
+`56e393373daaa6ec651e4fc690e251eb5167a4fc` passed its original 43 tests,
+but independent review found four bounded state-corruption defects: foreign
+index membership inputs were not isolated, `IGNORE_EVENT` targets could be
+collected before correction authority validation, an accepted overlay could
+suppress a future-ticker finding without actually applying, and duplicate
+`source_id` values were silently reduced by dictionary construction.
+
+The closeout fixes all four paths. Foreign-index events/corrections now emit a
+blocking structured finding and cannot mutate state. Only a same-index,
+officially sourced, accepted correction targeting a real membership event can
+suppress that event. Overlay detection suppression consumes only the exact
+observation/event pairs returned by the single successful application path.
+Duplicate source IDs are removed from authority and emit `ERROR` when identical
+or `CRITICAL` when conflicting. Eight focused tests cover these cases; all 43
+original tests and all 13 frozen regressions remain passing.
+
+This closeout adds no architecture or contract schema. Market-data ticker
+validity, pre-membership price history, permanent security identity, and
+corporate lineage remain intentionally deferred. No real source data was
+ingested.
 
 ## Known limitations and next authority
 

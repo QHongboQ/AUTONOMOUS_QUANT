@@ -1,12 +1,16 @@
-"""Generic detection and evidence-driven ticker observation overlays."""
+"""Generic detection and one authoritative overlay validation/application path."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from .contracts import (
+    AmbiguityState,
     FindingSeverity,
     FindingType,
     OverlayOperation,
     ReviewState,
+    SessionBoundary,
     SnapshotObservationV1,
     TickerEpisodeOverlayV1,
     TickerIdentityEventV1,
@@ -14,6 +18,20 @@ from .contracts import (
     normalize_ticker,
 )
 from .validation import make_finding
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedObservation:
+    observation_id: str
+    tickers: tuple[str, ...]
+    applied_overlay_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class OverlayApplicationResult:
+    observations: tuple[ResolvedObservation, ...]
+    applied_pairs: tuple[tuple[str, str], ...]
+    findings: tuple[ValidationFindingV1, ...]
 
 
 def detect_future_ticker_backfill(
@@ -44,44 +62,89 @@ def detect_future_ticker_backfill(
     return tuple(findings)
 
 
+def apply_ticker_overlays(
+    observations: tuple[SnapshotObservationV1, ...],
+    ticker_events: tuple[TickerIdentityEventV1, ...],
+    overlays: tuple[TickerEpisodeOverlayV1, ...],
+) -> OverlayApplicationResult:
+    """Validate and apply overlays; only returned applied pairs may suppress findings."""
+
+    observation_map = {item.observation_id: item for item in observations}
+    event_map = {item.event_id: item for item in ticker_events}
+    resolved = {item.observation_id: list(item.tickers) for item in observations}
+    applied_by_observation: dict[str, list[str]] = {
+        item.observation_id: [] for item in observations
+    }
+    applied_pairs: list[tuple[str, str]] = []
+    findings: list[ValidationFindingV1] = []
+
+    for overlay in sorted(overlays, key=lambda item: item.overlay_id):
+        if overlay.review_state is not ReviewState.ACCEPTED:
+            continue
+        observation = observation_map.get(overlay.raw_observation_id)
+        event = event_map.get(overlay.ticker_identity_event_id)
+        valid = observation is not None and event is not None
+        if valid:
+            assert observation is not None and event is not None
+            evidence = set(overlay.evidence_hashes)
+            old = normalize_ticker(event.old_ticker)
+            new = normalize_ticker(event.new_ticker)
+            valid = (
+                overlay.operation is OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR
+                and overlay.effective_session == event.effective_session
+                and observation.effective_session < event.effective_session
+                and new in observation.tickers
+                and old not in observation.tickers
+                and {observation.evidence_hash, event.evidence_hash} <= evidence
+                and event.boundary_semantics is not SessionBoundary.AMBIGUOUS
+                and event.ambiguity_state is AmbiguityState.CLEAR
+            )
+        if not valid:
+            findings.append(make_finding(
+                FindingType.INVALID_AUTHORITY_REFERENCE,
+                FindingSeverity.ERROR,
+                (overlay.overlay_id, overlay.raw_observation_id, overlay.ticker_identity_event_id),
+                "accepted ticker overlay is unbound or not applicable",
+            ))
+            continue
+        assert observation is not None and event is not None
+        tickers = resolved[observation.observation_id]
+        old = normalize_ticker(event.old_ticker)
+        new = normalize_ticker(event.new_ticker)
+        if new not in tickers or old in tickers:
+            findings.append(make_finding(
+                FindingType.INVALID_AUTHORITY_REFERENCE,
+                FindingSeverity.ERROR,
+                (overlay.overlay_id, observation.observation_id, event.event_id),
+                "accepted ticker overlay conflicts with another applied overlay",
+            ))
+            continue
+        tickers[tickers.index(new)] = old
+        applied_by_observation[observation.observation_id].append(overlay.overlay_id)
+        applied_pairs.append((observation.observation_id, event.event_id))
+
+    rows = tuple(
+        ResolvedObservation(
+            observation_id=observation.observation_id,
+            tickers=tuple(sorted(resolved[observation.observation_id])),
+            applied_overlay_ids=tuple(sorted(applied_by_observation[observation.observation_id])),
+        )
+        for observation in sorted(observations, key=lambda item: item.observation_id)
+    )
+    return OverlayApplicationResult(
+        observations=rows,
+        applied_pairs=tuple(sorted(applied_pairs)),
+        findings=tuple(sorted(findings, key=lambda item: item.finding_id)),
+    )
+
+
 def resolve_observation(
     observation: SnapshotObservationV1,
     ticker_events: tuple[TickerIdentityEventV1, ...],
     overlays: tuple[TickerEpisodeOverlayV1, ...],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return resolved tickers and applied overlay IDs without mutating raw evidence."""
+    """Compatibility wrapper over the single authoritative application path."""
 
-    tickers = list(observation.tickers)
-    applied: list[str] = []
-    events = {item.event_id: item for item in ticker_events}
-    for overlay in sorted(overlays, key=lambda item: item.overlay_id):
-        if overlay.raw_observation_id != observation.observation_id:
-            continue
-        if overlay.review_state is not ReviewState.ACCEPTED:
-            continue
-        event = events.get(overlay.ticker_identity_event_id)
-        if event is None or overlay.effective_session != event.effective_session:
-            continue
-        if observation.effective_session >= event.effective_session:
-            continue
-        if overlay.operation is OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR:
-            new = normalize_ticker(event.new_ticker)
-            old = normalize_ticker(event.old_ticker)
-            if new in tickers and old not in tickers:
-                tickers[tickers.index(new)] = old
-                applied.append(overlay.overlay_id)
-    return tuple(sorted(tickers)), tuple(sorted(applied))
-
-
-def finding_resolved_by_overlay(
-    finding: ValidationFindingV1,
-    overlays: tuple[TickerEpisodeOverlayV1, ...],
-) -> bool:
-    if finding.finding_type is not FindingType.FUTURE_TICKER_BEFORE_RENAME:
-        return False
-    affected = set(finding.affected_ids)
-    return any(
-        overlay.review_state is ReviewState.ACCEPTED
-        and {overlay.raw_observation_id, overlay.ticker_identity_event_id} <= affected
-        for overlay in overlays
-    )
+    result = apply_ticker_overlays((observation,), ticker_events, overlays)
+    row = result.observations[0]
+    return row.tickers, row.applied_overlay_ids

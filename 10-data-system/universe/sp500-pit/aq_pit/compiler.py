@@ -29,7 +29,7 @@ from .contracts import (
     ValidationFindingV1,
     normalize_ticker,
 )
-from .overlays import detect_future_ticker_backfill, finding_resolved_by_overlay, resolve_observation
+from .overlays import apply_ticker_overlays, detect_future_ticker_backfill
 from .validation import make_finding, validate_episodes
 
 
@@ -78,6 +78,11 @@ def _event_key(event: object) -> tuple[str, int, str]:
     raise TypeError(type(event).__name__)
 
 
+def _duplicate_ids(items: Iterable[object], attribute: str) -> set[str]:
+    values = [getattr(item, attribute) for item in items]
+    return {value for value in values if values.count(value) > 1}
+
+
 def compile_universe(
     *,
     policy: CompilePolicyV1,
@@ -95,7 +100,22 @@ def compile_universe(
     findings: list[ValidationFindingV1] = []
     episodes: list[InstrumentEpisodeV1] = []
     active: dict[str, _ActiveEpisode] = {}
-    manifests_by_id = {manifest.source_id: manifest for manifest in manifests}
+    duplicate_source_ids = _duplicate_ids(manifests, "source_id")
+    for source_id in sorted(duplicate_source_ids):
+        matches = [manifest for manifest in manifests if manifest.source_id == source_id]
+        identical = all(item == matches[0] for item in matches[1:])
+        findings.append(make_finding(
+            FindingType.DUPLICATE_SOURCE,
+            FindingSeverity.ERROR if identical else FindingSeverity.CRITICAL,
+            (source_id,),
+            "duplicate source_id is forbidden"
+            if identical else "conflicting manifests share one source_id",
+        ))
+    manifests_by_id = {
+        manifest.source_id: manifest
+        for manifest in manifests
+        if manifest.source_id not in duplicate_source_ids
+    }
 
     all_ids: list[str] = [event.event_id for event in membership_events]
     all_ids += [event.event_id for event in ticker_events]
@@ -147,13 +167,8 @@ def compile_universe(
                 "canonical event content is duplicated under multiple IDs",
             ))
 
-    ignored_event_ids = {
-        target
-        for correction in corrections
-        if correction.review_state is ReviewState.ACCEPTED
-        and correction.operation is CorrectionOperation.IGNORE_EVENT
-        for target in correction.target_source_or_event_ids
-    }
+    membership_by_id = {event.event_id: event for event in membership_events}
+    valid_corrections: list[MembershipCorrectionV1] = []
     for correction in corrections:
         if correction.review_state is ReviewState.UNRESOLVED:
             findings.append(make_finding(
@@ -162,11 +177,69 @@ def compile_universe(
                 (correction.correction_id,),
                 "correction is visible but not accepted",
             ))
+            continue
+        if correction.review_state is not ReviewState.ACCEPTED:
+            continue
+        correction_source = manifests_by_id.get(correction.source_id)
+        valid_authority = (
+            correction_source is not None
+            and correction_source.source_role is SourceRole.OFFICIAL_CONFLICT_RESOLUTION
+        )
+        same_index = correction.index_id == policy.index_id
+        valid_targets = True
+        if correction.operation is CorrectionOperation.IGNORE_EVENT:
+            targets = [membership_by_id.get(item) for item in correction.target_source_or_event_ids]
+            valid_targets = bool(targets) and all(
+                target is not None and target.index_id == policy.index_id
+                for target in targets
+            )
+        if not valid_authority or not same_index or not valid_targets:
+            finding_type = (
+                FindingType.FOREIGN_INDEX_INPUT
+                if not same_index
+                or correction.operation is CorrectionOperation.IGNORE_EVENT
+                and any(
+                    target is not None and target.index_id != policy.index_id
+                    for target in (membership_by_id.get(item) for item in correction.target_source_or_event_ids)
+                )
+                else FindingType.INVALID_AUTHORITY_REFERENCE
+            )
+            findings.append(make_finding(
+                finding_type,
+                FindingSeverity.ERROR,
+                (correction.correction_id, *correction.target_source_or_event_ids),
+                "accepted correction failed authority, index, or target validation",
+            ))
+            continue
+        valid_corrections.append(correction)
 
+    ignored_event_ids = {
+        target
+        for correction in valid_corrections
+        if correction.operation is CorrectionOperation.IGNORE_EVENT
+        for target in correction.target_source_or_event_ids
+    }
+
+    foreign_membership_ids = {
+        event.event_id for event in membership_events
+        if event.index_id != policy.index_id
+    }
+    for event_id in sorted(foreign_membership_ids):
+        findings.append(make_finding(
+            FindingType.FOREIGN_INDEX_INPUT,
+            FindingSeverity.ERROR,
+            (event_id,),
+            "foreign-index membership event cannot mutate this compile",
+        ))
+
+    overlay_application = apply_ticker_overlays(observations, ticker_events, overlays)
+    findings.extend(overlay_application.findings)
+    applied_pairs = {frozenset(pair) for pair in overlay_application.applied_pairs}
     detector_findings = detect_future_ticker_backfill(observations, ticker_events)
     findings.extend(
         finding for finding in detector_findings
-        if not finding_resolved_by_overlay(finding, overlays)
+        if finding.finding_type is not FindingType.FUTURE_TICKER_BEFORE_RENAME
+        or frozenset(finding.affected_ids) not in applied_pairs
     )
 
     seed_candidates = [
@@ -193,7 +266,12 @@ def compile_universe(
             ))
             resolved_tickers, applied_overlay_ids = (), ()
         else:
-            resolved_tickers, applied_overlay_ids = resolve_observation(seed, ticker_events, overlays)
+            resolved_seed = next(
+                item for item in overlay_application.observations
+                if item.observation_id == seed.observation_id
+            )
+            resolved_tickers = resolved_seed.tickers
+            applied_overlay_ids = resolved_seed.applied_overlay_ids
         applied_overlays = [item for item in overlays if item.overlay_id in applied_overlay_ids]
         for ticker in resolved_tickers:
             relevant = [
@@ -215,12 +293,12 @@ def compile_universe(
     operations: list[object] = [
         event for event in (*ticker_events, *membership_events)
         if getattr(event, "event_id") not in ignored_event_ids
+        and getattr(event, "event_id") not in foreign_membership_ids
         and policy.start_session < event.effective_session < policy.end_session
     ]
     operations.extend(
-        correction for correction in corrections
-        if correction.review_state is ReviewState.ACCEPTED
-        and correction.operation in {CorrectionOperation.ADD, CorrectionOperation.REMOVE}
+        correction for correction in valid_corrections
+        if correction.operation in {CorrectionOperation.ADD, CorrectionOperation.REMOVE}
         and policy.start_session < correction.effective_session < policy.end_session
     )
     operations.sort(key=_event_key)

@@ -251,5 +251,136 @@ class CompilerTests(unittest.TestCase):
         validate_publishable(result.episodes, (resolved,))
 
 
+class CloseoutFixTests(unittest.TestCase):
+    def test_foreign_add_cannot_mutate_sp500(self):
+        event = replace(
+            membership("sp400-add", MembershipAction.ADD, "BBB", "2020-06-01"),
+            index_id="SP400",
+        )
+        result = compile_universe(
+            policy=policy(), manifests=SOURCES, observations=(seed(),),
+            membership_events=(event,),
+        )
+        self.assertNotIn("BBB", {item.normalized_ticker for item in result.episodes})
+        self.assertIn(FindingType.FOREIGN_INDEX_INPUT, {item.finding_type for item in result.findings})
+
+    def test_foreign_remove_cannot_mutate_sp500(self):
+        event = replace(
+            membership("sp400-remove", MembershipAction.REMOVE, "AAA", "2020-06-01"),
+            index_id="SP400",
+        )
+        result = compile_universe(
+            policy=policy(), manifests=SOURCES, observations=(seed(),),
+            membership_events=(event,),
+        )
+        aaa = next(item for item in result.episodes if item.normalized_ticker == "AAA")
+        self.assertEqual(aaa.membership_to, policy().end_session)
+        self.assertIn(FindingType.FOREIGN_INDEX_INPUT, {item.finding_type for item in result.findings})
+
+    def test_foreign_correction_cannot_mutate_sp500(self):
+        correction = MembershipCorrectionV1(
+            "sp400-fix", ("seed-row",), CorrectionOperation.ADD, "SP400", "BBB",
+            "2020-06-01", "foreign omission", "official", H,
+            ReviewState.ACCEPTED, "IR03",
+        )
+        result = compile_universe(
+            policy=policy(), manifests=SOURCES, observations=(seed(),), corrections=(correction,),
+        )
+        self.assertNotIn("BBB", {item.normalized_ticker for item in result.episodes})
+        self.assertIn(FindingType.FOREIGN_INDEX_INPUT, {item.finding_type for item in result.findings})
+
+    def test_invalid_ignore_cannot_suppress_event(self):
+        bad_add = membership("bad-add", MembershipAction.ADD, "AAA", "2020-06-01")
+        for correction in (
+            MembershipCorrectionV1(
+                "missing-source", (bad_add.event_id,), CorrectionOperation.IGNORE_EVENT,
+                "SP500", "AAA", "2020-06-01", "invalid authority", "missing", H,
+                ReviewState.ACCEPTED, "IR04",
+            ),
+            MembershipCorrectionV1(
+                "unknown-target", ("does-not-exist",), CorrectionOperation.IGNORE_EVENT,
+                "SP500", "AAA", "2020-06-01", "invalid target", "official", H,
+                ReviewState.ACCEPTED, "IR04",
+            ),
+        ):
+            with self.subTest(correction=correction.correction_id):
+                result = compile_universe(
+                    policy=policy(), manifests=SOURCES, observations=(seed(),),
+                    membership_events=(bad_add,), corrections=(correction,),
+                )
+                types = {item.finding_type for item in result.findings}
+                self.assertIn(FindingType.INVALID_AUTHORITY_REFERENCE, types)
+                self.assertIn(FindingType.ADD_PRESENT, types)
+
+    def test_foreign_ignore_cannot_suppress_sp500_event(self):
+        bad_add = membership("bad-add", MembershipAction.ADD, "AAA", "2020-06-01")
+        correction = MembershipCorrectionV1(
+            "foreign-ignore", (bad_add.event_id,), CorrectionOperation.IGNORE_EVENT,
+            "SP400", "AAA", "2020-06-01", "wrong index", "official", H,
+            ReviewState.ACCEPTED, "IR04",
+        )
+        result = compile_universe(
+            policy=policy(), manifests=SOURCES, observations=(seed(),),
+            membership_events=(bad_add,), corrections=(correction,),
+        )
+        types = {item.finding_type for item in result.findings}
+        self.assertIn(FindingType.FOREIGN_INDEX_INPUT, types)
+        self.assertIn(FindingType.ADD_PRESENT, types)
+
+    def test_boundary_mismatched_overlay_does_not_suppress(self):
+        event = TickerIdentityEventV1(
+            "rename", "AAA", "BBB", None, "2020-06-01", "2020-06-01",
+            SessionBoundary.EFFECTIVE_SESSION, "ticker", H,
+        )
+        raw = seed(tickers=("BBB",))
+        bad_overlay = TickerEpisodeOverlayV1(
+            "bad-overlay", raw.observation_id, event.event_id, "2020-06-02",
+            OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR, "mismatched boundary", (H,),
+            ReviewState.ACCEPTED,
+        )
+        result = compile_universe(
+            policy=policy(), manifests=SOURCES, observations=(raw,),
+            ticker_events=(event,), overlays=(bad_overlay,),
+        )
+        types = {item.finding_type for item in result.findings}
+        self.assertIn(FindingType.INVALID_AUTHORITY_REFERENCE, types)
+        self.assertIn(FindingType.FUTURE_TICKER_BEFORE_RENAME, types)
+
+    def test_nonapplicable_overlay_does_not_suppress(self):
+        event = TickerIdentityEventV1(
+            "rename", "AAA", "BBB", None, "2020-06-01", "2020-06-01",
+            SessionBoundary.EFFECTIVE_SESSION, "ticker", H,
+        )
+        raw = seed(tickers=("AAA", "BBB"))
+        bad_overlay = TickerEpisodeOverlayV1(
+            "bad-overlay", raw.observation_id, event.event_id, event.effective_session,
+            OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR, "predecessor conflict", (H,),
+            ReviewState.ACCEPTED,
+        )
+        result = compile_universe(
+            policy=policy(), manifests=SOURCES, observations=(raw,),
+            ticker_events=(event,), overlays=(bad_overlay,),
+        )
+        types = {item.finding_type for item in result.findings}
+        self.assertIn(FindingType.INVALID_AUTHORITY_REFERENCE, types)
+        self.assertIn(FindingType.FUTURE_TICKER_BEFORE_RENAME, types)
+
+    def test_duplicate_source_id_fails_closed(self):
+        for duplicate in (SOURCES[0], replace(SOURCES[0], sha256="c" * 64)):
+            with self.subTest(conflicting=duplicate != SOURCES[0]):
+                result = compile_universe(
+                    policy=policy(), manifests=(*SOURCES, duplicate), observations=(seed(),),
+                )
+                duplicate_findings = [
+                    item for item in result.findings
+                    if item.finding_type is FindingType.DUPLICATE_SOURCE
+                ]
+                self.assertEqual(len(duplicate_findings), 1)
+                expected = FindingSeverity.ERROR if duplicate == SOURCES[0] else FindingSeverity.CRITICAL
+                self.assertEqual(duplicate_findings[0].severity, expected)
+                with self.assertRaises(PublicationBlockedError):
+                    validate_publishable(result.episodes, result.findings)
+
+
 if __name__ == "__main__":
     unittest.main()
