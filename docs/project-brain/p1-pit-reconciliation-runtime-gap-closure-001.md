@@ -109,7 +109,13 @@ regressions. The raw derivation function and raw FJA evidence remain unchanged.
 
 ## Verification
 
-The 64 pre-task tests and 13 focused closure tests pass, for 77 total tests.
+The current suite passes 93 total tests:
+
+- 64 pre-task tests;
+- 13 original runtime-gap closure tests;
+- 8 independent-review closeout-002 tests;
+- 8 independent-review closeout-003 tests.
+
 All 13 frozen PIT regressions remain unchanged and pass. `compileall` passes.
 Lint and type checking are not configured for this leaf.
 
