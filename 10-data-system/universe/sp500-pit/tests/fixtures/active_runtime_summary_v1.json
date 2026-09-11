@@ -1,0 +1,14 @@
+{
+  "schema_version": "PITActiveRuntimeSummaryFixtureV1",
+  "accepted_facts_sha256": "c1745a22c17c3a8a35bf56f504c1d96398c787492dce54a60ac85801799a9f62",
+  "output_hash": "5aa57b4c976b7aeb74968b523b47ccdf4d9a6323b5377bdb9a7d175705f6151f",
+  "counts": {
+    "canonical_facts": 37,
+    "identity_events": 20,
+    "overlay_cases": 9,
+    "overlay_rows": 3236,
+    "reconciled_membership_events": 630,
+    "instrument_episodes": 832,
+    "terminal_membership": 503
+  }
+}
