@@ -33,6 +33,7 @@ from .overlays import apply_ticker_overlays, detect_episode_scoped_ticker_findin
 from .sources.fja_sp500 import (
     RECONCILED_DERIVATION_VERSION,
     build_reconciled_membership_event_manifest,
+    derive_reconciled_membership_events,
 )
 from .validation import make_finding, validate_episodes
 
@@ -150,14 +151,28 @@ def compile_universe(
                     ticker_events,
                     overlays,
                 )
-                expected = build_reconciled_membership_event_manifest(
+                expected_manifest = build_reconciled_membership_event_manifest(
                     seed_manifests[0],
                     observations,
                     canonical_resolution.observations,
                     ticker_events,
                     overlays,
                 )
-                context_valid = manifest == expected
+                context_valid = manifest == expected_manifest
+                if context_valid:
+                    expected_events = derive_reconciled_membership_events(
+                        observations,
+                        canonical_resolution.observations,
+                        ticker_events,
+                        manifest,
+                        seed_manifest=seed_manifests[0],
+                        overlays=overlays,
+                    )
+                    actual_events = tuple(
+                        event for event in membership_events
+                        if event.source_id == manifest.source_id
+                    )
+                    context_valid = actual_events == expected_events
             except ValueError:
                 context_valid = False
         if not context_valid:
@@ -166,7 +181,7 @@ def compile_universe(
                 FindingType.INVALID_AUTHORITY_REFERENCE,
                 FindingSeverity.CRITICAL,
                 (manifest.source_id,),
-                "reconciled membership authority does not match the exact derivation context",
+                "reconciled membership authority or event stream does not match the exact derivation context",
             ))
 
     all_ids: list[str] = [event.event_id for event in membership_events]

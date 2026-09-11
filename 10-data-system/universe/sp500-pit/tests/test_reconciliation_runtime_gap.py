@@ -91,6 +91,26 @@ def reconcile(raw, identities=(), overlays=()):
     return applied, manifest, events, result
 
 
+def compile_reconciled(raw, manifest, events, identities=(), overlays=()):
+    return compile_universe(
+        policy=CompilePolicyV1(
+            "SP500", raw[0].effective_session, "2030-01-01",
+            "fixture-calendar-v1", "reconciled-policy-v1",
+        ),
+        manifests=(SEED_SOURCE, TICKER_SOURCE, manifest),
+        observations=tuple(raw), membership_events=tuple(events),
+        ticker_events=tuple(identities), overlays=tuple(overlays),
+    )
+
+
+def forged_reconciled_event(manifest, ticker="BBB", session="2020-06-01"):
+    return IndexMembershipEventV1(
+        f"forged-{ticker}-{session}", "SP500", MembershipAction.ADD, ticker,
+        None, session, session, SessionBoundary.SOURCE_DEFINED,
+        manifest.source_id, H2, "forged reconciled event",
+    )
+
+
 class ReconciliationRuntimeGapTests(unittest.TestCase):
     def assert_context_blocked(self, result):
         self.assertIn(FindingType.INVALID_AUTHORITY_REFERENCE, {
@@ -98,6 +118,111 @@ class ReconciliationRuntimeGapTests(unittest.TestCase):
         })
         with self.assertRaises(PublicationBlockedError):
             validate_publishable(result.episodes, result.findings)
+
+    def test_forged_extra_reconciled_event_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ("AAA",)),
+            observation("2020-06-01", ("AAA",)),
+        )
+        _, manifest, expected, _ = reconcile(raw)
+        self.assertEqual(expected, ())
+        result = compile_reconciled(
+            raw, manifest, (forged_reconciled_event(manifest),),
+        )
+        self.assert_context_blocked(result)
+        self.assertNotIn("BBB", {item.normalized_ticker for item in result.episodes})
+
+    def test_omitted_required_reconciled_event_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-06-01", ("AAA",)),
+        )
+        _, manifest, expected, _ = reconcile(raw)
+        self.assertEqual(len(expected), 1)
+        result = compile_reconciled(raw, manifest, ())
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
+    def test_modified_reconciled_event_ticker_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-06-01", ("AAA",)),
+        )
+        _, manifest, expected, _ = reconcile(raw)
+        changed = replace(expected[0], source_ticker="BBB")
+        result = compile_reconciled(raw, manifest, (changed,))
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
+    def test_modified_reconciled_event_session_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-06-01", ("AAA",)),
+        )
+        _, manifest, expected, _ = reconcile(raw)
+        changed = replace(
+            expected[0],
+            effective_date="2020-06-02",
+            effective_session="2020-06-02",
+        )
+        result = compile_reconciled(raw, manifest, (changed,))
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
+    def test_extra_reconciled_event_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-06-01", ("AAA",)),
+        )
+        _, manifest, expected, _ = reconcile(raw)
+        actual = (*expected, forged_reconciled_event(manifest))
+        result = compile_reconciled(raw, manifest, actual)
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
+    def test_exact_reconciled_event_stream_is_accepted(self):
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-06-01", ("AAA",)),
+        )
+        _, manifest, expected, _ = reconcile(raw)
+        result = compile_reconciled(raw, manifest, expected)
+        self.assertNotIn(FindingType.INVALID_AUTHORITY_REFERENCE, {
+            item.finding_type for item in result.findings
+        })
+        self.assertEqual(
+            {item.normalized_ticker for item in result.episodes},
+            {"AAA"},
+        )
+        validate_publishable(result.episodes, result.findings)
+
+    def test_zero_event_rename_exact_stream_is_accepted(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ("OLD",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        _, manifest, expected, _ = reconcile(raw, (event,))
+        self.assertEqual(expected, ())
+        result = compile_reconciled(raw, manifest, (), (event,))
+        self.assertNotIn(FindingType.INVALID_AUTHORITY_REFERENCE, {
+            item.finding_type for item in result.findings
+        })
+        validate_publishable(result.episodes, result.findings)
+
+    def test_zero_event_rename_with_injected_event_is_blocked(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ("OLD",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        _, manifest, expected, _ = reconcile(raw, (event,))
+        self.assertEqual(expected, ())
+        result = compile_reconciled(
+            raw, manifest, (forged_reconciled_event(manifest),), (event,),
+        )
+        self.assert_context_blocked(result)
+        self.assertNotIn("BBB", {item.normalized_ticker for item in result.episodes})
 
     def test_tampered_resolved_ticker_set_is_blocked(self):
         raw = (

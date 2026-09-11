@@ -84,6 +84,29 @@ unchanged frozen regressions. `compileall` passes.
 The raw FJA bytes and legacy exact raw snapshot-difference semantics remain
 unchanged.
 
+## Independent-review closeout 003
+
+Second-round independent review found one remaining authority gap: an exact
+reconciled manifest and reconciliation context did not yet prove that the
+caller-supplied membership-event stream was the exact deterministic output of
+that context. The compiler now reconstructs the canonical resolved
+observations, exact manifest, and complete typed `IndexMembershipEventV1` tuple.
+It compares that tuple for full equality with every supplied membership event
+whose source is the reconciled manifest.
+
+A valid manifest/context therefore cannot authorize extra, missing, reordered,
+or modified membership rows. Any mismatch invalidates the reconciled source,
+emits a blocking structured finding, prevents all of that source's membership
+events from mutating state, and blocks publication. A zero-event derivation
+authorizes exactly zero rows and remains bound even when a rename generates no
+membership churn.
+
+Eight focused closeout-003 tests cover forged and extra events, omitted required
+events, modified ticker and session content, exact non-empty stream acceptance,
+exact zero-event rename acceptance, and injection into a zero-event rename.
+The full suite now passes 93 tests, including all 13 unchanged frozen
+regressions. The raw derivation function and raw FJA evidence remain unchanged.
+
 ## Verification
 
 The 64 pre-task tests and 13 focused closure tests pass, for 77 total tests.
