@@ -23,7 +23,11 @@ from .validation import make_finding
 @dataclass(frozen=True, slots=True)
 class ResolvedObservation:
     observation_id: str
+    index_id: str
+    effective_session: str
     tickers: tuple[str, ...]
+    source_id: str
+    evidence_hash: str
     applied_overlay_ids: tuple[str, ...]
 
 
@@ -62,6 +66,117 @@ def detect_future_ticker_backfill(
     return tuple(findings)
 
 
+def detect_episode_scoped_ticker_findings(
+    observations: tuple[ResolvedObservation, ...],
+    ticker_events: tuple[TickerIdentityEventV1, ...],
+    membership_events: tuple[object, ...] = (),
+) -> tuple[ValidationFindingV1, ...]:
+    """Detect rename-label defects within the membership episode near each boundary.
+
+    Successor checks are limited to the contiguous successor run immediately before
+    the identity boundary.  This prevents a disconnected historical owner of the
+    same ticker text from being attributed to a later identity event.  A later use
+    of the predecessor is exempt only inside an independently derived membership
+    episode that starts while both the renamed successor and reused predecessor are
+    observed.
+    """
+
+    from .contracts import IndexMembershipEventV1, MembershipAction
+
+    ordered = tuple(sorted(
+        observations,
+        key=lambda item: (item.effective_session, item.observation_id),
+    ))
+    by_session = {item.effective_session: item for item in ordered}
+    findings: list[ValidationFindingV1] = []
+    accepted_membership_events = tuple(
+        item for item in membership_events
+        if isinstance(item, IndexMembershipEventV1)
+    )
+
+    for event in sorted(ticker_events, key=lambda item: (item.effective_session, item.event_id)):
+        old = normalize_ticker(event.old_ticker)
+        new = normalize_ticker(event.new_ticker)
+
+        before = [item for item in ordered if item.effective_session < event.effective_session]
+        predecessor_run: list[ResolvedObservation] = []
+        for observation in reversed(before):
+            if old not in observation.tickers:
+                break
+            predecessor_run.append(observation)
+        if predecessor_run:
+            scope_start = predecessor_run[-1].effective_session
+            future_rows = [
+                item for item in before
+                if item.effective_session >= scope_start and new in item.tickers
+            ]
+        else:
+            future_rows = []
+            for observation in reversed(before):
+                if new not in observation.tickers:
+                    break
+                future_rows.append(observation)
+            future_rows.reverse()
+        for observation in future_rows:
+            findings.append(make_finding(
+                FindingType.FUTURE_TICKER_BEFORE_RENAME,
+                FindingSeverity.ERROR,
+                (observation.observation_id, event.event_id),
+                f"{new} observed in the predecessor episode before identity boundary {event.effective_session}",
+            ))
+
+        reuse_intervals: list[tuple[str, str | None]] = []
+        additions = sorted(
+            (
+                item for item in accepted_membership_events
+                if item.action is MembershipAction.ADD
+                and normalize_ticker(item.source_ticker) == old
+                and item.effective_session >= event.effective_session
+            ),
+            key=lambda item: (item.effective_session, item.event_id),
+        )
+        removals = sorted(
+            (
+                item for item in accepted_membership_events
+                if item.action is MembershipAction.REMOVE
+                and normalize_ticker(item.source_ticker) == old
+                and item.effective_session >= event.effective_session
+            ),
+            key=lambda item: (item.effective_session, item.event_id),
+        )
+        for addition in additions:
+            boundary_observation = by_session.get(addition.effective_session)
+            if boundary_observation is None or not {
+                old, new,
+            } <= set(boundary_observation.tickers):
+                continue
+            end = next(
+                (
+                    removal.effective_session for removal in removals
+                    if removal.effective_session > addition.effective_session
+                ),
+                None,
+            )
+            reuse_intervals.append((addition.effective_session, end))
+
+        for observation in ordered:
+            if observation.effective_session < event.effective_session or old not in observation.tickers:
+                continue
+            inside_reuse = any(
+                start <= observation.effective_session
+                and (end is None or observation.effective_session < end)
+                for start, end in reuse_intervals
+            )
+            if not inside_reuse:
+                findings.append(make_finding(
+                    FindingType.STALE_OLD_TICKER_AFTER_RENAME,
+                    FindingSeverity.ERROR,
+                    (observation.observation_id, event.event_id),
+                    f"{old} observed outside an established episode at or after identity boundary {event.effective_session}",
+                ))
+    return tuple(sorted(findings, key=lambda item: item.finding_id))
+
+
 def apply_ticker_overlays(
     observations: tuple[SnapshotObservationV1, ...],
     ticker_events: tuple[TickerIdentityEventV1, ...],
@@ -89,15 +204,19 @@ def apply_ticker_overlays(
             evidence = set(overlay.evidence_hashes)
             old = normalize_ticker(event.old_ticker)
             new = normalize_ticker(event.new_ticker)
-            valid = (
-                overlay.operation is OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR
-                and overlay.effective_session == event.effective_session
+            common = (
+                overlay.effective_session == event.effective_session
                 and observation.effective_session < event.effective_session
                 and new in observation.tickers
-                and old not in observation.tickers
                 and {observation.evidence_hash, event.evidence_hash} <= evidence
                 and event.boundary_semantics is not SessionBoundary.AMBIGUOUS
                 and event.ambiguity_state is AmbiguityState.CLEAR
+            )
+            valid = common and (
+                overlay.operation is OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR
+                and old not in observation.tickers
+                or overlay.operation is OverlayOperation.DROP_DUPLICATE_SUCCESSOR_BEFORE_BOUNDARY
+                and old in observation.tickers
             )
         if not valid:
             findings.append(make_finding(
@@ -111,7 +230,12 @@ def apply_ticker_overlays(
         tickers = resolved[observation.observation_id]
         old = normalize_ticker(event.old_ticker)
         new = normalize_ticker(event.new_ticker)
-        if new not in tickers or old in tickers:
+        map_successor = overlay.operation is OverlayOperation.MAP_SUCCESSOR_TO_PREDECESSOR
+        applicable = new in tickers and (
+            map_successor and old not in tickers
+            or not map_successor and old in tickers
+        )
+        if not applicable:
             findings.append(make_finding(
                 FindingType.INVALID_AUTHORITY_REFERENCE,
                 FindingSeverity.ERROR,
@@ -119,14 +243,21 @@ def apply_ticker_overlays(
                 "accepted ticker overlay conflicts with another applied overlay",
             ))
             continue
-        tickers[tickers.index(new)] = old
+        if map_successor:
+            tickers[tickers.index(new)] = old
+        else:
+            tickers.remove(new)
         applied_by_observation[observation.observation_id].append(overlay.overlay_id)
         applied_pairs.append((observation.observation_id, event.event_id))
 
     rows = tuple(
         ResolvedObservation(
             observation_id=observation.observation_id,
+            index_id=observation.index_id,
+            effective_session=observation.effective_session,
             tickers=tuple(sorted(resolved[observation.observation_id])),
+            source_id=observation.source_id,
+            evidence_hash=observation.evidence_hash,
             applied_overlay_ids=tuple(sorted(applied_by_observation[observation.observation_id])),
         )
         for observation in sorted(observations, key=lambda item: item.observation_id)

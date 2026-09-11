@@ -9,17 +9,22 @@ import io
 
 from ..canonical import canonical_bytes, deterministic_id, sha256_hex
 from ..contracts import (
+    AmbiguityState,
     IndexMembershipEventV1,
     MembershipAction,
     SessionBoundary,
     SnapshotObservationV1,
     SourceManifestV1,
     SourceRole,
+    TickerEpisodeOverlayV1,
+    TickerIdentityEventV1,
     normalize_ticker,
 )
+from ..overlays import ResolvedObservation, apply_ticker_overlays
 
 
 FJA_ADAPTER_VERSION = "fja-sp500-snapshot-adapter-v1"
+RECONCILED_DERIVATION_VERSION = "identity-aware-resolved-snapshot-difference-v1"
 
 
 def raw_sha256(raw_bytes: bytes) -> str:
@@ -240,5 +245,213 @@ def derive_membership_events(
                 source_id=event_manifest.source_id,
                 evidence_hash=transition_hash,
                 reason="exact consecutive FJA snapshot set difference",
+            ))
+    return tuple(events)
+
+
+def build_reconciled_membership_event_manifest(
+    seed_manifest: SourceManifestV1,
+    observations: tuple[SnapshotObservationV1, ...],
+    resolved_observations: tuple[ResolvedObservation, ...],
+    ticker_events: tuple[TickerIdentityEventV1, ...],
+    overlays: tuple[TickerEpisodeOverlayV1, ...],
+) -> SourceManifestV1:
+    """Manifest the distinct identity-aware reconciled derivation path."""
+
+    if not observations or not resolved_observations:
+        raise ValueError("reconciled event manifest requires observations")
+    if seed_manifest.source_role is not SourceRole.HISTORICAL_SEED:
+        raise ValueError("reconciled derivation requires a HISTORICAL_SEED manifest")
+    if any(item.source_id != seed_manifest.source_id for item in observations):
+        raise ValueError("raw observations do not belong to the seed manifest")
+    raw_ids = {item.observation_id for item in observations}
+    if raw_ids != {item.observation_id for item in resolved_observations}:
+        raise ValueError("resolved observations must map exactly to raw observations")
+    canonical_resolution = apply_ticker_overlays(observations, ticker_events, overlays)
+    if tuple(sorted(resolved_observations, key=lambda item: item.observation_id)) != tuple(sorted(
+        canonical_resolution.observations,
+        key=lambda item: item.observation_id,
+    )):
+        raise ValueError(
+            "resolved observations are not the deterministic output of raw observations and overlays"
+        )
+    overlay_map = {item.overlay_id: item for item in overlays}
+    applied_ids = {
+        overlay_id
+        for item in resolved_observations
+        for overlay_id in item.applied_overlay_ids
+    }
+    if not applied_ids <= set(overlay_map):
+        raise ValueError("resolved observation references an unknown overlay")
+    logical = {
+        "algorithm": RECONCILED_DERIVATION_VERSION,
+        "raw_observations": tuple(sorted(observations, key=lambda item: item.observation_id)),
+        "resolved_observations": tuple(sorted(resolved_observations, key=lambda item: item.observation_id)),
+        "ticker_events": tuple(sorted(ticker_events, key=lambda item: item.event_id)),
+        "applied_overlays": tuple(sorted(
+            (overlay_map[item] for item in applied_ids),
+            key=lambda item: item.overlay_id,
+        )),
+        "seed_manifest_hash": seed_manifest.manifest_hash,
+    }
+    normalized_hash = sha256_hex(logical)
+    ancestry = tuple(sorted({
+        seed_manifest.source_id,
+        *(item.source_id for item in ticker_events),
+    }))
+    return SourceManifestV1(
+        source_id=deterministic_id("P1SRC-", logical),
+        source_role=SourceRole.PRECISE_MEMBERSHIP_EVENTS,
+        source_type="derived_identity_aware_resolved_snapshot_difference",
+        source_url_or_repo=seed_manifest.source_url_or_repo,
+        source_commit_or_revision=seed_manifest.source_commit_or_revision,
+        retrieved_at=seed_manifest.retrieved_at,
+        media_type="application/vnd.aq.pit-reconciled-membership-events+json",
+        byte_length=len(canonical_bytes(logical)),
+        sha256=normalized_hash,
+        license_observation=seed_manifest.license_observation,
+        coverage_start=min(item.effective_session for item in observations),
+        coverage_end=max(item.effective_session for item in observations),
+        ancestry=ancestry,
+        adapter_version=RECONCILED_DERIVATION_VERSION,
+    )
+
+
+def derive_reconciled_membership_events(
+    observations: tuple[SnapshotObservationV1, ...],
+    resolved_observations: tuple[ResolvedObservation, ...],
+    ticker_events: tuple[TickerIdentityEventV1, ...],
+    event_manifest: SourceManifestV1,
+    *,
+    seed_manifest: SourceManifestV1,
+    overlays: tuple[TickerEpisodeOverlayV1, ...],
+) -> tuple[IndexMembershipEventV1, ...]:
+    """Derive actual membership churn after applying identity transitions.
+
+    The raw exact-difference function above remains unchanged and authoritative as
+    source evidence.  This distinct path consumes a resolved view and transforms
+    the prior roster through clear same-session identity events before diffing.
+    """
+
+    if (
+        event_manifest.source_role is not SourceRole.PRECISE_MEMBERSHIP_EVENTS
+        or event_manifest.adapter_version != RECONCILED_DERIVATION_VERSION
+    ):
+        raise ValueError("reconciled events require the reconciled derivation manifest")
+    expected_manifest = build_reconciled_membership_event_manifest(
+        seed_manifest,
+        observations,
+        resolved_observations,
+        ticker_events,
+        overlays,
+    )
+    if event_manifest != expected_manifest:
+        raise ValueError("reconciled derivation manifest does not match the exact reconciliation context")
+    raw_ordered = tuple(sorted(
+        observations,
+        key=lambda item: (item.effective_session, item.observation_id),
+    ))
+    if len({item.effective_session for item in raw_ordered}) != len(raw_ordered):
+        raise ValueError("one observation per effective session is required")
+    resolved_by_id = {item.observation_id: item for item in resolved_observations}
+    if len(resolved_by_id) != len(resolved_observations) or set(resolved_by_id) != {
+        item.observation_id for item in raw_ordered
+    }:
+        raise ValueError("resolved observations must map exactly to raw observations")
+    for raw in raw_ordered:
+        resolved = resolved_by_id[raw.observation_id]
+        if (
+            resolved.index_id != raw.index_id
+            or resolved.effective_session != raw.effective_session
+            or resolved.source_id != raw.source_id
+            or resolved.evidence_hash != raw.evidence_hash
+        ):
+            raise ValueError("resolved observation provenance does not match raw observation")
+
+    for event in ticker_events:
+        if (
+            event.boundary_semantics is SessionBoundary.AMBIGUOUS
+            or event.ambiguity_state is AmbiguityState.AMBIGUOUS
+        ):
+            raise ValueError("ambiguous identity event cannot drive reconciled derivation")
+    events: list[IndexMembershipEventV1] = []
+    for prior_raw, current_raw in zip(raw_ordered, raw_ordered[1:]):
+        if prior_raw.index_id != current_raw.index_id:
+            raise ValueError("cannot diff observations from different indexes")
+        prior = resolved_by_id[prior_raw.observation_id]
+        current = resolved_by_id[current_raw.observation_id]
+        transformed = set(prior.tickers)
+        identities = tuple(sorted(
+            (
+                item for item in ticker_events
+                if prior.effective_session < item.effective_session <= current.effective_session
+            ),
+            key=lambda item: (item.effective_session, item.event_id),
+        ))
+        for session in sorted({item.effective_session for item in identities}):
+            identity_symbols = [
+                normalize_ticker(symbol)
+                for item in identities
+                if item.effective_session == session
+                for symbol in (item.old_ticker, item.new_ticker)
+            ]
+            if len(identity_symbols) != len(set(identity_symbols)):
+                raise ValueError("ambiguous same-session identity transitions")
+        for identity in identities:
+            old = normalize_ticker(identity.old_ticker)
+            new = normalize_ticker(identity.new_ticker)
+            if old not in transformed:
+                continue
+            if new in transformed:
+                raise ValueError("identity transition overlaps an active successor")
+            transformed.remove(old)
+            transformed.add(new)
+
+        current_set = set(current.tickers)
+        removed = tuple(sorted(transformed - current_set))
+        added = tuple(sorted(current_set - transformed))
+        transition_hash = sha256_hex({
+            "algorithm": RECONCILED_DERIVATION_VERSION,
+            "event_manifest_hash": event_manifest.manifest_hash,
+            "raw_prior_observation": prior_raw,
+            "raw_current_observation": current_raw,
+            "resolved_prior_observation": prior,
+            "resolved_current_observation": current,
+            "identity_events": identities,
+            "removed": removed,
+            "added": added,
+        })
+        transitions = (
+            *((MembershipAction.REMOVE, ticker) for ticker in removed),
+            *((MembershipAction.ADD, ticker) for ticker in added),
+        )
+        for action, ticker in transitions:
+            identity = {
+                "algorithm": RECONCILED_DERIVATION_VERSION,
+                "action": action,
+                "effective_session": current.effective_session,
+                "index_id": current.index_id,
+                "source_id": event_manifest.source_id,
+                "ticker": ticker,
+                "raw_prior_observation_id": prior_raw.observation_id,
+                "raw_current_observation_id": current_raw.observation_id,
+                "applied_overlay_ids": tuple(sorted({
+                    *prior.applied_overlay_ids,
+                    *current.applied_overlay_ids,
+                })),
+                "ticker_identity_event_ids": tuple(item.event_id for item in identities),
+            }
+            events.append(IndexMembershipEventV1(
+                event_id=deterministic_id("P1MEMR-", identity),
+                index_id=current.index_id,
+                action=action,
+                source_ticker=ticker,
+                announcement_date=None,
+                effective_date=current.effective_session,
+                effective_session=current.effective_session,
+                boundary_semantics=SessionBoundary.SOURCE_DEFINED,
+                source_id=event_manifest.source_id,
+                evidence_hash=transition_hash,
+                reason=f"{RECONCILED_DERIVATION_VERSION} from immutable source observations",
             ))
     return tuple(events)

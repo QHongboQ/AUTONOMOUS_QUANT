@@ -29,7 +29,12 @@ from .contracts import (
     ValidationFindingV1,
     normalize_ticker,
 )
-from .overlays import apply_ticker_overlays, detect_future_ticker_backfill
+from .overlays import apply_ticker_overlays, detect_episode_scoped_ticker_findings
+from .sources.fja_sp500 import (
+    RECONCILED_DERIVATION_VERSION,
+    build_reconciled_membership_event_manifest,
+    derive_reconciled_membership_events,
+)
 from .validation import make_finding, validate_episodes
 
 
@@ -116,6 +121,68 @@ def compile_universe(
         for manifest in manifests
         if manifest.source_id not in duplicate_source_ids
     }
+
+    reconciled_event_source_ids = {
+        event.source_id for event in membership_events
+        if event.event_id.startswith("P1MEMR-")
+        or (event.reason or "").startswith(RECONCILED_DERIVATION_VERSION)
+    }
+    invalid_reconciled_source_ids: set[str] = set()
+    for manifest in manifests:
+        is_reconciled_authority = (
+            manifest.adapter_version == RECONCILED_DERIVATION_VERSION
+            or manifest.source_type == "derived_identity_aware_resolved_snapshot_difference"
+            or manifest.media_type
+            == "application/vnd.aq.pit-reconciled-membership-events+json"
+            or manifest.source_id in reconciled_event_source_ids
+        )
+        if not is_reconciled_authority:
+            continue
+        seed_manifests = [
+            item for item in manifests
+            if item.source_role is SourceRole.HISTORICAL_SEED
+            and item.source_id in manifest.ancestry
+        ]
+        context_valid = len(seed_manifests) == 1
+        if context_valid:
+            try:
+                canonical_resolution = apply_ticker_overlays(
+                    observations,
+                    ticker_events,
+                    overlays,
+                )
+                expected_manifest = build_reconciled_membership_event_manifest(
+                    seed_manifests[0],
+                    observations,
+                    canonical_resolution.observations,
+                    ticker_events,
+                    overlays,
+                )
+                context_valid = manifest == expected_manifest
+                if context_valid:
+                    expected_events = derive_reconciled_membership_events(
+                        observations,
+                        canonical_resolution.observations,
+                        ticker_events,
+                        manifest,
+                        seed_manifest=seed_manifests[0],
+                        overlays=overlays,
+                    )
+                    actual_events = tuple(
+                        event for event in membership_events
+                        if event.source_id == manifest.source_id
+                    )
+                    context_valid = actual_events == expected_events
+            except ValueError:
+                context_valid = False
+        if not context_valid:
+            invalid_reconciled_source_ids.add(manifest.source_id)
+            findings.append(make_finding(
+                FindingType.INVALID_AUTHORITY_REFERENCE,
+                FindingSeverity.CRITICAL,
+                (manifest.source_id,),
+                "reconciled membership authority or event stream does not match the exact derivation context",
+            ))
 
     all_ids: list[str] = [event.event_id for event in membership_events]
     all_ids += [event.event_id for event in ticker_events]
@@ -234,12 +301,26 @@ def compile_universe(
 
     overlay_application = apply_ticker_overlays(observations, ticker_events, overlays)
     findings.extend(overlay_application.findings)
-    applied_pairs = {frozenset(pair) for pair in overlay_application.applied_pairs}
-    detector_findings = detect_future_ticker_backfill(observations, ticker_events)
+    detector_membership_events = tuple(
+        event for event in membership_events
+        if event.event_id not in ignored_event_ids
+        and event.event_id not in foreign_membership_ids
+        and event.source_id not in invalid_reconciled_source_ids
+        and event.boundary_semantics is not SessionBoundary.AMBIGUOUS
+        and (
+            source := manifests_by_id.get(event.source_id)
+        ) is not None
+        and source.source_role in {
+            SourceRole.PRECISE_MEMBERSHIP_EVENTS,
+            SourceRole.OFFICIAL_CONFLICT_RESOLUTION,
+        }
+    )
     findings.extend(
-        finding for finding in detector_findings
-        if finding.finding_type is not FindingType.FUTURE_TICKER_BEFORE_RENAME
-        or frozenset(finding.affected_ids) not in applied_pairs
+        detect_episode_scoped_ticker_findings(
+            overlay_application.observations,
+            ticker_events,
+            detector_membership_events,
+        )
     )
 
     seed_candidates = [
@@ -294,6 +375,10 @@ def compile_universe(
         event for event in (*ticker_events, *membership_events)
         if getattr(event, "event_id") not in ignored_event_ids
         and getattr(event, "event_id") not in foreign_membership_ids
+        and not (
+            isinstance(event, IndexMembershipEventV1)
+            and event.source_id in invalid_reconciled_source_ids
+        )
         and policy.start_session < event.effective_session < policy.end_session
     ]
     operations.extend(
@@ -400,7 +485,9 @@ def compile_universe(
                     f"cannot remove inactive ticker {ticker}",
                 ))
                 continue
-            episodes.append(_close(active.pop(ticker), policy.index_id, session, (operation,), (operation_id,)))
+            closing = active.pop(ticker)
+            if closing.opened != session:
+                episodes.append(_close(closing, policy.index_id, session, (operation,), (operation_id,)))
 
     for ticker in sorted(active):
         episodes.append(_close(active[ticker], policy.index_id, policy.end_session))
