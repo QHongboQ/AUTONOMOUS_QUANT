@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import io
-import json
 from pathlib import Path
 
 import pandas as pd
@@ -23,7 +22,6 @@ FJA_SHA256 = "646b2e47284abfb675abebacd4a4035ba22a79ea1ccdeccce7fbe5f0e27bab3a"
 @dataclass(frozen=True, slots=True)
 class ResearchInputs:
     observations: tuple[SnapshotObservationV1, ...]
-    historical_ledger: tuple[dict[str, object], ...]
 
 
 def load_research_inputs(data_root: Path) -> ResearchInputs:
@@ -84,6 +82,4 @@ def load_research_inputs(data_root: Path) -> ResearchInputs:
         for session, source_session, tickers in selected
     )
     validate_snapshot_observation_table(observations)
-    ledger_path = data_root / "audit" / "unresolved_findings" / "unresolved_findings.json"
-    ledger = tuple(json.loads(ledger_path.read_text(encoding="utf-8")))
-    return ResearchInputs(observations=observations, historical_ledger=ledger)
+    return ResearchInputs(observations=observations)

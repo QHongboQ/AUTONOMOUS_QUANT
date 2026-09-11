@@ -10,3 +10,7 @@ It does not own PIT membership/identity truth, DVC cache or pipeline behavior,
 calendar semantics, source evidence, market data, Qlib conversion, or P2
 certification. DVC tracks the files externally through the repository pipeline;
 no DVC Python object crosses this contract.
+
+Pure contract/export tests build deterministic temporary snapshots and always
+run on a clean checkout. Real 832-row publication and DVC CLI behavior are
+explicit integration tests gated by `AQ_PIT_DATA_ROOT` and `AQ_DVC_BIN`.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .canonical import sha256_hex
+from aq_pit.canonical import sha256_hex
 from .contracts import (
     AmbiguityState,
     CompilationResultV1,
@@ -30,7 +30,7 @@ from .contracts import (
     normalize_ticker,
 )
 from .overlays import apply_ticker_overlays, detect_episode_scoped_ticker_findings
-from .schema.pandera import validate_instrument_episode_table
+from aq_pit.schema.pandera import validate_instrument_episode_table
 from .sources.fja_sp500 import (
     RECONCILED_DERIVATION_VERSION,
     build_reconciled_membership_event_manifest,

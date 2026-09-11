@@ -8,7 +8,7 @@ import io
 
 import pandas as pd
 
-from ..canonical import canonical_bytes, deterministic_id, sha256_hex
+from aq_pit.canonical import canonical_bytes, deterministic_id, sha256_hex
 from ..contracts import (
     AmbiguityState,
     IndexMembershipEventV1,
@@ -22,7 +22,7 @@ from ..contracts import (
     normalize_ticker,
 )
 from ..overlays import ResolvedObservation, apply_ticker_overlays
-from ..schema.pandera import (
+from aq_pit.schema.pandera import (
     validate_membership_event_table,
     validate_snapshot_observation_table,
     validate_fja_source_table,

@@ -1,8 +1,8 @@
 from dataclasses import replace
 import unittest
 
-from aq_pit.compiler import compile_universe
-from aq_pit.contracts import (
+from reference_oracle.compiler import compile_universe
+from reference_oracle.contracts import (
     AmbiguityState,
     CompilePolicyV1,
     CorrectionOperation,
@@ -22,7 +22,7 @@ from aq_pit.contracts import (
     TickerIdentityEventV1,
     TickerEpisodeOverlayV1,
 )
-from aq_pit.validation import PublicationBlockedError, make_finding, validate_episodes, validate_publishable
+from reference_oracle.validation import PublicationBlockedError, make_finding, validate_episodes, validate_publishable
 
 
 H = "a" * 64

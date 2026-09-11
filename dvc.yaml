@@ -19,6 +19,5 @@ stages:
       - 10-data-system/universe/sp500-pit/aq_pit/schema/pandera
       - 10-data-system/universe/sp500-pit/aq_pit/thin_runtime.py
       - D:/AQ_DATA/P1/pit/raw/fja_sp500/repo/S&P 500 Historical Components & Changes (Updated).csv
-      - D:/AQ_DATA/P1/pit/audit/unresolved_findings/unresolved_findings.json
     outs:
       - 10-data-system/dataset-snapshot/pit-universe/data

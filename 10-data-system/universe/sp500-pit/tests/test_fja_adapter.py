@@ -1,10 +1,10 @@
 import unittest
 
 from aq_pit.canonical import sha256_hex
-from aq_pit.compiler import compile_universe
-from aq_pit.contracts import CompilePolicyV1, FindingType, MembershipAction, TickerIdentityEventV1, SessionBoundary
-from aq_pit.overlays import detect_future_ticker_backfill
-from aq_pit.sources.fja_sp500 import (
+from reference_oracle.compiler import compile_universe
+from reference_oracle.contracts import CompilePolicyV1, FindingType, MembershipAction, TickerIdentityEventV1, SessionBoundary
+from reference_oracle.overlays import detect_future_ticker_backfill
+from reference_oracle.sources.fja_sp500 import (
     build_fja_manifest,
     build_membership_event_manifest,
     derive_membership_events,

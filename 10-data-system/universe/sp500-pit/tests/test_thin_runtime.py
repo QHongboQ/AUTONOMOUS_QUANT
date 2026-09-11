@@ -4,9 +4,12 @@ import ast
 from dataclasses import fields, replace
 import os
 from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
 from aq_pit.export import ResearchUniverseRowV1
+from aq_pit.facts import accepted as accepted_module
 from aq_pit.facts import load_accepted_facts
 from aq_pit.gates.research_ready import assess_research_ready
 from aq_pit.thin_runtime import build_research_ready_universe
@@ -16,7 +19,7 @@ DATA_ROOT = os.environ.get("AQ_PIT_DATA_ROOT")
 
 
 @unittest.skipUnless(DATA_ROOT, "set AQ_PIT_DATA_ROOT for frozen real-data compatibility")
-class ThinRuntimeRealDataTests(unittest.TestCase):
+class ThinRuntimeRealDataIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.universe = build_research_ready_universe(Path(DATA_ROOT))
@@ -81,8 +84,6 @@ class ThinRuntimeRealDataTests(unittest.TestCase):
         result = assess_research_ready(
             self.compilation,
             self.universe.facts,
-            tuple({"finding_id": f"P1UNRES-{item.finding_id}"}
-                  for item in self.universe.facts.finding_resolutions),
             deterministic=False,
         )
         self.assertFalse(result.research_ready)
@@ -93,8 +94,6 @@ class ThinRuntimeRealDataTests(unittest.TestCase):
         result = assess_research_ready(
             compilation,
             self.universe.facts,
-            tuple({"finding_id": f"P1UNRES-{item.finding_id}"}
-                  for item in self.universe.facts.finding_resolutions),
             deterministic=True,
         )
         self.assertFalse(result.research_ready)
@@ -107,6 +106,16 @@ class ThinRuntimeStructureTests(unittest.TestCase):
         self.assertEqual(len(facts.finding_resolutions), 37)
         self.assertEqual(len(facts.identity_events), 20)
         self.assertEqual(len(facts.overlay_cases), 9)
+
+    def test_accepted_facts_content_hash_is_frozen(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            altered = Path(directory) / "accepted_reconciliation_facts.json"
+            altered.write_bytes(
+                accepted_module._FACTS_PATH.read_bytes() + b"\n"
+            )
+            with patch.object(accepted_module, "_FACTS_PATH", altered):
+                with self.assertRaisesRegex(ValueError, "frozen P1 authority"):
+                    accepted_module.load_accepted_facts()
 
     def test_active_python_has_no_accepted_symbol_constants(self) -> None:
         root = Path(__file__).parents[1]

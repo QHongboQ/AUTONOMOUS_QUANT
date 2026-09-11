@@ -1,8 +1,8 @@
 from dataclasses import replace
 import unittest
 
-from aq_pit.compiler import compile_universe
-from aq_pit.contracts import (
+from reference_oracle.compiler import compile_universe
+from reference_oracle.contracts import (
     CompilePolicyV1,
     FindingType,
     IndexMembershipEventV1,
@@ -16,15 +16,15 @@ from aq_pit.contracts import (
     TickerEpisodeOverlayV1,
     TickerIdentityEventV1,
 )
-from aq_pit.overlays import (
+from reference_oracle.overlays import (
     apply_ticker_overlays,
     detect_episode_scoped_ticker_findings,
 )
-from aq_pit.sources.fja_sp500 import (
+from reference_oracle.sources.fja_sp500 import (
     build_reconciled_membership_event_manifest,
     derive_reconciled_membership_events,
 )
-from aq_pit.validation import (
+from reference_oracle.validation import (
     AmbiguousTickerEpisodeError,
     PublicationBlockedError,
     lookup_episode,

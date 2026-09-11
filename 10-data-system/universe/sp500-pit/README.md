@@ -30,16 +30,21 @@ Pandera owns no membership or identity truth, reconciliation fact, calendar
 semantics, market data, or certification decision. Domain objects remain plain
 immutable AQ contracts; pandas and Pandera objects do not cross the leaf.
 
-## Retained reference oracle
+## Test-only reference oracle
 
-`compiler.py`, `contracts.py`, `overlays.py`, `validation.py`,
-`sources/fja_sp500.py`, and `scripts/run_fja_ingestion.py` are
-`KEEP_ORACLE_TEST_ONLY`. They preserve the 93 pre-stack behavioral tests and 13
-frozen regressions, but are not exported or imported by the active composition.
-They are not a second active pipeline. Corporate-action context, generic
+The former compiler/contracts/overlays/validation/source/ingestion reference
+implementation now lives exclusively under `tests/reference_oracle`. It
+preserves the 13 frozen behavioral regressions without occupying the production
+`aq_pit` namespace. It is not a second active pipeline. Corporate-action context, generic
 correction/authority machinery, terminal comparison, evidence publication, and
 certification are inactive in P1. Strict institutional certification belongs to
 P2. Historical Git evidence is preserved.
+
+`accepted_reconciliation_facts.json` is the only active reconciliation
+authority. Its exact content SHA-256, 37 finding IDs, 20 identity events, and 9
+overlay cases fail closed. The former unresolved-findings ledger remains only
+host-local archive/reference evidence and is not loaded by active P1 or tracked
+as a DVC stage dependency.
 
 ## Research-ready invariants
 
@@ -71,5 +76,7 @@ python -m unittest discover -s tests -v
 python -m compileall -q aq_pit tests
 ```
 
-The committed suite uses only tiny local fixtures and includes all 13 frozen
-blueprint regressions. No source or market data is downloaded.
+Unit/contract tests always run from tiny local fixtures. Classes explicitly
+named `IntegrationTests` require the configured local data, DVC CLI, or upstream
+runtime. The suite includes all 13 frozen blueprint regressions. No source or
+market data is downloaded.

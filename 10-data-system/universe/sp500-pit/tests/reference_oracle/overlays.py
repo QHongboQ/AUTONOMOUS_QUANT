@@ -1,4 +1,4 @@
-"""Generic detection and one authoritative overlay validation/application path."""
+"""Test-only reference overlay validation and application path."""
 
 from __future__ import annotations
 

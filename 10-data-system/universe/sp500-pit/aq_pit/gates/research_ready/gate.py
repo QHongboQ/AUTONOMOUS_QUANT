@@ -93,18 +93,14 @@ def _unexplained_boundary_count(compilation: ThinCompilation) -> int:
 def assess_research_ready(
     compilation: ThinCompilation,
     facts: AcceptedFacts,
-    historical_ledger: tuple[dict[str, object], ...],
     *,
     deterministic: bool,
 ) -> ResearchReadyGateResult:
     """Answer only whether the compiled universe is safe for P1 research."""
     failures: list[str] = []
-    ledger_ids = {
-        str(item.get("finding_id", "")).removeprefix("P1UNRES-")
-        for item in historical_ledger
-    }
-    accepted_ids = {item.finding_id for item in facts.finding_resolutions}
-    if ledger_ids != accepted_ids or len(historical_ledger) != facts.expected("canonical_facts"):
+    accepted_ids = tuple(item.finding_id for item in facts.finding_resolutions)
+    if (len(accepted_ids) != facts.expected("canonical_facts")
+            or len(set(accepted_ids)) != len(accepted_ids)):
         failures.append("ACCEPTED_FACT_ACCOUNTING")
 
     unexplained = _unexplained_boundary_count(compilation)

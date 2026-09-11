@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import hashlib
 import json
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from ..domain.models import normalize_ticker
 
 
 _FACTS_PATH = Path(__file__).with_name("accepted_reconciliation_facts.json")
+_FACTS_SHA256 = "c1745a22c17c3a8a35bf56f504c1d96398c787492dce54a60ac85801799a9f62"
 _CLASSIFICATIONS = {
     "GENUINE_RENAME",
     "SOURCE_BACKFILL",
@@ -70,6 +72,8 @@ def _iso(value: str | None, name: str, *, optional: bool = False) -> None:
 def load_accepted_facts() -> AcceptedFacts:
     """Load and fail closed on any malformed or incomplete accepted fact set."""
     raw = _FACTS_PATH.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != _FACTS_SHA256:
+        raise ValueError("accepted reconciliation facts differ from the frozen P1 authority")
     payload = json.loads(raw.decode("utf-8"))
     if payload.get("schema_version") != "P1AcceptedReconciliationFactsV1":
         raise ValueError("unsupported accepted reconciliation fact schema")

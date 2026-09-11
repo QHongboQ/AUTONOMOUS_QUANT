@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 
@@ -23,8 +24,91 @@ DATA_ROOT = os.environ.get("AQ_PIT_DATA_ROOT")
 DVC_BIN = os.environ.get("AQ_DVC_BIN")
 
 
+def synthetic_universe(rows: tuple[tuple[str, str, str, str], ...]) -> SimpleNamespace:
+    return SimpleNamespace(
+        gate=SimpleNamespace(research_ready=True),
+        rows=tuple(SimpleNamespace(
+            episode_id=episode_id,
+            ticker=ticker,
+            membership_from=membership_from,
+            membership_to=membership_to,
+        ) for episode_id, ticker, membership_from, membership_to in rows),
+    )
+
+
+SYNTHETIC_ROWS = (
+    ("aaa-1", "AAA", "2020-01-02", "2020-01-06"),
+    ("bbb-1", "BBB", "2020-01-03", "2020-02-03"),
+)
+
+
+class DatasetSnapshotUnitTests(unittest.TestCase):
+    def test_contract_and_public_row_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            snapshot = export_dataset_snapshot(synthetic_universe(SYNTHETIC_ROWS), output)
+            rows = [json.loads(line) for line in (output / "episodes.jsonl").read_text().splitlines()]
+        self.assertEqual(snapshot.row_count, 2)
+        self.assertTrue(all(set(row) == {"episode_id", "ticker", "membership_from", "membership_to"}
+                            for row in rows))
+
+    def test_export_is_byte_deterministic(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            first, second = Path(directory) / "first", Path(directory) / "second"
+            universe = synthetic_universe(SYNTHETIC_ROWS)
+            export_dataset_snapshot(universe, first)
+            export_dataset_snapshot(universe, second)
+            self.assertEqual((first / "episodes.jsonl").read_bytes(), (second / "episodes.jsonl").read_bytes())
+            self.assertEqual((first / "snapshot.json").read_bytes(), (second / "snapshot.json").read_bytes())
+
+    def test_duplicate_episode_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "duplicate episode_id"):
+                export_dataset_snapshot(
+                    synthetic_universe((*SYNTHETIC_ROWS, SYNTHETIC_ROWS[0])), Path(directory),
+                )
+
+    def test_empty_interval_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "non-empty"):
+                export_dataset_snapshot(
+                    synthetic_universe((("bad", "BAD", "2020-01-02", "2020-01-02"),)),
+                    Path(directory),
+                )
+
+    def test_nondeterministic_order_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "deterministically ordered"):
+                export_dataset_snapshot(synthetic_universe(tuple(reversed(SYNTHETIC_ROWS))), Path(directory))
+
+    def test_pure_export_has_no_dvc_dependency(self) -> None:
+        source = "\n".join(path.read_text(encoding="utf-8") for path in (
+            SNAPSHOT_ROOT / "aq_dataset_snapshot" / "contract.py",
+            SNAPSHOT_ROOT / "aq_dataset_snapshot" / "export.py",
+        ))
+        self.assertNotIn("from dvc", source)
+        self.assertNotIn("import dvc", source)
+
+    def test_pit_runtime_has_no_dvc_dependency(self) -> None:
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (PIT_ROOT / "aq_pit").rglob("*.py")
+        )
+        self.assertNotIn("from dvc", source)
+        self.assertNotIn("import dvc", source)
+
+    def test_repository_stage_declares_active_dependencies_and_output(self) -> None:
+        pipeline = (ROOT / "dvc.yaml").read_text(encoding="utf-8")
+        self.assertIn("pit_universe_snapshot:", pipeline)
+        self.assertIn("deps:", pipeline)
+        self.assertIn("outs:", pipeline)
+        self.assertIn("accepted_reconciliation_facts", pipeline)
+        self.assertNotIn("unresolved_findings", pipeline)
+        self.assertIn("dataset-snapshot/pit-universe/data", pipeline)
+
+
 @unittest.skipUnless(DATA_ROOT, "set AQ_PIT_DATA_ROOT for frozen snapshot tests")
-class DatasetSnapshotTests(unittest.TestCase):
+class DatasetSnapshotRealDataIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.universe = build_research_ready_universe(Path(DATA_ROOT))
@@ -78,34 +162,9 @@ class DatasetSnapshotTests(unittest.TestCase):
         self.assertFalse(forbidden & set(metadata))
         self.assertTrue(all(not (forbidden & set(row)) for row in self.rows))
 
-    def test_dataset_code_does_not_import_dvc(self) -> None:
-        source = "\n".join(path.read_text(encoding="utf-8") for path in (
-            SNAPSHOT_ROOT / "aq_dataset_snapshot" / "contract.py",
-            SNAPSHOT_ROOT / "aq_dataset_snapshot" / "export.py",
-            SNAPSHOT_ROOT / "export_snapshot.py",
-        ))
-        self.assertNotIn("from dvc", source)
-        self.assertNotIn("import dvc", source)
-
-    def test_pit_runtime_does_not_import_dvc(self) -> None:
-        source = "\n".join(
-            path.read_text(encoding="utf-8")
-            for path in (PIT_ROOT / "aq_pit").rglob("*.py")
-        )
-        self.assertNotIn("from dvc", source)
-        self.assertNotIn("import dvc", source)
-
-    def test_repository_stage_declares_dependencies_and_output(self) -> None:
-        pipeline = (ROOT / "dvc.yaml").read_text(encoding="utf-8")
-        self.assertIn("pit_universe_snapshot:", pipeline)
-        self.assertIn("deps:", pipeline)
-        self.assertIn("outs:", pipeline)
-        self.assertIn("accepted_reconciliation_facts", pipeline)
-        self.assertIn("dataset-snapshot/pit-universe/data", pipeline)
-
 
 @unittest.skipUnless(DVC_BIN, "set AQ_DVC_BIN for DVC CLI behavior tests")
-class DvcCliBoundaryTests(unittest.TestCase):
+class DvcCliIntegrationTests(unittest.TestCase):
     def test_skip_invalidation_isolation_and_cache_restore(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -18,6 +18,11 @@ synthetic probe verifies discovery and dynamic ranges only. No real data,
 Alpha158 execution, training, prediction, strategy run, backtest, or performance
 claim occurs.
 
+Pure conversion tests construct a small temporary DatasetSnapshot and always
+run without DVC data. The 832-row snapshot check and WSL Qlib public-API probe
+are explicit integration checks; the probe derives the checkout path at runtime
+and contains no fixed repository root or Linux username.
+
 Qlib owns future Dataset/handler, feature, model workflow, recorder, prediction,
 Top-K, backtest, transaction-cost, and portfolio-analysis machinery. AQ owns
 only this conversion boundary. The adapter reads no PIT source/compiler/facts,

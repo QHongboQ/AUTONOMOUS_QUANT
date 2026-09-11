@@ -2,7 +2,7 @@ from dataclasses import FrozenInstanceError, replace
 import unittest
 
 from aq_pit.canonical import CanonicalizationError, canonical_bytes, deterministic_id, sha256_hex
-from aq_pit.contracts import (
+from reference_oracle.contracts import (
     CorporateActionEventV1,
     IndexMembershipEventV1,
     MembershipAction,
@@ -11,7 +11,7 @@ from aq_pit.contracts import (
     SessionBoundary,
     TickerIdentityEventV1,
 )
-from aq_pit.validation import sources_are_independent
+from reference_oracle.validation import sources_are_independent
 
 
 H1 = "1" * 64

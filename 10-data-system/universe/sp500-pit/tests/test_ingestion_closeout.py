@@ -4,9 +4,9 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from aq_pit.compiler import compile_universe
-from aq_pit.contracts import CompilePolicyV1, SnapshotObservationV1, SourceManifestV1, SourceRole
-from scripts.run_fja_ingestion import (
+from reference_oracle.compiler import compile_universe
+from reference_oracle.contracts import CompilePolicyV1, SnapshotObservationV1, SourceManifestV1, SourceRole
+from reference_oracle.run_fja_ingestion import (
     DiagnosticRenameCandidate,
     PITINDEX_COMMIT,
     PITINDEX_REPOSITORY,
@@ -29,19 +29,10 @@ def seed_manifest() -> SourceManifestV1:
     )
 
 
-class IngestionCloseoutTests(unittest.TestCase):
+class IngestionCloseoutUnitTests(unittest.TestCase):
     def test_bzx_terminal_constituent_is_parsed(self):
         raw = b'id="constituents"\n|-\n|{{BZX link|CBOE}}\n|Cboe\n|}'
         self.assertEqual(_parse_terminal_symbols(raw), ("CBOE",))
-
-    def test_pinned_terminal_reference_has_503_constituents(self):
-        root = os.environ.get("AQ_PIT_DATA_ROOT")
-        if not root:
-            self.skipTest("AQ_PIT_DATA_ROOT is not configured")
-        path = Path(root) / "raw" / "terminal_reference" / "wikipedia-sp500-oldid-1265285344.wikitext"
-        if not path.is_file():
-            self.skipTest("pinned terminal reference is unavailable")
-        self.assertEqual(len(_terminal_roster(path.read_bytes())), 503)
 
     def test_pitindex_manifest_uses_pinned_repository_identity_and_metadata(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -101,6 +92,16 @@ class IngestionCloseoutTests(unittest.TestCase):
         after = compile_universe(**arguments)
         self.assertEqual(before, after)
         self.assertEqual(observation.tickers, raw_before)
+
+
+@unittest.skipUnless(os.environ.get("AQ_PIT_DATA_ROOT"), "set AQ_PIT_DATA_ROOT for pinned terminal integration")
+class IngestionReferenceIntegrationTests(unittest.TestCase):
+    def test_pinned_terminal_reference_has_503_constituents(self):
+        path = (Path(os.environ["AQ_PIT_DATA_ROOT"]) / "raw" / "terminal_reference"
+                / "wikipedia-sp500-oldid-1265285344.wikitext")
+        if not path.is_file():
+            self.skipTest("pinned terminal reference is unavailable")
+        self.assertEqual(len(_terminal_roster(path.read_bytes())), 503)
 
 
 if __name__ == "__main__":

@@ -30,7 +30,6 @@ def build_research_ready_universe(data_root: Path) -> ResearchReadyUniverse:
     gate = assess_research_ready(
         first,
         facts,
-        inputs.historical_ledger,
         deterministic=deterministic,
     )
     if not gate.research_ready:
