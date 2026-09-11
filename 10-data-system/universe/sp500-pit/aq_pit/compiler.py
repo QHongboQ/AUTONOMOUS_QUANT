@@ -30,6 +30,10 @@ from .contracts import (
     normalize_ticker,
 )
 from .overlays import apply_ticker_overlays, detect_episode_scoped_ticker_findings
+from .sources.fja_sp500 import (
+    RECONCILED_DERIVATION_VERSION,
+    build_reconciled_membership_event_manifest,
+)
 from .validation import make_finding, validate_episodes
 
 
@@ -116,6 +120,54 @@ def compile_universe(
         for manifest in manifests
         if manifest.source_id not in duplicate_source_ids
     }
+
+    reconciled_event_source_ids = {
+        event.source_id for event in membership_events
+        if event.event_id.startswith("P1MEMR-")
+        or (event.reason or "").startswith(RECONCILED_DERIVATION_VERSION)
+    }
+    invalid_reconciled_source_ids: set[str] = set()
+    for manifest in manifests:
+        is_reconciled_authority = (
+            manifest.adapter_version == RECONCILED_DERIVATION_VERSION
+            or manifest.source_type == "derived_identity_aware_resolved_snapshot_difference"
+            or manifest.media_type
+            == "application/vnd.aq.pit-reconciled-membership-events+json"
+            or manifest.source_id in reconciled_event_source_ids
+        )
+        if not is_reconciled_authority:
+            continue
+        seed_manifests = [
+            item for item in manifests
+            if item.source_role is SourceRole.HISTORICAL_SEED
+            and item.source_id in manifest.ancestry
+        ]
+        context_valid = len(seed_manifests) == 1
+        if context_valid:
+            try:
+                canonical_resolution = apply_ticker_overlays(
+                    observations,
+                    ticker_events,
+                    overlays,
+                )
+                expected = build_reconciled_membership_event_manifest(
+                    seed_manifests[0],
+                    observations,
+                    canonical_resolution.observations,
+                    ticker_events,
+                    overlays,
+                )
+                context_valid = manifest == expected
+            except ValueError:
+                context_valid = False
+        if not context_valid:
+            invalid_reconciled_source_ids.add(manifest.source_id)
+            findings.append(make_finding(
+                FindingType.INVALID_AUTHORITY_REFERENCE,
+                FindingSeverity.CRITICAL,
+                (manifest.source_id,),
+                "reconciled membership authority does not match the exact derivation context",
+            ))
 
     all_ids: list[str] = [event.event_id for event in membership_events]
     all_ids += [event.event_id for event in ticker_events]
@@ -238,6 +290,7 @@ def compile_universe(
         event for event in membership_events
         if event.event_id not in ignored_event_ids
         and event.event_id not in foreign_membership_ids
+        and event.source_id not in invalid_reconciled_source_ids
         and event.boundary_semantics is not SessionBoundary.AMBIGUOUS
         and (
             source := manifests_by_id.get(event.source_id)
@@ -307,6 +360,10 @@ def compile_universe(
         event for event in (*ticker_events, *membership_events)
         if getattr(event, "event_id") not in ignored_event_ids
         and getattr(event, "event_id") not in foreign_membership_ids
+        and not (
+            isinstance(event, IndexMembershipEventV1)
+            and event.source_id in invalid_reconciled_source_ids
+        )
         and policy.start_session < event.effective_session < policy.end_session
     ]
     operations.extend(

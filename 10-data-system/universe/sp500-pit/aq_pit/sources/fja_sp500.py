@@ -20,7 +20,7 @@ from ..contracts import (
     TickerIdentityEventV1,
     normalize_ticker,
 )
-from ..overlays import ResolvedObservation
+from ..overlays import ResolvedObservation, apply_ticker_overlays
 
 
 FJA_ADAPTER_VERSION = "fja-sp500-snapshot-adapter-v1"
@@ -267,6 +267,14 @@ def build_reconciled_membership_event_manifest(
     raw_ids = {item.observation_id for item in observations}
     if raw_ids != {item.observation_id for item in resolved_observations}:
         raise ValueError("resolved observations must map exactly to raw observations")
+    canonical_resolution = apply_ticker_overlays(observations, ticker_events, overlays)
+    if tuple(sorted(resolved_observations, key=lambda item: item.observation_id)) != tuple(sorted(
+        canonical_resolution.observations,
+        key=lambda item: item.observation_id,
+    )):
+        raise ValueError(
+            "resolved observations are not the deterministic output of raw observations and overlays"
+        )
     overlay_map = {item.overlay_id: item for item in overlays}
     applied_ids = {
         overlay_id
@@ -314,6 +322,9 @@ def derive_reconciled_membership_events(
     resolved_observations: tuple[ResolvedObservation, ...],
     ticker_events: tuple[TickerIdentityEventV1, ...],
     event_manifest: SourceManifestV1,
+    *,
+    seed_manifest: SourceManifestV1,
+    overlays: tuple[TickerEpisodeOverlayV1, ...],
 ) -> tuple[IndexMembershipEventV1, ...]:
     """Derive actual membership churn after applying identity transitions.
 
@@ -327,6 +338,15 @@ def derive_reconciled_membership_events(
         or event_manifest.adapter_version != RECONCILED_DERIVATION_VERSION
     ):
         raise ValueError("reconciled events require the reconciled derivation manifest")
+    expected_manifest = build_reconciled_membership_event_manifest(
+        seed_manifest,
+        observations,
+        resolved_observations,
+        ticker_events,
+        overlays,
+    )
+    if event_manifest != expected_manifest:
+        raise ValueError("reconciled derivation manifest does not match the exact reconciliation context")
     raw_ordered = tuple(sorted(
         observations,
         key=lambda item: (item.effective_session, item.observation_id),

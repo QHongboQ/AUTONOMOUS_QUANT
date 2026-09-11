@@ -24,7 +24,12 @@ from aq_pit.sources.fja_sp500 import (
     build_reconciled_membership_event_manifest,
     derive_reconciled_membership_events,
 )
-from aq_pit.validation import AmbiguousTickerEpisodeError, lookup_episode, validate_publishable
+from aq_pit.validation import (
+    AmbiguousTickerEpisodeError,
+    PublicationBlockedError,
+    lookup_episode,
+    validate_publishable,
+)
 
 
 H = "a" * 64
@@ -72,6 +77,7 @@ def reconcile(raw, identities=(), overlays=()):
     )
     events = derive_reconciled_membership_events(
         tuple(raw), applied.observations, tuple(identities), manifest,
+        seed_manifest=SEED_SOURCE, overlays=tuple(overlays),
     )
     result = compile_universe(
         policy=CompilePolicyV1(
@@ -86,6 +92,172 @@ def reconcile(raw, identities=(), overlays=()):
 
 
 class ReconciliationRuntimeGapTests(unittest.TestCase):
+    def assert_context_blocked(self, result):
+        self.assertIn(FindingType.INVALID_AUTHORITY_REFERENCE, {
+            item.finding_type for item in result.findings
+        })
+        with self.assertRaises(PublicationBlockedError):
+            validate_publishable(result.episodes, result.findings)
+
+    def test_tampered_resolved_ticker_set_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ("AAA",)),
+            observation("2020-02-03", ("AAA",)),
+        )
+        applied = apply_ticker_overlays(raw, (), ())
+        forged = (
+            applied.observations[0],
+            replace(applied.observations[1], tickers=("AAA", "BBB")),
+        )
+        with self.assertRaisesRegex(ValueError, "deterministic output"):
+            build_reconciled_membership_event_manifest(
+                SEED_SOURCE, raw, forged, (), (),
+            )
+
+        manifest = build_reconciled_membership_event_manifest(
+            SEED_SOURCE, raw, applied.observations, (), (),
+        )
+        with self.assertRaisesRegex(ValueError, "deterministic output"):
+            derive_reconciled_membership_events(
+                raw, forged, (), manifest,
+                seed_manifest=SEED_SOURCE, overlays=(),
+            )
+
+    def test_omitted_identity_context_is_blocked(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ("OLD",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        _, manifest, events, _ = reconcile(raw, (event,))
+        self.assertEqual(events, ())
+        result = compile_universe(
+            policy=CompilePolicyV1(
+                "SP500", raw[0].effective_session, "2030-01-01",
+                "fixture-calendar-v1", "reconciled-policy-v1",
+            ),
+            manifests=(SEED_SOURCE, TICKER_SOURCE, manifest),
+            observations=raw, membership_events=events, ticker_events=(),
+        )
+        self.assert_context_blocked(result)
+
+    def test_changed_identity_context_is_blocked(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ("OLD",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        _, manifest, events, _ = reconcile(raw, (event,))
+        changed = replace(
+            event,
+            effective_date="2020-06-02",
+            effective_session="2020-06-02",
+        )
+        result = compile_universe(
+            policy=CompilePolicyV1(
+                "SP500", raw[0].effective_session, "2030-01-01",
+                "fixture-calendar-v1", "reconciled-policy-v1",
+            ),
+            manifests=(SEED_SOURCE, TICKER_SOURCE, manifest),
+            observations=raw, membership_events=events, ticker_events=(changed,),
+        )
+        self.assert_context_blocked(result)
+
+    def test_omitted_overlay_context_is_blocked(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-02-03", ("NEW",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        accepted = overlay(raw[1], event)
+        _, manifest, events, _ = reconcile(raw, (event,), (accepted,))
+        result = compile_universe(
+            policy=CompilePolicyV1(
+                "SP500", raw[0].effective_session, "2030-01-01",
+                "fixture-calendar-v1", "reconciled-policy-v1",
+            ),
+            manifests=(SEED_SOURCE, TICKER_SOURCE, manifest),
+            observations=raw, membership_events=events, ticker_events=(event,),
+            overlays=(),
+        )
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
+    def test_changed_overlay_context_is_blocked(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-02-03", ("NEW",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        accepted = overlay(raw[1], event)
+        _, manifest, events, _ = reconcile(raw, (event,), (accepted,))
+        changed = replace(accepted, reason="altered accepted evidence")
+        result = compile_universe(
+            policy=CompilePolicyV1(
+                "SP500", raw[0].effective_session, "2030-01-01",
+                "fixture-calendar-v1", "reconciled-policy-v1",
+            ),
+            manifests=(SEED_SOURCE, TICKER_SOURCE, manifest),
+            observations=raw, membership_events=events, ticker_events=(event,),
+            overlays=(changed,),
+        )
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
+    def test_exact_reconciliation_context_is_accepted(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-02-03", ("NEW",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        accepted = overlay(raw[1], event)
+        _, _, _, result = reconcile(raw, (event,), (accepted,))
+        self.assertNotIn(FindingType.INVALID_AUTHORITY_REFERENCE, {
+            item.finding_type for item in result.findings
+        })
+        validate_publishable(result.episodes, result.findings)
+
+    def test_zero_membership_event_rename_remains_context_bound(self):
+        event = identity("OLD", "NEW", "2020-06-01")
+        raw = (
+            observation("2020-01-02", ("OLD",)),
+            observation("2020-06-01", ("NEW",)),
+        )
+        _, manifest, events, exact = reconcile(raw, (event,))
+        self.assertEqual(events, ())
+        validate_publishable(exact.episodes, exact.findings)
+
+        missing = compile_universe(
+            policy=CompilePolicyV1(
+                "SP500", raw[0].effective_session, "2030-01-01",
+                "fixture-calendar-v1", "reconciled-policy-v1",
+            ),
+            manifests=(SEED_SOURCE, TICKER_SOURCE, manifest),
+            observations=raw, membership_events=(), ticker_events=(),
+        )
+        self.assert_context_blocked(missing)
+
+    def test_incompatible_reconciled_manifest_version_is_blocked(self):
+        raw = (
+            observation("2020-01-02", ()),
+            observation("2020-02-03", ("AAA",)),
+        )
+        _, manifest, events, _ = reconcile(raw)
+        incompatible = replace(manifest, adapter_version="incompatible-v2")
+        result = compile_universe(
+            policy=CompilePolicyV1(
+                "SP500", raw[0].effective_session, "2030-01-01",
+                "fixture-calendar-v1", "reconciled-policy-v1",
+            ),
+            manifests=(SEED_SOURCE, TICKER_SOURCE, incompatible),
+            observations=raw, membership_events=events,
+        )
+        self.assert_context_blocked(result)
+        self.assertFalse(result.episodes)
+
     def test_duplicate_successor_before_boundary_drops_successor_only(self):
         event = identity("OLD", "NEW", "2020-06-01")
         raw = observation("2020-01-02", ("OLD", "NEW"))
@@ -191,7 +363,10 @@ class ReconciliationRuntimeGapTests(unittest.TestCase):
         raw_manifest = build_reconciled_membership_event_manifest(
             SEED_SOURCE, raw, unapplied.observations, (event,), (),
         )
-        raw_events = derive_reconciled_membership_events(raw, unapplied.observations, (event,), raw_manifest)
+        raw_events = derive_reconciled_membership_events(
+            raw, unapplied.observations, (event,), raw_manifest,
+            seed_manifest=SEED_SOURCE, overlays=(),
+        )
         self.assertIn(FindingType.FUTURE_TICKER_BEFORE_RENAME, {
             item.finding_type for item in detect_episode_scoped_ticker_findings(
                 unapplied.observations, (event,), raw_events,

@@ -57,6 +57,33 @@ membership conflicts rather than normal label reconciliation.
 No permanent Security Master, CIK master, corporate-lineage graph, price logic,
 symbol allowlist, or company-specific runtime condition was added.
 
+## Independent-review closeout 002
+
+Independent review identified two bounded fail-closed defects after the original
+three runtime gaps were closed. Both are now closed without changing the
+`identity-aware-resolved-snapshot-difference-v1` hash semantics or expanding the
+PIT architecture.
+
+1. Reconciled manifest construction and event derivation independently recompute
+   resolved observations from the immutable raw observations, exact ticker
+   identity events, and accepted applicable overlays. Caller-provided resolved
+   ticker content must equal that canonical result, so metadata copied from a
+   legitimate raw observation cannot authorize a forged ticker addition.
+2. Compilation reconstructs the reconciled derivation manifest from the exact
+   supplied raw observations, ticker identity event content, and applied overlay
+   content. A missing or changed identity event or overlay invalidates the
+   reconciled membership authority and emits a blocking structured finding.
+   This check is manifest-driven and therefore remains active when an ordinary
+   rename produces zero membership events.
+
+Eight focused closeout tests cover a forged resolved ticker set, omitted and
+changed identity context, omitted and changed overlay context, exact-context
+acceptance, the zero-membership-event rename case, and incompatible reconciled
+manifest versions. The full suite now passes 85 tests, including all 13
+unchanged frozen regressions. `compileall` passes.
+The raw FJA bytes and legacy exact raw snapshot-difference semantics remain
+unchanged.
+
 ## Verification
 
 The 64 pre-task tests and 13 focused closure tests pass, for 77 total tests.
