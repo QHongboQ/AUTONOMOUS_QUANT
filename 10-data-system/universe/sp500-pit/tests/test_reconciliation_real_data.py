@@ -5,6 +5,7 @@ from pathlib import Path
 import unittest
 
 from aq_pit.reconciliation import all_gates_pass, build_reconciliation, parse_terminal_roster
+from aq_pit.certification import CANONICAL_LEDGER_SHA256
 from aq_pit.sources.fja_sp500 import build_fja_manifest, parse_fja_snapshots
 from aq_pit.validation import AmbiguousTickerEpisodeError, lookup_episode
 
@@ -30,9 +31,10 @@ class RealDataReconciliationTests(unittest.TestCase):
             raw, seed, start_date="2010-01-01", end_date="2024-12-31",
             start_session="2010-01-04",
         )
-        ledger = tuple(json.loads(
-            (cls.root / "audit" / "unresolved_findings" / "unresolved_findings.json").read_text(encoding="utf-8")
-        ))
+        ledger_raw = (cls.root / "audit" / "unresolved_findings" / "unresolved_findings.json").read_bytes()
+        if hashlib.sha256(ledger_raw).hexdigest() != CANONICAL_LEDGER_SHA256:
+            raise AssertionError("unexpected canonical ledger input")
+        ledger = tuple(json.loads(ledger_raw.decode("utf-8")))
         terminal = parse_terminal_roster(
             (cls.root / "raw" / "terminal_reference" / "wikipedia-sp500-oldid-1265285344.wikitext").read_bytes()
         )

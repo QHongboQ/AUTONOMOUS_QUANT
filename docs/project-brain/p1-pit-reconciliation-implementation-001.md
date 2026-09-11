@@ -2,7 +2,7 @@
 
 **Task:** `AUTONOMOUS-QUANT-P1-PIT-RECONCILIATION-IMPLEMENTATION-001`
 
-**Result:** `PASS`
+**Result:** `PASS_WITH_REMAINING_AUTHORITY_BLOCKER`
 
 **Base:** `267f85dee0a41c363681202a001de9b8153bb5ef` (`origin/main`)
 
@@ -13,7 +13,7 @@
 ## Result
 
 The accepted evidence audit, state-mapping audit, and completed reconciliation
-runtime were materialized into the authoritative 2010–2024 S&P 500 PIT
+runtime were materialized into the reconciled 2010–2024 S&P 500 PIT candidate
 universe. All 37 canonical historical finding IDs remain present in the
 resolved ledger and all 37 are `RESOLVED`; none remains blocking.
 
@@ -59,7 +59,8 @@ and both evidence hashes. The FJA source bytes remain unchanged at SHA-256
 All identity relations and effective sessions are declarative accepted
 evidence, not ticker-specific branches in the runtime. Primary evidence
 locators retain their S&P DJI, SEC, or issuer publisher, title, date, URL, and
-content-addressed accepted-audit record. `pitindex` remains diagnostic only,
+locator-metadata audit record. Those locator hashes are not source-content
+hashes and cannot authorize certification. `pitindex` remains diagnostic only,
 and FJA descendants are not counted as independent evidence.
 
 ## Episode semantics
@@ -101,9 +102,10 @@ TERMINAL_ROSTER_COUNT = 503
 TERMINAL_SET_DIFFERENCE_COUNT = 0
 ```
 
-The test suite passes 101 tests, including all 93 pre-task tests, eight focused
-reconciliation tests, and all 13 unchanged frozen regressions. `compileall`
-passes.
+The implementation test suite passed 101 tests, including all 93 pre-task
+tests, eight focused reconciliation tests, and all 13 unchanged frozen
+regressions. The certification closeout adds nine fail-closed tests; the full
+suite now passes 110 tests. `compileall` passes.
 
 ## External artifacts
 
@@ -119,12 +121,59 @@ not overwritten.
 | reconciled membership events | `0e92dd3672f310570305ad691eca80552365a8edc73cde58599e349095f61566` |
 | InstrumentEpisodeV1 rows | `5d2732f8a6187bdab342ff09ff3ecdcc7e66d9e755bc364a8f3f822923d877e1` |
 | resolved reconciliation ledger | `2582d49aeda88349bd6c138ae78afd1220a7a856e38a85f3193d099d3713bf2b` |
-| provenance/source manifests | `5e437499ef821d5d84a325679e58df10ed31633e3d6b79e3c0aeb20adbce491e` |
-| compilation summary | `b5df88e5172c86bb2b60983cae8d96a1fae009ec527480cee1d7e2d8e25cb58e` |
-| artifact manifest | `106938708e4e3c45fc198c41987af39715fa27a9b6c9ed58553ed12f3bc805a8` |
+| provenance/source manifests | `855220c0af23fac2695180fc4653712a784bba7c689948798736aeae5e6f5105` |
+| compilation summary | `529754a84626926543bd6b06113383ad8fcbcbb67133c5625d2c55b2224ab964` |
+| artifact manifest | `3d467521bfc1e5706110fa2d0997593b3501464dd97ad20469790431b5a1a461` |
 
 Artifact entries use relative logical paths and content hashes. Absolute local
 paths do not participate in logical IDs.
+
+## Certification authority closeout
+
+Independent review accepted the 37-finding runtime result but identified that
+runtime reconciliation is not itself certification. The closeout inspected the
+accepted evidence root and applied the Project Brain authority requirements
+without promoting diagnostic sources.
+
+The canonical unresolved ledger is now independently byte-pinned. Its retained
+17,899-byte JSON file has SHA-256
+`d227a9c514e4a13752b0f35ddfc3a7e7292270570b96ff9f4342dfcbaed38734`.
+Any byte/content mutation, including a changed type, ticker, date, or finding
+body under the same finding ID, fails closed.
+
+The retained Wikipedia revision remains a `DIAGNOSTIC_REFERENCE`; its 202,695
+bytes remain pinned at SHA-256
+`597d7d170a35c6ec4ade33fc56b38d6f0c45db9029c515216ec03deee106b065`.
+It was not reclassified as official authority. The compiled terminal active
+episode set equals the resolved terminal observation, and the latter continues
+to equal the diagnostic 503-name roster, but no accepted official terminal
+roster exists in the evidence root.
+
+The evidence root also contains no retained primary official source bytes (or
+an immutable accepted artifact binding those bytes) for the identity/conflict
+packages, and no pre-registered independent historical roster samples. The
+existing S&P/SEC/issuer locator metadata remains useful provenance but cannot
+satisfy raw-evidence content addressing.
+
+```text
+RUNTIME_RECONCILIATION_RESULT = PASS
+PRIMARY_EVIDENCE_CONTENT_ADDRESSED = NO
+CANONICAL_LEDGER_PINNED = YES
+OFFICIAL_TERMINAL_AUTHORITY = MISSING
+HISTORICAL_SAMPLE_GATE = MISSING
+COMPILED_TERMINAL_SET_GATE = PASS
+ARTIFACT_HASHES_TWICE_IDENTICAL = PASS
+PROVENANCE_COMPLETE = NO
+PIT_UNIVERSE_CERTIFIED = NO
+```
+
+The complete artifact set was materialized independently into two clean
+staging roots. Relative file sets, byte lengths, every file SHA-256, artifact
+manifest content, and artifact manifest SHA-256 were identical. The manifest's
+logical hash now binds the full `(relative path, byte length, SHA-256)` entries,
+not only filenames. The verified tree was promoted atomically; the preceding
+runtime tree is retained recoverably at
+`D:\AQ_DATA\P1\pit\reconciled\.v1.previous`.
 
 ## Non-actions
 
@@ -141,7 +190,8 @@ P1 = STARTED
 P1_PIT_RUNTIME_FOUNDATION = COMPLETE
 P1_PIT_SOURCE_INGESTION = COMPLETE
 P1_PIT_RECONCILIATION_RUNTIME_GAP_CLOSURE = COMPLETE
-P1_PIT_RECONCILIATION_IMPLEMENTATION = COMPLETE
-PIT_UNIVERSE_CERTIFIED = YES
-CURRENT_NEXT = P1_DATASET_SNAPSHOT
+P1_PIT_RECONCILIATION_IMPLEMENTATION = COMPLETE_WITH_CERTIFICATION_BLOCKERS
+PIT_UNIVERSE_CERTIFIED = NO
+PIT_CERTIFICATION_BLOCKERS = PRIMARY_EVIDENCE_CONTENT_MISSING / OFFICIAL_TERMINAL_AUTHORITY_MISSING / HISTORICAL_SAMPLE_AUTHORITY_MISSING
+CURRENT_NEXT = P1_PIT_RECONCILIATION_IMPLEMENTATION
 ```
