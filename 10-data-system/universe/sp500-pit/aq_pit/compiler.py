@@ -29,7 +29,7 @@ from .contracts import (
     ValidationFindingV1,
     normalize_ticker,
 )
-from .overlays import apply_ticker_overlays, detect_future_ticker_backfill
+from .overlays import apply_ticker_overlays, detect_episode_scoped_ticker_findings
 from .validation import make_finding, validate_episodes
 
 
@@ -234,12 +234,25 @@ def compile_universe(
 
     overlay_application = apply_ticker_overlays(observations, ticker_events, overlays)
     findings.extend(overlay_application.findings)
-    applied_pairs = {frozenset(pair) for pair in overlay_application.applied_pairs}
-    detector_findings = detect_future_ticker_backfill(observations, ticker_events)
+    detector_membership_events = tuple(
+        event for event in membership_events
+        if event.event_id not in ignored_event_ids
+        and event.event_id not in foreign_membership_ids
+        and event.boundary_semantics is not SessionBoundary.AMBIGUOUS
+        and (
+            source := manifests_by_id.get(event.source_id)
+        ) is not None
+        and source.source_role in {
+            SourceRole.PRECISE_MEMBERSHIP_EVENTS,
+            SourceRole.OFFICIAL_CONFLICT_RESOLUTION,
+        }
+    )
     findings.extend(
-        finding for finding in detector_findings
-        if finding.finding_type is not FindingType.FUTURE_TICKER_BEFORE_RENAME
-        or frozenset(finding.affected_ids) not in applied_pairs
+        detect_episode_scoped_ticker_findings(
+            overlay_application.observations,
+            ticker_events,
+            detector_membership_events,
+        )
     )
 
     seed_candidates = [
@@ -400,7 +413,9 @@ def compile_universe(
                     f"cannot remove inactive ticker {ticker}",
                 ))
                 continue
-            episodes.append(_close(active.pop(ticker), policy.index_id, session, (operation,), (operation_id,)))
+            closing = active.pop(ticker)
+            if closing.opened != session:
+                episodes.append(_close(closing, policy.index_id, session, (operation,), (operation_id,)))
 
     for ticker in sorted(active):
         episodes.append(_close(active[ticker], policy.index_id, policy.end_session))

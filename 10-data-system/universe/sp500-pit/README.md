@@ -14,8 +14,10 @@ lineage, price history, price stitching, source downloading, or a published
 - `canonical.py` — strict UTF-8 canonical JSON and SHA-256 logical identities.
 - `contracts.py` — frozen, versioned source, event, overlay, correction,
   episode, policy, and finding contracts.
-- `overlays.py` — generic successor-before-boundary detection and reviewed,
-  evidence-driven observation overlays.
+- `overlays.py` — generic, episode-scoped rename detection and reviewed,
+  evidence-driven observation reconciliation, including duplicate successors.
+- `sources/fja_sp500.py` — preserves the historical raw exact-difference path
+  and exposes a distinct identity-aware resolved-observation derivation path.
 - `compiler.py` — pure membership/rename state transitions over half-open
   intervals. Corporate actions are retained as context but cannot mutate
   membership.
@@ -37,6 +39,8 @@ session; calendar conversion belongs to the future source-adapter layer.
   overlaps, duplicate events, and unresolved corrections block publication.
 - Only accepted overlays/corrections affect state; raw observations are frozen
   and never rewritten.
+- Reconciled membership derivation transforms the prior roster through accepted
+  identity events before diffing, so ticker changes cannot manufacture churn.
 - Absolute machine paths, floats, unsupported objects, clocks, hostnames,
   caches, and network state do not participate in logical identity.
 

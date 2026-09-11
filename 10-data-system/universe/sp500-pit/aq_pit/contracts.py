@@ -105,6 +105,7 @@ class ReviewState(str, Enum):
 
 class OverlayOperation(str, Enum):
     MAP_SUCCESSOR_TO_PREDECESSOR = "MAP_SUCCESSOR_TO_PREDECESSOR"
+    DROP_DUPLICATE_SUCCESSOR_BEFORE_BOUNDARY = "DROP_DUPLICATE_SUCCESSOR_BEFORE_BOUNDARY"
 
 
 class CorrectionOperation(str, Enum):
