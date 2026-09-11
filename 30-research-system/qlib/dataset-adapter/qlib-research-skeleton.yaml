@@ -1,0 +1,18 @@
+execution_state: NOT_EXECUTED_ON_REAL_MARKET_DATA
+ownership:
+  dataset:
+    class: DatasetH
+    module_path: qlib.data.dataset
+  handler:
+    class: Alpha158
+    module_path: qlib.contrib.data.handler
+  model_workflow:
+    owner: qlib.workflow.R
+  strategy:
+    class: TopkDropoutStrategy
+    module_path: qlib.contrib.strategy.signal_strategy
+  backtest:
+    owner: qlib.backtest
+  portfolio_analysis:
+    class: PortAnaRecord
+    module_path: qlib.workflow.record_temp

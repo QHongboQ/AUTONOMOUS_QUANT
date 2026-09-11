@@ -1,0 +1,66 @@
+schema: '2.0'
+stages:
+  pit_universe_snapshot:
+    cmd: uv run --no-project --python 3.12 --with-requirements 10-data-system/universe/sp500-pit/aq_pit/schema/pandera/requirements.txt python -B 10-data-system/dataset-snapshot/pit-universe/export_snapshot.py --data-root D:/AQ_DATA/P1/pit --output 10-data-system/dataset-snapshot/pit-universe/data
+    deps:
+    - path: 10-data-system/dataset-snapshot/pit-universe/aq_dataset_snapshot
+      hash: md5
+      md5: d445b130899e2f65b2678c3e1b7fb450.dir
+      size: 3819
+      nfiles: 3
+    - path: 10-data-system/dataset-snapshot/pit-universe/export_snapshot.py
+      hash: md5
+      md5: b91e6a4cb7b0547541fc7d8c2a84db11
+      size: 942
+    - path: 10-data-system/universe/sp500-pit/aq_pit/adapters
+      hash: md5
+      md5: 7fcb507af5238e074a1290b25c2057e1.dir
+      size: 3318
+      nfiles: 2
+    - path: 10-data-system/universe/sp500-pit/aq_pit/canonical.py
+      hash: md5
+      md5: f98fc9727458276752f4ad118b5c9616
+      size: 2949
+    - path: 10-data-system/universe/sp500-pit/aq_pit/domain
+      hash: md5
+      md5: d8f5c15005c576c2dd4250dee1f21fc6.dir
+      size: 20195
+      nfiles: 3
+    - path: 10-data-system/universe/sp500-pit/aq_pit/export
+      hash: md5
+      md5: b34999f78e946c46dc962ec42868cdfc.dir
+      size: 1145
+      nfiles: 2
+    - path: 10-data-system/universe/sp500-pit/aq_pit/facts/accepted.py
+      hash: md5
+      md5: 2ab134b211c5fc0d9cbaab32b7181515
+      size: 4645
+    - path: 10-data-system/universe/sp500-pit/aq_pit/facts/accepted_reconciliation_facts.json
+      hash: md5
+      md5: 3112304f448f335b5c8e7d83a69d9cd4
+      size: 9561
+    - path: 10-data-system/universe/sp500-pit/aq_pit/gates
+      hash: md5
+      md5: d30d1f5f2a6169cb064214a7ce1587db.dir
+      size: 6604
+      nfiles: 3
+    - path: 10-data-system/universe/sp500-pit/aq_pit/schema/pandera
+      hash: md5
+      md5: 1519dbdb4b8f4e91bafa0b51a17246be.dir
+      size: 10836
+      nfiles: 3
+    - path: 10-data-system/universe/sp500-pit/aq_pit/thin_runtime.py
+      hash: md5
+      md5: 0c3e17df4cfc5afcbf8fae73fb0fa5a1
+      size: 1511
+    - path: D:/AQ_DATA/P1/pit/raw/fja_sp500/repo/S&P 500 Historical Components &
+        Changes (Updated).csv
+      hash: md5
+      md5: dc794c50ac9add8a87bf0652d2cc5e78
+      size: 5533628
+    outs:
+    - path: 10-data-system/dataset-snapshot/pit-universe/data
+      hash: md5
+      md5: 177a98ec2e94e460e4dff3166b991fac.dir
+      size: 135129
+      nfiles: 2

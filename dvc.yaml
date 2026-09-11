@@ -1,0 +1,23 @@
+stages:
+  pit_universe_snapshot:
+    cmd: >-
+      uv run --no-project --python 3.12
+      --with-requirements 10-data-system/universe/sp500-pit/aq_pit/schema/pandera/requirements.txt
+      python -B 10-data-system/dataset-snapshot/pit-universe/export_snapshot.py
+      --data-root D:/AQ_DATA/P1/pit
+      --output 10-data-system/dataset-snapshot/pit-universe/data
+    deps:
+      - 10-data-system/dataset-snapshot/pit-universe/aq_dataset_snapshot
+      - 10-data-system/dataset-snapshot/pit-universe/export_snapshot.py
+      - 10-data-system/universe/sp500-pit/aq_pit/adapters
+      - 10-data-system/universe/sp500-pit/aq_pit/canonical.py
+      - 10-data-system/universe/sp500-pit/aq_pit/domain
+      - 10-data-system/universe/sp500-pit/aq_pit/export
+      - 10-data-system/universe/sp500-pit/aq_pit/facts/accepted.py
+      - 10-data-system/universe/sp500-pit/aq_pit/facts/accepted_reconciliation_facts.json
+      - 10-data-system/universe/sp500-pit/aq_pit/gates
+      - 10-data-system/universe/sp500-pit/aq_pit/schema/pandera
+      - 10-data-system/universe/sp500-pit/aq_pit/thin_runtime.py
+      - D:/AQ_DATA/P1/pit/raw/fja_sp500/repo/S&P 500 Historical Components & Changes (Updated).csv
+    outs:
+      - 10-data-system/dataset-snapshot/pit-universe/data

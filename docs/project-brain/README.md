@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P1 — PIT Reconciliation Implementation**
+> Current Next: **P1 — Upstream Substitution Final Independent Review**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -99,6 +99,11 @@ AUTONOMOUS_QUANT
 ├── 10-data-system
 │   ├── asset-master
 │   ├── universe
+│   │   └── sp500-pit
+│   │       └── schema
+│   │           └── pandera
+│   ├── trading-calendar
+│   │   └── xnys
 │   ├── market-data
 │   ├── corporate-actions
 │   ├── fundamentals
@@ -168,6 +173,10 @@ AUTONOMOUS_QUANT
 5. A leaf can be replaced without forcing unrelated siblings to change.
 6. Research code and production trading code must remain separated.
 7. Production may consume only **certified artifacts**, never raw experimental output.
+
+`10-data-system/trading-calendar/xnys` owns XNYS session semantics through
+pinned `exchange_calendars`. It does not own membership, identity, market data,
+or certification.
 
 ---
 
@@ -719,11 +728,20 @@ P1_OPEN_SOURCE_PIT_BLUEPRINT_DESIGN = COMPLETE
 P1_PIT_RUNTIME_FOUNDATION = COMPLETE
 P1_PIT_SOURCE_INGESTION = COMPLETE
 P1_PIT_RECONCILIATION_RUNTIME_GAP_CLOSURE = COMPLETE
+P1_PIT_THIN_RUNTIME = COMPLETE
+PIT_ACTIVE_RESPONSIBILITY = THIN_RESEARCH_DOMAIN_ADAPTER
+PIT_UNIVERSE_RESEARCH_READY = YES
 PIT_UNIVERSE_CERTIFIED = NO
-CURRENT_NEXT = P1_PIT_RECONCILIATION_IMPLEMENTATION
+P1_DVC_DATASET_SNAPSHOT = COMPLETE
+P1_QLIB_DATASET_HANDOFF = COMPLETE
+UPSTREAM_SUBSTITUTION_STACK = COMPLETE_PENDING_REVIEW
+DATASET_SNAPSHOT_READY = YES
+QLIB_HANDOFF_READY = YES
+REAL_MARKET_DATA_READY = NO
+CURRENT_NEXT = P1_UPSTREAM_SUBSTITUTION_FINAL_INDEPENDENT_REVIEW
 P1 = STARTED
 P1_MINIMAL_QUANT = IN_PROGRESS
-P2_CERTIFICATION = PLANNED / NOT STARTED
+P2_CERTIFICATION = PLANNED / NOT STARTED (OWNS STRICT INSTITUTIONAL CERTIFICATION)
 P3_AUTONOMOUS_RESEARCH = PLANNED / NOT STARTED
 NEWS_INTELLIGENCE = PLANNED / NOT STARTED
 MULTI_ASSET = PLANNED / NOT STARTED

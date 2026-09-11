@@ -1,7 +1,7 @@
 import unittest
 
-from aq_pit.compiler import compile_universe
-from aq_pit.contracts import (
+from reference_oracle.compiler import compile_universe
+from reference_oracle.contracts import (
     CompilePolicyV1,
     CorporateActionEventV1,
     FindingType,
@@ -16,8 +16,8 @@ from aq_pit.contracts import (
     TickerEpisodeOverlayV1,
     TickerIdentityEventV1,
 )
-from aq_pit.overlays import detect_future_ticker_backfill
-from aq_pit.validation import AmbiguousTickerEpisodeError, lookup_episode, validate_publishable
+from reference_oracle.overlays import detect_future_ticker_backfill
+from reference_oracle.validation import AmbiguousTickerEpisodeError, lookup_episode, validate_publishable
 
 
 H = "b" * 64

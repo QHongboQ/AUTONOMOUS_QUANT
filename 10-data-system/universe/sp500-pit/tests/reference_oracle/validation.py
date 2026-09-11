@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Iterable
 
-from .canonical import deterministic_id
+from aq_pit.canonical import deterministic_id
 from .contracts import (
     FindingSeverity,
     FindingType,

@@ -1,4 +1,4 @@
-"""Pinned-source adapters for the S&P 500 PIT runtime."""
+"""Pinned-source adapters retained only for the test reference oracle."""
 
 from .fja_sp500 import (
     FJA_ADAPTER_VERSION,

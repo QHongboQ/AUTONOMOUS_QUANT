@@ -8,7 +8,7 @@ from enum import Enum
 import re
 from typing import Iterable
 
-from .canonical import deterministic_id, sha256_hex
+from aq_pit.canonical import deterministic_id, sha256_hex
 
 
 __all__ = [

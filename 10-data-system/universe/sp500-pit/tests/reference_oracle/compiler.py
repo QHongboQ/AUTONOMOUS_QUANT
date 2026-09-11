@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
-from .canonical import sha256_hex
+from aq_pit.canonical import sha256_hex
 from .contracts import (
     AmbiguityState,
     CompilationResultV1,
@@ -30,6 +30,7 @@ from .contracts import (
     normalize_ticker,
 )
 from .overlays import apply_ticker_overlays, detect_episode_scoped_ticker_findings
+from aq_pit.schema.pandera import validate_instrument_episode_table
 from .sources.fja_sp500 import (
     RECONCILED_DERIVATION_VERSION,
     build_reconciled_membership_event_manifest,
@@ -494,6 +495,12 @@ def compile_universe(
     episodes.sort(key=lambda item: (item.valid_from, item.normalized_ticker, item.valid_to, item.episode_id))
     findings.extend(validate_episodes(episodes))
     findings.sort(key=lambda item: item.finding_id)
+    if not any(
+        finding.finding_type
+        in {FindingType.DUPLICATE_EPISODE, FindingType.OVERLAPPING_TICKER_EPISODES}
+        for finding in findings
+    ):
+        validate_instrument_episode_table(episodes)
     payload = {
         "schema_version": "CompilationResultV1",
         "policy": policy,

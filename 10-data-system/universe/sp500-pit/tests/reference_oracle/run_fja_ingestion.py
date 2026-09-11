@@ -12,8 +12,8 @@ from pathlib import Path
 import re
 
 from aq_pit.canonical import canonical_bytes, deterministic_id, sha256_hex
-from aq_pit.compiler import compile_universe
-from aq_pit.contracts import (
+from .compiler import compile_universe
+from .contracts import (
     AmbiguityState,
     CompilePolicyV1,
     FindingType,
@@ -23,8 +23,9 @@ from aq_pit.contracts import (
     SourceRole,
     TickerIdentityEventV1,
 )
-from aq_pit.overlays import detect_future_ticker_backfill
-from aq_pit.sources.fja_sp500 import (
+from .overlays import detect_future_ticker_backfill
+from aq_pit.schema.pandera import validate_identity_event_table
+from .sources.fja_sp500 import (
     build_fja_manifest,
     build_membership_event_manifest,
     derive_membership_events,
@@ -288,7 +289,9 @@ def _candidate_events(
             identity_anchor=None,
             ambiguity_state=AmbiguityState.CLEAR,
         ))
-    return tuple(result)
+    events = tuple(result)
+    validate_identity_event_table(events)
+    return events
 
 
 def _issue(kind: str, tickers: tuple[str, ...], first: str, last: str, source_ids: tuple[str, ...], leads: tuple[str, ...], *, blocking: bool = True) -> dict:
