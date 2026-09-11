@@ -24,6 +24,7 @@ from aq_pit.contracts import (
     TickerIdentityEventV1,
 )
 from aq_pit.overlays import detect_future_ticker_backfill
+from aq_pit.schema.pandera import validate_identity_event_table
 from aq_pit.sources.fja_sp500 import (
     build_fja_manifest,
     build_membership_event_manifest,
@@ -288,7 +289,9 @@ def _candidate_events(
             identity_anchor=None,
             ambiguity_state=AmbiguityState.CLEAR,
         ))
-    return tuple(result)
+    events = tuple(result)
+    validate_identity_event_table(events)
+    return events
 
 
 def _issue(kind: str, tickers: tuple[str, ...], first: str, last: str, source_ids: tuple[str, ...], leads: tuple[str, ...], *, blocking: bool = True) -> dict:

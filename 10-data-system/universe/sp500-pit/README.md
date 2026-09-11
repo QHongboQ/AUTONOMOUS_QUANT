@@ -18,6 +18,9 @@ lineage, price history, price stitching, source downloading, or a published
   evidence-driven observation reconciliation, including duplicate successors.
 - `sources/fja_sp500.py` — preserves the historical raw exact-difference path
   and exposes a distinct identity-aware resolved-observation derivation path.
+- `schema/pandera` — generic table-boundary shape, type, null, format,
+  uniqueness, structural enum, and simple interval validation, pinned to
+  `pandera==0.33.1` through its leaf-local dependency declaration.
 - `compiler.py` — pure membership/rename state transitions over half-open
   intervals. Corporate actions are retained as context but cannot mutate
   membership.
@@ -26,7 +29,12 @@ lineage, price history, price stitching, source downloading, or a published
 
 The compiler requires exactly one pinned `HISTORICAL_SEED` observation at the
 policy start session. Normalized events must already contain a resolved trading
-session; calendar conversion belongs to the future source-adapter layer.
+session; calendar conversion belongs to the sibling `trading-calendar/xnys`
+leaf and is not owned by Pandera.
+
+Pandera owns no membership or identity truth, reconciliation fact, calendar
+semantics, market data, or certification decision. Domain objects remain plain
+immutable AQ contracts; pandas and Pandera objects do not cross the leaf.
 
 ## Safety invariants
 

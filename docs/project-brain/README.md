@@ -99,6 +99,9 @@ AUTONOMOUS_QUANT
 ├── 10-data-system
 │   ├── asset-master
 │   ├── universe
+│   │   └── sp500-pit
+│   │       └── schema
+│   │           └── pandera
 │   ├── trading-calendar
 │   │   └── xnys
 │   ├── market-data

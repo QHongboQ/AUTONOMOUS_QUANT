@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import csv
 from datetime import date
 import hashlib
 import io
+
+import pandas as pd
 
 from ..canonical import canonical_bytes, deterministic_id, sha256_hex
 from ..contracts import (
@@ -21,6 +22,11 @@ from ..contracts import (
     normalize_ticker,
 )
 from ..overlays import ResolvedObservation, apply_ticker_overlays
+from ..schema.pandera import (
+    validate_membership_event_table,
+    validate_snapshot_observation_table,
+    validate_fja_source_table,
+)
 
 
 FJA_ADAPTER_VERSION = "fja-sp500-snapshot-adapter-v1"
@@ -38,27 +44,25 @@ def _read_rows(raw_bytes: bytes) -> tuple[tuple[str, tuple[str, ...]], ...]:
         text = raw_bytes.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise ValueError("FJA source must be UTF-8 CSV") from exc
-    reader = csv.DictReader(io.StringIO(text, newline=""))
-    if reader.fieldnames != ["date", "tickers"]:
-        raise ValueError("FJA source must have exactly the date,tickers header")
+    try:
+        frame = pd.read_csv(
+            io.StringIO(text, newline=""),
+            dtype="string",
+            keep_default_na=False,
+        )
+    except (pd.errors.ParserError, UnicodeError, ValueError) as exc:
+        raise ValueError("FJA source must be a two-column CSV table") from exc
+    if "date" in frame:
+        frame["date"] = frame["date"].str.strip()
+    validate_fja_source_table(frame.to_dict(orient="records"))
     rows: list[tuple[str, tuple[str, ...]]] = []
-    prior_date: str | None = None
-    for line_number, row in enumerate(reader, start=2):
-        session = (row.get("date") or "").strip()
-        try:
-            date.fromisoformat(session)
-        except ValueError as exc:
-            raise ValueError(f"invalid FJA date on line {line_number}") from exc
-        if prior_date is not None and session <= prior_date:
-            raise ValueError("FJA snapshot dates must be unique and strictly increasing")
-        raw_tickers = (row.get("tickers") or "").split(",")
+    for line_number, row in enumerate(frame.itertuples(index=False), start=2):
+        session = row.date
+        raw_tickers = row.tickers.split(",")
         tickers = tuple(sorted(normalize_ticker(item) for item in raw_tickers if item.strip()))
         if not tickers or len(tickers) != len(set(tickers)):
             raise ValueError(f"invalid FJA roster on line {line_number}")
         rows.append((session, tickers))
-        prior_date = session
-    if not rows:
-        raise ValueError("FJA source contains no snapshots")
     return tuple(rows)
 
 
@@ -163,7 +167,9 @@ def parse_fja_snapshots(
         ))
     if not observations:
         raise ValueError("no FJA snapshots in requested range")
-    return tuple(observations)
+    result = tuple(observations)
+    validate_snapshot_observation_table(result)
+    return result
 
 
 def build_membership_event_manifest(
@@ -207,8 +213,7 @@ def derive_membership_events(
     if event_manifest.source_role is not SourceRole.PRECISE_MEMBERSHIP_EVENTS:
         raise ValueError("derived events require a PRECISE_MEMBERSHIP_EVENTS manifest")
     ordered = tuple(sorted(observations, key=lambda item: (item.effective_session, item.observation_id)))
-    if len({item.effective_session for item in ordered}) != len(ordered):
-        raise ValueError("one observation per effective session is required")
+    validate_snapshot_observation_table(ordered)
     events: list[IndexMembershipEventV1] = []
     for prior, current in zip(ordered, ordered[1:]):
         if prior.index_id != current.index_id:
@@ -246,7 +251,9 @@ def derive_membership_events(
                 evidence_hash=transition_hash,
                 reason="exact consecutive FJA snapshot set difference",
             ))
-    return tuple(events)
+    result = tuple(events)
+    validate_membership_event_table(result)
+    return result
 
 
 def build_reconciled_membership_event_manifest(
@@ -351,8 +358,7 @@ def derive_reconciled_membership_events(
         observations,
         key=lambda item: (item.effective_session, item.observation_id),
     ))
-    if len({item.effective_session for item in raw_ordered}) != len(raw_ordered):
-        raise ValueError("one observation per effective session is required")
+    validate_snapshot_observation_table(raw_ordered)
     resolved_by_id = {item.observation_id: item for item in resolved_observations}
     if len(resolved_by_id) != len(resolved_observations) or set(resolved_by_id) != {
         item.observation_id for item in raw_ordered
@@ -454,4 +460,6 @@ def derive_reconciled_membership_events(
                 evidence_hash=transition_hash,
                 reason=f"{RECONCILED_DERIVATION_VERSION} from immutable source observations",
             ))
-    return tuple(events)
+    result = tuple(events)
+    validate_membership_event_table(result)
+    return result
