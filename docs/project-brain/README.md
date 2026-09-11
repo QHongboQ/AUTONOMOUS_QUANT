@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P1 — Upstream Substitution Final Independent Review**
+> Current Next: **P1 — Qlib-Native Minimal Quant Baseline**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -86,6 +86,21 @@ No production system should depend on winning a latency race against professiona
 ---
 
 ## 4. Tree Architecture
+
+Normative interpretation:
+
+```text
+TREE != SELF-WRITTEN IMPLEMENTATION MAP
+TREE = RESPONSIBILITY AND MAINTENANCE MAP
+```
+
+The logical tree records capability ownership, responsibility, navigation,
+replacement boundaries, maintenance, and audit locations. A node may be
+satisfied by an entire upstream project, a focused upstream library, or
+AQ-owned domain/policy code. Physical upstream projects do not need to be
+copied, split, vendored, or reimplemented to mirror this tree. The complete
+ownership modes, capability map, and mandatory task preamble are authoritative
+in [Upstream Ownership Model](upstream-ownership-model.md).
 
 ```text
 AUTONOMOUS_QUANT
@@ -173,6 +188,9 @@ AUTONOMOUS_QUANT
 5. A leaf can be replaced without forcing unrelated siblings to change.
 6. Research code and production trading code must remain separated.
 7. Production may consume only **certified artifacts**, never raw experimental output.
+8. **No AQ engine without upstream rejection evidence.** Every implementation
+   task must identify the upstream owner and ownership mode before code is
+   authorized.
 
 `10-data-system/trading-calendar/xnys` owns XNYS session semantics through
 pinned `exchange_calendars`. It does not own membership, identity, market data,
@@ -223,54 +241,47 @@ Production does not run open-ended research.
 
 ---
 
-## 6. Upstream-First Candidate Stack
+## 6. Upstream Ownership Map
 
-### Core research candidate — Microsoft Qlib
-- quantitative ML research
-- datasets / factors
-- model training
-- backtesting
-- online model rolling
-- portfolio / strategy components
-- experiment recording
+Implementation uses exactly three ownership modes:
 
-### Autonomous R&D candidate — Microsoft RD-Agent(Q)
-- automated factor proposal
-- automated factor implementation
-- automated model proposal / optimization
-- factor-model co-optimization
-- iterative research loops
+- `UPSTREAM_WHOLE`: a complete upstream project owns the capability; AQ is
+  limited to configuration, adapter, contract, health/upgrade evidence,
+  orchestration, and policy boundaries.
+- `UPSTREAM_LEAF`: a focused upstream library owns one bounded leaf; AQ may
+  add only a necessary thin wrapper/configuration.
+- `AQ_OWNED`: project-specific policy, facts, contracts, and routing that
+  cannot reasonably be delegated upstream. This does not automatically
+  authorize a generic engine.
 
-### Full-stack challenger — FinRL-X / FinRL-Trading
-- data
-- ML stock selection
-- portfolio allocation
-- timing
-- risk overlay
-- backtest
-- paper/live execution
+Current ownership is:
 
-It must be tested against the modular Qlib + RD-Agent route before adoption.
+- **Qlib — `UPSTREAM_WHOLE`:** DatasetH, handlers, Alpha158/Alpha360, model
+  training, workflow, predictions, ranking, Top-K, research backtesting,
+  transaction costs, portfolio analysis, and rolling/online research.
+- **RD-Agent(Q) — `UPSTREAM_WHOLE`:** automated factor/model proposal and
+  implementation plus iterative research-loop automation; AQ owns its policy,
+  budget, and permission boundaries.
+- **Qlib + skfolio — `UPSTREAM_WHOLE` / `UPSTREAM_LEAF`:** generic portfolio,
+  optimization, WalkForward, CombinatorialPurgedCV, MeanRisk, and compatible
+  statistical tooling; AQ owns portfolio policy and risk limits.
+- **QuantConnect LEAN — `UPSTREAM_WHOLE` if adopted:** preferred execution
+  candidate, not yet production authority. A later execution audit must close
+  runtime prerequisites before adoption.
+- **OpenBB — `UPSTREAM_WHOLE`, provider-gateway role:** provider access for
+  market data, fundamentals, macro, and news where it is the cleanest owner;
+  it is not mandatory when another selected upstream owns the path directly.
+- **exchange_calendars, Pandera, DVC — `UPSTREAM_LEAF`:** exchange sessions,
+  schema validation, and reproducibility/pipeline tracking respectively. AQ
+  must not duplicate their generic engines.
+- **AQ PIT universe — `AQ_OWNED` thin domain:** accepted S&P 500 PIT facts and
+  membership/identity policy only, not a general security master.
+- **FinRL-X — challenger/fallback only:** `UPSTREAM_WHOLE` if a future audit
+  selects it; AQ must not mimic it.
 
-### Production execution candidate — QuantConnect LEAN
-- event-driven backtesting
-- portfolio state
-- order management
-- fills
-- fees
-- slippage
-- brokerage models
-- paper/live execution
-- multi-asset support
-
-Use only if upstream audit shows it adds enough value over simpler execution options.
-
-### Information / data gateway candidate — OpenBB
-- market data
-- fundamentals
-- macro
-- news / provider integrations
-- AI/agent-friendly interfaces
+The root hard rule and required future-task ownership preamble are defined in
+[Upstream Ownership Model](upstream-ownership-model.md). A task that skips
+that ownership check is architecturally invalid.
 
 ### Information intelligence candidates
 - TradingAgents
@@ -582,7 +593,8 @@ P0 upstream fit, interface audit, and four functional POCs are complete.
 
 P0 established the selected upstream topology and verified its bounded integration contracts. It did not authorize production trading.
 
-Current next is P1 Minimal Quant, which is not started.
+At P0 close, the recorded next phase was P1 Minimal Quant, which had not yet
+started. This sentence is historical; the current authority is Section 26.
 
 ### Historical P0 evaluation requirements
 
@@ -593,29 +605,30 @@ During P0, Qlib, RD-Agent(Q), FinRL-X, LEAN, OpenBB/information providers, and i
 ## 21. P1 — Minimal Quant
 
 ```text
-Point-in-Time US Universe
+Selected upstream market data
         ↓
-Daily Market Data
+Qlib native data layer
+        ↓
+Qlib DatasetH
         ↓
 Qlib Alpha158
         ↓
-Model Tournament
-  Linear / Ridge
-  LightGBM
-  XGBoost
-  CatBoost
-  DoubleEnsemble
+Qlib model
         ↓
-Cross-Sectional Ranking
+Qlib prediction / ranking
         ↓
-Top-K Portfolio
+Qlib Top-K
         ↓
-Equal Weight / Inverse Vol
+Qlib backtest
         ↓
-Backtest
-        ↓
-Benchmark Suite
+Qlib portfolio analysis
 ```
+
+P1 primarily **composes Qlib upstream capabilities**; it does not implement AQ
+equivalents of these engines. AQ responsibility is limited to configuration,
+policy metadata, minimal experiment/run routing when required, result
+classification, and project-specific boundaries. Later model comparison may
+configure multiple Qlib-supported models without creating an AQ model engine.
 
 P1 does **not** include RD-Agent autonomous promotion, news, TradingAgents, crypto, live money, high-frequency data or tick recording.
 
@@ -734,11 +747,11 @@ PIT_UNIVERSE_RESEARCH_READY = YES
 PIT_UNIVERSE_CERTIFIED = NO
 P1_DVC_DATASET_SNAPSHOT = COMPLETE
 P1_QLIB_DATASET_HANDOFF = COMPLETE
-UPSTREAM_SUBSTITUTION_STACK = COMPLETE_PENDING_REVIEW
+P1_UPSTREAM_SUBSTITUTION_STACK = COMPLETE
 DATASET_SNAPSHOT_READY = YES
 QLIB_HANDOFF_READY = YES
 REAL_MARKET_DATA_READY = NO
-CURRENT_NEXT = P1_UPSTREAM_SUBSTITUTION_FINAL_INDEPENDENT_REVIEW
+CURRENT_NEXT = P1_QLIB_NATIVE_MINIMAL_QUANT_BASELINE
 P1 = STARTED
 P1_MINIMAL_QUANT = IN_PROGRESS
 P2_CERTIFICATION = PLANNED / NOT STARTED (OWNS STRICT INSTITUTIONAL CERTIFICATION)
