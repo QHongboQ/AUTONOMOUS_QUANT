@@ -1,0 +1,8 @@
+{
+  "schema_version": "PITFixtureSHA256ManifestV1",
+  "hash_normalization": "CRLF_TO_LF",
+  "files": {
+    "active_runtime_summary_v1.json": "12d0009a67c204a041bc7c8d00f691fd2edbf8bc845cbb6cb9e483b5f138406f",
+    "frozen_regressions_v1.json": "25d3ae8f5edb847433d4d7bf384132ab30eb38034615d13245f9940992ff4170"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "schema_version": "PITFrozenRegressionFixturesV1",
+  "cases": [
+    {
+      "id": "R01",
+      "description": "invalid membership-style effective session remains fail-closed",
+      "invalid_observation": {"session": "MMM", "tickers": ["MMM"]},
+      "expected_error": "effective_session must be an ISO date"
+    },
+    {
+      "id": "R02",
+      "description": "FB to META rename creates adjacent distinct episodes",
+      "runs": [{"end_session": "2023-01-03", "observations": [{"session": "2022-01-03", "tickers": ["FB"]}], "identities": [{"old_ticker": "FB", "new_ticker": "META", "effective_session": "2022-06-09"}], "expected": {"episodes": [["FB", "2022-01-03", "2022-06-09"], ["META", "2022-06-09", "2023-01-03"]], "overlay_count": 0, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R03",
+      "description": "early DAY observation maps to CDAY before the accepted boundary",
+      "runs": [{"end_session": "2024-06-03", "observations": [{"session": "2024-01-02", "tickers": ["DAY"]}], "identities": [{"old_ticker": "CDAY", "new_ticker": "DAY", "effective_session": "2024-02-01"}], "overlays": [{"case_id": "R03-backfill", "old_ticker": "CDAY", "new_ticker": "DAY", "effective_session": "2024-02-01", "start_session": null}], "expected": {"episodes": [["CDAY", "2024-01-02", "2024-02-01"], ["DAY", "2024-02-01", "2024-06-03"]], "overlay_count": 1, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R04",
+      "description": "RE to EG rename boundary remains 2023-07-10",
+      "runs": [{"end_session": "2024-01-03", "observations": [{"session": "2023-01-03", "tickers": ["RE"]}], "identities": [{"old_ticker": "RE", "new_ticker": "EG", "effective_session": "2023-07-10"}], "expected": {"episodes": [["RE", "2023-01-03", "2023-07-10"], ["EG", "2023-07-10", "2024-01-03"]], "overlay_count": 0, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R05",
+      "description": "WTW episode opens on effective session, not announcement date",
+      "runs": [{"end_session": "2022-03-01", "observations": [{"session": "2021-12-01", "tickers": ["WLTW"]}], "identities": [{"old_ticker": "WLTW", "new_ticker": "WTW", "announcement_date": "2022-01-05", "effective_session": "2022-01-10"}], "expected": {"episodes": [["WLTW", "2021-12-01", "2022-01-10"], ["WTW", "2022-01-10", "2022-03-01"]], "overlay_count": 0, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R06",
+      "description": "KORS to CPRI rename creates adjacent episodes",
+      "runs": [{"end_session": "2020-01-02", "observations": [{"session": "2018-01-02", "tickers": ["KORS"]}], "identities": [{"old_ticker": "KORS", "new_ticker": "CPRI", "effective_session": "2019-01-02"}], "expected": {"episodes": [["KORS", "2018-01-02", "2019-01-02"], ["CPRI", "2019-01-02", "2020-01-02"]], "overlay_count": 0, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R07",
+      "description": "historical Q and re-entered Q remain separate before Q to IQV rename",
+      "runs": [{"end_session": "2019-01-02", "observations": [{"session": "2000-01-03", "tickers": ["BASE", "Q"]}, {"session": "2001-01-02", "tickers": ["BASE"]}, {"session": "2016-01-04", "tickers": ["BASE", "Q"]}], "identities": [{"old_ticker": "Q", "new_ticker": "IQV", "effective_session": "2017-11-15"}], "expected": {"episodes": [["BASE", "2000-01-03", "2019-01-02"], ["Q", "2000-01-03", "2001-01-02"], ["Q", "2016-01-04", "2017-11-15"], ["IQV", "2017-11-15", "2019-01-02"]], "overlay_count": 0, "membership_event_count": 2, "ambiguous_undated": ["Q"]}}]
+    },
+    {
+      "id": "R08",
+      "description": "old and re-entered DLPH membership are distinct episodes",
+      "runs": [{"end_session": "2013-01-02", "observations": [{"session": "2008-01-02", "tickers": ["BASE", "DLPH"]}, {"session": "2009-01-02", "tickers": ["BASE"]}, {"session": "2011-01-03", "tickers": ["BASE", "DLPH"]}], "expected": {"episodes": [["BASE", "2008-01-02", "2013-01-02"], ["DLPH", "2008-01-02", "2009-01-02"], ["DLPH", "2011-01-03", "2013-01-02"]], "overlay_count": 0, "membership_event_count": 2, "ambiguous_undated": ["DLPH"]}}]
+    },
+    {
+      "id": "R09",
+      "description": "corporate-successor context cannot manufacture membership",
+      "context_only_successor": "WBD",
+      "runs": [
+        {"name": "context-only", "end_session": "2023-01-03", "observations": [{"session": "2021-01-04", "tickers": ["DISCK"]}], "expected": {"episodes": [["DISCK", "2021-01-04", "2023-01-03"]], "overlay_count": 0, "membership_event_count": 0, "excluded_tickers": ["WBD"]}},
+        {"name": "explicit-membership", "end_session": "2023-01-03", "observations": [{"session": "2021-01-04", "tickers": ["DISCK"]}, {"session": "2022-04-11", "tickers": ["DISCK", "WBD"]}], "expected": {"episodes": [["DISCK", "2021-01-04", "2023-01-03"], ["WBD", "2022-04-11", "2023-01-03"]], "overlay_count": 0, "membership_event_count": 1}}
+      ]
+    },
+    {
+      "id": "R10",
+      "description": "early APTV is mapped to DLPH until 2017-12-05",
+      "runs": [{"end_session": "2018-06-01", "observations": [{"session": "2017-01-03", "tickers": ["APTV"]}], "identities": [{"old_ticker": "DLPH", "new_ticker": "APTV", "effective_session": "2017-12-05"}], "overlays": [{"case_id": "R10-backfill", "old_ticker": "DLPH", "new_ticker": "APTV", "effective_session": "2017-12-05", "start_session": null}], "expected": {"episodes": [["DLPH", "2017-01-03", "2017-12-05"], ["APTV", "2017-12-05", "2018-06-01"]], "overlay_count": 1, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R11",
+      "description": "early CPRI is mapped to KORS until 2019-01-02",
+      "runs": [{"end_session": "2020-01-02", "observations": [{"session": "2018-01-02", "tickers": ["CPRI"]}], "identities": [{"old_ticker": "KORS", "new_ticker": "CPRI", "effective_session": "2019-01-02"}], "overlays": [{"case_id": "R11-backfill", "old_ticker": "KORS", "new_ticker": "CPRI", "effective_session": "2019-01-02", "start_session": null}], "expected": {"episodes": [["KORS", "2018-01-02", "2019-01-02"], ["CPRI", "2019-01-02", "2020-01-02"]], "overlay_count": 1, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R12",
+      "description": "early IQV is mapped to Q until 2017-11-15",
+      "runs": [{"end_session": "2018-06-01", "observations": [{"session": "2017-01-03", "tickers": ["IQV"]}], "identities": [{"old_ticker": "Q", "new_ticker": "IQV", "effective_session": "2017-11-15"}], "overlays": [{"case_id": "R12-backfill", "old_ticker": "Q", "new_ticker": "IQV", "effective_session": "2017-11-15", "start_session": null}], "expected": {"episodes": [["Q", "2017-01-03", "2017-11-15"], ["IQV", "2017-11-15", "2018-06-01"]], "overlay_count": 1, "membership_event_count": 0}}]
+    },
+    {
+      "id": "R13",
+      "description": "generic exit and re-entry creates separate episodes and undated lookup fails closed",
+      "runs": [{"end_session": "2023-01-03", "observations": [{"session": "2020-01-02", "tickers": ["BASE", "XYZ"]}, {"session": "2020-06-01", "tickers": ["BASE"]}, {"session": "2022-01-03", "tickers": ["BASE", "XYZ"]}], "expected": {"episodes": [["BASE", "2020-01-02", "2023-01-03"], ["XYZ", "2020-01-02", "2020-06-01"], ["XYZ", "2022-01-03", "2023-01-03"]], "overlay_count": 0, "membership_event_count": 2, "ambiguous_undated": ["XYZ"], "dated_lookups": [{"ticker": "XYZ", "session": "2020-03-02", "episode": ["XYZ", "2020-01-02", "2020-06-01"]}, {"ticker": "XYZ", "session": "2022-03-01", "episode": ["XYZ", "2022-01-03", "2023-01-03"]}]}}]
+    }
+  ]
+}

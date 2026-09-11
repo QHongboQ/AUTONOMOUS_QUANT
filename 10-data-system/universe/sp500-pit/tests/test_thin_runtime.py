@@ -13,9 +13,11 @@ from aq_pit.facts import accepted as accepted_module
 from aq_pit.facts import load_accepted_facts
 from aq_pit.gates.research_ready import assess_research_ready
 from aq_pit.thin_runtime import build_research_ready_universe
+from fixture_loader import load_fixture
 
 
 DATA_ROOT = os.environ.get("AQ_PIT_DATA_ROOT")
+SUMMARY = load_fixture("active_runtime_summary_v1.json")
 
 
 @unittest.skipUnless(DATA_ROOT, "set AQ_PIT_DATA_ROOT for frozen real-data compatibility")
@@ -32,14 +34,23 @@ class ThinRuntimeRealDataIntegrationTests(unittest.TestCase):
             if item.normalized_ticker == ticker
         ]
 
-    def test_reference_oracle_counts(self) -> None:
+    def test_static_fixture_counts(self) -> None:
         metrics = dict(self.universe.gate.metrics)
-        self.assertEqual(metrics["canonical_facts"], 37)
-        self.assertEqual(metrics["identity_events"], 20)
-        self.assertEqual(metrics["overlay_cases"], 9)
-        self.assertEqual(metrics["overlay_rows"], 3236)
-        self.assertEqual(metrics["reconciled_membership_events"], 630)
-        self.assertEqual(metrics["instrument_episodes"], 832)
+        expected = SUMMARY["counts"]
+        for name in (
+            "canonical_facts",
+            "identity_events",
+            "overlay_cases",
+            "overlay_rows",
+            "reconciled_membership_events",
+            "instrument_episodes",
+        ):
+            self.assertEqual(metrics[name], expected[name])
+        terminal = sum(
+            item.valid_to == "2025-01-01" for item in self.compilation.episodes
+        )
+        self.assertEqual(terminal, expected["terminal_membership"])
+        self.assertEqual(self.compilation.output_hash, SUMMARY["output_hash"])
 
     def test_gate_passes_without_runtime_domain_errors(self) -> None:
         self.assertTrue(self.universe.gate.research_ready)
@@ -103,9 +114,14 @@ class ThinRuntimeRealDataIntegrationTests(unittest.TestCase):
 class ThinRuntimeStructureTests(unittest.TestCase):
     def test_declarative_fact_set_is_complete(self) -> None:
         facts = load_accepted_facts()
-        self.assertEqual(len(facts.finding_resolutions), 37)
-        self.assertEqual(len(facts.identity_events), 20)
-        self.assertEqual(len(facts.overlay_cases), 9)
+        expected = SUMMARY["counts"]
+        self.assertEqual(len(facts.finding_resolutions), expected["canonical_facts"])
+        self.assertEqual(len(facts.identity_events), expected["identity_events"])
+        self.assertEqual(len(facts.overlay_cases), expected["overlay_cases"])
+        self.assertEqual(
+            accepted_module._FACTS_SHA256,
+            SUMMARY["accepted_facts_sha256"],
+        )
 
     def test_accepted_facts_content_hash_is_frozen(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
