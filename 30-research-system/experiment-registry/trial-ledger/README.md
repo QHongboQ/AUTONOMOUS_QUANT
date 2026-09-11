@@ -1,10 +1,20 @@
-# AQ Trial Ledger runtime foundation
+# Trial Ledger ownership and retirement
 
-Standard-library SQLite foundation. Run from this directory with:
+```text
+OWNER:
+Qlib / RD-Agent / DVC upstream responsibilities
 
-```powershell
-py -V:Astral/CPython3.12.14 -m unittest discover -s tests -v
-py -V:Astral/CPython3.12.14 -m compileall aq_trial_ledger tests
+AQ_RUNTIME:
+NONE
+
+STATUS:
+CUSTOM_RUNTIME_RETIRED
 ```
 
-All tests create temporary databases and backups only. No production database path is configured.
+The former custom SQLite Trial Ledger runtime is preserved in Git history and
+historical Project Brain evidence only. Those historical documents do not
+represent current implementation authority.
+
+AQ may later own only a minimal certification or promotion governance contract
+if P2 demonstrates that it is necessary. No generic AQ experiment registry or
+experiment database is authorized.

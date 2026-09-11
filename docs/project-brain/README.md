@@ -276,6 +276,11 @@ Current ownership is:
   must not duplicate their generic engines.
 - **AQ PIT universe — `AQ_OWNED` thin domain:** accepted S&P 500 PIT facts and
   membership/identity policy only, not a general security master.
+- **Trial Ledger custom runtime — retired:** Qlib, RD-Agent, and DVC own the
+  generic experiment workflow, research-loop metadata, artifact dependencies,
+  and reproducibility responsibilities. AQ has no generic experiment database.
+  Historical Trial Ledger documents remain evidence, not current implementation
+  authority.
 - **FinRL-X — challenger/fallback only:** `UPSTREAM_WHOLE` if a future audit
   selects it; AQ must not mimic it.
 
@@ -748,6 +753,9 @@ PIT_UNIVERSE_CERTIFIED = NO
 P1_DVC_DATASET_SNAPSHOT = COMPLETE
 P1_QLIB_DATASET_HANDOFF = COMPLETE
 P1_UPSTREAM_SUBSTITUTION_STACK = COMPLETE
+TRIAL_LEDGER_CUSTOM_RUNTIME = RETIRED
+TRIAL_LEDGER_GENERIC_EXPERIMENT_OWNERS = QLIB_RDAGENT_DVC
+AQ_EXPERIMENT_DATABASE = NONE
 DATASET_SNAPSHOT_READY = YES
 QLIB_HANDOFF_READY = YES
 REAL_MARKET_DATA_READY = NO
