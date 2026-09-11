@@ -99,6 +99,8 @@ AUTONOMOUS_QUANT
 ├── 10-data-system
 │   ├── asset-master
 │   ├── universe
+│   ├── trading-calendar
+│   │   └── xnys
 │   ├── market-data
 │   ├── corporate-actions
 │   ├── fundamentals
@@ -168,6 +170,10 @@ AUTONOMOUS_QUANT
 5. A leaf can be replaced without forcing unrelated siblings to change.
 6. Research code and production trading code must remain separated.
 7. Production may consume only **certified artifacts**, never raw experimental output.
+
+`10-data-system/trading-calendar/xnys` owns XNYS session semantics through
+pinned `exchange_calendars`. It does not own membership, identity, market data,
+or certification.
 
 ---
 
