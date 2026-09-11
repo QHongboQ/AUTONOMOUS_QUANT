@@ -1,31 +1,9 @@
-"""Public contracts for the bounded S&P 500 PIT universe foundation."""
+"""Public entry point for the single active P1 PIT research path.
 
-from .compiler import compile_universe
-from .contracts import *  # noqa: F403 - contracts are the intended public surface
-from .contracts import __all__ as _contract_exports
-from .overlays import (
-    apply_ticker_overlays,
-    detect_episode_scoped_ticker_findings,
-    detect_future_ticker_backfill,
-    resolve_observation,
-)
-from .validation import (
-    AmbiguousTickerEpisodeError,
-    PublicationBlockedError,
-    lookup_episode,
-    sources_are_independent,
-    validate_publishable,
-)
+The pre-shrink contracts/compiler modules remain importable only so the frozen
+behavioral oracle tests can run.  They are deliberately not re-exported here.
+"""
 
-__all__ = [*_contract_exports,
-    "compile_universe",
-    "apply_ticker_overlays",
-    "detect_future_ticker_backfill",
-    "detect_episode_scoped_ticker_findings",
-    "resolve_observation",
-    "lookup_episode",
-    "sources_are_independent",
-    "validate_publishable",
-    "AmbiguousTickerEpisodeError",
-    "PublicationBlockedError",
-]
+from .thin_runtime import ResearchReadyUniverse, build_research_ready_universe
+
+__all__ = ["ResearchReadyUniverse", "build_research_ready_universe"]
