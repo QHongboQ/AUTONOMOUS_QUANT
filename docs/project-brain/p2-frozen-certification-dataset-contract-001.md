@@ -423,9 +423,14 @@ PROVIDER_EXPANSION_GATE = CLOSED
 FROZEN_CERTIFICATION_DATASET_CONTRACT_V1 = FROZEN
 P2_CERTIFICATION_WINDOW_STATUS = NOT_YET_PREREGISTERED
 MARKET_DATA_DOWNLOADED = NO
-MARKET_DATA_IN_GIT = NO
-PROVIDER_RESPONSE_BODY_IN_GIT = NO
-CREDENTIAL_IN_GIT = NO
+CERTIFICATION_DATASET_ROWS_IN_GIT = NO
+PROVIDER_PAYLOADS_IN_GIT = NO
+PRIVATE_MARKET_DATA_IN_GIT = NO
+LICENSED_MARKET_DATA_IN_GIT = NO
+DVC_DATA_ARTIFACTS_IN_GIT = NO
+CREDENTIALS_IN_GIT = NO
+PRIVATE_EVIDENCE_IN_GIT = NO
+HISTORICAL_PUBLIC_CORROBORATION_VALUES_IN_DOCUMENTATION = ALLOWED_EVIDENCE_ONLY
 NEW_PROVIDER_ADDED = NO
 MODEL_TRAINING = NO
 BACKTEST = NO
@@ -443,3 +448,8 @@ CURRENT_NEXT = P2_FROZEN_CERTIFICATION_DATASET_BUILD_001
 
 The dataset build, partition preregistration, and every certification consumer
 remain unstarted.
+
+The precise Git-data reporting boundary, including the distinction between
+historical public corroboration evidence and certification dataset rows, is
+authoritative in
+[P2 Frozen Certification Dataset Git Scope Clarification 001](p2-frozen-certification-dataset-git-scope-clarification-001.md).

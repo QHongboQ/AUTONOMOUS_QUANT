@@ -725,6 +725,9 @@ If the autonomous system fails to add value over simple passive investing after 
 
 ## 26. Authority / Status
 
+The certification Git-data boundary is defined precisely in
+[P2 Frozen Certification Dataset Git Scope Clarification 001](p2-frozen-certification-dataset-git-scope-clarification-001.md). Historical public corroboration in documentation is evidence only, never a certification dataset row or provider substitute.
+
 ```text
 PROJECT_STATUS = PLANNING
 PRODUCTION_TRADING = NOT AUTHORIZED
@@ -874,6 +877,9 @@ MISSING_DATA_CONTRACT = FROZEN
 PRICE_ADJUSTMENT_CONTRACT = FROZEN
 REPRODUCIBILITY_CONTRACT = FROZEN
 VALIDATION_CONTRACT = FROZEN
+P2_CERTIFICATION_GIT_DATA_SCOPE = CLARIFIED
+CERTIFICATION_DATASET_ROWS_IN_GIT = NO
+HISTORICAL_PUBLIC_CORROBORATION_VALUES_IN_DOCUMENTATION = ALLOWED_EVIDENCE_ONLY
 SEALED_OOS_DATES_SELECTED = NO
 P2_CERTIFICATION_WINDOW_STATUS = NOT_YET_PREREGISTERED
 CURRENT_NEXT = P2_FROZEN_CERTIFICATION_DATASET_BUILD_001
