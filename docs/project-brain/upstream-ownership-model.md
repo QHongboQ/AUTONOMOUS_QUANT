@@ -185,6 +185,31 @@ provider integrations where suitable. It is not mandatory when another
 selected upstream owns the needed capability more cleanly; for example, a
 Qlib-native market-data path may directly serve a Qlib-native P1 baseline.
 
+### P2 certification-data composition
+
+The authoritative capability split is recorded in
+`p2-data-upstream-substitution-audit-001.md`:
+
+- Quantiacs remains a direct primary data candidate; OpenBB is the gateway for
+  compatible alternate providers, with yfinance owning Yahoo acquisition.
+- edgartools owns generic SEC retrieval and parsing; OpenFIGI is supporting
+  identifier evidence, not PIT episode authority.
+- DuckDB owns deterministic relational composition, joins, gap queries, and
+  duplicate/conflict query mechanics. AQ owns source-precedence policy.
+- Pandera, `exchange_calendars`, DVC, and Qlib retain validation, session,
+  reproducibility, and downstream research ownership respectively.
+- AQ retains only thin `InstrumentEpisodeV1` facts, provenance contracts,
+  certification/terminal policy, adapters, configuration, and orchestration.
+
+```text
+DATA_GENERIC_ENGINE_POLICY = UPSTREAM_FIRST_NO_CUSTOM_ENGINE_WITHOUT_REJECTION_EVIDENCE
+CUSTOM_ENGINE_REQUIRED = NO
+```
+
+AQ must not add generic downloader/provider, HTTP/retry/cache, SEC parser,
+security-master, merge/composition, artifact/version, or training-data engines
+unless a later audit first records explicit upstream rejection evidence.
+
 ### Trading calendar
 
 **Owner:** `exchange_calendars`
