@@ -1,0 +1,39 @@
+prediction_authority:
+  experiment: aq_p1_qlib_native_minimal_baseline_001
+  recorder_id: 16bd043b00914e54bca7458efc5af9e9
+  artifact: pred.pkl
+
+provider_uri: /home/zhou/AQ_DATA/P1/qlib-native-baseline-001/qlib_data
+region: us
+market: sp500
+benchmark: SPY
+
+backtest:
+  start_time: 2022-01-03
+  end_time: 2025-12-29
+  account: 100000000
+  exchange_kwargs:
+    limit_threshold: 0.095
+    deal_price: close
+    open_cost: 0.0005
+    close_cost: 0.0015
+    min_cost: 5
+
+strategy_class:
+  class: TopkDropoutStrategy
+  module_path: qlib.contrib.strategy
+
+candidates:
+  baseline:
+    topk: 50
+    n_drop: 5
+    execution: reuse_completed_recorder
+  concentrated:
+    topk: 30
+    n_drop: 3
+    execution: new_portana_recorder
+  diversified:
+    topk: 100
+    n_drop: 10
+    execution: new_portana_recorder
+
