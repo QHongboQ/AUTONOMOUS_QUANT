@@ -144,6 +144,49 @@ class DuckDBBindingTests(unittest.TestCase):
         self.assertEqual(result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
         self.assertEqual(self.connection.sql("SELECT count(*) FROM binding_duplicates WHERE case_id='ANTM_ELV'").fetchone()[0], 1)
 
+    def test_zero_session_episode_is_preserved_and_fails_closed(self):
+        episodes, candidates, observations, sessions = binding_frames()
+        sessions = sessions[sessions["case_id"] != "ANTM_ELV"]
+        result = evaluate_provider_bindings(
+            self.connection, episodes=episodes, candidates=candidates,
+            observations=observations, sessions=sessions,
+        ).set_index("case_id")
+        self.assertIn("ANTM_ELV", result.index)
+        self.assertEqual(result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        self.assertEqual(len(result), len(episodes))
+
+    def test_partial_session_input_fails_closed(self):
+        episodes, candidates, observations, sessions = binding_frames()
+        sessions = sessions[
+            (sessions["case_id"] != "ANTM_ELV")
+            | (sessions["session_date"] != DATES[-1])
+        ]
+        result = evaluate_provider_bindings(
+            self.connection, episodes=episodes, candidates=candidates,
+            observations=observations, sessions=sessions,
+        ).set_index("case_id")
+        self.assertEqual(result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
+
+    def test_out_of_episode_session_fails_closed(self):
+        episodes, candidates, observations, sessions = binding_frames()
+        target = sessions["case_id"] == "ANTM_ELV"
+        target_rows = sessions.index[target]
+        sessions.loc[target_rows[-1], "session_date"] = DATES[-1] + pd.Timedelta(days=10)
+        result = evaluate_provider_bindings(
+            self.connection, episodes=episodes, candidates=candidates,
+            observations=observations, sessions=sessions,
+        ).set_index("case_id")
+        self.assertEqual(result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
+
+    def test_decision_cardinality_matches_unique_episodes(self):
+        episodes, candidates, observations, sessions = binding_frames()
+        result = evaluate_provider_bindings(
+            self.connection, episodes=episodes, candidates=candidates,
+            observations=observations, sessions=sessions,
+        )
+        self.assertEqual(len(result), len(episodes))
+        self.assertEqual(result["case_id"].nunique(), len(episodes))
+
     def test_antm_elv_is_uniquely_authorized(self):
         self.assertEqual(self.result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AUTHORIZED")
 

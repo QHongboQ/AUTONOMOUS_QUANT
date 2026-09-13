@@ -31,6 +31,11 @@ PROVIDER_BINDING_NOT_AVAILABLE
 KNOWN_PROVIDER_GAP_CANDIDATE
 ```
 
+Every unique required episode produces exactly one decision. Missing, partial,
+duplicate, or out-of-episode required-session input fails closed as
+`PROVIDER_BINDING_AMBIGUOUS`; a missing session relation can never make an
+episode disappear from the decision output.
+
 Tests use synthetic relations only. Real provider payloads, credentials,
 private market data, and SEC document content remain outside Git.
 

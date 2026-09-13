@@ -59,6 +59,16 @@ SELECT case_id, count(*) AS actual_session_count
 FROM binding_sessions
 GROUP BY case_id;
 
+CREATE OR REPLACE TEMP VIEW binding_session_validity AS
+SELECT
+    e.case_id,
+    count(s.session_date) FILTER (
+        WHERE s.session_date < e.valid_from OR s.session_date >= e.valid_to
+    ) AS out_of_episode_session_count
+FROM binding_episodes e
+LEFT JOIN binding_sessions s USING (case_id)
+GROUP BY e.case_id;
+
 CREATE OR REPLACE TEMP VIEW binding_coverage AS
 SELECT
     u.case_id,
@@ -90,7 +100,9 @@ SELECT
     CASE
       WHEN s.candidate_count = 0 THEN 'PROVIDER_BINDING_NOT_AVAILABLE'
       WHEN coalesce(d.has_duplicate, false) THEN 'PROVIDER_BINDING_AMBIGUOUS'
-      WHEN ss.actual_session_count != e.required_sessions
+      WHEN coalesce(ss.actual_session_count, 0) != e.required_sessions
+        THEN 'PROVIDER_BINDING_AMBIGUOUS'
+      WHEN coalesce(sv.out_of_episode_session_count, 0) != 0
         THEN 'PROVIDER_BINDING_AMBIGUOUS'
       WHEN s.eligible_count != 1 THEN 'PROVIDER_BINDING_AMBIGUOUS'
       WHEN coalesce(c.observation_count, 0) = 0
@@ -105,7 +117,8 @@ SELECT
     coalesce(m.missing_session_count, 0) AS missing_session_count
 FROM binding_episodes e
 JOIN binding_candidate_summary s USING (case_id)
-JOIN binding_session_summary ss USING (case_id)
+LEFT JOIN binding_session_summary ss USING (case_id)
+LEFT JOIN binding_session_validity sv USING (case_id)
 LEFT JOIN binding_unique_candidates u USING (case_id)
 LEFT JOIN binding_coverage c USING (case_id)
 LEFT JOIN binding_missing_summary m USING (case_id)
