@@ -6,7 +6,9 @@ import argparse
 from collections import Counter, defaultdict
 import gzip
 import json
+import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -20,12 +22,14 @@ sys.path.insert(0, str(LEAF))
 import qlib
 from qlib.backtest.decision import Order
 from qlib.backtest.exchange import Exchange
+from qlib.contrib.data.handler import Alpha158
 from qlib.contrib.model.gbdt import LGBModel
 from qlib.data import D
 from qlib.data.dataset import DatasetH
 from qlib.data.dataset.handler import DataHandlerLP
+from qlib.data.filter import NameDFilter
 
-from aq_qlib_handoff.qlib_config import RaggedAlpha158
+from aq_qlib_handoff.qlib_config import RaggedAlpha158, current_close_filter
 
 
 OBSERVED = {"OBSERVED_PRIMARY", "OBSERVED_SECONDARY"}
@@ -50,6 +54,7 @@ def main() -> None:
     if args.output.exists():
         raise FileExistsError(args.output)
     args.output.mkdir(parents=True)
+    os.chdir(args.output)
 
     source_sha = subprocess.check_output(
         ("git", "-C", str(args.qlib_source), "rev-parse", "HEAD"), text=True,
@@ -127,11 +132,25 @@ def main() -> None:
     assert observed_frame["$close"].notna().all()
     assert len(missing_frame) == 1 and missing_frame["$close"].isna().all()
 
+    availability_filter = current_close_filter()
+    filtered_market = D.instruments(market="p2_pit", filter_pipe=[availability_filter])
+    missing_day_instruments = D.list_instruments(
+        filtered_market, start_time=arnc_missing[1], end_time=arnc_missing[1], freq="day", as_list=True,
+    )
+    observed_day_instruments = D.list_instruments(
+        filtered_market, start_time=observed_control[1], end_time=observed_control[1], freq="day", as_list=True,
+    )
+    assert arnc_missing[0] not in missing_day_instruments
+    assert observed_control[0] in observed_day_instruments
+    assert RaggedAlpha158.get_label_config is Alpha158.get_label_config
+
+    cohort_pattern = "^(?:" + "|".join(re.escape(instrument) for instrument in smoke_instruments) + ")$"
     handler = RaggedAlpha158(
-        instruments=smoke_instruments,
+        instruments="p2_pit",
         start_time="2015-01-02", end_time="2019-12-31",
         fit_start_time="2015-01-02", fit_end_time="2018-12-31",
         infer_processors=[], learn_processors=[{"class": "DropnaLabel"}],
+        filter_pipe=[NameDFilter(cohort_pattern), current_close_filter()],
     )
     dataset = DatasetH(handler=handler, segments={
         "train": ("2015-01-02", "2018-12-31"),
@@ -143,8 +162,9 @@ def main() -> None:
     assert isinstance(infer_train, pd.DataFrame) and isinstance(learn_train, pd.DataFrame)
     label_columns = learn_train.columns.get_level_values(0) == "label"
     assert not learn_train.loc[:, label_columns].isna().any(axis=None)
+    masked_unusable_in_inference = len(key_set(infer_train.index) & masked_train)
     masked_unusable = len(key_set(learn_train.index) & masked_train)
-    assert masked_unusable == 0 and len(masked_train) > 0
+    assert masked_unusable_in_inference == 0 and masked_unusable == 0 and len(masked_train) > 0
     feature_columns = infer_train.columns.get_level_values(0) == "feature"
     feature_values = infer_train.loc[:, feature_columns]
     feature_nan_count = int(feature_values.isna().sum().sum())
@@ -181,10 +201,12 @@ def main() -> None:
         "control_case_counts": {ticker: dict(per_ticker[ticker]) for ticker in sorted(CONTROL_TICKERS)},
         "dataset_h": "PASS",
         "dropna_label": "PASS",
+        "expression_dfilter": "PASS",
         "feature_nan_count": feature_nan_count,
         "feature_total_values": int(feature_values.size),
         "lgbmodel_smoke": "PASS",
         "masked_rows_in_smoke_training_input": len(masked_train),
+        "masked_unusable_rows_in_inference": masked_unusable_in_inference,
         "masked_unusable_rows_in_training": masked_unusable,
         "nan_tradability": "PASS",
         "prediction_rows": len(predictions),
@@ -195,7 +217,7 @@ def main() -> None:
         "real_missing_control": {"instrument": arnc_missing[0], "date": arnc_missing[1]},
         "stable_instruments": len(ranges),
         "instrument_ranges": sum(len(value) for value in ranges.values()),
-        "trainable_label_rows": len(learn_train),
+        "smoke_trainable_label_rows": len(learn_train),
     }
     (args.output / "integration-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8",

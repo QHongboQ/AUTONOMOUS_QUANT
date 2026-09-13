@@ -2,6 +2,12 @@
 
 from qlib.contrib.data.handler import Alpha158
 from qlib.contrib.data.loader import Alpha158DL
+from qlib.data.filter import ExpressionDFilter
+
+
+def current_close_filter() -> ExpressionDFilter:
+    """Return Qlib's native dynamic filter for current-session close availability."""
+    return ExpressionDFilter(rule_expression="$close == $close", keep=False)
 
 
 class RaggedAlpha158(Alpha158):
@@ -13,8 +19,3 @@ class RaggedAlpha158(Alpha158):
             "price": {"windows": [0], "feature": ["OPEN", "HIGH", "LOW"]},
             "rolling": {},
         })
-
-    def get_label_config(self):
-        # The current-session ratio makes a masked close produce a NaN label;
-        # Qlib's native DropnaLabel then excludes that sample from learning.
-        return ["($close/$close)*(Ref($close, -2)/Ref($close, -1) - 1)"], ["LABEL0"]

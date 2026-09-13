@@ -162,6 +162,13 @@ class RaggedPanelTests(unittest.TestCase):
         forbidden = ('"DISCK"', '"FB"', '"META"', '"WBD"', "2022-04-08", "NAS:", "NYS:")
         self.assertTrue(all(value not in source for value in forbidden))
 
+    def test_qlib_config_uses_native_label_and_filter(self) -> None:
+        source = (LEAF / "aq_qlib_handoff" / "qlib_config.py").read_text(encoding="utf-8")
+        self.assertNotIn("def get_label_config", source)
+        self.assertNotIn("($close/$close)", source)
+        self.assertIn("ExpressionDFilter", source)
+        self.assertIn('rule_expression="$close == $close"', source)
+
     def test_output_path_is_fail_closed(self) -> None:
         (self.root / "output").mkdir()
         with self.assertRaises(FileExistsError):

@@ -16,8 +16,9 @@ CUSTOM_GENERIC_ENGINE_REQUIRED = NO
 The accepted runtime remains Qlib `0.9.8.dev26` from pinned source commit
 `2fb9380b342556ddb50a4b24e4fe8655d548b2b8` in the existing WSL Ubuntu 24.04
 `rdagent4qlib` environment. Qlib owns local-provider storage, DatasetH,
-DataHandlerLP, Alpha158/Alpha158DL operators, DropnaLabel, LGBModel, Recorder,
-prediction, Exchange, backtest, transaction costs, and portfolio analysis.
+DataHandlerLP, Alpha158/Alpha158DL operators, ExpressionDFilter, DropnaLabel,
+LGBModel, Recorder, prediction, Exchange, backtest, transaction costs, and
+portfolio analysis.
 
 AQ supplies only accepted PIT membership ranges, permanent security identity,
 12 declarative date-bounded provider-binding facts, and a thin frozen-input
@@ -92,17 +93,21 @@ D.features_observed = PASS
 D.features_missing_returns_nan = PASS
 DatasetH = PASS
 Alpha158DL_OHLCV_FEATURES = PASS (157 features; no VWAP)
+ExpressionDFilter_CURRENT_CLOSE = PASS
 DropnaLabel = PASS
-TRAINABLE_LABEL_ROWS = 20671
+SMOKE_TRAINABLE_LABEL_ROWS = 20671
 MASKED_ROWS_IN_SMOKE_TRAINING_INPUT = 455
+MASKED_UNUSABLE_ROWS_IN_INFERENCE = 0
 MASKED_UNUSABLE_ROWS_IN_TRAINING = 0
-FEATURE_NAN_COUNT = 68915
-FEATURE_TOTAL_VALUES = 3316782
+FEATURE_NAN_COUNT = 4305
+FEATURE_TOTAL_VALUES = 3245347
 LGBModel_BOUNDED_SMOKE = PASS
 PREDICTION_SMOKE = PASS (2688 rows)
 Exchange_NAN_SUSPENSION = PASS
 NAN_CLOSE_BUY_ALLOWED = NO
 NAN_CLOSE_SELL_ALLOWED = NO
+AQ_CUSTOM_LABEL_EXPRESSION = NONE
+AQ_CUSTOM_FILTER_CLASS = NONE
 ```
 
 Real controls covered ARNC/HWM, BBBY, DOW, DISCK, ANTM/ELV, ABC/COR,
@@ -167,5 +172,5 @@ MISSING_SESSION_CAUSES_WHOLE_YEAR_REJECTION = NO
 RESEARCH_RUNTIME_EXTERNAL_API_COUNT = 0
 DATA_PROVIDER_REMEDIATION = CLOSED
 P2 = STARTED / IN_PROGRESS
-CURRENT_NEXT = P2_QLIB_NATIVE_RAGGED_PANEL_CLOSEOUT_001
+CURRENT_NEXT = P2_QLIB_NATIVE_RAGGED_PANEL_PR_CLOSEOUT_001
 ```

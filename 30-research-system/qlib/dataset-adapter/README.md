@@ -27,10 +27,12 @@ frozen source contract supplies only open/high/low/close/volume.
 Pure conversion tests construct small temporary inputs and run without private
 data. The real P2 probe runs against the private generated provider in the
 existing WSL `rdagent4qlib` environment. It verifies DatasetH, 157 upstream
-Alpha158-compatible features, native DropnaLabel exclusion of masked learning
-samples, a bounded LightGBM fit/prediction, and Qlib Exchange suspension for a
-NaN close. It is an integration proof, not a certification or performance
-claim.
+Alpha158-compatible features, ExpressionDFilter exclusion of current-session
+NaN-close samples from inference/training, native DropnaLabel exclusion of
+unavailable future labels from learning, a bounded LightGBM fit/prediction, and
+Qlib Exchange suspension for a NaN close. The 20,671 trainable-label count is
+only for this deterministic smoke cohort, not the full P2 panel. This is an
+integration proof, not a certification or performance claim.
 
 Qlib owns Dataset/handler, feature, model workflow, recorder, prediction,
 Top-K, exchange, backtest, transaction-cost, and portfolio-analysis machinery.
