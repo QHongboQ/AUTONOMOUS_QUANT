@@ -16,6 +16,21 @@ Upstream ownership is strict:
   duplicates, uniqueness, conflicts, coverage, and unresolved inventories.
 - AQ supplies only project-specific fail-closed acceptance policy.
 
+The leaf also owns one SHA-256-frozen declarative authority artifact,
+`accepted_provider_binding_facts.json`. Its 12 facts bind an exact accepted
+PIT episode to one exact provider and provider asset for one exact half-open
+date interval. The loader rejects altered bytes, another schema or count,
+duplicate episode/provider bindings, invalid intervals or evidence hashes,
+and any scope other than `PROVIDER_BINDING_ONLY`. These facts contain no
+membership or price rows and cannot authorize forward fill, synthetic rows,
+successor-price substitution, or ticker/name/price-continuity inference.
+
+Authority is applied through DuckDB's episode/provider/asset/date-valid join.
+It can make only the exact candidate identity-supported; coverage remains an
+independent required-session anti-join result. In particular, the accepted
+ARNC/HWM binding retains 1,323 required sessions, 868 observed sessions, and
+455 missing sessions.
+
 Exactly two thin provider translations exist in `providers.py`. Their
 `AnnotatedResult` metadata retains provider, provider asset identifier,
 provider symbol, adjustment semantics, and the source-observation content

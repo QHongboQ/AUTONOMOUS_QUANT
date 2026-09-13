@@ -1,3 +1,35 @@
+CREATE OR REPLACE TEMP VIEW binding_authority_matches AS
+SELECT
+    e.case_id,
+    c.provider,
+    c.provider_asset_identifier,
+    count(a.fact_id) AS authority_match_count
+FROM binding_episodes e
+JOIN binding_candidates c USING (case_id)
+LEFT JOIN binding_authority_facts a
+  ON a.episode_id = e.episode_id
+ AND a.provider = c.provider
+ AND a.provider_asset_identifier = c.provider_asset_identifier
+ AND a.valid_from = e.valid_from
+ AND a.valid_to = e.valid_to
+GROUP BY e.case_id, c.provider, c.provider_asset_identifier;
+
+CREATE OR REPLACE TEMP VIEW binding_effective_candidates AS
+SELECT
+    c.*,
+    coalesce(m.authority_match_count, 0) = 1 AS authority_supported,
+    c.provider_identity_supported
+      OR coalesce(m.authority_match_count, 0) = 1
+      AS effective_provider_identity_supported,
+    c.sec_identity_supported
+      OR coalesce(m.authority_match_count, 0) = 1
+      AS effective_sec_identity_supported
+FROM binding_candidates c
+LEFT JOIN binding_authority_matches m
+  ON m.case_id = c.case_id
+ AND m.provider = c.provider
+ AND m.provider_asset_identifier = c.provider_asset_identifier;
+
 CREATE OR REPLACE TEMP VIEW binding_interval_observations AS
 SELECT
     e.case_id,
@@ -5,7 +37,7 @@ SELECT
     o.session_date,
     o.close
 FROM binding_episodes e
-JOIN binding_candidates c USING (case_id)
+JOIN binding_effective_candidates c USING (case_id)
 JOIN binding_observations o USING (provider_asset_identifier)
 WHERE o.session_date >= e.valid_from
   AND o.session_date < e.valid_to;
@@ -15,16 +47,18 @@ SELECT
     e.case_id,
     count(c.provider_asset_identifier) AS candidate_count,
     count(c.provider_asset_identifier) FILTER (
-        WHERE c.provider_identity_supported AND c.sec_identity_supported
+        WHERE c.effective_provider_identity_supported
+          AND c.effective_sec_identity_supported
     ) AS eligible_count
 FROM binding_episodes e
-LEFT JOIN binding_candidates c USING (case_id)
+LEFT JOIN binding_effective_candidates c USING (case_id)
 GROUP BY e.case_id;
 
 CREATE OR REPLACE TEMP VIEW binding_unique_candidates AS
 SELECT case_id, min(provider_asset_identifier) AS provider_asset_identifier
-FROM binding_candidates
-WHERE provider_identity_supported AND sec_identity_supported
+FROM binding_effective_candidates
+WHERE effective_provider_identity_supported
+  AND effective_sec_identity_supported
 GROUP BY case_id
 HAVING count(*) = 1;
 
@@ -49,7 +83,8 @@ SELECT 'binding_observations', c.case_id,
        o.provider_asset_identifier || '|' || cast(o.session_date AS varchar), count(*)
 FROM binding_observations o
 JOIN (
-    SELECT DISTINCT case_id, provider_asset_identifier FROM binding_candidates
+    SELECT DISTINCT case_id, provider_asset_identifier
+    FROM binding_effective_candidates
 ) c USING (provider_asset_identifier)
 GROUP BY c.case_id, o.provider_asset_identifier, o.session_date
 HAVING count(*) > 1;
