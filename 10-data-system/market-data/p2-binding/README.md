@@ -22,19 +22,44 @@ provider symbol, adjustment semantics, and the source-observation content
 hash. No AQ provider registry, router, normalizer, HTTP/retry/cache framework,
 security master, or relational engine exists.
 
-The output states remain distinct:
+Identity and required-session price coverage are separate, orthogonal facts.
+Identity has these states:
+
+```text
+PROVIDER_BINDING_AUTHORIZED
+PROVIDER_BINDING_AMBIGUOUS
+PROVIDER_BINDING_NOT_AVAILABLE
+```
+
+Coverage has these states and is evaluated only for a uniquely authorized
+identity:
+
+```text
+COMPLETE_PROVIDER_COVERAGE
+ZERO_PROVIDER_COVERAGE
+PARTIAL_PROVIDER_COVERAGE
+COVERAGE_NOT_EVALUATED
+```
+
+The compatibility decision output combines them without hiding partial
+coverage:
 
 ```text
 PROVIDER_BINDING_AUTHORIZED
 PROVIDER_BINDING_AMBIGUOUS
 PROVIDER_BINDING_NOT_AVAILABLE
 KNOWN_PROVIDER_GAP_CANDIDATE
+PARTIAL_PROVIDER_COVERAGE
 ```
 
 Every unique required episode produces exactly one decision. Missing, partial,
-duplicate, or out-of-episode required-session input fails closed as
-`PROVIDER_BINDING_AMBIGUOUS`; a missing session relation can never make an
-episode disappear from the decision output.
+duplicate, or out-of-episode required-session input fails closed as an identity
+ambiguity. This is distinct from complete required-session input accompanied by
+partial provider observations, which returns `PARTIAL_PROVIDER_COVERAGE` and is
+fail-closed for certification readiness. Coverage is computed from the exact
+required-session anti-join, not total observations in the episode interval. A
+missing session relation can never make an episode disappear from the decision
+output.
 
 Tests use synthetic relations only. Real provider payloads, credentials,
 private market data, and SEC document content remain outside Git.
