@@ -1,23 +1,29 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 from datetime import date
+import hashlib
+import json
 import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 import duckdb
 import pandas as pd
 from openbb_core.provider.abstract.annotated_result import AnnotatedResult
 from openbb_core.provider.standard_models.equity_historical import EquityHistoricalData
 
+import aq_market_data_binding.binding as binding_module
 from aq_market_data_binding import (
     OpenFigiEvidence,
     QuantiacsEquityHistoricalFetcher,
     SecEvidence,
     SimFinEquityHistoricalFetcher,
     evaluate_provider_bindings,
+    load_provider_binding_authority,
 )
 
 
@@ -34,13 +40,13 @@ def binding_frames():
         ("DISCK", "episode-disck", DATES[0], DATES[-1] + pd.Timedelta(days=1), 3),
     ], columns=["case_id", "episode_id", "valid_from", "valid_to", "required_sessions"])
     candidates = pd.DataFrame([
-        ("DD", "provider-dd-old", "DD", False, False, False),
-        ("DD", "provider-dd-new", "DD", False, True, True),
-        ("ANTM_ELV", "provider-elv", "ELV", True, True, True),
-        ("STI", "provider-sti-old", "STI", True, True, False),
-        ("STI", "provider-sti-reuse", "STI", False, False, True),
-        ("FB_META", "provider-meta", "META", True, False, True),
-    ], columns=["case_id", "provider_asset_identifier", "provider_symbol", "provider_identity_supported", "sec_identity_supported", "openfigi_supported"])
+        ("DD", "QUANTIACS", "provider-dd-old", "DD", False, False, False),
+        ("DD", "QUANTIACS", "provider-dd-new", "DD", False, True, True),
+        ("ANTM_ELV", "QUANTIACS", "provider-elv", "ELV", True, True, True),
+        ("STI", "QUANTIACS", "provider-sti-old", "STI", True, True, False),
+        ("STI", "QUANTIACS", "provider-sti-reuse", "STI", False, False, True),
+        ("FB_META", "QUANTIACS", "provider-meta", "META", True, False, True),
+    ], columns=["case_id", "provider", "provider_asset_identifier", "provider_symbol", "provider_identity_supported", "sec_identity_supported", "openfigi_supported"])
     observations = pd.DataFrame([
         ("provider-elv", when, 100.0 + position) for position, when in enumerate(DATES)
     ] + [("provider-wbd", when, 200.0) for when in DATES], columns=["provider_asset_identifier", "session_date", "close"])
@@ -56,8 +62,8 @@ def single_case_frames(*, required: int, observed: int):
         ("GENERIC", "episode-generic", dates[0], dates[-1] + pd.Timedelta(days=1), required),
     ], columns=["case_id", "episode_id", "valid_from", "valid_to", "required_sessions"])
     candidates = pd.DataFrame([
-        ("GENERIC", "provider-generic", "GENERIC", True, True, False),
-    ], columns=["case_id", "provider_asset_identifier", "provider_symbol", "provider_identity_supported", "sec_identity_supported", "openfigi_supported"])
+        ("GENERIC", "QUANTIACS", "provider-generic", "GENERIC", True, True, False),
+    ], columns=["case_id", "provider", "provider_asset_identifier", "provider_symbol", "provider_identity_supported", "sec_identity_supported", "openfigi_supported"])
     observation_rows = [
         ("provider-generic", when, 100.0 + position)
         for position, when in enumerate(dates[:observed])
@@ -71,6 +77,50 @@ def single_case_frames(*, required: int, observed: int):
     sessions = pd.DataFrame([
         ("GENERIC", when) for when in dates
     ], columns=["case_id", "session_date"])
+    return episodes, candidates, observations, sessions
+
+
+def accepted_authority_fact(historical_ticker: str | None = None):
+    path = Path(binding_module.__file__).with_name(
+        "accepted_provider_binding_facts.json"
+    )
+    facts = json.loads(path.read_text(encoding="utf-8"))["facts"]
+    if historical_ticker is None:
+        return facts[0]
+    return next(fact for fact in facts if fact["historical_ticker"] == historical_ticker)
+
+
+def authority_case_frames(
+    *, historical_ticker: str | None = None, required: int = 3,
+    observed: int = 3, wrong_asset: bool = False,
+    interval_offset_days: int = 0,
+):
+    fact = accepted_authority_fact(historical_ticker)
+    valid_from = pd.Timestamp(fact["valid_from"])
+    valid_to = pd.Timestamp(fact["valid_to"]) + pd.Timedelta(days=interval_offset_days)
+    dates = pd.date_range(valid_from, periods=required, freq="B")
+    asset = fact["provider_asset_identifier"] + ("~wrong" if wrong_asset else "")
+    episodes = pd.DataFrame([(
+        "AUTHORITY", fact["episode_id"], valid_from, valid_to, required,
+    )], columns=["case_id", "episode_id", "valid_from", "valid_to", "required_sessions"])
+    candidates = pd.DataFrame([(
+        "AUTHORITY", fact["provider"], asset, fact["provider_symbol"],
+        False, False, False,
+    )], columns=["case_id", "provider", "provider_asset_identifier", "provider_symbol", "provider_identity_supported", "sec_identity_supported", "openfigi_supported"])
+    observation_rows = [
+        (asset, when, 100.0 + position)
+        for position, when in enumerate(dates[:observed])
+    ]
+    if not observation_rows:
+        observation_rows.append((asset, dates[0] - pd.Timedelta(days=1), 99.0))
+    observations = pd.DataFrame(
+        observation_rows,
+        columns=["provider_asset_identifier", "session_date", "close"],
+    )
+    sessions = pd.DataFrame(
+        [("AUTHORITY", when) for when in dates],
+        columns=["case_id", "session_date"],
+    )
     return episodes, candidates, observations, sessions
 
 
@@ -132,6 +182,111 @@ class EvidenceBoundaryTests(unittest.TestCase):
             decision_role="SECURITY_CONTINUITY",
         )
         self.assertEqual(evidence.cik, 1156039)
+
+
+class ProviderBindingAuthorityTests(unittest.TestCase):
+    def setUp(self):
+        self.authority_path = Path(binding_module.__file__).with_name(
+            "accepted_provider_binding_facts.json"
+        )
+
+    def write_payload(self, directory: str, payload: dict) -> Path:
+        path = Path(directory) / "accepted_provider_binding_facts.json"
+        path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8", newline="\n",
+        )
+        return path
+
+    def test_authority_file_has_exactly_twelve_facts(self):
+        authority = load_provider_binding_authority()
+        self.assertEqual(len(authority), 12)
+        self.assertEqual(authority["episode_id"].nunique(), 12)
+
+    def test_altered_authority_hash_fails_closed(self):
+        raw = self.authority_path.read_bytes().replace(b'"expected_count": 12', b'"expected_count": 11')
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / self.authority_path.name
+            path.write_bytes(raw)
+            with self.assertRaisesRegex(ValueError, "file hash mismatch"):
+                load_provider_binding_authority(path)
+
+    def test_duplicate_authority_fact_fails_closed(self):
+        payload = json.loads(self.authority_path.read_text(encoding="utf-8"))
+        payload["facts"][1] = copy.deepcopy(payload["facts"][0])
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_payload(directory, payload)
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            with mock.patch.object(binding_module, "_AUTHORITY_FILE_SHA256", digest):
+                with self.assertRaisesRegex(ValueError, "duplicate"):
+                    load_provider_binding_authority(path)
+
+    def test_authority_count_is_enforced(self):
+        payload = json.loads(self.authority_path.read_text(encoding="utf-8"))
+        payload["facts"].pop()
+        payload["expected_count"] = 11
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_payload(directory, payload)
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            with mock.patch.object(binding_module, "_AUTHORITY_FILE_SHA256", digest):
+                with self.assertRaisesRegex(ValueError, "fact count mismatch"):
+                    load_provider_binding_authority(path)
+
+    def evaluate_authority_case(self, **kwargs) -> tuple[pd.Series, duckdb.DuckDBPyConnection]:
+        connection = duckdb.connect(":memory:")
+        frames = authority_case_frames(**kwargs)
+        result = evaluate_provider_bindings(
+            connection, episodes=frames[0], candidates=frames[1],
+            observations=frames[2], sessions=frames[3],
+        ).iloc[0]
+        return result, connection
+
+    def test_exact_accepted_provider_asset_is_authorized(self):
+        result, connection = self.evaluate_authority_case()
+        try:
+            self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+            self.assertEqual(
+                connection.sql(
+                    "SELECT authority_supported FROM binding_effective_candidates"
+                ).fetchone()[0],
+                True,
+            )
+        finally:
+            connection.close()
+
+    def test_same_ticker_wrong_asset_fails_closed(self):
+        result, connection = self.evaluate_authority_case(wrong_asset=True)
+        try:
+            self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        finally:
+            connection.close()
+
+    def test_out_of_authority_interval_fails_closed(self):
+        result, connection = self.evaluate_authority_case(interval_offset_days=1)
+        try:
+            self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        finally:
+            connection.close()
+
+    def test_authority_does_not_convert_partial_coverage(self):
+        result, connection = self.evaluate_authority_case(required=3, observed=2)
+        try:
+            self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+            self.assertEqual(result["coverage_state"], "PARTIAL_PROVIDER_COVERAGE")
+            self.assertEqual(result["missing_session_count"], 1)
+        finally:
+            connection.close()
+
+    def test_arnc_hwm_authority_retains_455_missing_sessions(self):
+        result, connection = self.evaluate_authority_case(
+            historical_ticker="ARNC", required=1323, observed=868,
+        )
+        try:
+            self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+            self.assertEqual(result["coverage_state"], "PARTIAL_PROVIDER_COVERAGE")
+            self.assertEqual(result["missing_session_count"], 455)
+        finally:
+            connection.close()
 
 
 class DuckDBBindingTests(unittest.TestCase):
