@@ -69,14 +69,27 @@ FROM binding_episodes e
 LEFT JOIN binding_sessions s USING (case_id)
 GROUP BY e.case_id;
 
+CREATE OR REPLACE TEMP VIEW binding_required_observations AS
+SELECT
+    u.case_id,
+    u.provider_asset_identifier,
+    s.session_date,
+    i.close
+FROM binding_unique_candidates u
+JOIN binding_sessions s USING (case_id)
+JOIN binding_interval_observations i
+  ON i.case_id = u.case_id
+ AND i.provider_asset_identifier = u.provider_asset_identifier
+ AND i.session_date = s.session_date;
+
 CREATE OR REPLACE TEMP VIEW binding_coverage AS
 SELECT
     u.case_id,
-    count(i.session_date) AS observation_count
+    count(o.session_date) AS observation_count
 FROM binding_unique_candidates u
-LEFT JOIN binding_interval_observations i
-  ON i.case_id = u.case_id
- AND i.provider_asset_identifier = u.provider_asset_identifier
+LEFT JOIN binding_required_observations o
+  ON o.case_id = u.case_id
+ AND o.provider_asset_identifier = u.provider_asset_identifier
 GROUP BY u.case_id;
 
 CREATE OR REPLACE TEMP VIEW binding_missing_sessions AS
@@ -94,7 +107,7 @@ SELECT case_id, count(*) AS missing_session_count
 FROM binding_missing_sessions
 GROUP BY case_id;
 
-CREATE OR REPLACE TEMP VIEW binding_decisions AS
+CREATE OR REPLACE TEMP VIEW binding_identity_states AS
 SELECT
     e.case_id,
     CASE
@@ -105,14 +118,12 @@ SELECT
       WHEN coalesce(sv.out_of_episode_session_count, 0) != 0
         THEN 'PROVIDER_BINDING_AMBIGUOUS'
       WHEN s.eligible_count != 1 THEN 'PROVIDER_BINDING_AMBIGUOUS'
-      WHEN coalesce(c.observation_count, 0) = 0
-       AND coalesce(m.missing_session_count, 0) = e.required_sessions
-        THEN 'KNOWN_PROVIDER_GAP_CANDIDATE'
       ELSE 'PROVIDER_BINDING_AUTHORIZED'
-    END AS binding_state,
+    END AS identity_state,
     u.provider_asset_identifier,
     s.candidate_count,
     s.eligible_count,
+    e.required_sessions,
     coalesce(c.observation_count, 0) AS observation_count,
     coalesce(m.missing_session_count, 0) AS missing_session_count
 FROM binding_episodes e
@@ -125,3 +136,39 @@ LEFT JOIN binding_missing_summary m USING (case_id)
 LEFT JOIN (
     SELECT DISTINCT case_id, true AS has_duplicate FROM binding_duplicates
 ) d USING (case_id);
+
+CREATE OR REPLACE TEMP VIEW binding_coverage_states AS
+SELECT
+    *,
+    CASE
+      WHEN identity_state != 'PROVIDER_BINDING_AUTHORIZED'
+        THEN 'COVERAGE_NOT_EVALUATED'
+      WHEN missing_session_count = 0
+        THEN 'COMPLETE_PROVIDER_COVERAGE'
+      WHEN missing_session_count = required_sessions
+        THEN 'ZERO_PROVIDER_COVERAGE'
+      WHEN missing_session_count > 0
+       AND missing_session_count < required_sessions
+        THEN 'PARTIAL_PROVIDER_COVERAGE'
+      ELSE 'COVERAGE_NOT_EVALUATED'
+    END AS coverage_state
+FROM binding_identity_states;
+
+CREATE OR REPLACE TEMP VIEW binding_decisions AS
+SELECT
+    *,
+    CASE
+      WHEN identity_state = 'PROVIDER_BINDING_AMBIGUOUS'
+        THEN 'PROVIDER_BINDING_AMBIGUOUS'
+      WHEN identity_state = 'PROVIDER_BINDING_NOT_AVAILABLE'
+        THEN 'PROVIDER_BINDING_NOT_AVAILABLE'
+      WHEN coverage_state = 'COMPLETE_PROVIDER_COVERAGE'
+        THEN 'PROVIDER_BINDING_AUTHORIZED'
+      WHEN coverage_state = 'ZERO_PROVIDER_COVERAGE'
+        THEN 'KNOWN_PROVIDER_GAP_CANDIDATE'
+      WHEN coverage_state = 'PARTIAL_PROVIDER_COVERAGE'
+        THEN 'PARTIAL_PROVIDER_COVERAGE'
+      ELSE 'PROVIDER_BINDING_AMBIGUOUS'
+    END AS decision_state,
+    decision_state AS binding_state
+FROM binding_coverage_states;

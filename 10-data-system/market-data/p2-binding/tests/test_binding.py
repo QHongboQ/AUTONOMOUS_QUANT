@@ -50,6 +50,30 @@ def binding_frames():
     return episodes, candidates, observations, sessions
 
 
+def single_case_frames(*, required: int, observed: int):
+    dates = pd.date_range("2020-01-02", periods=required, freq="B")
+    episodes = pd.DataFrame([
+        ("GENERIC", "episode-generic", dates[0], dates[-1] + pd.Timedelta(days=1), required),
+    ], columns=["case_id", "episode_id", "valid_from", "valid_to", "required_sessions"])
+    candidates = pd.DataFrame([
+        ("GENERIC", "provider-generic", "GENERIC", True, True, False),
+    ], columns=["case_id", "provider_asset_identifier", "provider_symbol", "provider_identity_supported", "sec_identity_supported", "openfigi_supported"])
+    observation_rows = [
+        ("provider-generic", when, 100.0 + position)
+        for position, when in enumerate(dates[:observed])
+    ]
+    if not observation_rows:
+        observation_rows.append(("provider-generic", dates[0] - pd.Timedelta(days=1), 99.0))
+    observations = pd.DataFrame(
+        observation_rows,
+        columns=["provider_asset_identifier", "session_date", "close"],
+    )
+    sessions = pd.DataFrame([
+        ("GENERIC", when) for when in dates
+    ], columns=["case_id", "session_date"])
+    return episodes, candidates, observations, sessions
+
+
 class FetcherTests(unittest.TestCase):
     def test_quantiacs_fetcher_uses_openbb_standard_model(self):
         raw = [{"time": "2022-01-03", "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5, "vol": 10}]
@@ -132,6 +156,8 @@ class DuckDBBindingTests(unittest.TestCase):
 
     def test_conflict_query_fails_dd_closed(self):
         self.assertEqual(self.result.loc["DD", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        self.assertEqual(self.result.loc["DD", "identity_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        self.assertEqual(self.result.loc["DD", "coverage_state"], "COVERAGE_NOT_EVALUATED")
         self.assertEqual(self.connection.sql("SELECT count(*) FROM binding_conflicts WHERE case_id='DD'").fetchone()[0], 1)
 
     def test_duplicate_query_fails_closed(self):
@@ -166,6 +192,7 @@ class DuckDBBindingTests(unittest.TestCase):
             observations=observations, sessions=sessions,
         ).set_index("case_id")
         self.assertEqual(result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        self.assertEqual(result.loc["ANTM_ELV", "coverage_state"], "COVERAGE_NOT_EVALUATED")
 
     def test_out_of_episode_session_fails_closed(self):
         episodes, candidates, observations, sessions = binding_frames()
@@ -177,6 +204,7 @@ class DuckDBBindingTests(unittest.TestCase):
             observations=observations, sessions=sessions,
         ).set_index("case_id")
         self.assertEqual(result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        self.assertEqual(result.loc["ANTM_ELV", "coverage_state"], "COVERAGE_NOT_EVALUATED")
 
     def test_decision_cardinality_matches_unique_episodes(self):
         episodes, candidates, observations, sessions = binding_frames()
@@ -189,9 +217,13 @@ class DuckDBBindingTests(unittest.TestCase):
 
     def test_antm_elv_is_uniquely_authorized(self):
         self.assertEqual(self.result.loc["ANTM_ELV", "binding_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(self.result.loc["ANTM_ELV", "identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(self.result.loc["ANTM_ELV", "coverage_state"], "COMPLETE_PROVIDER_COVERAGE")
 
     def test_sti_is_coverage_gap_not_identity_failure(self):
         self.assertEqual(self.result.loc["STI", "binding_state"], "KNOWN_PROVIDER_GAP_CANDIDATE")
+        self.assertEqual(self.result.loc["STI", "identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(self.result.loc["STI", "coverage_state"], "ZERO_PROVIDER_COVERAGE")
         self.assertEqual(self.result.loc["STI", "missing_session_count"], 3)
 
     def test_openfigi_alone_cannot_backmap_meta_to_fb(self):
@@ -199,7 +231,56 @@ class DuckDBBindingTests(unittest.TestCase):
 
     def test_disck_terminal_gap_does_not_substitute_wbd(self):
         self.assertEqual(self.result.loc["DISCK", "binding_state"], "PROVIDER_BINDING_NOT_AVAILABLE")
+        self.assertEqual(self.result.loc["DISCK", "coverage_state"], "COVERAGE_NOT_EVALUATED")
         self.assertTrue(pd.isna(self.result.loc["DISCK", "provider_asset_identifier"]))
+
+    def evaluate_single_case(self, *, required: int, observed: int) -> pd.Series:
+        episodes, candidates, observations, sessions = single_case_frames(
+            required=required, observed=observed,
+        )
+        return evaluate_provider_bindings(
+            self.connection, episodes=episodes, candidates=candidates,
+            observations=observations, sessions=sessions,
+        ).iloc[0]
+
+    def test_complete_provider_coverage(self):
+        result = self.evaluate_single_case(required=3, observed=3)
+        self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(result["coverage_state"], "COMPLETE_PROVIDER_COVERAGE")
+        self.assertEqual(result["decision_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(result["missing_session_count"], 0)
+
+    def test_zero_provider_coverage(self):
+        result = self.evaluate_single_case(required=3, observed=0)
+        self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(result["coverage_state"], "ZERO_PROVIDER_COVERAGE")
+        self.assertEqual(result["decision_state"], "KNOWN_PROVIDER_GAP_CANDIDATE")
+        self.assertEqual(result["missing_session_count"], 3)
+
+    def test_partial_provider_observation_coverage(self):
+        result = self.evaluate_single_case(required=3, observed=2)
+        self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(result["coverage_state"], "PARTIAL_PROVIDER_COVERAGE")
+        self.assertEqual(result["decision_state"], "PARTIAL_PROVIDER_COVERAGE")
+        self.assertEqual(result["missing_session_count"], 1)
+
+    def test_arnc_hwm_partial_provider_observation_coverage(self):
+        result = self.evaluate_single_case(required=1323, observed=868)
+        self.assertEqual(result["identity_state"], "PROVIDER_BINDING_AUTHORIZED")
+        self.assertEqual(result["coverage_state"], "PARTIAL_PROVIDER_COVERAGE")
+        self.assertEqual(result["decision_state"], "PARTIAL_PROVIDER_COVERAGE")
+        self.assertEqual(result["missing_session_count"], 455)
+
+    def test_ambiguous_identity_does_not_evaluate_coverage(self):
+        self.assertEqual(self.result.loc["DD", "identity_state"], "PROVIDER_BINDING_AMBIGUOUS")
+        self.assertEqual(self.result.loc["DD", "coverage_state"], "COVERAGE_NOT_EVALUATED")
+
+    def test_unavailable_provider_does_not_evaluate_coverage(self):
+        self.assertEqual(self.result.loc["DISCK", "identity_state"], "PROVIDER_BINDING_NOT_AVAILABLE")
+        self.assertEqual(self.result.loc["DISCK", "coverage_state"], "COVERAGE_NOT_EVALUATED")
+
+    def test_combined_decision_retains_binding_state_compatibility_alias(self):
+        self.assertTrue((self.result["decision_state"] == self.result["binding_state"]).all())
 
     def test_states_remain_distinct(self):
         self.assertEqual(len(set(self.result["binding_state"])), 4)
@@ -210,7 +291,10 @@ class DuckDBBindingTests(unittest.TestCase):
             path.read_text(encoding="utf-8") for path in root.glob("*.py")
         )
         sql = (root / "binding.sql").read_text(encoding="utf-8")
-        for ticker in ("DD", "ANTM", "ELV", "STI", "FB", "META", "DISCK", "WBD"):
+        for ticker in (
+            "DD", "ANTM", "ELV", "STI", "FB", "META", "DISCK", "WBD",
+            "ARNC", "HWM",
+        ):
             self.assertNotIn(f'"{ticker}"', source)
             self.assertNotIn(f"'{ticker}'", source)
             self.assertNotIn(f"'{ticker}'", sql)
