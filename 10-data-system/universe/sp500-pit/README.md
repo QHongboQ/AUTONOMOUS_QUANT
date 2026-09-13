@@ -80,3 +80,28 @@ Unit/contract tests always run from tiny local fixtures. Classes explicitly
 named `IntegrationTests` require the configured local data, DVC CLI, or upstream
 runtime. The suite includes all 13 frozen blueprint regressions. No source or
 market data is downloaded.
+
+## P2 free upstream identity binding
+
+`aq_pit.provider_binding` is the thin project boundary for certification-data
+provider identity. It does not create a provider registry, router, security
+master, normalizer, HTTP client, retry system, cache, or relational engine.
+
+- Two OpenBB Core fetchers map Quantiacs and SimFin native row shapes into the
+  OpenBB `EquityHistorical` Standard Model and preserve provider provenance.
+- OpenFIGI identifiers are supporting evidence only. Quantiacs `tts-*` values
+  remain provider asset identifiers and are rejected as FIGIs.
+- edgartools owns SEC retrieval and parsing; AQ retains only the CIK,
+  accession, filing/effective dates, content hash, and decision role.
+- Pandera validates the four input relations. DuckDB SQL owns interval joins,
+  anti joins, uniqueness, conflicts, coverage, and unresolved decisions.
+- AQ owns only the fail-closed decision policy tied to accepted PIT episodes.
+
+The four distinct results are `PROVIDER_BINDING_AUTHORIZED`,
+`PROVIDER_BINDING_AMBIGUOUS`, `PROVIDER_BINDING_NOT_AVAILABLE`, and
+`KNOWN_PROVIDER_GAP_CANDIDATE`. Identity ambiguity is never relabeled as a
+price gap, and identity evidence never manufactures a price observation.
+
+The dependency leaf is pinned in `requirements-p2-binding.txt`. Tests use only
+synthetic rows; frozen provider payloads, private market data, credentials, and
+SEC document content remain outside Git.
