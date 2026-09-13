@@ -1,10 +1,16 @@
-# Qlib DatasetSnapshot adapter
+# Qlib research-data handoff
 
-This replaceable research leaf converts the public AQ PIT DatasetSnapshot into
-Qlib's documented local instrument-membership representation: tab-separated
-`instrument`, inclusive start date, and inclusive end date. AQ's source episode
-ID remains in a parallel deterministic map; repeated ticker episodes remain
-separate Qlib spans and are never stitched across a membership gap.
+This replaceable research leaf provides two thin handoffs into Qlib. The
+original DatasetSnapshot adapter converts public PIT membership into Qlib's
+documented instrument-range representation. The P2 ragged-panel adapter stages
+the frozen private Quantiacs/SimFin observations as CSV and delegates final
+binary serialization to Qlib's pinned upstream `scripts/dump_bin.py`.
+
+P2 instrument IDs derive only from `security_identity`; historical ticker is
+metadata. The handoff preserves all 745 accepted membership ranges across 730
+security identities. Each of the 1,267,963 required member sessions contains
+either accepted OHLCV or NaN. Missing observations never remove membership or
+an entire year, and their reason remains in a private availability sidecar.
 
 The accepted runtime is the existing WSL `rdagent4qlib` environment: Qlib
 `0.9.8.dev26` from pinned source commit
@@ -12,18 +18,26 @@ The accepted runtime is the existing WSL `rdagent4qlib` environment: Qlib
 historical deployment evidence and is not this consumer authority.
 
 The leaf relies on public Qlib surfaces: `qlib.init`, `qlib.data.D.instruments`,
-`D.list_instruments`, `DatasetH`, `Alpha158`, `qlib.workflow.R`,
-`TopkDropoutStrategy`, `qlib.backtest.backtest`, and `PortAnaRecord`. The small
-synthetic probe verifies discovery and dynamic ranges only. No real data,
-Alpha158 execution, training, prediction, strategy run, backtest, or performance
-claim occurs.
+`D.list_instruments`, `DatasetH`, `Alpha158DL`, `DropnaLabel`, `LGBModel`,
+`Exchange`, `qlib.workflow.R`, `TopkDropoutStrategy`, `qlib.backtest.backtest`,
+and `PortAnaRecord`. `RaggedAlpha158` is configuration only: upstream
+Alpha158DL owns all feature/operator formulas, with VWAP excluded because the
+frozen source contract supplies only open/high/low/close/volume.
 
-Pure conversion tests construct a small temporary DatasetSnapshot and always
-run without DVC data. The 832-row snapshot check and WSL Qlib public-API probe
-are explicit integration checks; the probe derives the checkout path at runtime
-and contains no fixed repository root or Linux username.
+Pure conversion tests construct small temporary inputs and run without private
+data. The real P2 probe runs against the private generated provider in the
+existing WSL `rdagent4qlib` environment. It verifies DatasetH, 157 upstream
+Alpha158-compatible features, native DropnaLabel exclusion of masked learning
+samples, a bounded LightGBM fit/prediction, and Qlib Exchange suspension for a
+NaN close. It is an integration proof, not a certification or performance
+claim.
 
-Qlib owns future Dataset/handler, feature, model workflow, recorder, prediction,
-Top-K, backtest, transaction-cost, and portfolio-analysis machinery. AQ owns
-only this conversion boundary. The adapter reads no PIT source/compiler/facts,
-imports no DVC runtime, and does not mutate DatasetSnapshot input.
+Qlib owns Dataset/handler, feature, model workflow, recorder, prediction,
+Top-K, exchange, backtest, transaction-cost, and portfolio-analysis machinery.
+AQ owns PIT membership, stable security identity, declarative provider-binding
+facts, and this thin staging/configuration boundary. No provider API, provider
+router, generic data engine, or identity lookup runs during research.
+
+Private build outputs belong under
+`D:\AQ_DATA\P2\qlib-native-ragged-panel-001`; no provider rows, Qlib binaries,
+models, predictions, or MLflow artifacts belong in Git.

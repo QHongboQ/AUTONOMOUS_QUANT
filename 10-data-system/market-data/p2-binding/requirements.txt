@@ -1,5 +1,0 @@
-duckdb==1.5.5
-edgartools==5.58.0
-exchange_calendars==4.13.2
-openbb-core==1.6.13
-pandera[pandas]==0.33.1
