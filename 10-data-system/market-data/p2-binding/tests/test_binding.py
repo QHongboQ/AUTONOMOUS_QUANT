@@ -12,7 +12,7 @@ import pandas as pd
 from openbb_core.provider.abstract.annotated_result import AnnotatedResult
 from openbb_core.provider.standard_models.equity_historical import EquityHistoricalData
 
-from aq_pit.provider_binding import (
+from aq_market_data_binding import (
     OpenFigiEvidence,
     QuantiacsEquityHistoricalFetcher,
     SecEvidence,
@@ -22,6 +22,7 @@ from aq_pit.provider_binding import (
 
 
 DATES = pd.to_datetime(["2022-01-03", "2022-01-04", "2022-01-05"])
+SOURCE_HASH = "a" * 64
 
 
 def binding_frames():
@@ -53,21 +54,40 @@ class FetcherTests(unittest.TestCase):
     def test_quantiacs_fetcher_uses_openbb_standard_model(self):
         raw = [{"time": "2022-01-03", "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5, "vol": 10}]
         result = asyncio.run(QuantiacsEquityHistoricalFetcher.fetch_data(
-            {"symbol": "AAA", "provider_asset_identifier": "provider-a"},
+            {
+                "symbol": "AAA",
+                "provider_asset_identifier": "provider-a",
+                "provider_symbol": "PROVIDER_AAA",
+                "adjustment_semantics": "provider_adjusted",
+                "source_observation_sha256": SOURCE_HASH,
+            },
             upstream_loader=lambda query: raw,
         ))
         self.assertIsInstance(result, AnnotatedResult)
         self.assertIsInstance(result.result[0], EquityHistoricalData)
         self.assertEqual(result.metadata["provider_asset_identifier"], "provider-a")
+        self.assertEqual(result.metadata["provider_symbol"], "PROVIDER_AAA")
+        self.assertEqual(result.metadata["adjustment_semantics"], "provider_adjusted")
+        self.assertEqual(result.metadata["source_observation_sha256"], SOURCE_HASH)
 
     def test_simfin_fetcher_uses_openbb_standard_model(self):
         raw = [{"Date": "2022-01-03", "Open": 1.0, "High": 2.0, "Low": 0.5, "Close": 1.5, "Volume": 10}]
         result = asyncio.run(SimFinEquityHistoricalFetcher.fetch_data(
-            {"symbol": "AAA", "simfin_id": 7}, upstream_loader=lambda query: raw,
+            {
+                "symbol": "AAA",
+                "simfin_id": 7,
+                "provider_symbol": "SIMFIN_AAA",
+                "adjustment_semantics": "provider_adjusted",
+                "source_observation_sha256": SOURCE_HASH,
+            },
+            upstream_loader=lambda query: raw,
         ))
         self.assertIsInstance(result.result[0], EquityHistoricalData)
         self.assertEqual(result.metadata["provider"], "SIMFIN")
-        self.assertEqual(result.metadata["simfin_id"], 7)
+        self.assertEqual(result.metadata["provider_asset_identifier"], 7)
+        self.assertEqual(result.metadata["provider_symbol"], "SIMFIN_AAA")
+        self.assertEqual(result.metadata["adjustment_semantics"], "provider_adjusted")
+        self.assertEqual(result.metadata["source_observation_sha256"], SOURCE_HASH)
 
 
 class EvidenceBoundaryTests(unittest.TestCase):
@@ -142,9 +162,11 @@ class DuckDBBindingTests(unittest.TestCase):
         self.assertEqual(len(set(self.result["binding_state"])), 4)
 
     def test_runtime_contains_no_ticker_specific_branches_or_generic_engine(self):
-        root = Path(__file__).parents[1] / "aq_pit"
-        source = (root / "provider_binding.py").read_text(encoding="utf-8")
-        sql = (root / "provider_binding.sql").read_text(encoding="utf-8")
+        root = Path(__file__).parents[1] / "aq_market_data_binding"
+        source = "\n".join(
+            path.read_text(encoding="utf-8") for path in root.glob("*.py")
+        )
+        sql = (root / "binding.sql").read_text(encoding="utf-8")
         for ticker in ("DD", "ANTM", "ELV", "STI", "FB", "META", "DISCK", "WBD"):
             self.assertNotIn(f'"{ticker}"', source)
             self.assertNotIn(f"'{ticker}'", source)
