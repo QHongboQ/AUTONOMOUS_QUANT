@@ -160,3 +160,127 @@ stages:
       hash: md5
       md5: c323ab46dc15633c27a9432f52be9bd8
       size: 1345
+  p2_certification_historical_rehearsal:
+    cmd: python -B
+      40-certification-system/historical-rehearsal/seal_rehearsal.py --protocol
+      40-certification-system/protocol/p2-certification-protocol-v1.json
+      --activation
+      40-certification-system/protocol/p2-certification-protocol-v1-activation.json
+      --provider-report
+      D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --primary-pred
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/primary_pred.pkl
+      --control-pred
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/control_pred.pkl
+      --mlflow-db
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/mlflow/mlflow.db
+      --blocker
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-blocker.json
+      --historical-summary
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+      --runtime-day
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day.txt
+      --runtime-future
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      --qlib-report
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-report.json
+      --daily-returns
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/daily_net_returns.csv
+      --skfolio-report
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/skfolio/skfolio-report.json
+      --arch-report
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/arch/arch-report.json
+      --validation-report
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/validation/validation-report.json
+      --final-summary
+      D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary-resolved.json
+      --output
+      40-certification-system/historical-rehearsal/.private/dvc-seal.json
+    deps:
+    - path: 40-certification-system/historical-rehearsal/seal_rehearsal.py
+      hash: md5
+      md5: 509cbe63845b46979d76fe12c40667b8
+      size: 3034
+    - path:
+        40-certification-system/protocol/p2-certification-protocol-v1-activation.json
+      hash: md5
+      md5: ce13c9898a98ba216bab2b6c94c6168c
+      size: 470
+    - path: 40-certification-system/protocol/p2-certification-protocol-v1.json
+      hash: md5
+      md5: 45772975b21617cad485cc793e1ed433
+      size: 13169
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/arch/arch-report.json
+      hash: md5
+      md5: cd38974415ec7a836fbc3caddb379dbf
+      size: 976
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day.txt
+      hash: md5
+      md5: b6bae739f7af5dbd0a1096f0e50cf615
+      size: 27676
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      hash: md5
+      md5: 8799a64722f7c4214a145f5cc705f171
+      size: 27687
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/control_pred.pkl
+      hash: md5
+      md5: 27b32b2601e9423089d7f0e337c28fa2
+      size: 4578302
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/daily_net_returns.csv
+      hash: md5
+      md5: 72e869af0301deda7741a2217e032e85
+      size: 208318
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/mlflow/mlflow.db
+      hash: md5
+      md5: 1a2969c21de3ba14219fa207b5df865e
+      size: 905216
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/primary_pred.pkl
+      hash: md5
+      md5: 372789fa96b52f214573bd38dd2ae935
+      size: 6080690
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-blocker.json
+      hash: md5
+      md5: a283eae16e527730be617a36e7d24764
+      size: 1656
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-report.json
+      hash: md5
+      md5: 219b2a559e218b8ecf3ef7c0aa09cad3
+      size: 12264
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary-resolved.json
+      hash: md5
+      md5: 8349002fcc0fcc8f4b2cf6ee9d5f40c9
+      size: 5012
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+      hash: md5
+      md5: b7bf4f22728264bd550373d855e286f6
+      size: 1957
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/skfolio/skfolio-report.json
+      hash: md5
+      md5: 181dccc935c46712f0e6982e0a4aebe9
+      size: 16194
+    - path:
+        D:/AQ_DATA/P2/certification-historical-rehearsal-001/validation/validation-report.json
+      hash: md5
+      md5: 4fac5b35f6f199ae2f5adff83c8ffb85
+      size: 424
+    - path: D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+    outs:
+    - path: 40-certification-system/historical-rehearsal/.private/dvc-seal.json
+      hash: md5
+      md5: d82262a75f85636cde98b464e222d517
+      size: 1628
