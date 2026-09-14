@@ -1,4 +1,36 @@
 stages:
+  p2_certification_protocol_freeze:
+    cmd: >-
+      python -B 40-certification-system/protocol/seal_protocol.py
+      --protocol 40-certification-system/protocol/p2-certification-protocol-v1.json
+      --provider-report D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --qlib-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
+      --skfolio-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
+      --arch-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      --validation-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json
+      --blocker-ledger 40-certification-system/upstream-stack-integration/blockers.json
+      --authority-facts 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      --ragged-alpha-config 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
+      --primary-model-config 30-research-system/qlib/native-baseline/workflow_config_lightgbm_Alpha158_US.yaml
+      --control-model-config 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      --strategy-config 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      --output 40-certification-system/protocol/.private/protocol-freeze-seal.json
+    deps:
+      - 40-certification-system/protocol/seal_protocol.py
+      - 40-certification-system/protocol/p2-certification-protocol-v1.json
+      - D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json
+      - 40-certification-system/upstream-stack-integration/blockers.json
+      - 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      - 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
+      - 30-research-system/qlib/native-baseline/workflow_config_lightgbm_Alpha158_US.yaml
+      - 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      - 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+    outs:
+      - 40-certification-system/protocol/.private/protocol-freeze-seal.json
   p2_upstream_certification_stack_integration:
     cmd: >-
       python -B 40-certification-system/upstream-stack-integration/seal_evidence.py
