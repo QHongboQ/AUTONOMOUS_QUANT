@@ -263,7 +263,7 @@ was changed.
 | Capability | Classification | Exact residual action |
 |---|---|---|
 | RD-Agent installed-runtime source identity | `UPSTREAM_BLOCKED` | bind the control runtime to an exact auditable release/SHA; do not infer the checkout SHA |
-| RD-Agent declared Qlib pin versus selected Qlib runtime | `UPSTREAM_BLOCKED` | align provenance through the same upstream public runtime; no source patch |
+| RD-Agent declared Qlib pin versus selected Qlib runtime | `UPSTREAM_BLOCKED` | exact audited wheel was built, but mandatory dependencies are absent; resolve only that upstream dependency set before retrying, with no source patch |
 | AQ US ragged-panel scenario configuration | `THIN_AQ_CONTRACT_MAY_BE_REQUIRED` | installed templates are fixed to `~/.qlib/qlib_data/cn_data`, `region: cn`, and `csi300`; prove a configuration/adapter-only US path |
 | Autonomous LLM research loop | `UPSTREAM_AVAILABLE_NOT_ACTIVATED` | activate only after provenance/config gates and separate LLM-budget authorization |
 | P3 Candidate to P2 mapping | `THIN_AQ_CONTRACT_MAY_BE_REQUIRED` | define a project-specific fail-closed identity contract; do not build a workflow engine |
@@ -271,9 +271,13 @@ was changed.
 | Sealed-OOS release | `DEFERRED_TO_LATER_PHASE` | remain inaccessible until the one-shot P2 authority permits release |
 | Additional research/provider/broker projects | `NOT_REQUIRED` | remain inactive for this direct integration |
 
-A blocker is not authorization for custom implementation. The first blocking
-gate is runtime provenance alignment; the US configuration and Candidate
-contract remain finite follow-on gaps.
+A blocker is not authorization for custom implementation. The bounded
+provenance-alignment attempt is recorded in
+`p3-rdagent-runtime-provenance-alignment-001.md`: the exact source wheel built
+offline, but its mandatory dependency metadata made `pip check` fail, so the
+original healthy runtime was restored. Runtime dependency alignment is now the
+first gate; the US configuration and Candidate contract remain finite
+follow-on gaps.
 
 ## Final state and non-actions
 
@@ -283,7 +287,7 @@ RD_AGENT_RUNTIME = PASS
 RD_AGENT_NATIVE_RESEARCH_LOOP = NATIVE_AVAILABLE
 RD_AGENT_CHECKPOINT_RESUME = NATIVE_AVAILABLE
 QLIB_RUNTIME = PASS
-RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = PASS
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = PASS_PRE_ALIGNMENT_RUNTIME_ONLY
 QLIB_RESEARCH_CAPABILITIES = PASS
 QLIB_RECORDER = PASS
 MLFLOW_TRACKING = PASS
@@ -293,7 +297,7 @@ P3_TO_P2_HANDOFF = THIN_CONTRACT_REQUIRED
 SEALED_OOS_ISOLATION = PASS
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 P3_UPSTREAM_RESEARCH_STACK_INTEGRATION = COMPLETE_WITH_DOCUMENTED_BLOCKERS
-CURRENT_NEXT = P3_RDAGENT_RUNTIME_PROVENANCE_ALIGNMENT_001
+CURRENT_NEXT = P3_RDAGENT_RUNTIME_DEPENDENCY_ALIGNMENT_001
 
 RD_AGENT_LLM_LOOP_EXECUTED = NO
 LLM_CALLS = 0
