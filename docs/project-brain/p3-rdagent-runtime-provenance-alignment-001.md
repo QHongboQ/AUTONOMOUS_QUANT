@@ -174,3 +174,15 @@ PAPER_TRADING = NO
 LIVE_TRADING = NO
 PACKAGE_NETWORK_DOWNLOADS = 0
 ```
+
+## Subsequent current-state update
+
+The authorized dependency-alignment follow-up ran a resolver-only dry run and
+stopped before installation because the closure required downgrading existing
+`fsspec 2026.7.0` to `2026.6.0`. The prior `CURRENT_NEXT` above is the
+historical outcome of this provenance task. Current authority is:
+
+```text
+P3_RDAGENT_DEPENDENCY_ALIGNMENT = BLOCKED_EXISTING_FSSPEC_DOWNGRADE_REQUIRED_NO_ENVIRONMENT_MUTATION
+CURRENT_NEXT = P3_RDAGENT_FSSPEC_DEPENDENCY_CONFLICT_ANALYSIS_001
+```
