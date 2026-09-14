@@ -473,3 +473,34 @@ P3_CAN_ISSUE_CERTIFIED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
 ```
+
+## Current RD-Agent US template-binding upstream audit
+
+The pinned RD-Agent source and official current `main` are the same commit.
+Both hard-code the finance workspace template folders in the factor/model
+Experiment constructors and the five Qlib YAML names in the unchanged
+factor/model runners. The CLI, finance environment settings, `app_tpl`, and
+custom-data surfaces do not directly expose an external Qlib template folder
+or individual YAML path. No newer official release or current upstream hook
+closes this gap.
+
+The existing importable component-class settings do provide a safe upstream
+extension seam. A binding-only hypothesis-to-experiment component can delegate
+to upstream conversion, replace only the experiment's `QlibFBWorkspace`
+template folder, and leave RDLoop, proposal, coder, runner, Qlib execution,
+Recorder/MLflow, feedback, and trace behavior unchanged.
+
+The next design must preserve all five upstream runner branches. The two
+approved US baseline YAMLs cannot simply be aliased over branches that require
+combined-factor `StaticDataLoader` or SOTA model semantics.
+
+```text
+P3_RDAGENT_US_TEMPLATE_BINDING_UPSTREAM_AUDIT = COMPLETE
+OFFICIAL_TEMPLATE_OVERRIDE_AVAILABLE = NO
+OFFICIAL_UPGRADE_TEMPLATE_OVERRIDE_AVAILABLE = NO
+THIN_SCENARIO_BINDING_FEASIBLE = YES
+RD_AGENT_US_TEMPLATE_BINDING = THIN_SCENARIO_BINDING_REQUIRED
+P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_DESIGN_001
+```
