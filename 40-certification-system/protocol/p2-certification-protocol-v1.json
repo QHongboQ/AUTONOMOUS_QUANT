@@ -1,0 +1,358 @@
+{
+  "acceptance_policy": {
+    "historical_rehearsal_gate": {
+      "all_required": [
+        "TEMPORAL_INTEGRITY_PASS",
+        "PANDERA_VALIDATION_PASS",
+        "XNYS_VALIDATION_PASS",
+        "WALKFORWARD_POLICY_GATES_PASS",
+        "CPCV_POLICY_GATES_PASS",
+        "SPA_GATE_PASS",
+        "REALITYCHECK_GATE_PASS",
+        "STEPM_GATE_PASS",
+        "MCS_GATE_PASS",
+        "BASE_COST_GATE_PASS",
+        "TWO_X_COST_GATE_PASS",
+        "PARAMETER_ROBUSTNESS_GATE_PASS",
+        "DVC_REPRODUCIBILITY_PASS"
+      ],
+      "pass_value": "YES"
+    },
+    "historical_result_ceiling": [
+      "REJECTED",
+      "NOT_ELIGIBLE_NO_PRISTINE_OOS"
+    ],
+    "historical_result_prohibited": "CERTIFIED",
+    "p2_system_completion_blocked_by_no_current_pristine_oos": false
+  },
+  "candidate_inventory": {
+    "candidate_set_expansion_requires_new_protocol_version": true,
+    "factor_family": {
+      "class": "RaggedAlpha158",
+      "config_identity": "30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py#RaggedAlpha158@sha256:577ad2c76dd8d16881e240dba876e0b68e617624f6b69ab29ef0c7cea0b12b84",
+      "feature_owner": "MICROSOFT_QLIB_ALPHA158DL",
+      "name": "CURRENT_P2_RAGGEDALPHA158_ALPHA158_COMPATIBLE"
+    },
+    "primary_candidate_id": "QLIB_LGBMODEL_RAGGEDALPHA158_TOPK30_NDROP3_V1",
+    "primary_model": {
+      "class": "LGBModel",
+      "config_identity": "30-research-system/qlib/native-baseline/workflow_config_lightgbm_Alpha158_US.yaml#task.model@sha256:c6e6c4882adeb053d58e91b27d7d796fd9886dc1946d1d0540d5d9637f42ccaf",
+      "module_path": "qlib.contrib.model.gbdt",
+      "owner": "MICROSOFT_QLIB"
+    },
+    "primary_strategy": {
+      "class": "TopkDropoutStrategy",
+      "config_identity": "30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml#candidates.concentrated@sha256:b96e88cedb0755f36facc0afbc51e38970217582631c2585c645dcbaf7462588",
+      "module_path": "qlib.contrib.strategy",
+      "n_drop": 3,
+      "owner": "MICROSOFT_QLIB",
+      "topk": 30
+    },
+    "selection_basis": "ALREADY_OBSERVED_HISTORICAL_P1_EVIDENCE_ONLY_NOT_CERTIFICATION_EVIDENCE"
+  },
+  "certification_state": {
+    "certified_model": "NONE",
+    "certified_strategy": "NONE",
+    "current_next": "P2_CERTIFICATION_HISTORICAL_REHEARSAL_001",
+    "historical_rehearsal_ready": true,
+    "p2_certification": "STARTED_IN_PROGRESS",
+    "protocol_status": "FROZEN",
+    "sealed_oos_available": false
+  },
+  "cost_stress_policy": {
+    "base_close_cost": 0.0015,
+    "base_cost_median_active_return": "GREATER_THAN_ZERO",
+    "base_open_cost": 0.0005,
+    "deal_price": "close",
+    "limit_threshold": 0.095,
+    "minimum_cost_all_scenarios": 5,
+    "owner": "MICROSOFT_QLIB_EXCHANGE_AND_BACKTEST",
+    "scenarios": [
+      {
+        "close_cost_multiplier": 1.0,
+        "gate": "MEDIAN_ACTIVE_RETURN_GREATER_THAN_ZERO",
+        "id": "BASE",
+        "open_cost_multiplier": 1.0
+      },
+      {
+        "close_cost_multiplier": 2.0,
+        "gate": "MEDIAN_ACTIVE_RETURN_GREATER_THAN_ZERO",
+        "id": "TWO_X",
+        "open_cost_multiplier": 2.0
+      },
+      {
+        "close_cost_multiplier": 3.0,
+        "gate": "MANDATORY_EVIDENCE_ONLY_NOT_A_VETO_GATE",
+        "id": "THREE_X",
+        "open_cost_multiplier": 3.0
+      }
+    ],
+    "two_x_cost_median_active_return": "GREATER_THAN_ZERO"
+  },
+  "dataset_authority": {
+    "authority_fact_count": 12,
+    "authority_fact_path": "10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json",
+    "authority_fact_sha256": "3cd9b13a1424609120a4e069ac2cf9f9b9aa61e2df919aa48cf51eeac616bc69",
+    "code_base_sha": "9c166de6758b1387f6cfef526ce06b7d19f4afc9",
+    "history_end": "2024-12-31",
+    "history_start": "2015-01-02",
+    "masked_row_percent": 3.405068,
+    "masked_rows": 43175,
+    "member_session_rows": 1267963,
+    "membership_ranges": 745,
+    "observed_safe_rows": 1224788,
+    "provider_build_report_path": "D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json",
+    "provider_build_report_sha256": "eda5e8bb8e3f274d2893ea6a09f5764111f59c9cadf40eb32e3fbce199a68142",
+    "qlib_provider_identity": {
+      "calendar_sessions": 2516,
+      "path": "D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data",
+      "region": "us",
+      "source_build_schema": "RaggedPanelBuildV1"
+    },
+    "security_identities": 730,
+    "source_precedence": "QUANTIACS_PRIMARY_SIMFIN_BOUNDED_SECONDARY",
+    "upstream_stack_evidence": {
+      "arch_report_sha256": "5d00e5b41c81660c6a1490822469cc7afa09ffc1bce4e4b1c0ec9d088c2b254b",
+      "blocker_ledger_canonical_lf_sha256": "f3a58083cf2a978c4187207b2537a48d309b19bdeee39e83f7d77737cf6a10a8",
+      "dvc_stage_output_md5": "7e3c22b65af0646d87ac3ade2d703a07",
+      "qlib_report_sha256": "67e910e73b860939195b9142cde134c04528d14e554d8379f2563079e7f7c0eb",
+      "seal_path": "40-certification-system/upstream-stack-integration/.private/dvc-seal.json",
+      "skfolio_report_sha256": "0d1d5a9984bc419367d612a04ad778b5b4fbc63be5ee8cf2fce0090f6831fa1b",
+      "validation_report_sha256": "df53fa5b8d3b843b748150fa1439ef7a1ce0f90445a13c98ffa5b6c429bf9662"
+    }
+  },
+  "deferred_statistics": {
+    "dsr": "DEFERRED_NO_SELECTED_UPSTREAM_OWNER",
+    "dsr_pbo_block_p2_v1_system_completion": false,
+    "pbo": "DEFERRED_NO_SELECTED_UPSTREAM_OWNER",
+    "self_implementation_authorized": false
+  },
+  "historical_data_policy": {
+    "classification": "HISTORICAL_DEVELOPMENT_AND_CERTIFICATION_REHEARSAL_ONLY",
+    "end": "2024-12-31",
+    "historical_data_can_issue_certified_status": false,
+    "historical_data_is_pristine_oos": false,
+    "p1_observed_test_interval": "2022-01-03_THROUGH_2025-12-29",
+    "p1_observed_test_interval_remains_non_pristine": true,
+    "relabel_historical_partition_as_pristine_sealed_oos": "PROHIBITED",
+    "start": "2015-01-02"
+  },
+  "label_temporal_policy": {
+    "effective_lookahead_sessions": 2,
+    "expression": "Ref($close, -2)/Ref($close, -1) - 1",
+    "inherited_by": "RaggedAlpha158",
+    "source_class": "qlib.contrib.data.handler.Alpha158",
+    "source_path": "qlib/contrib/data/handler.py",
+    "source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8",
+    "verification": "PASS"
+  },
+  "market_benchmark_policy": {
+    "certification_claim_to_beat_spy": "PROHIBITED",
+    "market_benchmark_certification_evidence": "NOT_AVAILABLE",
+    "p1_spy_benchmark": "HISTORICAL_REFERENCE_ONLY",
+    "p2_v1_external_market_benchmark_expansion": "PROHIBITED"
+  },
+  "metrics": {
+    "mandatory_upstream_evidence": [
+      "NET_RETURN",
+      "ACTIVE_RETURN_VERSUS_STATISTICAL_CONTROL",
+      "ANNUALIZED_RETURN",
+      "INFORMATION_RATIO_WHERE_UPSTREAM_EMITS_IT",
+      "MAXIMUM_DRAWDOWN",
+      "TURNOVER",
+      "TRANSACTION_COST",
+      "IC_WHERE_UPSTREAM_EMITS_IT",
+      "RANK_IC_WHERE_UPSTREAM_EMITS_IT",
+      "WALKFORWARD_FOLD_RESULTS",
+      "CPCV_SPLIT_RESULTS",
+      "SPA_EVIDENCE",
+      "REALITYCHECK_EVIDENCE",
+      "STEPM_EVIDENCE",
+      "MCS_EVIDENCE",
+      "COST_STRESS_RESULTS",
+      "PARAMETER_ROBUSTNESS_RESULTS"
+    ],
+    "production_capital_or_live_risk_ceilings_established": false
+  },
+  "multiple_testing_policy": {
+    "bootstrap_block_size": 10,
+    "bootstrap_method": "STATIONARY",
+    "bootstrap_replications": 5000,
+    "bootstrap_seed": 20260913,
+    "gates": {
+      "mcs_95_percent": "PRIMARY_CANDIDATE_IN_SET",
+      "reality_check_pvalue": "LESS_THAN_OR_EQUAL_TO_0.05",
+      "spa_consistent_pvalue": "LESS_THAN_OR_EQUAL_TO_0.05",
+      "stepm": "PRIMARY_CANDIDATE_IN_SUPERIOR_SET"
+    },
+    "loss": "NEGATIVE_NET_DAILY_RETURN",
+    "owner": "ARCH_8.0.0",
+    "primary_benchmark_loss": "NEGATIVE_NET_DAILY_RETURN_OF_PREREGISTERED_LINEAR_OLS_CONTROL",
+    "required_procedures": [
+      "SPA",
+      "RealityCheck",
+      "StepM",
+      "MCS"
+    ],
+    "significance_alpha": 0.05
+  },
+  "non_authorizations": {
+    "aq_custom_engine_count": 0,
+    "backtest": false,
+    "broker_calls": 0,
+    "certification_decision_executed": false,
+    "cpcv_executed": false,
+    "live_capital": "NOT_AUTHORIZED",
+    "llm_calls": 0,
+    "market_data_network_calls": 0,
+    "model_training": false,
+    "new_data_provider": false,
+    "new_predictions": false,
+    "production_trading": "NOT_AUTHORIZED",
+    "rd_agent_executed": false,
+    "spa_realitycheck_stepm_mcs_executed": false,
+    "walkforward_executed": false
+  },
+  "ownership": {
+    "aq": "PROTOCOL_POLICY_THRESHOLDS_TRIAL_INVENTORY_SEALED_OOS_AUTHORITY_AND_CERTIFICATION_DECISION_SEMANTICS_ONLY",
+    "arch": "SPA_REALITYCHECK_STEPM_MCS_AND_BOOTSTRAP_PROCEDURES",
+    "dvc": "DEPENDENCY_SNAPSHOT_AND_EVIDENCE_REPRODUCIBILITY",
+    "exchange_calendars": "XNYS_SESSION_AUTHORITY",
+    "microsoft_qlib": "DATASETH_RAGGEDALPHA158_MODELS_PREDICTIONS_TOPKDROPOUTSTRATEGY_BACKTEST_EXCHANGE_COST_RECORDER_MLFLOW_AND_PORTFOLIO_ANALYSIS",
+    "pandera": "GENERIC_TABULAR_VALIDATION",
+    "skfolio": "WALKFORWARD_CPCV_PURGE_AND_EMBARGO_MECHANICS"
+  },
+  "parameter_robustness_policy": {
+    "configurations": [
+      {
+        "id": "P0",
+        "n_drop": 3,
+        "role": "PRIMARY",
+        "topk": 30
+      },
+      {
+        "id": "P1",
+        "n_drop": 3,
+        "role": "NEIGHBOR",
+        "topk": 25
+      },
+      {
+        "id": "P2",
+        "n_drop": 3,
+        "role": "NEIGHBOR",
+        "topk": 35
+      },
+      {
+        "id": "P3",
+        "n_drop": 2,
+        "role": "NEIGHBOR",
+        "topk": 30
+      },
+      {
+        "id": "P4",
+        "n_drop": 4,
+        "role": "NEIGHBOR",
+        "topk": 30
+      }
+    ],
+    "median_active_return_all_five": "GREATER_THAN_ZERO",
+    "minimum_positive_sign_preserving_neighbors": 3,
+    "neighbor_count": 4,
+    "owner": "MICROSOFT_QLIB_TOPKDROPOUTSTRATEGY"
+  },
+  "protocol_version": "P2_CERTIFICATION_PROTOCOL_V1",
+  "regime_evidence_policy": {
+    "blocks": [
+      "2015-2016",
+      "2017-2018",
+      "2019-2020",
+      "2021-2022",
+      "2023-2024"
+    ],
+    "hard_veto": false,
+    "missing_prediction_policy": "RECORD_BLOCK_UNAVAILABLE_DO_NOT_FABRICATE_PREDICTIONS",
+    "required": true,
+    "ruptures_added": false,
+    "segmentation_owner": "MICROSOFT_QLIB_BOUNDED_CALENDAR_SEGMENTS"
+  },
+  "sealed_oos_policy": {
+    "availability_at_freeze": "NO",
+    "early_result_access": "PROHIBITED",
+    "intermediate_peek": "PROHIBITED",
+    "minimum_sessions": 126,
+    "one_shot_release": true,
+    "released_window_becomes_historical_for_future_versions": true,
+    "reuse_for_retuning": "PROHIBITED",
+    "start_rule": "THE_FIRST_XNYS_SESSION_STRICTLY_AFTER_THE_CERTIFICATIONPROTOCOLV1_FREEZE_COMMIT_BECOMES_PART_OF_ORIGIN_MAIN",
+    "start_session_resolved": false
+  },
+  "serialization": {
+    "encoding": "UTF-8",
+    "indent_spaces": 2,
+    "key_order": "LEXICOGRAPHIC",
+    "line_endings": "LF",
+    "terminal_newline": true
+  },
+  "temporal_cv_policy": {
+    "active_return_definition": "CANDIDATE_NET_RETURN_MINUS_PREREGISTERED_STATISTICAL_CONTROL_NET_RETURN_FOR_THE_SAME_EVALUATION_WINDOW",
+    "cpcv": {
+      "embargo_size_sessions": 2,
+      "median_active_return": "GREATER_THAN_ZERO",
+      "minimum_positive_active_return_fraction": 0.6,
+      "n_folds": 10,
+      "n_test_folds": 2,
+      "owner": "SKFOLIO_1.0.6_COMBINATORIALPURGEDCV",
+      "purged_size_sessions": 2
+    },
+    "walkforward": {
+      "expand_train": false,
+      "median_active_return": "GREATER_THAN_ZERO",
+      "minimum_positive_active_return_fraction": 0.6,
+      "owner": "SKFOLIO_1.0.6_WALKFORWARD",
+      "purged_size_sessions": 2,
+      "reduce_test": false,
+      "step_sessions": 63,
+      "test_size_sessions": 63,
+      "train_size_sessions": 504,
+      "upstream_equivalent": "WalkForward(test_size=63, train_size=504, purged_size=2, expand_train=False, reduce_test=False); with freq=None skfolio advances by test_size"
+    }
+  },
+  "trial_inventory": {
+    "catboost_executed": false,
+    "known_executed_trial_count": 4,
+    "no_hidden_trial_removal": true,
+    "primary_statistical_control": {
+      "config_identity": "30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml#task.model@sha256:b9a92537a9737ce909284e77e583ad20c0a3d2b18f795271d85db6c5ba5eafc1",
+      "id": "TRIAL_004",
+      "model": "Qlib LinearModel(estimator=ols)",
+      "n_drop": 5,
+      "topk": 50
+    },
+    "trials": [
+      {
+        "id": "TRIAL_001",
+        "model": "Qlib LGBModel",
+        "n_drop": 5,
+        "topk": 50
+      },
+      {
+        "id": "TRIAL_002",
+        "model": "Qlib LGBModel",
+        "n_drop": 3,
+        "topk": 30
+      },
+      {
+        "id": "TRIAL_003",
+        "model": "Qlib LGBModel",
+        "n_drop": 10,
+        "topk": 100
+      },
+      {
+        "id": "TRIAL_004",
+        "model": "Qlib LinearModel(estimator=ols)",
+        "n_drop": 5,
+        "topk": 50
+      }
+    ]
+  }
+}

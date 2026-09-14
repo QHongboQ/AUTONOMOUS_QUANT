@@ -100,3 +100,63 @@ stages:
       hash: md5
       md5: 7e3c22b65af0646d87ac3ade2d703a07
       size: 739
+  p2_certification_protocol_freeze:
+    cmd: python -B 40-certification-system/protocol/seal_protocol.py --protocol 40-certification-system/protocol/p2-certification-protocol-v1.json --provider-report D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json --qlib-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json --skfolio-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json --arch-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json --validation-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json --blocker-ledger 40-certification-system/upstream-stack-integration/blockers.json --authority-facts 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json --ragged-alpha-config 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py --primary-model-config 30-research-system/qlib/native-baseline/workflow_config_lightgbm_Alpha158_US.yaml --control-model-config 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml --strategy-config 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml --output 40-certification-system/protocol/.private/protocol-freeze-seal.json
+    deps:
+    - path: 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      hash: md5
+      md5: 66f6fc0f1492772ae379e1fe41d76325
+      size: 11957
+    - path: 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
+      hash: md5
+      md5: 24cb38d962d6e04b3155875813d1f7c5
+      size: 782
+    - path: 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      hash: md5
+      md5: 71b83073f5f90f384aeb62aa1eca16aa
+      size: 2288
+    - path: 30-research-system/qlib/native-baseline/workflow_config_lightgbm_Alpha158_US.yaml
+      hash: md5
+      md5: d172ef754bb4f87bc197e89bbb0241f0
+      size: 2181
+    - path: 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      hash: md5
+      md5: b81185713196f41d3a8ea0ba43f07dfc
+      size: 839
+    - path: 40-certification-system/protocol/p2-certification-protocol-v1.json
+      hash: md5
+      md5: 163d5718a9d81c80e2d8f71cf29f336c
+      size: 12811
+    - path: 40-certification-system/protocol/seal_protocol.py
+      hash: md5
+      md5: d254e21f3437b9ed578decfd83adc4a1
+      size: 5440
+    - path: 40-certification-system/upstream-stack-integration/blockers.json
+      hash: md5
+      md5: 7eb413605979c3cefac31d29b2b6eecc
+      size: 2126
+    - path: D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      hash: md5
+      md5: 4aab3ada207135fbd190db082a29e85c
+      size: 621
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
+      hash: md5
+      md5: e44e5baad98ff36c908744081b953d2d
+      size: 888
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
+      hash: md5
+      md5: f1940dfa967757261a050f62107f3376
+      size: 496
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json
+      hash: md5
+      md5: a4d32b4d802c3f78bd229e1744e519b4
+      size: 341
+    outs:
+    - path: 40-certification-system/protocol/.private/protocol-freeze-seal.json
+      hash: md5
+      md5: c323ab46dc15633c27a9432f52be9bd8
+      size: 1345
