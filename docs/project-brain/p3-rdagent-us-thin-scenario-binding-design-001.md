@@ -1,6 +1,6 @@
 # P3 RD-Agent US Thin Scenario Binding Design 001
 
-Status: **COMPLETE — READY FOR IMPLEMENTATION**
+Status: **COMPLETE — IMPLEMENTATION BLOCKED BY FACTOR SOURCE-DATA CONTRACT**
 
 Design date: 2026-09-14
 
@@ -25,9 +25,9 @@ RD_LOOP_OVERRIDE_REQUIRED = NO
 PROMPT_OVERRIDE_REQUIRED = NO
 FACTOR_SOURCE_DATA_PATH = THIN_BINDING_REQUIRED
 UPSTREAM_LOGIC_COPIED = NO
-THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
+THIN_BINDING_DESIGN = COMPLETE_IMPLEMENTATION_BLOCKED_BY_FACTOR_SOURCE_DATA
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
+CURRENT_NEXT = P3_RDAGENT_US_QLIB_FACTOR_FIELD_PRESERVATION_001
 ```
 
 RD-Agent remains the autonomous research owner. The project binding owns only
@@ -393,7 +393,30 @@ P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING_IMPLEMENTED
 
 No DVC file or stage changed.
 
-## 12. Non-actions
+## 12. Source-data contract proof update
+
+The subsequent source-data proof tested the approved AQ provider through
+Qlib's public API. OHLCV is available, but `$factor` returns only NaN. Pinned
+Qlib defines `$factor` as the restoration price-adjustment factor, while the
+frozen Quantiacs source contains a nonconstant `split_cumprod` matching that
+direction. A constant `1.0` would therefore be semantically wrong.
+
+The binding design remains the approved minimum design, but implementation is
+not authorized until a separate bounded task preserves the already-frozen
+factor semantics through the Qlib provider. The private `daily_pv.h5` input
+must not be materialized with invented factor data.
+
+```text
+QLIB_FACTOR_AVAILABLE = NO
+CONSTANT_FACTOR_SEMANTICALLY_VALID = NO
+SOURCE_DATA_MATERIALIZATION = BLOCKED
+MATERIALIZER_IMPLEMENTATION = NONE
+FACTOR_SOURCE_DATA_CONTRACT = BLOCKED
+THIN_BINDING_DESIGN = COMPLETE_IMPLEMENTATION_BLOCKED_BY_FACTOR_SOURCE_DATA
+CURRENT_NEXT = P3_RDAGENT_US_QLIB_FACTOR_FIELD_PRESERVATION_001
+```
+
+## 13. Non-actions
 
 ```text
 CODE_CHANGED = NO

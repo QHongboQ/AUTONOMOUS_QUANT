@@ -540,8 +540,38 @@ PROMPT_CSI300_EXECUTION_RELEVANCE = UI_ONLY_NOT_CONSUMED_BY_SELECTED_AUTONOMOUS_
 PROMPT_OVERRIDE_REQUIRED = NO
 FACTOR_SOURCE_DATA_PATH = THIN_BINDING_REQUIRED
 UPSTREAM_LOGIC_COPIED = NO
-THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
+THIN_BINDING_DESIGN = COMPLETE_IMPLEMENTATION_BLOCKED_BY_FACTOR_SOURCE_DATA
 P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING_IMPLEMENTED_AND_PROVEN
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
+CURRENT_NEXT = P3_RDAGENT_US_QLIB_FACTOR_FIELD_PRESERVATION_001
+```
+
+## Current RD-Agent US factor source-data contract proof
+
+A bounded Qlib public-API sample against the approved AQ US provider returned
+valid `$open`, `$close`, `$high`, `$low`, and `$volume`, but `$factor` was NaN
+for every sampled observation. Pinned Qlib defines this field as the
+restoration price-adjustment factor, not a research alpha. The frozen
+Quantiacs input contains explicit, nonconstant `split_cumprod` with the same
+adjusted/original direction, so a constant `1.0` is not valid.
+
+The official RD-Agent Factor CoSTEER generator always exports the six-column
+HDF contract and cannot be reused directly because it hard-codes the China
+provider. A thin configured Qlib export remains the eventual minimum
+materialization shape, but it cannot be valid until the existing frozen factor
+is preserved through the AQ Qlib provider and exposed by Qlib's public API.
+
+```text
+P3_RDAGENT_US_FACTOR_SOURCE_DATA_CONTRACT_PROOF = COMPLETE
+QLIB_FACTOR_AVAILABLE = NO
+QLIB_FACTOR_SEMANTICS = RESTORATION_PRICE_ADJUSTMENT_FACTOR_SPLIT_ADJUSTED
+CONSTANT_FACTOR_SEMANTICALLY_VALID = NO
+SOURCE_DATA_MATERIALIZATION = BLOCKED
+MATERIALIZER_IMPLEMENTATION = NONE
+FACTOR_SOURCE_DATA_CONTRACT = BLOCKED
+PIT_MEMBERSHIP_AUTHORITY_CHANGED = NO
+RAGGED_POLICY_CHANGED = NO
+SEALED_OOS_ISOLATION = PASS
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_RDAGENT_US_QLIB_FACTOR_FIELD_PRESERVATION_001
 ```
