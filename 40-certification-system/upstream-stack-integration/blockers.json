@@ -1,0 +1,32 @@
+{
+  "blockers": [
+    {
+      "capability": "Qlib Recorder lifecycle for the bounded MLflow run",
+      "exact_error_or_gap": "Initial probe sequencing allowed LGBModel.fit to open Qlib's default recorder before a second R.start call, producing: Run with UUID 494d9104114647eca8e830d9e5ff6049 is already active.",
+      "p2_blocking": false,
+      "public_interface": "qlib.workflow.R.start",
+      "recommended_next_action": "None; the allowed same-upstream configuration correction places model execution and evidence logging inside one public Qlib R.start context, and the corrected recorder finished.",
+      "status": "PASS_WITH_LIMITATION",
+      "upstream": "MLflow through Qlib"
+    },
+    {
+      "capability": "XNYS session validation",
+      "exact_error_or_gap": "No existing authorized persistent runtime exposes exchange_calendars 4.13.2; installing or repairing packages is outside this task.",
+      "p2_blocking": true,
+      "public_interface": "exchange_calendars.get_calendar",
+      "recommended_next_action": "In a separately authorized task, provide the pinned exchange_calendars 4.13.2 runtime and execute validation_probe.py without changing AQ calendar semantics.",
+      "status": "BLOCKED_ENVIRONMENT",
+      "upstream": "exchange_calendars"
+    },
+    {
+      "capability": "Certification handoff schema validation",
+      "exact_error_or_gap": "No existing authorized persistent runtime exposes Pandera 0.33.1; installing or repairing packages is outside this task.",
+      "p2_blocking": true,
+      "public_interface": "pandera.pandas.DataFrameSchema",
+      "recommended_next_action": "In a separately authorized task, provide the pinned Pandera 0.33.1 runtime and execute validation_probe.py without creating an AQ schema engine.",
+      "status": "BLOCKED_ENVIRONMENT",
+      "upstream": "Pandera"
+    }
+  ],
+  "schema_version": "P2UpstreamCertificationBlockerLedgerV1"
+}

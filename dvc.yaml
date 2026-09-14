@@ -1,4 +1,22 @@
 stages:
+  p2_upstream_certification_stack_integration:
+    cmd: >-
+      python -B 40-certification-system/upstream-stack-integration/seal_evidence.py
+      --provider-report D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --qlib-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
+      --skfolio-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
+      --arch-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      --blocker-ledger 40-certification-system/upstream-stack-integration/blockers.json
+      --output 40-certification-system/upstream-stack-integration/.private/dvc-seal.json
+    deps:
+      - 40-certification-system/upstream-stack-integration/seal_evidence.py
+      - 40-certification-system/upstream-stack-integration/blockers.json
+      - D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+    outs:
+      - 40-certification-system/upstream-stack-integration/.private/dvc-seal.json
   pit_universe_snapshot:
     cmd: >-
       uv run --no-project --python 3.12
