@@ -1,6 +1,6 @@
 # P3 RD-Agent Runtime Provenance Alignment 001
 
-Status: **BLOCKED / ORIGINAL RUNTIME RESTORED**
+Status: **PASS — CURRENT CLOSEOUT / HISTORICAL BLOCKERS PRESERVED**
 
 ## Ownership preamble
 
@@ -220,4 +220,26 @@ PACKAGE_CHANGES = 0
 RD_AGENT_RUNTIME_PROVENANCE = BLOCKED
 RD_AGENT_RUNTIME_SOURCE_SHA = NONE
 CURRENT_NEXT = P3_RDAGENT_CONDA_DISCOVERY_PATH_CONFIGURATION_RESOLUTION_001
+```
+
+## Current provenance closeout
+
+The subsequent configuration-resolution task made the existing Miniforge
+`conda` executable visible only to the bounded control process. RD-Agent's own
+validator then discovered `rdagent4qlib` without a manual `bin_path`. After a
+successful zero-mutation native bridge proof, the previously audited
+dependency closure and source-wheel installation completed.
+
+```text
+RD_AGENT_RUNTIME_VERSION = 0.8.1.dev37
+RD_AGENT_RUNTIME_PROVENANCE = PASS
+RD_AGENT_RUNTIME_SOURCE_SHA = 32b3d395e73d9db5eee3fe9063d69aec0fdc83bd
+RD_AGENT_WHEEL_SHA256 = 6d4b78037016951d21879249152fee21df90e5dca0a752e233026a41afe64395
+RD_AGENT_DECLARED_QLIB_PIN = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+SELECTED_QLIB_RUNTIME_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+RD_AGENT_QLIB_PIN_ALIGNMENT = PASS
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = PASS
+PERSISTENT_OS_PATH_CHANGED = NO
+SHELL_PROFILE_CHANGED = NO
+CURRENT_NEXT = P3_US_RAGGED_SCENARIO_CONFIGURATION_PROOF_001
 ```

@@ -1,6 +1,6 @@
 # P3 RD-Agent Runtime Dependency Alignment 001
 
-Status: **BLOCKED BY EXISTING-PACKAGE DOWNGRADE / NO ENVIRONMENT MUTATION**
+Status: **PASS — CURRENT CLOSEOUT / HISTORICAL BLOCKERS PRESERVED**
 
 ## Ownership preamble
 
@@ -440,3 +440,92 @@ The next bounded configuration task must establish how the upstream 0.8.0
 validator can discover the existing Miniforge `conda` executable without
 source modification or package mutation. It must not retry the alignment or
 advance to later P3 work until that configuration proof passes.
+
+## Current closeout — native Conda discovery and audited alignment pass
+
+The historical blocked attempts above remain evidence of the failure modes
+that preceded this closeout. The bounded configuration resolution exposed the
+existing Miniforge executable to the RD-Agent control process only. Native
+`QlibCondaConf()` then ran its own validator, discovered the selected
+`rdagent4qlib` path, and retained it without a manually supplied `bin_path`.
+
+```text
+CONDA_BASE = /home/zhou/miniforge3
+CONDA_EXECUTABLE = /home/zhou/miniforge3/bin/conda
+CONDA_VERSION = 26.7.2
+CONDA_ENV_NAME = rdagent4qlib
+SELECTED_QLIB_PREFIX = /home/zhou/miniforge3/envs/rdagent4qlib
+SELECTED_QLIB_BIN_PATH = /home/zhou/miniforge3/envs/rdagent4qlib/bin
+CONDA_DISCOVERY_PATH_CONFIGURATION_PROOF = PASS
+PERSISTENT_OS_PATH_CHANGED = NO
+SHELL_PROFILE_CHANGED = NO
+```
+
+Before package mutation, exactly one native `QlibCondaEnv.run()` call executed
+only `import sys, qlib` and printed the interpreter and Qlib version. It
+returned zero from the selected environment:
+
+```text
+PRE_ALIGNMENT_NATIVE_BRIDGE = PASS
+SYS_EXECUTABLE = /home/zhou/miniforge3/envs/rdagent4qlib/bin/python
+OBSERVED_QLIB_VERSION = 0.9.8.dev26
+PRE_RD_AGENT_VERSION = 0.8.0
+PRE_FSSPEC_VERSION = 2026.7.0
+```
+
+The resolver dry run proposed exactly the previously audited closure and no
+other existing-package version change or removal. Exact released artifacts
+were installed for:
+
+```text
+fsspec = 2026.6.0
+absl-py = 2.5.0
+datasets = 5.0.1
+duckduckgo-search = 8.1.1
+grpcio = 1.84.0
+lxml = 6.1.3
+multiprocess = 0.70.19
+primp = 2.0.1
+tensorboard = 2.21.0
+tensorboard-data-server = 0.7.2
+```
+
+The official clean Microsoft source at
+`32b3d395e73d9db5eee3fe9063d69aec0fdc83bd` produced
+`rdagent-0.8.1.dev37-py3-none-any.whl` with SHA-256
+`6d4b78037016951d21879249152fee21df90e5dca0a752e233026a41afe64395`.
+The wheel was installed with `--no-deps --no-index`; installed provenance,
+imports, CLI help, and `pip check` passed.
+
+The installed RD-Agent declares Qlib commit
+`2fb9380b342556ddb50a4b24e4fe8655d548b2b8`, exactly matching the selected
+Qlib source/runtime. Exactly one post-alignment native
+`QlibCondaEnv.run()` repeated the non-performance import proof and returned
+zero from the same selected interpreter. `QlibCondaEnv.prepare()` was never
+called.
+
+```text
+POST_RD_AGENT_VERSION = 0.8.1.dev37
+POST_FSSPEC_VERSION = 2026.6.0
+RD_AGENT_DEPENDENCY_ALIGNMENT = PASS
+RD_AGENT_RUNTIME_PROVENANCE = PASS
+RD_AGENT_RUNTIME_SOURCE_SHA = 32b3d395e73d9db5eee3fe9063d69aec0fdc83bd
+RD_AGENT_DECLARED_QLIB_PIN = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+SELECTED_QLIB_RUNTIME_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+RD_AGENT_QLIB_PIN_ALIGNMENT = PASS
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = PASS
+UNAUTHORIZED_EXISTING_PACKAGE_VERSION_CHANGES = 0
+REMOVED_PREEXISTING_PACKAGES = 0
+QLIB_PACKAGE_CHANGED = NO
+DVC_ENV_CHANGED = NO
+RD_AGENT_SOURCE_CHANGED = NO
+QLIB_SOURCE_CHANGED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+RD_AGENT_LLM_LOOP_EXECUTED = NO
+MODEL_TRAINING = NO
+NEW_PREDICTIONS = NO
+BACKTEST = NO
+DATASET_DOWNLOADS = 0
+MARKET_DATA_NETWORK_CALLS = 0
+CURRENT_NEXT = P3_US_RAGGED_SCENARIO_CONFIGURATION_PROOF_001
+```

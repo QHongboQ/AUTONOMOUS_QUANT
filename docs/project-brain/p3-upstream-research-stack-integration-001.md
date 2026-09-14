@@ -1,6 +1,6 @@
 # P3 Upstream Research Stack Integration 001
 
-Status: **COMPLETE WITH DOCUMENTED BLOCKERS**
+Status: **COMPLETE — RD-AGENT RUNTIME ALIGNMENT PASS**
 
 ## Ownership preamble
 
@@ -356,4 +356,31 @@ FSSPEC_VERSION = 2026.7.0
 QLIB_PACKAGE_CHANGED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_CONDA_DISCOVERY_PATH_CONFIGURATION_RESOLUTION_001
+```
+
+## Current RD-Agent runtime integration closeout
+
+The native discovery path is now proven. With
+`/home/zhou/miniforge3/bin` prepended only to the bounded process PATH,
+unmodified `QlibCondaConf()` discovered the unique `rdagent4qlib` environment.
+One pre-alignment and one post-alignment non-performance
+`QlibCondaEnv.run()` proof each returned zero from the selected Qlib Python.
+
+The audited source-derived RD-Agent `0.8.1.dev37` runtime and its exact Qlib
+pin now align with the selected Qlib commit. The dependency closure passes,
+Qlib and DVC inventories are unchanged, and no AQ runner or generic engine was
+introduced.
+
+```text
+CONDA_DISCOVERY_PATH_CONFIGURATION_PROOF = PASS
+PRE_ALIGNMENT_NATIVE_BRIDGE = PASS
+FSSPEC_ALIGNMENT = PASS
+RD_AGENT_DEPENDENCY_ALIGNMENT = PASS
+RD_AGENT_RUNTIME_PROVENANCE = PASS
+RD_AGENT_QLIB_PIN_ALIGNMENT = PASS
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = PASS
+QLIB_PACKAGE_CHANGED = NO
+DVC_ENV_CHANGED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_US_RAGGED_SCENARIO_CONFIGURATION_PROOF_001
 ```
