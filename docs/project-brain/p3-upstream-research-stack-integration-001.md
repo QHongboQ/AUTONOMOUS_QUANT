@@ -505,7 +505,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_DESIGN_001
 ```
 
-## Current RD-Agent US thin scenario-binding design
+## Frozen RD-Agent US thin scenario-binding design
 
 The minimum real-loop binding is now designed against the pinned public class
 settings. One project module will subclass only the upstream factor and model
@@ -546,7 +546,35 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
 ```
 
-## Current RD-Agent US factor source-data contract proof
+## Current RD-Agent US thin scenario-binding implementation
+
+The frozen class-seam design is implemented with one project binding module
+and exactly five approved US templates. The factor/model converters call
+upstream conversion and rebind only newly created workspaces. Factor/quant
+Scenario guards validate the immutable P3 source before upstream construction.
+Level-1 tests passed without a runner, LLM, training, prediction, backtest,
+provider call, or DVC execution.
+
+```text
+P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION = COMPLETE
+RD_AGENT_US_THIN_BINDING = PASS
+PROJECT_BINDING_MODULE_COUNT = 1
+PROJECT_TEMPLATE_FILE_COUNT = 5
+ACTIVE_CHINA_EXECUTION_DEFAULTS = 0
+TEMPLATE_HASH_GUARD = PASS
+FACTOR_SOURCE_GUARD = PASS
+QUANT_SOURCE_GUARD = PASS
+UPSTREAM_RUNNER_TEMPLATE_SELECTION_COMPATIBLE = PASS
+REAL_RDAGENT_US_TEMPLATE_PATH = PROVEN_WITHOUT_AUTONOMOUS_EXECUTION
+RUNNER_OVERRIDE_REQUIRED = NO
+CODER_OVERRIDE_REQUIRED = NO
+RD_LOOP_OVERRIDE_REQUIRED = NO
+P3_DVC_STAGE_ACTIVATION = READY_NEXT
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
+```
+
+## RD-Agent US factor source-data contract proof and implementation handoff
 
 A bounded Qlib public-API sample proved that the immutable AQ provider returns
 OHLCV but no `$factor`. The follow-up preservation task retained the official
@@ -572,6 +600,8 @@ FACTOR_SOURCE_DATA_CONTRACT = READY_FOR_THIN_BINDING_IMPLEMENTATION
 PIT_MEMBERSHIP_AUTHORITY_CHANGED = NO
 RAGGED_POLICY_CHANGED = NO
 SEALED_OOS_ISOLATION = PASS
+RD_AGENT_US_THIN_BINDING = PASS
+P3_DVC_STAGE_ACTIVATION = READY_NEXT
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
+CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
 ```

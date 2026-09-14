@@ -1,14 +1,14 @@
 # P3 RD-Agent US Thin Scenario Binding Design 001
 
-Status: **COMPLETE — READY FOR IMPLEMENTATION**
+Status: **COMPLETE — IMPLEMENTED AND LEVEL-1 VERIFIED**
 
 Design date: 2026-09-14
 
-This document defines the minimum project-owned binding that lets the pinned
+This document originally defined the minimum project-owned binding that lets the pinned
 Microsoft RD-Agent `fin_factor`, `fin_model`, and `fin_quant` applications use
-the approved US ragged Qlib configuration family. It is a design record only:
-no Python or YAML implementation was added and no autonomous loop, training,
-prediction, backtest, provider call, or DVC stage was run.
+the approved US ragged Qlib configuration family. The design is now implemented
+and Level-1 verified. No autonomous loop, training, prediction, backtest,
+provider call, or DVC stage was run.
 
 ## 1. Authority and decision
 
@@ -28,6 +28,15 @@ UPSTREAM_LOGIC_COPIED = NO
 THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
+```
+
+The block above is the frozen design decision. Current completion state is:
+
+```text
+RD_AGENT_US_THIN_BINDING = PASS
+REAL_RDAGENT_US_TEMPLATE_PATH = PROVEN_WITHOUT_AUTONOMOUS_EXECUTION
+P3_DVC_STAGE_ACTIVATION = READY_NEXT
+CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
 ```
 
 RD-Agent remains the autonomous research owner. The project binding owns only
@@ -321,7 +330,7 @@ DATA_ADAPTER_REQUIRED = NO
 This closes the design question without authorizing data creation in this
 task.
 
-## 9. Future validation design
+## 9. Frozen validation design
 
 ### Level 1 — no LLM and no training
 
@@ -388,7 +397,7 @@ QLIB_AND_MLFLOW = RUN_TRACKING_OWNER
 RUN_SCOPED_RDAGENT_WORKSPACE = LIKELY_FUTURE_DVC_OUTPUT_BOUNDARY
 SHARED_MLFLOW_DB = NOT_DVC_OUTPUT
 US_HISTORICAL_PROVIDER = DVC_DEPENDENCY_ONLY
-P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING_IMPLEMENTED_AND_PROVEN
+P3_DVC_STAGE_ACTIVATION = READY_NEXT
 ```
 
 No DVC file or stage changed.
@@ -414,11 +423,13 @@ CONSTANT_FACTOR_SEMANTICALLY_VALID = NO
 SOURCE_DATA_MATERIALIZATION = THIN_CONFIGURED_QLIB_EXPORT
 MATERIALIZER_IMPLEMENTATION = ONE_THIN_CONTRACT_MATERIALIZER
 FACTOR_SOURCE_DATA_CONTRACT = READY_FOR_THIN_BINDING_IMPLEMENTATION
-THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
-CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
+THIN_BINDING_DESIGN = IMPLEMENTED_LEVEL1_PASS
+RD_AGENT_US_THIN_BINDING = PASS
+P3_DVC_STAGE_ACTIVATION = READY_NEXT
+CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
 ```
 
-## 13. Non-actions
+## 13. Design-task non-actions (historical)
 
 ```text
 CODE_CHANGED = NO
