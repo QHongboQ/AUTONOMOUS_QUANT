@@ -338,3 +338,22 @@ RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED_ALIGNED_RUNTIME_PATH_NOT_BOUND
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
 ```
+
+## Subsequent explicit-bin-path retry
+
+The zero-mutation prerequisite retry resolved the actual `rdagent4qlib`
+prefix from Conda metadata and passed its bin directory explicitly to the
+restored RD-Agent 0.8.0 public configuration. The installed 0.8.0
+`CondaConf` validator nevertheless overwrote that value after its unqualified
+`conda` subprocess could not be found. The single proof returned 127 and the
+task stopped before all package operations.
+
+```text
+RD_AGENT_RUNTIME = PASS_ORIGINAL_0_8_0_UNCHANGED
+EXPLICIT_BINPATH_CONFIGURATION_PROOF = BLOCKED_CONDA_DISCOVERY_PATH
+PACKAGE_CHANGES = 0
+FSSPEC_VERSION = 2026.7.0
+QLIB_PACKAGE_CHANGED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_RDAGENT_CONDA_DISCOVERY_PATH_CONFIGURATION_RESOLUTION_001
+```

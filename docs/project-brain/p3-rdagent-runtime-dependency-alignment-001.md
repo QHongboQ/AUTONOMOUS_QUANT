@@ -339,3 +339,104 @@ The later residual gaps remain unchanged: US ragged-panel scenario
 configuration proof, the Candidate-to-P2 thin fail-closed identity contract,
 P3 DVC-stage activation, and autonomous-loop activation. The project does not
 advance to them while the bounded alignment remains rolled back.
+
+## Explicit Qlib bin-path alignment retry
+
+Status: **BLOCKED BEFORE PACKAGE MUTATION**
+
+The bounded retry started from the exact rolled-back environment:
+
+```text
+TASK = AUTONOMOUS-QUANT-P3-RDAGENT-EXPLICIT-QLIB-BINPATH-ALIGNMENT-RETRY-001
+PRIOR_BRANCH_HEAD = de5d6f457d65dc51483c05096caabc398c4c9f95
+RD_AGENT_VERSION = 0.8.0
+FSSPEC_VERSION = 2026.7.0
+PIP_CHECK = PASS
+```
+
+Actual Conda metadata resolved exactly one `rdagent4qlib` environment:
+
+```text
+SELECTED_QLIB_PREFIX = /home/zhou/miniforge3/envs/rdagent4qlib
+SELECTED_QLIB_BIN_PATH = /home/zhou/miniforge3/envs/rdagent4qlib/bin
+SELECTED_PYTHON = /home/zhou/miniforge3/envs/rdagent4qlib/bin/python
+SELECTED_QLIB_VERSION = 0.9.8.dev26
+SELECTED_QLIB_RUNTIME_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+```
+
+The official checkout at
+`32b3d395e73d9db5eee3fe9063d69aec0fdc83bd` confirmed the public inheritance
+chain `QlibCondaConf -> CondaConf -> LocalConf`; `QlibCondaConf` selects
+`rdagent4qlib`; and `LocalConf.bin_path` defaults to empty. Official test
+source also demonstrates public construction with `LocalConf(bin_path=...)`.
+
+Exactly one zero-package-mutation proof instantiated the restored installed
+runtime with:
+
+```text
+QlibCondaConf(bin_path=/home/zhou/miniforge3/envs/rdagent4qlib/bin)
+```
+
+and invoked `QlibCondaEnv.run()` with a payload limited to printing
+`sys.executable`, `qlib.__version__`, and PATH. It returned 127 before Python
+could start:
+
+```text
+RETURN_CODE = 127
+EFFECTIVE_RUN_PATH = /bin/:/usr/bin/:
+STDOUT = timeout: failed to run command 'python': No such file or directory
+EXPLICIT_BINPATH_CONFIGURATION_PROOF = BLOCKED
+```
+
+Read-only inspection then established the exact reason. Installed RD-Agent
+0.8.0 defines an after-model-validator on `CondaConf` that always runs:
+
+```text
+conda run -n rdagent4qlib --no-capture-output env | grep '^PATH='
+```
+
+and always replaces `self.bin_path` with either the command result or an empty
+string. The `conda` executable is not discoverable on the control process PATH,
+so the validator returned a nonzero status and overwrote the explicitly passed
+value with `''`. A separate configuration instantiation confirmed:
+
+```text
+EFFECTIVE_BIN_PATH = ''
+CONDA_ENV_NAME = rdagent4qlib
+```
+
+The task contract required an immediate stop if this pre-mutation proof failed.
+Therefore no rollback snapshot, resolver dry run, wheel download, dependency
+installation, RD-Agent build, or final bridge smoke was started. The direct
+selected-Qlib check remains valid, but it is not misreported as a successful
+RD-Agent bridge.
+
+```text
+PACKAGE_CHANGES = 0
+ENVIRONMENT_CHANGES = 0
+POST_RD_AGENT_VERSION = 0.8.0
+POST_FSSPEC_VERSION = 2026.7.0
+DEPENDENCY_IMPORT_SMOKE = NOT_EXECUTED_STEP_2_STOP
+RD_AGENT_WHEEL_SHA256 = NONE
+RD_AGENT_RUNTIME_PROVENANCE = BLOCKED
+RD_AGENT_RUNTIME_SOURCE_SHA = NONE
+RD_AGENT_DECLARED_QLIB_PIN = 3e72593b8c985f01979bebcf646658002ac43b00
+RD_AGENT_QLIB_PIN_ALIGNMENT = BLOCKED
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED
+UNAUTHORIZED_EXISTING_PACKAGE_VERSION_CHANGES = 0
+QLIB_PACKAGE_CHANGED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+RD_AGENT_LLM_LOOP_EXECUTED = NO
+LLM_CALLS = 0
+MODEL_TRAINING = NO
+NEW_PREDICTIONS = NO
+BACKTEST = NO
+DATASET_DOWNLOADS = 0
+MARKET_DATA_NETWORK_CALLS = 0
+CURRENT_NEXT = P3_RDAGENT_CONDA_DISCOVERY_PATH_CONFIGURATION_RESOLUTION_001
+```
+
+The next bounded configuration task must establish how the upstream 0.8.0
+validator can discover the existing Miniforge `conda` executable without
+source modification or package mutation. It must not retry the alignment or
+advance to later P3 work until that configuration proof passes.

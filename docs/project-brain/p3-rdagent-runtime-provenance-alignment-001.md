@@ -204,3 +204,20 @@ RD_AGENT_QLIB_PIN_ALIGNMENT = BLOCKED_ORIGINAL_0_8_0_RESTORED
 RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED_ALIGNED_RUNTIME_PATH_NOT_BOUND
 CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
 ```
+
+## Subsequent explicit-bin-path retry outcome
+
+The next zero-mutation proof passed the resolved Qlib bin path explicitly to
+the restored `rdagent 0.8.0` configuration. Its `CondaConf` after-validator
+then invoked an unqualified `conda` command, failed to find it on the control
+process PATH, and overwrote the explicit value with an empty string. The sole
+proof returned 127 before Qlib import. The task stopped before resolver or
+package operations.
+
+```text
+EXPLICIT_BINPATH_CONFIGURATION_PROOF = BLOCKED
+PACKAGE_CHANGES = 0
+RD_AGENT_RUNTIME_PROVENANCE = BLOCKED
+RD_AGENT_RUNTIME_SOURCE_SHA = NONE
+CURRENT_NEXT = P3_RDAGENT_CONDA_DISCOVERY_PATH_CONFIGURATION_RESOLUTION_001
+```
