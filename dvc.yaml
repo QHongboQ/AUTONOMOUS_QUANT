@@ -6,6 +6,7 @@ stages:
       --qlib-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
       --skfolio-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
       --arch-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      --validation-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json
       --blocker-ledger 40-certification-system/upstream-stack-integration/blockers.json
       --output 40-certification-system/upstream-stack-integration/.private/dvc-seal.json
     deps:
@@ -15,6 +16,7 @@ stages:
       - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
       - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
       - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      - D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json
     outs:
       - 40-certification-system/upstream-stack-integration/.private/dvc-seal.json
   pit_universe_snapshot:

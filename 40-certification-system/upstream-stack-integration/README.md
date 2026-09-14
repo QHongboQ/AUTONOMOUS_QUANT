@@ -17,10 +17,12 @@ P2 Qlib local provider
 ```
 
 Pandera and exchange_calendars are validation authorities around the handoff.
-Their probes are retained here, but this task does not provision a missing
-runtime. AQ policy remains outside these upstream-owned algorithms.
+The retained validation probe executes through the repository's managed
+`uv run --no-project --python 3.12` pattern with both authoritative requirement
+files. AQ policy remains outside these upstream-owned algorithms.
 
 Private task evidence belongs under
 `D:\AQ_DATA\P2\upstream-certification-stack-integration-001`. The DVC stage
-tracks hashes for the accepted provider report and private integration reports;
+tracks hashes for the accepted provider report and private integration reports,
+including the validation report;
 the small generated seal remains a DVC output and is ignored by Git.

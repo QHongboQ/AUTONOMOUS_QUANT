@@ -11,20 +11,20 @@
     },
     {
       "capability": "XNYS session validation",
-      "exact_error_or_gap": "No existing authorized persistent runtime exposes exchange_calendars 4.13.2; installing or repairing packages is outside this task.",
-      "p2_blocking": true,
+      "exact_error_or_gap": "Historical initial gap: no existing authorized persistent runtime exposed exchange_calendars 4.13.2, and installation or repair was outside the initial integration task. Current activation passed through the exact pinned managed uv runtime.",
+      "p2_blocking": false,
       "public_interface": "exchange_calendars.get_calendar",
-      "recommended_next_action": "In a separately authorized task, provide the pinned exchange_calendars 4.13.2 runtime and execute validation_probe.py without changing AQ calendar semantics.",
-      "status": "BLOCKED_ENVIRONMENT",
+      "recommended_next_action": "None; the exact pinned upstream was activated through the repository uv pattern and validation_probe.py passed without changing AQ calendar semantics.",
+      "status": "PASS",
       "upstream": "exchange_calendars"
     },
     {
       "capability": "Certification handoff schema validation",
-      "exact_error_or_gap": "No existing authorized persistent runtime exposes Pandera 0.33.1; installing or repairing packages is outside this task.",
-      "p2_blocking": true,
+      "exact_error_or_gap": "Historical initial gap: no existing authorized persistent runtime exposed Pandera 0.33.1, and installation or repair was outside the initial integration task. Current activation passed through the exact pinned managed uv runtime.",
+      "p2_blocking": false,
       "public_interface": "pandera.pandas.DataFrameSchema",
-      "recommended_next_action": "In a separately authorized task, provide the pinned Pandera 0.33.1 runtime and execute validation_probe.py without creating an AQ schema engine.",
-      "status": "BLOCKED_ENVIRONMENT",
+      "recommended_next_action": "None; the exact pinned upstream was activated through the repository uv pattern and validation_probe.py passed without creating an AQ schema engine.",
+      "status": "PASS",
       "upstream": "Pandera"
     }
   ],

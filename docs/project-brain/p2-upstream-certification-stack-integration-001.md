@@ -2,7 +2,7 @@
 
 Date: 2026-09-13
 
-Status: **COMPLETE WITH RECORDED BLOCKERS**
+Status: **COMPLETE**
 
 Classification: **TECHNICAL INTEGRATION ONLY — NO MODEL OR STRATEGY CERTIFIED**
 
@@ -40,7 +40,7 @@ PROVIDER_BUILD_REPORT_SHA256 = eda5e8bb8e3f274d2893ea6a09f5764111f59c9cadf40eb32
 The integration made no market-data network request and did not modify the
 provider bytes.
 
-## Upstream integration result
+## Initial upstream integration result (historical)
 
 | Owner | Version / pin | Public interface exercised | Result |
 |---|---|---|---|
@@ -52,12 +52,36 @@ provider bytes.
 | exchange_calendars | required `4.13.2` | `get_calendar("XNYS")` | BLOCKED_ENVIRONMENT |
 | Pandera | required `0.33.1` | `pandera.pandas.DataFrameSchema` | BLOCKED_ENVIRONMENT |
 
-The existing authorized persistent runtimes do not expose
+At the end of the initial integration task, the existing authorized persistent runtimes did not expose
 exchange_calendars 4.13.2 or Pandera 0.33.1. The task contract required the
 missing environments to be recorded instead of installed, so the retained
-validation probe was not executed. This leaves the complete cross-upstream
-flow `PARTIAL`; it does not authorize an AQ replacement calendar or schema
-engine.
+validation probe was not executed. The initial cross-upstream flow was therefore
+`PARTIAL`; this historical result did not authorize an AQ replacement calendar
+or schema engine.
+
+## Runtime activation (current)
+
+The bounded activation task reused the two authoritative repository requirement
+files through the established public uv pattern:
+
+```text
+uv run --no-project --python 3.12
+EXCHANGE_CALENDARS_VERSION = 4.13.2
+PANDERA_VERSION = 0.33.1
+XNYS_CALENDAR_MATCH = PASS
+PANDERA_SCHEMA_VALIDATION = PASS
+DUPLICATE_DATES = 0
+NON_XNYS_EVIDENCE_ROWS = 0
+PROVIDER_CALENDAR_ROWS = 2516
+VALIDATION_INPUT_ROWS = 124
+VALIDATION_REPORT_SHA256 = df53fa5b8d3b843b748150fa1439ef7a1ce0f90445a13c98ffa5b6c429bf9662
+```
+
+The managed runtime resolved only the two exact direct pins and their required
+transitive Python dependencies. The retained `validation_probe.py` used
+`exchange_calendars.get_calendar("XNYS")` and
+`pandera.pandas.DataFrameSchema`; it found no calendar discrepancy and no
+schema failure. No long-lived environment or AQ validation engine was created.
 
 ## Qlib and MLflow evidence
 
@@ -101,14 +125,17 @@ The `p2_upstream_certification_stack_integration` DVC stage records external
 dependency identities for the accepted provider report and private Qlib,
 skfolio, and arch reports, plus the repository blocker ledger. The generated
 seal is ignored by Git. A first `dvc repro` generated the seal and updated
-`dvc.lock`; an immediate second replay reported the stage unchanged and all
-data and pipelines up to date.
+`dvc.lock`. Runtime activation added the private validation-report identity to
+the same seal. The updated first `dvc repro` completed successfully; an
+immediate second replay reported the stage unchanged and all data and pipelines
+up to date.
 
 ```text
 QLIB_REPORT_SHA256 = 67e910e73b860939195b9142cde134c04528d14e554d8379f2563079e7f7c0eb
 SKFOLIO_REPORT_SHA256 = 0d1d5a9984bc419367d612a04ad778b5b4fbc63be5ee8cf2fce0090f6831fa1b
 ARCH_REPORT_SHA256 = 5d00e5b41c81660c6a1490822469cc7afa09ffc1bce4e4b1c0ec9d088c2b254b
-BLOCKER_LEDGER_SHA256 = 8648d03746c77fd283e2a2a67818a0a370f86e685ec6f6605ad05ac2d620e913
+VALIDATION_REPORT_SHA256 = df53fa5b8d3b843b748150fa1439ef7a1ce0f90445a13c98ffa5b6c429bf9662
+BLOCKER_LEDGER_SHA256 = f3a58083cf2a978c4187207b2537a48d309b19bdeee39e83f7d77737cf6a10a8
 DVC = PASS
 ```
 
@@ -118,15 +145,17 @@ The authoritative machine-readable ledger is
 `40-certification-system/upstream-stack-integration/blockers.json`.
 
 ```text
-RECORDED_ISSUE_COUNT = 3
-P2_BLOCKING_BLOCKER_COUNT = 2
-EXCHANGE_CALENDARS = BLOCKED_ENVIRONMENT
-PANDERA = BLOCKED_ENVIRONMENT
+HISTORICAL_RECORDED_ISSUES = 3
+OPEN_P2_BLOCKING_BLOCKERS = 0
+EXCHANGE_CALENDARS = PASS
+PANDERA = PASS
 ```
 
-The two P2-blocking items require separately authorized pinned runtimes before
-their retained public-interface validation probe can run. They do not create
-an automatic repair task.
+The ledger preserves both earlier `BLOCKED_ENVIRONMENT` facts in each entry's
+exact historical gap text. Their current status is `PASS` and their
+`p2_blocking` flags are false after the authorized pinned managed-runtime
+activation. The historical MLflow sequencing issue remains non-blocking
+`PASS_WITH_LIMITATION`.
 
 The existing Qlib dataset-adapter regression suite passed 25 of 25 tests from
 its expected Windows launcher, including its public Qlib API compatibility
@@ -160,8 +189,8 @@ MERGED = NO
 ```text
 QLIB = PASS
 MLFLOW_VIA_QLIB = PASS
-EXCHANGE_CALENDARS = BLOCKED
-PANDERA = BLOCKED
+EXCHANGE_CALENDARS = PASS
+PANDERA = PASS
 SKFOLIO_WALKFORWARD = PASS
 SKFOLIO_CPCV = PASS
 ARCH_SPA = PASS
@@ -169,7 +198,7 @@ ARCH_REALITY_CHECK = PASS
 ARCH_STEPM = PASS
 ARCH_MCS = PASS
 DVC = PASS
-FULL_CROSS_UPSTREAM_FLOW = PARTIAL
-FINAL_CLASSIFICATION = PASS_WITH_RECORDED_BLOCKERS
+FULL_CROSS_UPSTREAM_FLOW = PASS
+FINAL_CLASSIFICATION = PASS
 CURRENT_NEXT = P2_CERTIFICATION_PROTOCOL_PREREGISTRATION_001
 ```
