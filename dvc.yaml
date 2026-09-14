@@ -9,7 +9,15 @@ stages:
       --control-pred D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/control_pred.pkl
       --mlflow-db D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/mlflow/mlflow.db
       --blocker D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-blocker.json
-      --summary D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+      --historical-summary D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+      --runtime-day D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day.txt
+      --runtime-future D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      --qlib-report D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-report.json
+      --daily-returns D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/daily_net_returns.csv
+      --skfolio-report D:/AQ_DATA/P2/certification-historical-rehearsal-001/skfolio/skfolio-report.json
+      --arch-report D:/AQ_DATA/P2/certification-historical-rehearsal-001/arch/arch-report.json
+      --validation-report D:/AQ_DATA/P2/certification-historical-rehearsal-001/validation/validation-report.json
+      --final-summary D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary-resolved.json
       --output 40-certification-system/historical-rehearsal/.private/dvc-seal.json
     deps:
       - 40-certification-system/historical-rehearsal/seal_rehearsal.py
@@ -21,6 +29,14 @@ stages:
       - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/mlflow/mlflow.db
       - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-blocker.json
       - D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day.txt
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-report.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/daily_net_returns.csv
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/skfolio/skfolio-report.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/arch/arch-report.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/validation/validation-report.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary-resolved.json
     outs:
       - 40-certification-system/historical-rehearsal/.private/dvc-seal.json
   p2_certification_protocol_freeze:

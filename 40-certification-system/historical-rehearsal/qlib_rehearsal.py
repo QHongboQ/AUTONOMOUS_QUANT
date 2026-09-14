@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -20,6 +21,12 @@ QLIB_SOURCE_SHA = "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
 PROTOCOL_SHA = "a9aed881c229f9eb7f85fa23b866168a55dc9c00be3c3b178d91a4af20451dfb"
 PRIMARY_CONFIG_SHA = "c6e6c4882adeb053d58e91b27d7d796fd9886dc1946d1d0540d5d9637f42ccaf"
 CONTROL_CONFIG_SHA = "b9a92537a9737ce909284e77e583ad20c0a3d2b18f795271d85db6c5ba5eafc1"
+PRIMARY_PREDICTION_SHA = "7af735fff6b07eb9be4b686776ffd53b496555cb5477bca641dfc9e4f521d7e7"
+CONTROL_PREDICTION_SHA = "26c3433faa58a64914393fe13eac169d9ce86dbbe86f16dfb2b24fbd64139dab"
+PRIMARY_RECORDER_ID = "734ffa5ec01449f6b8a6696880d825bf"
+CONTROL_RECORDER_ID = "d6035e318a0640da876e52d587137e7c"
+EXCHANGE_CALENDARS_VERSION = "4.13.2"
+FROZEN_DAY_ROWS = 2516
 TRAIN = ("2015-04-01", "2019-12-31")
 VALID = ("2020-01-01", "2021-12-31")
 TEST = ("2022-01-03", "2024-12-31")
@@ -57,6 +64,66 @@ def require_hash(path: Path, expected: str, canonical: bool = False) -> None:
     actual = canonical_lf_sha256(path) if canonical else sha256(path)
     if actual != expected:
         raise RuntimeError(f"identity mismatch for {path}: {actual} != {expected}")
+
+
+def prepare_runtime_calendar(provider: Path, calendar_runtime: Path) -> dict[str, object]:
+    """Create Qlib's calendar-only future storage from the frozen day calendar."""
+    import exchange_calendars
+
+    if exchange_calendars.__version__ != EXCHANGE_CALENDARS_VERSION:
+        raise RuntimeError(f"unexpected exchange_calendars version: {exchange_calendars.__version__}")
+    source = provider / "calendars" / "day.txt"
+    source_bytes = source.read_bytes()
+    sessions = source.read_text(encoding="utf-8").splitlines()
+    if len(sessions) != FROZEN_DAY_ROWS or sessions[-1] != TEST[1]:
+        raise RuntimeError("frozen provider day calendar identity mismatch")
+    calendar = exchange_calendars.get_calendar("XNYS")
+    next_session = calendar.next_session(pd.Timestamp(sessions[-1])).strftime("%Y-%m-%d")
+    if next_session in sessions:
+        raise RuntimeError("resolved XNYS boundary is not strictly after the frozen calendar")
+
+    calendars = calendar_runtime / "calendars"
+    calendars.mkdir(parents=True, exist_ok=False)
+    runtime_day = calendars / "day.txt"
+    runtime_future = calendars / "day_future.txt"
+    shutil.copyfile(source, runtime_day)
+    runtime_future.write_bytes(source_bytes.rstrip(b"\r\n") + b"\n" + next_session.encode("ascii") + b"\n")
+    if runtime_day.read_bytes() != source_bytes:
+        raise RuntimeError("runtime day calendar is not a byte-for-byte copy")
+    future_sessions = runtime_future.read_text(encoding="utf-8").splitlines()
+    if future_sessions != sessions + [next_session]:
+        raise RuntimeError("future calendar is not the exact one-session extension")
+    return {
+        "calendar_authority": f"exchange_calendars {exchange_calendars.__version__} / XNYS",
+        "runtime_day_calendar_sha256": sha256(runtime_day),
+        "runtime_day_calendar_rows": len(sessions),
+        "runtime_day_calendar_last": sessions[-1],
+        "runtime_future_calendar_sha256": sha256(runtime_future),
+        "runtime_future_calendar_rows": len(future_sessions),
+        "future_calendar_extra_session": next_session,
+        "future_calendar_extra_session_count": 1,
+    }
+
+
+def verify_runtime_calendar(provider: Path, calendar_runtime: Path) -> dict[str, object]:
+    source = provider / "calendars" / "day.txt"
+    runtime_day = calendar_runtime / "calendars" / "day.txt"
+    runtime_future = calendar_runtime / "calendars" / "day_future.txt"
+    source_sessions = source.read_text(encoding="utf-8").splitlines()
+    future_sessions = runtime_future.read_text(encoding="utf-8").splitlines()
+    if runtime_day.read_bytes() != source.read_bytes():
+        raise RuntimeError("runtime day calendar no longer matches the frozen provider")
+    if future_sessions[:-1] != source_sessions or len(future_sessions) != len(source_sessions) + 1:
+        raise RuntimeError("runtime future calendar shape mismatch")
+    return {
+        "runtime_day_calendar_sha256": sha256(runtime_day),
+        "runtime_day_calendar_rows": len(source_sessions),
+        "runtime_day_calendar_last": source_sessions[-1],
+        "runtime_future_calendar_sha256": sha256(runtime_future),
+        "runtime_future_calendar_rows": len(future_sessions),
+        "future_calendar_extra_session": future_sessions[-1],
+        "future_calendar_extra_session_count": len(future_sessions) - len(source_sessions),
+    }
 
 
 def create_handler(linear: bool):
@@ -237,9 +304,15 @@ def main() -> None:
     parser.add_argument("--primary-config", required=True, type=Path)
     parser.add_argument("--control-config", required=True, type=Path)
     parser.add_argument("--qlib-source", required=True, type=Path)
+    parser.add_argument("--calendar-runtime", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--prepare-calendar-only", action="store_true")
     parser.add_argument("--resume-after-benchmark-wrapper-failure", action="store_true")
     args = parser.parse_args()
+
+    if args.prepare_calendar_only:
+        print(json.dumps(prepare_runtime_calendar(args.provider, args.calendar_runtime), sort_keys=True))
+        return
 
     if args.output.exists() and not args.resume_after_benchmark_wrapper_failure:
         raise FileExistsError(args.output)
@@ -278,6 +351,7 @@ def main() -> None:
     for key, value in expected_provider.items():
         if provider_report.get(key) != value:
             raise RuntimeError(f"provider report mismatch: {key}")
+    calendar_evidence = verify_runtime_calendar(args.provider, args.calendar_runtime)
 
     source_sha = subprocess.check_output(
         ("git", "-C", str(args.qlib_source), "rev-parse", "HEAD"), text=True,
@@ -296,6 +370,17 @@ def main() -> None:
     qlib.init(
         provider_uri=str(args.provider),
         region="us",
+        calendar_provider={
+            "class": "LocalCalendarProvider",
+            "module_path": "qlib.data.data",
+            "kwargs": {
+                "backend": {
+                    "class": "FileCalendarStorage",
+                    "module_path": "qlib.data.storage.file_storage",
+                    "kwargs": {"provider_uri": str(args.calendar_runtime)},
+                },
+            },
+        },
         expression_cache=None,
         dataset_cache=None,
         exp_manager={
@@ -307,6 +392,25 @@ def main() -> None:
             },
         },
     )
+    current_calendar = D.calendar(freq="day", future=False)
+    future_calendar = D.calendar(freq="day", future=True)
+    if current_calendar[-1].strftime("%Y-%m-%d") != TEST[1]:
+        raise RuntimeError("Qlib current calendar end mismatch")
+    if future_calendar[-1].strftime("%Y-%m-%d") != calendar_evidence["future_calendar_extra_session"]:
+        raise RuntimeError("Qlib future calendar did not load the XNYS boundary session")
+    from qlib.backtest.utils import TradeCalendarManager
+    final_step_calendar = TradeCalendarManager(freq="day", start_time=TEST[1], end_time=TEST[1])
+    final_step_start, final_step_end = final_step_calendar.get_step_time(0)
+    if final_step_start.strftime("%Y-%m-%d") != TEST[1]:
+        raise RuntimeError("Qlib final trade step start mismatch")
+    calendar_evidence.update(
+        current_calendar_end=TEST[1],
+        future_calendar_contains_next_xnys_session=True,
+        trade_calendar_final_step_boundary_resolves=True,
+        trade_calendar_final_step_end=str(final_step_end),
+        qlib_calendar_provider="LocalCalendarProvider+FileCalendarStorage",
+    )
+    print("QLIB_FUTURE_CALENDAR_BOUNDARY_PASS " + json.dumps(calendar_evidence, sort_keys=True), flush=True)
     ranges = D.list_instruments(
         D.instruments(market="p2_pit"),
         start_time="2015-01-02",
@@ -320,6 +424,8 @@ def main() -> None:
     if args.resume_after_benchmark_wrapper_failure:
         primary_path = args.output / "primary_pred.pkl"
         control_path = args.output / "control_pred.pkl"
+        require_hash(primary_path, PRIMARY_PREDICTION_SHA)
+        require_hash(control_path, CONTROL_PREDICTION_SHA)
         primary = pd.read_pickle(primary_path)
         control = pd.read_pickle(control_path)
 
@@ -341,6 +447,8 @@ def main() -> None:
         control_recorder, control_signal_metrics = recorder_evidence(
             "p2_certification_historical_rehearsal_linear",
         )
+        if primary_recorder != PRIMARY_RECORDER_ID or control_recorder != CONTROL_RECORDER_ID:
+            raise RuntimeError("frozen model recorder identity mismatch")
         print("RESUME_FROZEN_MODEL_PREDICTIONS", flush=True)
     else:
         primary, primary_recorder, primary_path, primary_signal_metrics = train_and_predict("primary", args.output)
@@ -392,6 +500,7 @@ def main() -> None:
         "train": list(TRAIN),
         "valid": list(VALID),
         "test": list(TEST),
+        "calendar_runtime": calendar_evidence,
     }
     manifest_path = args.output / "qlib-rehearsal-report.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
