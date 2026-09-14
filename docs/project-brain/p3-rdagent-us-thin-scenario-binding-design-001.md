@@ -1,6 +1,6 @@
 # P3 RD-Agent US Thin Scenario Binding Design 001
 
-Status: **COMPLETE — IMPLEMENTATION BLOCKED BY FACTOR SOURCE-DATA CONTRACT**
+Status: **COMPLETE — READY FOR IMPLEMENTATION**
 
 Design date: 2026-09-14
 
@@ -25,9 +25,9 @@ RD_LOOP_OVERRIDE_REQUIRED = NO
 PROMPT_OVERRIDE_REQUIRED = NO
 FACTOR_SOURCE_DATA_PATH = THIN_BINDING_REQUIRED
 UPSTREAM_LOGIC_COPIED = NO
-THIN_BINDING_DESIGN = COMPLETE_IMPLEMENTATION_BLOCKED_BY_FACTOR_SOURCE_DATA
+THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_RDAGENT_US_QLIB_FACTOR_FIELD_PRESERVATION_001
+CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
 ```
 
 RD-Agent remains the autonomous research owner. The project binding owns only
@@ -395,25 +395,27 @@ No DVC file or stage changed.
 
 ## 12. Source-data contract proof update
 
-The subsequent source-data proof tested the approved AQ provider through
-Qlib's public API. OHLCV is available, but `$factor` returns only NaN. Pinned
-Qlib defines `$factor` as the restoration price-adjustment factor, while the
-frozen Quantiacs source contains a nonconstant `split_cumprod` matching that
-direction. A constant `1.0` would therefore be semantically wrong.
+The source-data proof found that the immutable P2 Qlib provider does not expose
+`$factor`. The bounded follow-up resolved this without changing that provider:
+one thin materializer reads OHLCV through Qlib's public API and joins only
+exact, already-selected Quantiacs episode/asset/session observations to frozen
+`split_cumprod`. SimFin-only and otherwise unproven factors remain NaN.
 
-The binding design remains the approved minimum design, but implementation is
-not authorized until a separate bounded task preserves the already-frozen
-factor semantics through the Qlib provider. The private `daily_pv.h5` input
-must not be materialized with invented factor data.
+The resulting full/debug private `daily_pv.h5` inputs passed the official HDF
+schema, pinned native reader, and `get_data_folder_intro()` path. A generator
+throw-sentinel proved the China fallback was not selected. The factor-source
+precondition is now satisfied; this document's minimum binding design may
+proceed unchanged.
 
 ```text
-QLIB_FACTOR_AVAILABLE = NO
+QLIB_FACTOR_AVAILABLE_IN_IMMUTABLE_P2_PROVIDER = NO
+QLIB_FACTOR_FIELD_PRESERVATION = PASS
 CONSTANT_FACTOR_SEMANTICALLY_VALID = NO
-SOURCE_DATA_MATERIALIZATION = BLOCKED
-MATERIALIZER_IMPLEMENTATION = NONE
-FACTOR_SOURCE_DATA_CONTRACT = BLOCKED
-THIN_BINDING_DESIGN = COMPLETE_IMPLEMENTATION_BLOCKED_BY_FACTOR_SOURCE_DATA
-CURRENT_NEXT = P3_RDAGENT_US_QLIB_FACTOR_FIELD_PRESERVATION_001
+SOURCE_DATA_MATERIALIZATION = THIN_CONFIGURED_QLIB_EXPORT
+MATERIALIZER_IMPLEMENTATION = ONE_THIN_CONTRACT_MATERIALIZER
+FACTOR_SOURCE_DATA_CONTRACT = READY_FOR_THIN_BINDING_IMPLEMENTATION
+THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
+CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
 ```
 
 ## 13. Non-actions

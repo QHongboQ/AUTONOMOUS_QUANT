@@ -1,6 +1,6 @@
 # P3 RD-Agent US Factor Source-Data Contract Proof 001
 
-Status: **COMPLETE — FACTOR SOURCE-DATA CONTRACT BLOCKED**
+Status: **COMPLETE — HISTORICAL BLOCKER RESOLVED BY FROZEN FACTOR PRESERVATION**
 
 Proof date: 2026-09-14
 
@@ -10,7 +10,7 @@ contract. It did not implement the binding, materialize `daily_pv.h5`, modify
 RD-Agent or Qlib, run an LLM, train, predict, backtest, download data, or alter
 P2 authority.
 
-## 1. Authority and result
+## 1. Authority and result at proof time
 
 ```text
 RD_AGENT_SOURCE_SHA = 32b3d395e73d9db5eee3fe9063d69aec0fdc83bd
@@ -197,4 +197,23 @@ BACKTEST = NO
 DATASET_DOWNLOADS = 0
 MARKET_DATA_NETWORK_CALLS = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
+```
+
+## 9. Subsequent bounded resolution
+
+The follow-up preservation task located the exact frozen Quantiacs source and
+used `split_cumprod` only for rows whose episode, provider asset, session, and
+`OBSERVED_PRIMARY` selection were already proven. It did not change the P2
+Qlib provider. The resulting full/debug native HDF inputs passed exact row,
+factor, schema, native-reader, and China-fallback isolation checks.
+
+The blocked statements above remain the historical result of this proof at
+the then-current provider interface. The current state is:
+
+```text
+QLIB_FACTOR_FIELD_PRESERVATION = PASS
+SOURCE_DATA_MATERIALIZATION = THIN_CONFIGURED_QLIB_EXPORT
+MATERIALIZER_IMPLEMENTATION = ONE_THIN_CONTRACT_MATERIALIZER
+FACTOR_SOURCE_DATA_CONTRACT = READY_FOR_THIN_BINDING_IMPLEMENTATION
+CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
 ```
