@@ -447,3 +447,29 @@ AQ_US_SCENARIO_ADAPTER = NONE
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_AUDIT_001
 ```
+
+## Current Candidate-to-P2 identity contract audit
+
+The cross-upstream identity boundary is now defined without implementing a
+new AQ engine. RD-Agent owns research content and lineage, Qlib
+Recorder/MLflow own the exact completed run, DVC must own dependency and
+artifact versions, and P2 Certification owns protocol eligibility, sealed-OOS
+isolation, and certification decisions.
+
+No native upstream ID spans all four authorities. After the P3 DVC stage is
+activated, the minimum project-owned boundary is an eight-field thin static
+manifest with a deterministic Candidate ID. It binds upstream identities; it
+does not replace their registries, recorders, artifact stores, or validators.
+
+```text
+P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_AUDIT = COMPLETE
+CANDIDATE_TO_P2_CONTRACT = THIN_STATIC_MANIFEST_REQUIRED
+CANDIDATE_ID_STRATEGY = DETERMINISTIC_HASH
+AQ_REQUIRED_IDENTITY_FIELD_COUNT = 8
+CONTRACT_IMPLEMENTATION_ORDER = AFTER_DVC_STAGE
+CANDIDATE_IDENTITY_IS_CERTIFICATION_RESULT = NO
+P3_CAN_ACCESS_SEALED_OOS = NO
+P3_CAN_ISSUE_CERTIFIED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
+```
