@@ -188,3 +188,154 @@ authority is:
 RESOLUTION_CLASS = SAFE_BOUNDED_FSSPEC_DOWNGRADE
 CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
 ```
+
+## Bounded downgrade and provenance alignment attempt
+
+Status: **BLOCKED / MANDATORY BRIDGE SMOKE FAILED / FULL ROLLBACK COMPLETE**
+
+The separately authorized bounded task began from the clean branch head
+`efabc669d91bae99012c91b378c09f82e9f0d686`. The official RD-Agent checkout
+was clean at `32b3d395e73d9db5eee3fe9063d69aec0fdc83bd`; the selected Qlib source was
+clean at `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`; and `rdagent4qlib` reported
+Qlib `0.9.8.dev26`.
+
+The pre-mutation control environment was Python `3.11.16`, pip `26.2.1`,
+`rdagent 0.8.0`, and `fsspec 2026.7.0`, with `pip check` passing. Its sorted
+freeze SHA-256 was
+`28880ae97ecc679435729c775603be09f35121b53dc77611940a5ac0660fbccd`.
+The selected Qlib environment freeze SHA-256 was
+`152a6d6034b7f5a089a790a6bba91ce8ed32e566ff3d0f19fc4adee99ec3ad58`.
+A repository-external byte-preserving rollback snapshot was created before
+mutation.
+
+### Exact resolver and released artifacts
+
+The repeated `--dry-run --report --upgrade-strategy only-if-needed` resolver
+gate proposed exactly:
+
+```text
+ADD absl-py==2.5.0
+ADD datasets==5.0.1
+ADD duckduckgo-search==8.1.1
+ADD grpcio==1.84.0
+ADD lxml==6.1.3
+ADD multiprocess==0.70.19
+ADD primp==2.0.1
+ADD tensorboard==2.21.0
+ADD tensorboard-data-server==0.7.2
+CHANGE fsspec 2026.7.0 -> 2026.6.0
+OTHER_EXISTING_PACKAGE_UPGRADES = 0
+OTHER_EXISTING_PACKAGE_DOWNGRADES = 0
+EXISTING_PACKAGE_REMOVALS = 0
+RESOLVER_REPORT_SHA256 = 4b7fbe7d4341f659b38edf10c3890bb349e8535f60565fdb770c9b8cb9cc4398
+```
+
+The ten exact released wheels were acquired into the temporary wheelhouse.
+Their SHA-256 values were:
+
+| Distribution | SHA-256 |
+|---|---|
+| `absl-py 2.5.0` | `0f17b89f2a4eaaedc4f28c622998aa690564b3012a396a4ffad0821007fe03ba` |
+| `datasets 5.0.1` | `9fbf73688f8c18f7529b4fe592abd04015f81d1e58001e4bac73ffb2b39d7cc4` |
+| `duckduckgo-search 8.1.1` | `f48adbb06626ee05918f7e0cef3a45639e9939805c4fc179e68c48a12f1b5062` |
+| `fsspec 2026.6.0` | `02e0b71817df9b2169dc30a16832045764def1191b43dcff5bb85bdee212d2a1` |
+| `grpcio 1.84.0` | `bd8ea8eb3817b226057cc1c0e7ec4b378dcda52043b972b6ff12b1152178967d` |
+| `lxml 6.1.3` | `527195c188d7d0af748cd48d220ab8cdc5cb99be3d49ac4d9be7324d8abf9bc0` |
+| `multiprocess 0.70.19` | `928851ae7973aea4ce0eaf330bbdafb2e01398a91518d5c8818802845564f45c` |
+| `primp 2.0.1` | `9a7be373adfded677a9092ae2743873d5c8a9573148d617a189d26715f7d8ea5` |
+| `tensorboard 2.21.0` | `7279316dcb6bd5bc391d623dea841531299cde1887310e8133bc34a996d32255` |
+| `tensorboard-data-server 0.7.2` | `ef687163c24185ae9754ed5650eb5bc4d84ff257aabdc33f0cc6f74d8ba54530` |
+
+Installed from the wheelhouse with `--no-index`, the temporary aligned state
+passed `pip check`, the exact package-version assertions, the full inventory
+diff, and import-only smoke for `fsspec`, `datasets`, `tensorboard`,
+`duckduckgo_search`, `prefect`, and `huggingface_hub`. No search or dataset
+request was issued.
+
+### Exact RD-Agent wheel and mandatory bridge result
+
+An offline local wheel was built from a clean local build clone of the official
+source SHA. Neither the official source nor the build clone was modified.
+
+```text
+RD_AGENT_SOURCE_SHA = 32b3d395e73d9db5eee3fe9063d69aec0fdc83bd
+SOURCE_VERSION = 0.8.1.dev37
+WHEEL_FILENAME = rdagent-0.8.1.dev37-py3-none-any.whl
+WHEEL_SHA256 = ad330119e1d5a6986a963934a39e26a2dc0f79aa0b69c4590fd7c3f063acec37
+WHEEL_DECLARED_QLIB_PIN = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+```
+
+The wheel was installed with `--no-index --no-deps --force-reinstall`.
+`rdagent 0.8.1.dev37` imported, `rdagent --help` passed, `pip check` passed,
+the installed code declared the exact selected Qlib pin, and its
+`direct_url.json` recorded the same wheel SHA-256.
+
+Exactly one public `QlibCondaEnv.run()` smoke then requested only `import qlib`
+and printing the version and interpreter identity. `QlibCondaEnv.prepare()`
+was never called. Although `QlibCondaConf.conda_env_name` defaults to
+`rdagent4qlib`, its inherited `bin_path` defaults to empty. The smoke emitted
+PATH `/bin/:/usr/bin/:`, so it failed before Qlib import:
+
+```text
+BRIDGE_RETURN_CODE = 127
+BRIDGE_STDOUT = timeout: failed to run command 'python': No such file or directory
+OBSERVED_QLIB_VERSION = NOT_OBSERVED_IN_ALIGNED_SMOKE
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED
+```
+
+RD-Agent logged local LLM-backend configuration initialization while reporting
+the failed run, but no LLM loop or external LLM request occurred. The contract
+permitted only one bridge smoke, so there was no repair or retry. A future
+separately authorized retry must configure the selected Qlib environment bin
+path while continuing to prohibit `prepare()`.
+
+### Rollback and authoritative current state
+
+The failed mandatory check triggered full rollback. All nine new packages were
+removed, `fsspec 2026.7.0`, `rdagent 0.8.0`, and the original CLI entry point
+were restored, and the sorted freeze matched the pre-task file byte-for-byte.
+`pip check`, RD-Agent import, and CLI help passed after rollback. Qlib and DVC
+were unchanged; the DVC freeze SHA-256 remained
+`4c4c5cbb2d1ae319ed26642065464081ea1a35560e880e71e4e3468e7a19b699`
+for all 99 distributions.
+
+```text
+POST_RD_AGENT_VERSION = 0.8.0
+POST_FSSPEC_VERSION = 2026.7.0
+ROLLBACK_CONTROL_FREEZE_SHA256 = 28880ae97ecc679435729c775603be09f35121b53dc77611940a5ac0660fbccd
+ROLLBACK_FREEZE_IDENTITY = PASS
+QLIB_FREEZE_IDENTITY = PASS
+DVC_ENV_CHANGED = NO
+RD_AGENT_SOURCE_CHANGED = NO
+QLIB_SOURCE_CHANGED = NO
+QLIB_PACKAGE_CHANGED = NO
+FSSPEC_ALIGNMENT = BLOCKED_FULL_ROLLBACK_AFTER_BRIDGE_FAILURE
+RD_AGENT_DEPENDENCY_ALIGNMENT = BLOCKED_FULL_ROLLBACK_AFTER_BRIDGE_FAILURE
+RD_AGENT_RUNTIME_PROVENANCE = BLOCKED_ORIGINAL_0_8_0_RESTORED
+RD_AGENT_RUNTIME_SOURCE_SHA = NONE
+RD_AGENT_DECLARED_QLIB_PIN = 3e72593b8c985f01979bebcf646658002ac43b00
+SELECTED_QLIB_RUNTIME_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+RD_AGENT_QLIB_PIN_ALIGNMENT = BLOCKED
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED_ALIGNED_RUNTIME_PATH_NOT_BOUND
+RETRY_REQUIRED = YES
+CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
+
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CODE_CHANGED = NO
+RD_AGENT_LLM_LOOP_EXECUTED = NO
+LLM_CALLS = 0
+MODEL_TRAINING = NO
+NEW_PREDICTIONS = NO
+BACKTEST = NO
+DATASET_DOWNLOADS = 0
+MARKET_DATA_NETWORK_CALLS = 0
+DVC_REPRO_EXECUTED = NO
+BROKER_CALLS = 0
+PAPER_TRADING = NO
+LIVE_TRADING = NO
+```
+
+The later residual gaps remain unchanged: US ragged-panel scenario
+configuration proof, the Candidate-to-P2 thin fail-closed identity contract,
+P3 DVC-stage activation, and autonomous-loop activation. The project does not
+advance to them while the bounded alignment remains rolled back.

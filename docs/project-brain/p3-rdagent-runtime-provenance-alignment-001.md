@@ -187,3 +187,20 @@ authority was:
 P3_RDAGENT_DEPENDENCY_ALIGNMENT = BLOCKED_EXISTING_FSSPEC_DOWNGRADE_REQUIRED_NO_ENVIRONMENT_MUTATION
 CURRENT_NEXT = P3_RDAGENT_FSSPEC_DEPENDENCY_CONFLICT_ANALYSIS_001
 ```
+
+## Subsequent bounded-alignment outcome
+
+The exact source wheel was rebuilt from the same official source SHA and
+temporarily installed after the audited dependency closure passed. Runtime
+version, wheel hash binding, CLI, imports, `pip check`, and the declared Qlib
+pin all passed. The sole mandatory bridge smoke failed with return code 127
+because the default `QlibCondaConf` left `bin_path` empty. The task made no
+second attempt and restored the original `rdagent 0.8.0` runtime exactly.
+
+```text
+RD_AGENT_RUNTIME_PROVENANCE = BLOCKED_ORIGINAL_0_8_0_RESTORED
+RD_AGENT_RUNTIME_SOURCE_SHA = NONE
+RD_AGENT_QLIB_PIN_ALIGNMENT = BLOCKED_ORIGINAL_0_8_0_RESTORED
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED_ALIGNED_RUNTIME_PATH_NOT_BOUND
+CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
+```

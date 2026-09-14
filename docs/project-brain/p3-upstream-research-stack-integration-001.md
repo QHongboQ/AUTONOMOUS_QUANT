@@ -317,3 +317,24 @@ BROKER_CALLS = 0
 LIVE_TRADING = NO
 PAPER_TRADING = NO
 ```
+
+## Subsequent bounded-alignment attempt
+
+The authorized fsspec/dependency/provenance execution confirmed the audited
+resolver closure and temporarily passed RD-Agent dependency, import, CLI,
+wheel-provenance, and Qlib-pin checks. The single mandatory aligned-runtime
+`QlibCondaEnv.run()` smoke returned 127 because the default configuration did
+not bind the selected Conda environment's bin path. No retry was permitted.
+The original `rdagent 0.8.0` and `fsspec 2026.7.0` environment was restored
+with an identical complete freeze.
+
+```text
+RD_AGENT_RUNTIME = PASS_ORIGINAL_0_8_0_RESTORED
+FSSPEC_ALIGNMENT = BLOCKED_FULL_ROLLBACK_AFTER_BRIDGE_FAILURE
+RD_AGENT_DEPENDENCY_ALIGNMENT = BLOCKED_FULL_ROLLBACK_AFTER_BRIDGE_FAILURE
+RD_AGENT_RUNTIME_PROVENANCE = BLOCKED
+RD_AGENT_QLIB_PIN_ALIGNMENT = BLOCKED
+RD_AGENT_TO_QLIB_RUNTIME_BRIDGE = BLOCKED_ALIGNED_RUNTIME_PATH_NOT_BOUND
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
+```
