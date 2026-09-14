@@ -64,3 +64,39 @@ stages:
       md5: 177a98ec2e94e460e4dff3166b991fac.dir
       size: 135129
       nfiles: 2
+  p2_upstream_certification_stack_integration:
+    cmd: python -B 40-certification-system/upstream-stack-integration/seal_evidence.py --provider-report D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json --qlib-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json --skfolio-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json --arch-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json --validation-report D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json --blocker-ledger 40-certification-system/upstream-stack-integration/blockers.json --output 40-certification-system/upstream-stack-integration/.private/dvc-seal.json
+    deps:
+    - path: 40-certification-system/upstream-stack-integration/blockers.json
+      hash: md5
+      md5: ad774a0196be48e3a01ae78f9aa6f9d3
+      size: 2094
+    - path: 40-certification-system/upstream-stack-integration/seal_evidence.py
+      hash: md5
+      md5: 9207b4d462ac620dda620948b306e1de
+      size: 3376
+    - path: D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/arch/arch-report.json
+      hash: md5
+      md5: 4aab3ada207135fbd190db082a29e85c
+      size: 621
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/qlib/qlib-mlflow-report.json
+      hash: md5
+      md5: e44e5baad98ff36c908744081b953d2d
+      size: 888
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/skfolio/skfolio-report.json
+      hash: md5
+      md5: f1940dfa967757261a050f62107f3376
+      size: 496
+    - path: D:/AQ_DATA/P2/upstream-certification-stack-integration-001/validation/validation-report.json
+      hash: md5
+      md5: a4d32b4d802c3f78bd229e1744e519b4
+      size: 341
+    outs:
+    - path: 40-certification-system/upstream-stack-integration/.private/dvc-seal.json
+      hash: md5
+      md5: 7e3c22b65af0646d87ac3ade2d703a07
+      size: 739

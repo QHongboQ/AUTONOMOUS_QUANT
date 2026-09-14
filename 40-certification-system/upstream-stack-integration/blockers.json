@@ -1,0 +1,32 @@
+{
+  "blockers": [
+    {
+      "capability": "Qlib Recorder lifecycle for the bounded MLflow run",
+      "exact_error_or_gap": "Initial probe sequencing allowed LGBModel.fit to open Qlib's default recorder before a second R.start call, producing: Run with UUID 494d9104114647eca8e830d9e5ff6049 is already active.",
+      "p2_blocking": false,
+      "public_interface": "qlib.workflow.R.start",
+      "recommended_next_action": "None; the allowed same-upstream configuration correction places model execution and evidence logging inside one public Qlib R.start context, and the corrected recorder finished.",
+      "status": "PASS_WITH_LIMITATION",
+      "upstream": "MLflow through Qlib"
+    },
+    {
+      "capability": "XNYS session validation",
+      "exact_error_or_gap": "Historical initial gap: no existing authorized persistent runtime exposed exchange_calendars 4.13.2, and installation or repair was outside the initial integration task. Current activation passed through the exact pinned managed uv runtime.",
+      "p2_blocking": false,
+      "public_interface": "exchange_calendars.get_calendar",
+      "recommended_next_action": "None; the exact pinned upstream was activated through the repository uv pattern and validation_probe.py passed without changing AQ calendar semantics.",
+      "status": "PASS",
+      "upstream": "exchange_calendars"
+    },
+    {
+      "capability": "Certification handoff schema validation",
+      "exact_error_or_gap": "Historical initial gap: no existing authorized persistent runtime exposed Pandera 0.33.1, and installation or repair was outside the initial integration task. Current activation passed through the exact pinned managed uv runtime.",
+      "p2_blocking": false,
+      "public_interface": "pandera.pandas.DataFrameSchema",
+      "recommended_next_action": "None; the exact pinned upstream was activated through the repository uv pattern and validation_probe.py passed without creating an AQ schema engine.",
+      "status": "PASS",
+      "upstream": "Pandera"
+    }
+  ],
+  "schema_version": "P2UpstreamCertificationBlockerLedgerV1"
+}
