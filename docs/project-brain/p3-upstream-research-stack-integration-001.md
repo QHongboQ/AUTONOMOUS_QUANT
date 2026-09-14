@@ -504,3 +504,44 @@ P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_DESIGN_001
 ```
+
+## Current RD-Agent US thin scenario-binding design
+
+The minimum real-loop binding is now designed against the pinned public class
+settings. One project module will subclass only the upstream factor and model
+hypothesis-to-experiment converters, call upstream conversion, and replace
+only workspaces newly constructed for the current conversion. The unchanged
+factor/model runners retain their five branch-specific filenames and all Qlib,
+Recorder/MLflow, feedback, trace, and checkpoint behavior.
+
+The five project YAMLs preserve the approved US provider, `region=us`,
+date-valid `p2_pit` market, ragged missing-data policy, SQLite MLflow tracking,
+combined-factor `StaticDataLoader`, and injected `model.py`/`GeneralPTNN`
+semantics. CSI300 experiment-setting text is UI-only and requires no prompt
+override.
+
+Real factor/quant Scenario construction would currently select the pinned
+China-only data generator because both default factor source-data directories
+are absent. The approved design uses RD-Agent's native
+`FACTOR_COSTEER_DATA_FOLDER` and `FACTOR_COSTEER_DATA_FOLDER_DEBUG` settings
+with prevalidated private US `daily_pv.h5` inputs. Because upstream constructs
+the Scenario before importing the converter, the same single project module
+also supplies factor/quant Scenario subclasses that only validate the input
+before calling the unchanged upstream constructor. This prevents selection of
+the China generator without changing prompt or Scenario-description logic.
+No data adapter or generic engine is introduced.
+
+```text
+P3_RDAGENT_US_THIN_SCENARIO_BINDING_DESIGN = COMPLETE
+PREFERRED_BINDING_STRATEGY = HYPOTHESIS2EXPERIMENT_SUBCLASS_BINDING
+PROJECT_BINDING_MODULE_COUNT = 1
+PROJECT_TEMPLATE_FILE_COUNT = 5
+PROMPT_CSI300_EXECUTION_RELEVANCE = UI_ONLY_NOT_CONSUMED_BY_SELECTED_AUTONOMOUS_EXECUTION_PROMPTS
+PROMPT_OVERRIDE_REQUIRED = NO
+FACTOR_SOURCE_DATA_PATH = THIN_BINDING_REQUIRED
+UPSTREAM_LOGIC_COPIED = NO
+THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
+P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING_IMPLEMENTED_AND_PROVEN
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
+```

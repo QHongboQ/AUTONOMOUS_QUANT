@@ -1,6 +1,6 @@
 # P3 RD-Agent US Template Binding Upstream Audit 001
 
-Status: **COMPLETE — THIN SCENARIO BINDING REQUIRED**
+Status: **COMPLETE — THIN SCENARIO BINDING DESIGNED**
 
 Audit date: 2026-09-14
 
@@ -9,7 +9,7 @@ can enter the real Microsoft RD-Agent `fin_factor`, `fin_model`, and
 `fin_quant` paths. It does not implement that binding and did not execute an
 LLM loop, training, prediction, backtest, or DVC stage.
 
-## 1. Decision
+## 1. Audit-time decision (historical input to the completed design)
 
 ```text
 RD_AGENT_US_TEMPLATE_BINDING = THIN_SCENARIO_BINDING_REQUIRED
@@ -310,4 +310,40 @@ BROKER_CALLS = 0
 PAPER_TRADING = NO
 LIVE_TRADING = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
+```
+
+## 11. Subsequent bounded design closeout
+
+The follow-on source trace selected the official
+`hypothesis2experiment` class seam. One project module will subclass the
+factor and model converters, delegate to `super().convert_response(...)`, and
+rebind only workspaces newly constructed for the current conversion. It will
+not replace prior completed trace workspaces. All five unchanged runner names
+remain present in a project-owned US template family.
+
+The CSI300 strings in the two `experiment_setting` templates are UI-only and
+do not enter the selected hypothesis, coding, or feedback prompts, so no
+prompt override is needed. The real factor/quant Scenario path does expose a
+separate native-data precondition: absent default factor data folders would
+select the China-only generator. The implementation must instead use the
+official `FACTOR_COSTEER_DATA_FOLDER` and
+`FACTOR_COSTEER_DATA_FOLDER_DEBUG` settings with prevalidated private US HDF5
+inputs and fail before Scenario construction if either input is unavailable.
+
+The complete design and file budget are recorded in
+`p3-rdagent-us-thin-scenario-binding-design-001.md`.
+
+```text
+PREFERRED_BINDING_STRATEGY = HYPOTHESIS2EXPERIMENT_SUBCLASS_BINDING
+PROJECT_BINDING_MODULE_COUNT = 1
+PROJECT_TEMPLATE_FILE_COUNT = 5
+RUNNER_OVERRIDE_REQUIRED = NO
+CODER_OVERRIDE_REQUIRED = NO
+RD_LOOP_OVERRIDE_REQUIRED = NO
+PROMPT_OVERRIDE_REQUIRED = NO
+FACTOR_SOURCE_DATA_PATH = THIN_BINDING_REQUIRED
+UPSTREAM_LOGIC_COPIED = NO
+THIN_BINDING_DESIGN = READY_FOR_IMPLEMENTATION
+P3_DVC_STAGE_ACTIVATION = DEFERRED_UNTIL_RDAGENT_US_TEMPLATE_BINDING_IMPLEMENTED_AND_PROVEN
+CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
 ```
