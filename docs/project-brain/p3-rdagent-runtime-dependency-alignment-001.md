@@ -175,3 +175,16 @@ BROKER_CALLS = 0
 PAPER_TRADING = NO
 LIVE_TRADING = NO
 ```
+
+## Subsequent current-state update
+
+The authorized read-only conflict analysis verified that every installed
+reverse dependency accepts `fsspec 2026.6.0` and that an explicit resolver
+dry run proposes no other existing-package change. The prior `CURRENT_NEXT`
+above is the historical outcome of this dependency-alignment task. Current
+authority is:
+
+```text
+RESOLUTION_CLASS = SAFE_BOUNDED_FSSPEC_DOWNGRADE
+CURRENT_NEXT = P3_RDAGENT_FSSPEC_BOUNDED_DOWNGRADE_AND_PROVENANCE_ALIGNMENT_001
+```
