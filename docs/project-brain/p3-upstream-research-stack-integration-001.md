@@ -384,3 +384,38 @@ DVC_ENV_CHANGED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_US_RAGGED_SCENARIO_CONFIGURATION_PROOF_001
 ```
+
+## Current US ragged scenario configuration proof
+
+The pinned RD-Agent factor and model templates expose Qlib initialization and
+workflow settings as YAML, but their checked-in defaults are China-specific.
+A disposable copy changed only configuration values, removed the default
+feature `Fillna` processor to preserve the established P2 ragged policy, and
+was executed through native `QlibCondaEnv.run()` without `prepare()`.
+
+Qlib initialized the existing immutable US provider with `region=us` and
+`market=p2_pit`. Public Qlib instrument resolution returned different active
+sets at the provider's first and last sessions. A seven-session boundary
+sample returned four observed rows and left three unavailable sessions absent;
+no row or price was synthesized or filled. Provider file counts, byte counts,
+and key hashes were unchanged.
+
+The provider, region, market, benchmark, and missing-data choices are literal
+template values rather than runtime environment settings. A bounded static
+US config is therefore required; no executable adapter or AQ engine is
+required.
+
+```text
+QLIB_INIT_FROM_RDAGENT_US_CONFIG = PASS
+QLIB_US_REGION_CONFIG = us
+QLIB_US_MARKET_CONFIG = p2_pit
+US_INSTRUMENT_UNIVERSE_RESOLVED = PASS
+STATIC_CURRENT_UNIVERSE_SUBSTITUTION = NO
+RAGGED_PANEL_SEMANTICS_PRESERVED = YES
+PIT_MEMBERSHIP_AUTHORITY_CHANGED = NO
+SEALED_OOS_ISOLATION = PASS
+P3_US_SCENARIO_CONFIGURATION = THIN_STATIC_CONFIG_REQUIRED
+UNACCOUNTED_EXECUTION_HARDCODES = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_US_RAGGED_STATIC_CONFIG_MATERIALIZATION_001
+```
