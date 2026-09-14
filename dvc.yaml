@@ -1,4 +1,28 @@
 stages:
+  p2_certification_historical_rehearsal:
+    cmd: >-
+      python -B 40-certification-system/historical-rehearsal/seal_rehearsal.py
+      --protocol 40-certification-system/protocol/p2-certification-protocol-v1.json
+      --activation 40-certification-system/protocol/p2-certification-protocol-v1-activation.json
+      --provider-report D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --primary-pred D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/primary_pred.pkl
+      --control-pred D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/control_pred.pkl
+      --mlflow-db D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/mlflow/mlflow.db
+      --blocker D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-blocker.json
+      --summary D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+      --output 40-certification-system/historical-rehearsal/.private/dvc-seal.json
+    deps:
+      - 40-certification-system/historical-rehearsal/seal_rehearsal.py
+      - 40-certification-system/protocol/p2-certification-protocol-v1.json
+      - 40-certification-system/protocol/p2-certification-protocol-v1-activation.json
+      - D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/primary_pred.pkl
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/control_pred.pkl
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/mlflow/mlflow.db
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib/qlib-rehearsal-blocker.json
+      - D:/AQ_DATA/P2/certification-historical-rehearsal-001/reports/rehearsal-summary.json
+    outs:
+      - 40-certification-system/historical-rehearsal/.private/dvc-seal.json
   p2_certification_protocol_freeze:
     cmd: >-
       python -B 40-certification-system/protocol/seal_protocol.py
