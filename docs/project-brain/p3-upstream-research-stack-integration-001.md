@@ -419,3 +419,31 @@ UNACCOUNTED_EXECUTION_HARDCODES = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_US_RAGGED_STATIC_CONFIG_MATERIALIZATION_001
 ```
+
+## Current US ragged static-config materialization
+
+The minimum selected configuration set is now materialized under the existing
+RD-Agent owner: one pinned-template overlay for factor research and one for
+model research. The overlays bind the immutable US provider, `region=us`, and
+the date-valid `p2_pit` market; omit upstream feature filling; and keep all
+research dates within 2015-01-02 through 2024-12-31. SPY remains only a
+structurally required research placeholder and is not a P2 certification
+benchmark.
+
+Both configs rendered and parsed through Qlib's public config path inside the
+native RD-Agent `QlibCondaEnv`. Qlib initialization, market resolution, and a
+bounded ragged sample passed without training, predictions, backtest, LLM,
+network, or provider mutation. No executable AQ adapter or generic engine is
+required.
+
+```text
+P3_US_RAGGED_STATIC_CONFIG = COMPLETE
+P3_US_SCENARIO_CONFIGURATION = THIN_STATIC_CONFIG_MATERIALIZED
+MINIMUM_REQUIRED_CONFIG_COUNT = 2
+ACTIVE_CHINA_EXECUTION_DEFAULTS = 0
+RAGGED_PANEL_SEMANTICS_PRESERVED = YES
+SEALED_OOS_ISOLATION = PASS
+AQ_US_SCENARIO_ADAPTER = NONE
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_AUDIT_001
+```
