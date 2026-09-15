@@ -1,6 +1,6 @@
 # P3 Candidate-to-P2 Identity Contract Audit 001
 
-Status: **COMPLETE — THIN STATIC MANIFEST REQUIRED AFTER DVC ACTIVATION**
+Status: **COMPLETE — THIN STATIC CONTRACT MATERIALIZED / REAL INSTANCE DEFERRED**
 
 This is a documentation-only, cross-upstream identity audit. It did not run
 an RD-Agent loop, fit a model, create predictions, backtest, access market
@@ -10,12 +10,12 @@ authority.
 ## 1. Decision
 
 ```text
-CANDIDATE_TO_P2_CONTRACT = THIN_STATIC_MANIFEST_REQUIRED
-CONTRACT_IMPLEMENTATION_ORDER = AFTER_DVC_STAGE
+CANDIDATE_TO_P2_CONTRACT = MATERIALIZED
+CONTRACT_IMPLEMENTATION_ORDER = COMPLETE_AFTER_DVC_STAGE_ACTIVATION
 CANDIDATE_ID_STRATEGY = DETERMINISTIC_HASH
 CUSTOM_ENGINE_REQUIRED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_INSTANCE_001
 ```
 
 No single upstream identifier spans the complete Candidate-to-P2 boundary.
@@ -193,10 +193,11 @@ DVC must own these facts after activation:
 - runtime environment snapshot identity;
 - reproducible stage dependency/output graph.
 
-The repository currently has no P3 DVC stage. Materializing the Candidate
-contract before activation would either contain placeholders or make AQ
-duplicate DVC's artifact-version responsibility. Therefore implementation is
-ordered `AFTER_DVC_STAGE`.
+The P3 DVC stage is activated definition-only and its Qlib/MLflow artifact
+boundary is aligned beneath the DVC run root. The static Candidate contract is
+therefore materialized without placeholders. A real Candidate instance remains
+deferred until the first authorized execution creates native run and DVC
+identities.
 
 ## 10. Minimum cross-upstream binding matrix
 
@@ -261,14 +262,12 @@ not establish a need for a new AQ runtime validation engine.
 
 ## 13. Residual implementation gaps
 
-The DVC stage is activated definition-only and its Qlib/MLflow artifact
-boundary is aligned to the same run-scoped DVC output. The finite remaining
-work is:
+The static eight-field contract is materialized. The finite remaining work is:
 
-1. materialize the eight-field thin static Candidate-to-P2 manifest against
-   those ready DVC and Qlib/MLflow identities;
-2. integrate Candidate production into the autonomous research loop only
-   after the static boundary is independently reviewed.
+1. run the first separately authorized autonomous smoke and materialize one
+   real Candidate instance from its native DVC and Qlib/MLflow identities;
+2. integrate Candidate production into later autonomous research only after
+   that real-instance boundary is independently reviewed.
 
 No unresolved identity-design blocker remains.
 
@@ -276,8 +275,8 @@ No unresolved identity-design blocker remains.
 
 ```text
 CODE_CHANGED = NO
-SCHEMA_IMPLEMENTED = NO
-MANIFEST_IMPLEMENTED = NO
+SCHEMA_IMPLEMENTED = YES
+REAL_CANDIDATE_INSTANCE_CREATED = NO
 DVC_STAGE_CHANGED = NO
 RD_AGENT_LLM_LOOP_EXECUTED = NO
 LLM_CALLS = 0
@@ -292,4 +291,5 @@ DATASET_DOWNLOADS = 0
 BROKER_CALLS = 0
 PAPER_TRADING = NO
 LIVE_TRADING = NO
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_INSTANCE_001
 ```

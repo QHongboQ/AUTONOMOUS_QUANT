@@ -617,7 +617,8 @@ cache parents beneath one run-scoped root. DVC now defines one direct official
 `rdagent fin_quant --loop-n 1` execution stage with the proven process-local US
 bindings and source paths. The external output is non-cached, so DVC will own
 its future output hash without copying private artifacts. Qlib Recorder and
-MLflow retain experiment/run identity and their database is not a DVC output.
+MLflow retain experiment/run identity; the run-scoped database and native
+artifact locations remain descendants of the DVC output.
 
 ```text
 P3_DVC_STAGE_ACTIVATION = PASS
@@ -658,4 +659,28 @@ DVC_YAML_CHANGED = NO
 DVC_LOCK_CHANGED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_MATERIALIZATION_001
+```
+
+## Candidate-to-P2 identity contract materialization
+
+The audited cross-upstream Candidate identity is materialized as one JSON
+Schema Draft 2020-12 file and one normative Markdown specification. The root
+requires exactly eight fields; Candidate ID is RFC 8785 JCS plus SHA-256 over
+the seven non-ID fields. Qlib must be `FINISHED`, sealed-OOS access must be
+false, and P3 has no certification, protocol-edit, or production-promotion
+authority. No real or placeholder Candidate was created.
+
+```text
+CANDIDATE_TO_P2_CONTRACT = MATERIALIZED
+CANDIDATE_CONTRACT_VERSION = P3_CANDIDATE_TO_P2_CONTRACT_V1
+AQ_REQUIRED_IDENTITY_FIELD_COUNT = 8
+CANDIDATE_ID_INPUT_FIELD_COUNT = 7
+SCHEMA_VALIDATION = PASS
+NEGATIVE_VALIDATION_CASES = 8/8 PASS
+REAL_CANDIDATE_INSTANCE_CREATED = NO
+FAKE_CANDIDATE_INSTANCE_CREATED = NO
+CUSTOM_REGISTRY_REQUIRED = NO
+CUSTOM_RUNTIME_VALIDATOR_REQUIRED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_INSTANCE_001
 ```
