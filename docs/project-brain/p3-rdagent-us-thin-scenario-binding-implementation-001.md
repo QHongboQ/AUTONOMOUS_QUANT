@@ -134,7 +134,7 @@ parsed the rendered YAML, verified all five unchanged runner-selected names,
 proved hash tampering and wrong source paths fail closed, and exercised the
 real upstream conversion methods without executing a runner.
 
-## 7. Non-actions and next state
+## 7. Historical implementation handoff state
 
 ```text
 RD_AGENT_US_THIN_BINDING = PASS
@@ -158,4 +158,20 @@ PAPER_TRADING = NO
 LIVE_TRADING = NO
 REMAINING_RESIDUAL_GAPS = NONE
 CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
+```
+
+## 8. Current DVC activation state
+
+The follow-up DVC task activated a definition-only upstream execution stage
+that directly invokes official `rdagent fin_quant --loop-n 1`. RD-Agent's
+native workspace, log/session, and cache settings bind the run to one
+deterministic root. No autonomous loop was executed and no DVC lock entry was
+fabricated.
+
+```text
+P3_DVC_STAGE_ACTIVATION = PASS
+P3_DVC_STAGE_NAME = p3_rdagent_us_quant_research
+P3_DVC_STAGE = ACTIVATED_DEFINITION_ONLY
+P3_DVC_LOCK_ENTRY = PENDING_FIRST_AUTHORIZED_AUTONOMOUS_RUN
+CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_MATERIALIZATION_001
 ```

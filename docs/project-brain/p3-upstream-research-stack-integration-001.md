@@ -358,7 +358,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_CONDA_DISCOVERY_PATH_CONFIGURATION_RESOLUTION_001
 ```
 
-## Current RD-Agent runtime integration closeout
+## Completed RD-Agent runtime integration closeout record
 
 The native discovery path is now proven. With
 `/home/zhou/miniforge3/bin` prepended only to the bounded process PATH,
@@ -385,7 +385,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_US_RAGGED_SCENARIO_CONFIGURATION_PROOF_001
 ```
 
-## Current US ragged scenario configuration proof
+## Completed US ragged scenario configuration proof record
 
 The pinned RD-Agent factor and model templates expose Qlib initialization and
 workflow settings as YAML, but their checked-in defaults are China-specific.
@@ -420,7 +420,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_US_RAGGED_STATIC_CONFIG_MATERIALIZATION_001
 ```
 
-## Current US ragged static-config materialization
+## Completed US ragged static-config materialization record
 
 The minimum selected configuration set is now materialized under the existing
 RD-Agent owner: one pinned-template overlay for factor research and one for
@@ -448,7 +448,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_AUDIT_001
 ```
 
-## Current Candidate-to-P2 identity contract audit
+## Completed Candidate-to-P2 identity contract audit record
 
 The cross-upstream identity boundary is now defined without implementing a
 new AQ engine. RD-Agent owns research content and lineage, Qlib
@@ -474,7 +474,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
 ```
 
-## Current RD-Agent US template-binding upstream audit
+## Completed RD-Agent US template-binding upstream audit record
 
 The pinned RD-Agent source and official current `main` are the same commit.
 Both hard-code the finance workspace template folders in the factor/model
@@ -546,7 +546,7 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_RDAGENT_US_THIN_SCENARIO_BINDING_IMPLEMENTATION_001
 ```
 
-## Current RD-Agent US thin scenario-binding implementation
+## Completed RD-Agent US thin scenario-binding implementation record
 
 The frozen class-seam design is implemented with one project binding module
 and exactly five approved US templates. The factor/model converters call
@@ -569,9 +569,11 @@ REAL_RDAGENT_US_TEMPLATE_PATH = PROVEN_WITHOUT_AUTONOMOUS_EXECUTION
 RUNNER_OVERRIDE_REQUIRED = NO
 CODER_OVERRIDE_REQUIRED = NO
 RD_LOOP_OVERRIDE_REQUIRED = NO
-P3_DVC_STAGE_ACTIVATION = READY_NEXT
+P3_DVC_STAGE_ACTIVATION = PASS
+P3_DVC_STAGE = ACTIVATED_DEFINITION_ONLY
+P3_DVC_LOCK_ENTRY = PENDING_FIRST_AUTHORIZED_AUTONOMOUS_RUN
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
+CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_MATERIALIZATION_001
 ```
 
 ## RD-Agent US factor source-data contract proof and implementation handoff
@@ -601,7 +603,35 @@ PIT_MEMBERSHIP_AUTHORITY_CHANGED = NO
 RAGGED_POLICY_CHANGED = NO
 SEALED_OOS_ISOLATION = PASS
 RD_AGENT_US_THIN_BINDING = PASS
-P3_DVC_STAGE_ACTIVATION = READY_NEXT
+P3_DVC_STAGE_ACTIVATION = PASS
+P3_DVC_STAGE = ACTIVATED_DEFINITION_ONLY
+P3_DVC_LOCK_ENTRY = PENDING_FIRST_AUTHORIZED_AUTONOMOUS_RUN
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_NEXT = P3_DVC_STAGE_ACTIVATION_001
+CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_MATERIALIZATION_001
+```
+
+## Current P3 DVC stage activation
+
+Native RD-Agent settings provide deterministic workspace, trace/session, and
+cache parents beneath one run-scoped root. DVC now defines one direct official
+`rdagent fin_quant --loop-n 1` execution stage with the proven process-local US
+bindings and source paths. The external output is non-cached, so DVC will own
+its future output hash without copying private artifacts. Qlib Recorder and
+MLflow retain experiment/run identity and their database is not a DVC output.
+
+```text
+P3_DVC_STAGE_ACTIVATION = PASS
+NATIVE_RUN_ROOT = DETERMINISTIC_CONFIGURABLE
+DVC_STAGE_MODE = UPSTREAM_EXECUTION_STAGE
+P3_DVC_STAGE_NAME = p3_rdagent_us_quant_research
+P3_DVC_STAGE = ACTIVATED_DEFINITION_ONLY
+P3_DVC_LOCK_ENTRY = PENDING_FIRST_AUTHORIZED_AUTONOMOUS_RUN
+MLFLOW_DB_IS_DVC_OUTPUT = NO
+EXISTING_DVC_STAGE_DEFINITIONS_CHANGED = NO
+EXISTING_DVC_LOCK_ENTRIES_CHANGED = NO
+DVC_REPRO_EXECUTED = NO
+RD_AGENT_LLM_LOOP_EXECUTED = NO
+SEALED_OOS_ISOLATION = PASS
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_CANDIDATE_TO_P2_IDENTITY_CONTRACT_MATERIALIZATION_001
 ```
