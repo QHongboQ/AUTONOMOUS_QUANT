@@ -684,3 +684,31 @@ CUSTOM_RUNTIME_VALIDATOR_REQUIRED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_INSTANCE_001
 ```
+
+## Local free LLM backend activation
+
+The pinned RD-Agent `LiteLLMAPIBackend` now has a proven local-only Ollama
+route in Ubuntu-24.04. Hardware admission selected `qwen3:4b` and the fixed
+`qwen3-embedding:0.6b`; the 8B model was not downloaded. Native Ollama,
+direct LiteLLM, RD-Agent chat, RD-Agent embedding, and the pinned structured
+response fallback all passed. The service listens only on
+`127.0.0.1:11434`, and all model settings remain process-local.
+
+```text
+OLLAMA_VERSION = 0.34.0
+LOCAL_INFERENCE_CLASS = GPU_SMALL_MODEL_ONLY
+LOCAL_CHAT_MODEL = ollama/qwen3:4b
+LOCAL_EMBEDDING_MODEL = ollama/qwen3-embedding:0.6b
+OLLAMA_LOCALHOST_ONLY = YES
+RDAGENT_RESPONSE_SCHEMA_COMPATIBILITY = PASS
+RDAGENT_LITELLM_CHAT_HEALTH = PASS
+RDAGENT_LITELLM_EMBEDDING_HEALTH = PASS
+PAID_LLM_REQUESTS = 0
+PAID_EMBEDDING_REQUESTS = 0
+CLOUD_INFERENCE_REQUESTS = 0
+AUTONOMOUS_ATTEMPT_COUNT = 0
+DVC_REPRO_EXECUTED = NO
+P3_LOCAL_FREE_LLM_BACKEND = ACTIVE
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_INSTANCE_001
+```
