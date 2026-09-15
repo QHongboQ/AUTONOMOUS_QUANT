@@ -1,0 +1,50 @@
+{
+  "configuration_version": "P3_LOCAL_LOGICAL_LLM_SLOTS_V1",
+  "litellm_version": "1.100.1",
+  "route_mode": "LOCAL_ONLY",
+  "chat": {
+    "logical_slot": "aq-brain-local",
+    "litellm_model": "ollama/aq-brain-local",
+    "provider": "ollama",
+    "resolved_model": "qwen3:4b",
+    "resolved_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "local_retry_count": 1
+  },
+  "embedding": {
+    "logical_slot": "aq-embedding-local",
+    "litellm_model": "ollama/aq-embedding-local",
+    "provider": "ollama",
+    "resolved_model": "qwen3-embedding:0.6b",
+    "resolved_digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+    "dimensions": 1024,
+    "epoch_identity": "e63389904f57782a645d2f9d79ec5f028b8a7ef99aa051a2cdb0ca2e55dbf6db",
+    "epoch_identity_projection": {
+      "cache_and_index_policy": "NEW_EMPTY_UPSTREAM_CACHE_AND_INDEX_ON_MODEL_CHANGE",
+      "dimensions": 1024,
+      "epoch_version": "P3_EMBEDDING_EPOCH_V1",
+      "logical_slot": "aq-embedding-local",
+      "provider": "ollama",
+      "requested_model": "ollama/aq-embedding-local",
+      "resolved_digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+      "resolved_model": "qwen3-embedding:0.6b"
+    },
+    "cross_model_fallback": false
+  },
+  "cloud_interfaces": {
+    "chat_logical_slot": "aq-brain-cloud",
+    "chat_state": "RESERVED_NOT_IMPLEMENTED",
+    "embedding_logical_slot": "aq-embedding-cloud",
+    "embedding_state": "RESERVED_NOT_IMPLEMENTED"
+  },
+  "model_residency": {
+    "policy": "ON_DEMAND",
+    "permanent_llm_gpu_residency_required": false,
+    "upstream_control": "OLLAMA_KEEP_ALIVE"
+  },
+  "native_trace": {
+    "owner": "RD_AGENT",
+    "root_environment_variable": "LOG_TRACE_PATH",
+    "required_under_dvc_run_root": true,
+    "content_sha256_required_by_candidate_v2": true
+  }
+}

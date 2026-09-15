@@ -379,3 +379,35 @@ BACKTEST = NO
 OLLAMA_MODEL_DOWNLOAD = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ```
+
+## Local-only implementation resolution
+
+The subsequent bounded implementation intentionally activated only the safe
+local subset of this design. Native Ollama aliases now provide stable
+`aq-brain-local` and `aq-embedding-local` roles; no Gateway, cloud credential,
+or automatic fallback was introduced. Candidate V2 preserves all eight
+top-level bundles and adds required `llm_execution_identity` under the runtime
+bundle. The local slot configuration is now a P3 DVC dependency.
+
+```text
+CANDIDATE_CONTRACT_VERSION = P3_CANDIDATE_TO_P2_CONTRACT_V2
+CANDIDATE_TOP_LEVEL_FIELD_COUNT = 8
+LLM_EXECUTION_IDENTITY_REQUIRED = YES
+DEFAULT_CHAT_POLICY = LOCAL_ONLY
+LOCAL_CHAT_LOGICAL_SLOT = aq-brain-local
+LOCAL_CHAT_RESOLVED_MODEL = qwen3:4b
+LOCAL_EMBEDDING_LOGICAL_SLOT = aq-embedding-local
+LOCAL_EMBEDDING_RESOLVED_MODEL = qwen3-embedding:0.6b
+EMBEDDING_EPOCH_IDENTITY = e63389904f57782a645d2f9d79ec5f028b8a7ef99aa051a2cdb0ca2e55dbf6db
+CLOUD_CHAT_INTERFACE = RESERVED_NOT_IMPLEMENTED
+CLOUD_EMBEDDING_INTERFACE = RESERVED_NOT_IMPLEMENTED
+LITELLM_GATEWAY_DEPLOYED = NO
+AUTO_CLOUD_FALLBACK = NO
+MODEL_RESIDENCY_POLICY = ON_DEMAND
+DVC_YAML_CHANGED = YES_P3_STAGE_ONLY
+DVC_LOCK_CHANGED = NO
+DVC_REPRO_EXECUTED = NO
+CUSTOM_AQ_ROUTER_REQUIRED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_LOCAL_BRAIN_RESOURCE_ADMISSION_BENCHMARK_001
+```

@@ -766,3 +766,37 @@ DVC_REPRO_EXECUTED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_CANDIDATE_CONTRACT_V2_AND_DUAL_LLM_BACKEND_IMPLEMENTATION_001
 ```
+
+## Candidate V2 and local logical LLM slots
+
+Candidate V2 is materialized with the same eight top-level bundles and a
+required `llm_execution_identity` extension under the runtime bundle. Native
+Ollama aliases own the stable local chat and embedding roles, while RD-Agent
+continues to use its upstream LiteLLM backend. The P3 DVC stage now selects
+those aliases process-locally and depends on their non-secret identity config.
+
+Cloud slot names remain reserved only. No Gateway, proxy extra, cloud key,
+automatic fallback, AQ router, autonomous run, or model upgrade was introduced.
+
+```text
+CANDIDATE_CONTRACT_VERSION = P3_CANDIDATE_TO_P2_CONTRACT_V2
+CANDIDATE_TOP_LEVEL_FIELD_COUNT = 8
+LLM_EXECUTION_IDENTITY_REQUIRED = YES
+LOCAL_CHAT_LOGICAL_SLOT = aq-brain-local
+LOCAL_CHAT_RESOLVED_MODEL = qwen3:4b
+LOCAL_EMBEDDING_LOGICAL_SLOT = aq-embedding-local
+LOCAL_EMBEDDING_RESOLVED_MODEL = qwen3-embedding:0.6b
+EMBEDDING_EPOCH_IDENTITY = e63389904f57782a645d2f9d79ec5f028b8a7ef99aa051a2cdb0ca2e55dbf6db
+MODEL_RESIDENCY_POLICY = ON_DEMAND
+CLOUD_CHAT_INTERFACE = RESERVED_NOT_IMPLEMENTED
+CLOUD_EMBEDDING_INTERFACE = RESERVED_NOT_IMPLEMENTED
+LITELLM_GATEWAY_DEPLOYED = NO
+AUTO_CLOUD_FALLBACK = NO
+DVC_YAML_CHANGED = YES_P3_STAGE_ONLY
+DVC_LOCK_CHANGED = NO
+DVC_REPRO_EXECUTED = NO
+AUTONOMOUS_ATTEMPT_COUNT = 0
+CUSTOM_AQ_ROUTER_REQUIRED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_LOCAL_BRAIN_RESOURCE_ADMISSION_BENCHMARK_001
+```
