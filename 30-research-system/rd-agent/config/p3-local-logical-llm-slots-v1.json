@@ -6,8 +6,8 @@
     "logical_slot": "aq-brain-local",
     "litellm_model": "ollama/aq-brain-local",
     "provider": "ollama",
-    "resolved_model": "qwen3:4b",
-    "resolved_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "resolved_model": "qwen2.5-coder:7b",
+    "resolved_digest": "dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364",
     "local_retry_count": 1
   },
   "embedding": {

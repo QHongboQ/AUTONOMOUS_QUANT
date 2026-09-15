@@ -177,3 +177,23 @@ CUSTOM_AQ_ROUTER_REQUIRED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_LOCAL_BRAIN_RESOURCE_ADMISSION_BENCHMARK_001
 ```
+
+## Local brain resource admission update
+
+The bounded 2026-09-15 admission benchmark selected
+`qwen2.5-coder:7b` at digest
+`dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364`
+for the existing `aq-brain-local` slot. Only the chat model identity fields in
+the slot configuration changed. The embedding identity/epoch is unchanged,
+and Candidate V2 requires no schema change because resolved model and digest
+already belong to `llm_execution_identity`.
+
+```text
+LOCAL_CHAT_RESOLVED_MODEL = qwen2.5-coder:7b
+LOCAL_CHAT_RESOLVED_DIGEST = dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364
+LOGICAL_SLOT_CONFIGURATION_SHA256 = e087c4edb0d4516c0ea5bf0ade8f6129cf070be276566ab8162c5b65ac2db825
+EMBEDDING_CHANGED = NO
+CANDIDATE_V2_SCHEMA_CHANGE_REQUIRED = NO
+MODEL_RESIDENCY_POLICY = ON_DEMAND
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
+```
