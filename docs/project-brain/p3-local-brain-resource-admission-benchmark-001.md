@@ -142,3 +142,25 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 LOCAL_BRAIN_RESOURCE_ADMISSION = PASS
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
 ```
+
+## Effective context metadata follow-up
+
+The selected model and its resource admission remain unchanged. A later
+pre-run gate found that pinned RD-Agent subtracted LiteLLM's dynamically
+reported Ollama output maximum (`32768`) from its input maximum (`32768`). A
+thin backend now uses LiteLLM's public metadata registration interface to
+declare the approved output budget `4096`, yielding the safe effective input
+budget `28672`. One bounded inherited chat health call and one inherited
+embedding health call passed; no autonomous attempt or Qlib execution occurred.
+
+```text
+LOCAL_BRAIN_SELECTED_MODEL = qwen2.5-coder:7b
+LOCAL_BRAIN_SELECTED_DIGEST = dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364
+CONTEXT_WINDOW = 32768
+EFFECTIVE_CHAT_INPUT_LIMIT = 28672
+CHAT_MAX_OUTPUT_TOKENS = 4096
+CONTEXT_HEADROOM_GATE = PASS
+MODEL_SELECTION_CHANGED = NO
+AUTONOMOUS_ATTEMPT_COUNT = 0
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
+```

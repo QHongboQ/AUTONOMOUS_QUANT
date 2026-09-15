@@ -124,9 +124,10 @@ stages:
       PICKLE_CACHE_FOLDER_PATH_STR=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/pickle-cache
       LOG_TRACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/trace
       OLLAMA_API_BASE=http://127.0.0.1:11434
+      BACKEND=aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
       LITELLM_CHAT_MODEL=ollama/aq-brain-local
       LITELLM_EMBEDDING_MODEL=ollama/aq-embedding-local
-      LITELLM_CHAT_TOKEN_LIMIT=32768
+      LITELLM_CHAT_TOKEN_LIMIT=28672
       LITELLM_CHAT_MAX_TOKENS=4096
       LITELLM_CHAT_TEMPERATURE=0.2
       LITELLM_REASONING_THINK_RM=true

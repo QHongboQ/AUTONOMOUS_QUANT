@@ -824,3 +824,35 @@ P3_DVC_LOCK_CHANGED = NO
 P3_AUTONOMOUS_ATTEMPT_COUNT = 0
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
 ```
+
+## RD-Agent / LiteLLM effective context headroom resolution
+
+The pinned RD-Agent backend subtracts LiteLLM's reported maximum output from
+maximum input. LiteLLM's dynamic Ollama metadata reported the model context as
+both values, so the prior effective input limit was zero. Current official
+RD-Agent and LiteLLM main retain those respective behaviors; no upstream
+package upgrade was available for this exact mismatch.
+
+A thin project backend now registers corrected metadata through LiteLLM's
+public `register_model()` interface, then delegates all execution to the
+original `LiteLLMAPIBackend`. RD-Agent's native `BACKEND` setting selects it
+only for the P3 stage. No completion, embedding, routing, retry, streaming, or
+response logic was added.
+
+```text
+ROOT_CAUSE = RDAGENT_LITELLM_OLLAMA_METADATA_SEMANTIC_MISMATCH
+RESOLUTION_MODE = LITELLM_PUBLIC_REGISTER_MODEL
+EFFECTIVE_CHAT_INPUT_LIMIT = 28672
+CHAT_MAX_OUTPUT_TOKENS = 4096
+CONTEXT_WINDOW = 32768
+CONTEXT_HEADROOM_GATE = PASS
+LOCAL_CHAT_HEALTH = PASS
+LOCAL_EMBEDDING_HEALTH = PASS
+CUSTOM_COMPLETION_LOGIC = 0
+CUSTOM_EMBEDDING_LOGIC = 0
+CUSTOM_ROUTER_LOGIC = 0
+DVC_REPRO_EXECUTED = NO
+AUTONOMOUS_ATTEMPT_COUNT = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
+```

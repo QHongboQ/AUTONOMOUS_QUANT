@@ -108,9 +108,9 @@ chat_logical_slot = aq-brain-local
 chat_route_mode = LOCAL_ONLY
 chat provider = ollama
 requested_model = ollama/aq-brain-local
-resolved_model = qwen3:4b
+resolved_model = <resolved_model from the DVC-bound logical-slot configuration>
 provider_model_identity_kind = LOCAL_DIGEST
-provider_model_identity = 359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7
+provider_model_identity = <resolved_digest from the DVC-bound logical-slot configuration>
 fallback_occurred = false
 fallback_reason_counts = []
 
@@ -123,6 +123,11 @@ provider_model_identity = ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581
 dimensions = 1024
 embedding_epoch_sha256 = e63389904f57782a645d2f9d79ec5f028b8a7ef99aa051a2cdb0ca2e55dbf6db
 ```
+
+These placeholders describe the binding rule, not missing Candidate data. A
+real Candidate records the concrete model and digest proven by its DVC-bound
+logical-slot configuration and upstream run evidence. The schema deliberately
+does not bind one permanent local model.
 
 The schema can represent `CLOUD_ONLY` and `LOCAL_FIRST` later without changing
 the eight top-level fields. Those modes are not implemented now. A local-only
