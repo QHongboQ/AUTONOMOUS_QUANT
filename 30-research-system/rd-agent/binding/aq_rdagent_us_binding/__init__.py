@@ -39,11 +39,11 @@ _MAX_SOURCE_DATE = pd.Timestamp("2024-12-31")
 _SOURCE_COLUMNS = ["$open", "$close", "$high", "$low", "$volume", "$factor"]
 
 TEMPLATE_HASHES = {
-    "factor_template/conf_baseline.yaml": "5b679eaefcf8f552c765fb21f94e4c44f34fe2f680c17f84690473683c5c843d",
-    "factor_template/conf_combined_factors.yaml": "c2f24f30170eb32e4cfeb916a11eba9fe726143e97c73ca93a6ac70af32cc9c6",
-    "factor_template/conf_combined_factors_sota_model.yaml": "0f1b2c8662b5d6619d293c07d91c75df688b5c7ca048f504bbc4e67b38beb7cc",
-    "model_template/conf_baseline_factors_model.yaml": "739a2c0b97383241c90ed24f56b106ab24bff9f20466b6411dff3156921a70b9",
-    "model_template/conf_sota_factors_model.yaml": "a5f7bc6b11900e53514dc93f10d8b393fe9ef0801c4bb0f0f99fa089259b48ec",
+    "factor_template/conf_baseline.yaml": "ddfb7dd65875636db4cc0acb2471ae1c48d07a30b88b60380ef2a355fdf3d73c",
+    "factor_template/conf_combined_factors.yaml": "2758f1f764bc38a1193f3e78320a65eaecdf3360aada2c300881dee5c54f2426",
+    "factor_template/conf_combined_factors_sota_model.yaml": "8f5fac7c7f6592f282556c51f5b34c078460db46f9ee3a54c3bcc31385e6d119",
+    "model_template/conf_baseline_factors_model.yaml": "6f4aeab4e422e0e4b266c42f132ffd8a8a1b27cfbec74513a92745e60d7cb260",
+    "model_template/conf_sota_factors_model.yaml": "4a08250b0e0906f10a4856992aec1bb85f144076d1d4cf1ba34c90fa544b5d69",
 }
 
 _SOURCE_HASHES = {

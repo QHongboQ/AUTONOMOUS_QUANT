@@ -8,7 +8,7 @@ qlib_init:
         class: MLflowExpManager
         module_path: qlib.workflow.expm
         kwargs:
-            uri: sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/mlflow.db
+            uri: sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/mlflow.db
             default_exp_name: Experiment
 
 market: &market p2_pit

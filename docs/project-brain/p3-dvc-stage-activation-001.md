@@ -85,13 +85,18 @@ D:/AQ_DATA/P3/rdagent-us-ragged/factor-source
 D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
 ```
 
-The Qlib templates retain the native SQLite MLflow manager. The shared MLflow
-database and MLflow artifact store are not DVC outputs. A later candidate
-handoff will bind DVC artifact identity to the Qlib/MLflow recorder identity;
-this task does not create that contract or a parallel registry.
+The Qlib templates retain the native SQLite MLflow manager. A bounded
+follow-up aligned their tracking URI to the run-scoped SQLite database beneath
+the existing DVC output. Because RD-Agent executes `qrun` from each native
+workspace, MLflow's default filesystem artifact root also remains beneath that
+same DVC output. A later candidate handoff will bind DVC artifact identity to
+the Qlib/MLflow recorder identity; no parallel registry was created.
 
 ```text
-MLFLOW_DB_IS_DVC_OUTPUT = NO
+RUN_SCOPED_MLFLOW_DB_IS_DVC_OUTPUT = YES
+OLD_SHARED_MLFLOW_DB_IS_DVC_OUTPUT = NO
+MLFLOW_ARTIFACTS_UNDER_DVC_OUTPUT = YES
+P3_MLFLOW_DVC_ARTIFACT_ALIGNMENT = PASS
 P2_PROVIDER_MUTATED = NO
 ```
 

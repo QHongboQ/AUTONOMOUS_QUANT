@@ -261,12 +261,13 @@ not establish a need for a new AQ runtime validation engine.
 
 ## 13. Residual implementation gaps
 
-The finite remaining work is:
+The DVC stage is activated definition-only and its Qlib/MLflow artifact
+boundary is aligned to the same run-scoped DVC output. The finite remaining
+work is:
 
-1. activate the P3 DVC stage so DVC owns exact dependencies and outputs;
-2. materialize the eight-field thin static Candidate-to-P2 manifest against
-   those DVC identities;
-3. integrate Candidate production into the autonomous research loop only
+1. materialize the eight-field thin static Candidate-to-P2 manifest against
+   those ready DVC and Qlib/MLflow identities;
+2. integrate Candidate production into the autonomous research loop only
    after the static boundary is independently reviewed.
 
 No unresolved identity-design blocker remains.
