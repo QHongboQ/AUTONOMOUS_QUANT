@@ -712,3 +712,57 @@ P3_LOCAL_FREE_LLM_BACKEND = ACTIVE
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_INSTANCE_001
 ```
+
+## Dual LLM backend routing and identity design
+
+The installed LiteLLM 1.100.1 Router and Gateway natively own multi-provider
+model groups, retries, cooldowns and fallbacks, so AQ requires no provider
+router. Native environment substitution permits stable logical slots with
+replaceable Ollama/OpenAI model values. The installed RD-Agent environment is
+not itself Gateway-ready because the official proxy extra is incomplete; a
+later implementation must use a dedicated pinned localhost-only Gateway
+environment without mutating RD-Agent.
+
+Regular LiteLLM fallback is broader than the allowed paid-fallback policy: it
+can route authentication and invalid-request failures, not only local
+availability failures. The active default therefore remains local-only and
+cloud is a manual, not-armed override. Embeddings cannot cross model spaces;
+any model switch requires a new cache/index epoch and complete upstream
+reindex.
+
+Candidate V1 binds RD-Agent and Qlib identities but not actual LLM provider,
+model, digest/response identity, routing config, call counts, fallback reasons,
+or embedding epoch. V1 remains immutable. Candidate V2 will preserve the same
+eight top-level bundles and extend `runtime_identity_bundle` with one minimal
+`llm_execution_identity` sub-bundle.
+
+```text
+LLM_ROUTER_OWNER = LITELLM
+LITELLM_NATIVE_MULTI_PROVIDER = YES
+LITELLM_NATIVE_FALLBACK = YES
+LITELLM_NATIVE_GATEWAY = YES
+CUSTOM_AQ_ROUTER_REQUIRED = NO
+CHAT_LOGICAL_SLOT = aq-brain
+CHAT_LOCAL_SLOT = aq-brain-local
+CHAT_CLOUD_SLOT = aq-brain-cloud
+DEFAULT_CHAT_POLICY = LOCAL_ONLY_WITH_MANUAL_CLOUD_OVERRIDE
+AUTO_CLOUD_FALLBACK_SAFE = NO
+CLOUD_CHAT_STATE = CONFIGURED_NOT_ARMED
+UPSTREAM_HARD_CLOUD_BUDGET_AVAILABLE = YES
+HARD_BUDGET_DEPLOYED = NO
+EMBEDDING_LOGICAL_SLOT = aq-embedding
+EMBEDDING_LOCAL_SLOT = aq-embedding-local
+EMBEDDING_CLOUD_SLOT = aq-embedding-cloud
+EMBEDDING_AUTO_CROSS_MODEL_FALLBACK = NO
+EMBEDDING_EPOCH_REQUIRED_FOR_MODEL_SWITCH = YES
+CANDIDATE_V1_BINDS_LLM_EXECUTION_IDENTITY = NO
+CANDIDATE_CONTRACT_UPGRADE_REQUIRED = YES
+PROPOSED_CANDIDATE_CONTRACT_VERSION = P3_CANDIDATE_TO_P2_CONTRACT_V2
+ROUTING_CONFIG_DVC_DEPENDENCY_REQUIRED = YES
+PAID_LLM_REQUESTS = 0
+CLOUD_INFERENCE_REQUESTS = 0
+AUTONOMOUS_ATTEMPT_COUNT = 0
+DVC_REPRO_EXECUTED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_NEXT = P3_CANDIDATE_CONTRACT_V2_AND_DUAL_LLM_BACKEND_IMPLEMENTATION_001
+```
