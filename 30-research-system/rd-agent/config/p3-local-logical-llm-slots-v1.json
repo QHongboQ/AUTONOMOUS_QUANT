@@ -2,6 +2,10 @@
   "configuration_version": "P3_LOCAL_LOGICAL_LLM_SLOTS_V1",
   "litellm_version": "1.100.1",
   "route_mode": "LOCAL_ONLY",
+  "ollama_runtime": {
+    "context_length": 32768,
+    "num_parallel": 1
+  },
   "chat": {
     "logical_slot": "aq-brain-local",
     "litellm_model": "ollama_chat/aq-brain-local",

@@ -110,6 +110,8 @@ class LocalOllamaBackendTests(unittest.TestCase):
             )
         )
         self.assertEqual(config["route_mode"], "LOCAL_ONLY")
+        self.assertEqual(config["ollama_runtime"]["context_length"], 32768)
+        self.assertEqual(config["ollama_runtime"]["num_parallel"], 1)
         self.assertEqual(config["chat"]["litellm_model"], "ollama_chat/aq-brain-local")
         self.assertEqual(config["chat"]["provider"], "ollama_chat")
         self.assertEqual(config["chat"]["resolved_model"], "qwen2.5-coder:7b")
