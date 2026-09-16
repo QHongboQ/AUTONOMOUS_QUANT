@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P3 — Local Brain Resource Admission Benchmark 001**
+> Current Next: **P3 — First Authorized Autonomous Smoke and Candidate V2 Instance 004**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
