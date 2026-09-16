@@ -130,7 +130,7 @@ stages:
       QLIB_MLFLOW_URI=sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/mlflow.db
       OLLAMA_API_BASE=http://127.0.0.1:11434
       BACKEND=aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
-      LITELLM_CHAT_MODEL=ollama/aq-brain-local
+      LITELLM_CHAT_MODEL=ollama_chat/aq-brain-local
       LITELLM_EMBEDDING_MODEL=ollama/aq-embedding-local
       LITELLM_CHAT_TOKEN_LIMIT=28672
       LITELLM_CHAT_MAX_TOKENS=4096

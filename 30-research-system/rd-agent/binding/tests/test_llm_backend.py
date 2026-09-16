@@ -13,13 +13,14 @@ RDAGENT_ROOT = TEST_FILE.parents[2]
 sys.path.insert(0, str(BINDING_ROOT))
 
 os.environ.setdefault("OLLAMA_API_BASE", "http://127.0.0.1:11434")
-os.environ.setdefault("LITELLM_CHAT_MODEL", "ollama/aq-brain-local")
+os.environ.setdefault("LITELLM_CHAT_MODEL", "ollama_chat/aq-brain-local")
 os.environ.setdefault("LITELLM_EMBEDDING_MODEL", "ollama/aq-embedding-local")
 os.environ.setdefault("LITELLM_CHAT_TOKEN_LIMIT", "28672")
 os.environ.setdefault("LITELLM_CHAT_MAX_TOKENS", "4096")
 
 from rdagent.oai.backend import LiteLLMAPIBackend
 from rdagent.oai.backend.litellm import LITELLM_SETTINGS
+from litellm import get_supported_openai_params, supports_response_schema
 
 from aq_rdagent_us_binding.llm_backend import USLocalOllamaLiteLLMAPIBackend
 
@@ -33,7 +34,7 @@ class LocalOllamaBackendTests(unittest.TestCase):
             LITELLM_SETTINGS.chat_max_tokens,
             os.environ.get("OLLAMA_API_BASE"),
         )
-        LITELLM_SETTINGS.chat_model = "ollama/aq-brain-local"
+        LITELLM_SETTINGS.chat_model = "ollama_chat/aq-brain-local"
         LITELLM_SETTINGS.embedding_model = "ollama/aq-embedding-local"
         LITELLM_SETTINGS.chat_token_limit = 28672
         LITELLM_SETTINGS.chat_max_tokens = 4096
@@ -85,11 +86,19 @@ class LocalOllamaBackendTests(unittest.TestCase):
             LiteLLMAPIBackend._create_embedding_inner_function,
         )
 
+    def test_official_ollama_chat_route_exposes_structured_output(self) -> None:
+        USLocalOllamaLiteLLMAPIBackend()
+        self.assertIn(
+            "response_format",
+            get_supported_openai_params(model="ollama_chat/aq-brain-local"),
+        )
+        self.assertTrue(supports_response_schema(model="ollama_chat/aq-brain-local"))
+
     def test_nonlocal_or_cloud_routes_fail_closed(self) -> None:
         LITELLM_SETTINGS.chat_model = "openai/gpt-4o"
         with self.assertRaisesRegex(RuntimeError, "local Ollama"):
             USLocalOllamaLiteLLMAPIBackend()
-        LITELLM_SETTINGS.chat_model = "ollama/aq-brain-local"
+        LITELLM_SETTINGS.chat_model = "ollama_chat/aq-brain-local"
         os.environ["OLLAMA_API_BASE"] = "https://example.invalid"
         with self.assertRaisesRegex(RuntimeError, "localhost"):
             USLocalOllamaLiteLLMAPIBackend()
@@ -101,7 +110,8 @@ class LocalOllamaBackendTests(unittest.TestCase):
             )
         )
         self.assertEqual(config["route_mode"], "LOCAL_ONLY")
-        self.assertEqual(config["chat"]["litellm_model"], "ollama/aq-brain-local")
+        self.assertEqual(config["chat"]["litellm_model"], "ollama_chat/aq-brain-local")
+        self.assertEqual(config["chat"]["provider"], "ollama_chat")
         self.assertEqual(config["chat"]["resolved_model"], "qwen2.5-coder:7b")
         self.assertEqual(
             config["chat"]["resolved_digest"],

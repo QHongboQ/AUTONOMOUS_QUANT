@@ -4,8 +4,8 @@
   "route_mode": "LOCAL_ONLY",
   "chat": {
     "logical_slot": "aq-brain-local",
-    "litellm_model": "ollama/aq-brain-local",
-    "provider": "ollama",
+    "litellm_model": "ollama_chat/aq-brain-local",
+    "provider": "ollama_chat",
     "resolved_model": "qwen2.5-coder:7b",
     "resolved_digest": "dae161e27b0e90dd1856c8bb3209201fd6736d8eb66298e75ed87571486f4364",
     "local_retry_count": 1

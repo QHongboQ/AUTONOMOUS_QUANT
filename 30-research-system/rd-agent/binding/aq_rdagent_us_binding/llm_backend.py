@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from litellm import get_model_info, register_model
+from litellm import get_model_info, register_model, supports_response_schema
 from rdagent.oai.backend import LiteLLMAPIBackend
 from rdagent.oai.backend.litellm import LITELLM_SETTINGS
 
 
-_CHAT_MODEL = "ollama/aq-brain-local"
+_CHAT_MODEL = "ollama_chat/aq-brain-local"
 _EMBEDDING_MODEL = "ollama/aq-embedding-local"
 _OLLAMA_API_BASE = "http://127.0.0.1:11434"
 _CONTEXT_WINDOW = 32768
@@ -49,24 +49,27 @@ class USLocalOllamaLiteLLMAPIBackend(LiteLLMAPIBackend):
         register_model(
             {
                 _CHAT_MODEL: {
-                    "litellm_provider": "ollama",
+                    "litellm_provider": "ollama_chat",
                     "mode": "chat",
                     "max_tokens": _CONTEXT_WINDOW,
                     "max_input_tokens": _CONTEXT_WINDOW,
                     "max_output_tokens": output_budget,
                     "input_cost_per_token": 0.0,
                     "output_cost_per_token": 0.0,
+                    "supports_response_schema": True,
                 }
             }
         )
         info = get_model_info(_CHAT_MODEL)
         if (
-            info.get("litellm_provider") != "ollama"
+            info.get("litellm_provider") != "ollama_chat"
             or info.get("mode") != "chat"
             or info.get("max_input_tokens") != _CONTEXT_WINDOW
             or info.get("max_output_tokens") != output_budget
         ):
             raise RuntimeError("LiteLLM rejected the approved local Ollama metadata")
+        if not supports_response_schema(model=_CHAT_MODEL):
+            raise RuntimeError("LiteLLM rejected the proven local structured-output capability")
 
         super().__init__(*args, **kwargs)
         if self.chat_token_limit != input_budget:
