@@ -38,7 +38,7 @@ LLM_EXECUTION_IDENTITY_REQUIRED = YES
 V1_SCHEMA_SHA256 = a30630d41596d5d89da1b4291b07489585e0ca23fbc78ddd822404eb0e3cb795
 V1_SPEC_SHA256 = 0085963ad80b3e8ca526e8749be1eda6a157e7e15908462c8af5633277b8a364
 V2_SCHEMA_SHA256 = a7f1c175c68188e641eacc61da2ba2683a9b1b6d6021cf1faa25f5543818266b
-V2_SPEC_SHA256 = d052a429269995e12c572863c307f6a8eb9adcf70f97a460e1ea16274dc44c1c
+INITIAL_V2_SPEC_SHA256 = d052a429269995e12c572863c307f6a8eb9adcf70f97a460e1ea16274dc44c1c
 ```
 
 Required identity now includes LiteLLM version; LLM configuration and native
@@ -196,4 +196,38 @@ EMBEDDING_CHANGED = NO
 CANDIDATE_V2_SCHEMA_CHANGE_REQUIRED = NO
 MODEL_RESIDENCY_POLICY = ON_DEMAND
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
+```
+
+## Candidate V2 spec hash authority sync
+
+The original materialization record above remains historical evidence. Git
+history proves that commit `c3f2374d29ba9e691a8cf4fb4eb00283d4416b3d`
+created Candidate V2 with the initial spec hash, while commit
+`184031d4b9b58b913fa8fa5c063cfe3a9a6b2d1e` intentionally generalized the
+Markdown spec. That evolution replaced the hard-coded local chat model and
+digest with values supplied by the DVC-bound logical-slot configuration and
+added the rule that a real Candidate records concrete run-proven identity. It
+did not change the Candidate V2 schema.
+
+The old spec hash is therefore classified only as
+`HISTORICAL_INITIAL_V2_HASH`; it is not current artifact authority. The
+current generic spec does not permanently bind `qwen2.5-coder:7b`. The current
+logical-slot configuration supplies that concrete model and digest, while a
+real Candidate must retain the identity proven by its actual run evidence.
+
+```text
+INITIAL_V2_MATERIALIZATION_COMMIT = c3f2374d29ba9e691a8cf4fb4eb00283d4416b3d
+INITIAL_V2_SPEC_SHA256 = d052a429269995e12c572863c307f6a8eb9adcf70f97a460e1ea16274dc44c1c
+CURRENT_V2_SPEC_SHA256 = a5ca1f92684cc2eec3bed9024e4c9f221cc23b4c4992029d4d41963ac088837a
+CURRENT_V2_SCHEMA_SHA256 = a7f1c175c68188e641eacc61da2ba2683a9b1b6d6021cf1faa25f5543818266b
+SPEC_EVOLUTION_COMMIT = 184031d4b9b58b913fa8fa5c063cfe3a9a6b2d1e
+SPEC_EVOLUTION_REASON = LOCAL_CHAT_MODEL_IDENTITY_MOVED_FROM_HARDCODED_SPEC_VALUE_TO_DVC_BOUND_RUNTIME_IDENTITY
+SCHEMA_CHANGED_BY_SPEC_EVOLUTION = NO
+CANDIDATE_TOP_LEVEL_FIELD_COUNT = 8
+CANDIDATE_V2_SCHEMA_VALIDATION = PASS
+CANDIDATE_V2_CONTRACT_STATUS = ACTIVE
+CONTRACT_MODEL_REPLACEABILITY = PASS
+P3_RUN_NAMESPACE = p3-fin-quant-003
+ATTEMPT_003_EXECUTED = NO
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_004
 ```
