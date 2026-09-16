@@ -4,12 +4,6 @@
 qlib_init:
     provider_uri: /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
     region: us
-    exp_manager:
-        class: MLflowExpManager
-        module_path: qlib.workflow.expm
-        kwargs:
-            uri: sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/mlflow.db
-            default_exp_name: Experiment
 
 market: &market p2_pit
 benchmark: &benchmark SPY

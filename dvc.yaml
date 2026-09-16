@@ -1,3 +1,6 @@
+vars:
+  - P3_RUN_NAMESPACE: p3-fin-quant-002
+
 stages:
   p2_certification_historical_rehearsal:
     cmd: >-
@@ -120,9 +123,11 @@ stages:
       -- env
       PATH=/home/zhou/miniforge3/bin:/home/zhou/AQ_ENVS/rdagent/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       PYTHONPATH=/mnt/d/AUTONOMOUS_QUANT/30-research-system/rd-agent/binding
-      WORKSPACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/workspaces
-      PICKLE_CACHE_FOLDER_PATH_STR=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/pickle-cache
-      LOG_TRACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001/trace
+      CONDA_DEFAULT_ENV=rdagent4qlib
+      WORKSPACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/workspaces
+      PICKLE_CACHE_FOLDER_PATH_STR=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/pickle-cache
+      LOG_TRACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/trace
+      QLIB_MLFLOW_URI=sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/mlflow.db
       OLLAMA_API_BASE=http://127.0.0.1:11434
       BACKEND=aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
       LITELLM_CHAT_MODEL=ollama/aq-brain-local
@@ -169,5 +174,5 @@ stages:
       - D:/AQ_DATA/P3/rdagent-us-ragged/factor-source
       - D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
     outs:
-      - D:/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/p3-fin-quant-001:
+      - D:/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
           cache: false

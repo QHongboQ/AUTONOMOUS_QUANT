@@ -801,6 +801,38 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
 ```
 
+## Runtime namespace decoupling and Conda boundary resolution
+
+The first real attempt entered loop 0 but failed before research inference
+because the stage omitted `CONDA_DEFAULT_ENV`. Its 16 trace files and 39,673
+bytes remain immutable under `p3-fin-quant-001`, with deterministic manifest
+SHA-256 `1f671a5ee8a0a854731750a03ad50683a9d938ea0c473ef075ae678ed18e48b2`.
+
+The stage now binds the existing `rdagent4qlib` environment process-locally
+and uses one DVC-native `P3_RUN_NAMESPACE` value for all attempt-002 runtime
+paths. The five Qlib templates no longer contain attempt-specific MLflow
+configuration; pinned Qlib consumes `QLIB_MLFLOW_URI` through its native
+settings. Exactly five template hash constants were refreshed, with no binding
+logic change.
+
+```text
+ROOT_CAUSE = MISSING_PROCESS_LOCAL_CONDA_DEFAULT_ENV
+FAILED_ATTEMPT_001_STATE = PRESERVED_IMMUTABLE_PRE_RESEARCH_FAILURE
+CONDA_DEFAULT_ENV = rdagent4qlib
+NEXT_RUN_NAMESPACE = p3-fin-quant-002
+QLIB_PROCESS_LOCAL_MLFLOW_URI_PROOF = PASS
+FACTOR_COSTEER_ENV_CONSTRUCTION = PASS
+ATTEMPT_ID_PRESENT_IN_TEMPLATE_COUNT = 0
+TEMPLATE_HASH_GUARD = PASS
+RUN_NAMESPACE_COHERENCE = PASS
+BINDING_AND_MATERIALIZER_TESTS = 24/24_PASS
+FUTURE_ATTEMPT_REQUIRES_TEMPLATE_CHANGE = NO
+FUTURE_ATTEMPT_REQUIRES_HASH_REFRESH = NO
+DVC_REPRO_EXECUTED = NO
+AUTONOMOUS_ATTEMPT_COUNT_THIS_TASK = 0
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_003
+```
+
 ## Local brain resource admission benchmark
 
 The current official Ollama catalog and the actual 6 GiB GPU / 7.64 GiB WSL

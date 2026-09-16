@@ -96,3 +96,23 @@ QLIB_SOURCE_CHANGED = NO
 P3_RDAGENT_LITELLM_EFFECTIVE_CONTEXT_HEADROOM_RESOLUTION = PASS
 CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_001
 ```
+
+## Runtime namespace regression check
+
+After attempt-001 exposed the missing process-local Conda selection, the exact
+future attempt-002 stage environment was reconstructed without inference. The
+same accepted backend class still resolves input 28672 plus output 4096 to the
+32768 context window. Runtime namespace selection moved to one DVC variable
+and Qlib's native `QLIB_MLFLOW_URI`; no backend implementation changed.
+
+```text
+BACKEND_CLASS = aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
+EFFECTIVE_CHAT_INPUT_LIMIT = 28672
+CHAT_MAX_OUTPUT_TOKENS = 4096
+CONTEXT_WINDOW = 32768
+CONTEXT_HEADROOM_GATE = PASS
+BACKEND_IMPLEMENTATION_CHANGED = NO
+LLM_INFERENCE_EXECUTED = NO
+DVC_REPRO_EXECUTED = NO
+CURRENT_NEXT = P3_FIRST_AUTHORIZED_AUTONOMOUS_SMOKE_AND_CANDIDATE_V2_INSTANCE_003
+```
