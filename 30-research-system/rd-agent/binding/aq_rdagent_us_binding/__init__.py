@@ -25,6 +25,7 @@ from rdagent.scenarios.qlib.proposal.factor_proposal import (
 from rdagent.scenarios.qlib.proposal.model_proposal import (
     QlibModelHypothesis2Experiment,
 )
+from rdagent.utils.agent.tpl import T
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -37,6 +38,7 @@ FACTOR_SOURCE_FULL = FACTOR_SOURCE_ROOT / "full"
 FACTOR_SOURCE_DEBUG = FACTOR_SOURCE_ROOT / "debug"
 _MAX_SOURCE_DATE = pd.Timestamp("2024-12-31")
 _SOURCE_COLUMNS = ["$open", "$close", "$high", "$low", "$volume", "$factor"]
+_FACTOR_DESCRIPTION_TAGS = frozenset({"factor", "feature", "factors"})
 
 TEMPLATE_HASHES = {
     "factor_template/conf_baseline.yaml": "ddc6713ca9b07b44f210c0dc61d15fa3359fdd9a3e0e2dfd832331b58674bb40",
@@ -66,6 +68,17 @@ def _sha256(path: Path) -> str:
 def _text_sha256(path: Path) -> str:
     """Hash canonical text so Git checkout newline policy cannot change authority."""
     return hashlib.sha256(path.read_text(encoding="utf-8").encode()).hexdigest()
+
+
+def _render_upstream_factor_strategy() -> str:
+    return T("scenarios.qlib.experiment.prompts:qlib_factor_strategy").r()
+
+
+def _append_upstream_factor_strategy(description: str) -> str:
+    strategy = _render_upstream_factor_strategy()
+    if strategy in description:
+        return description
+    return f"{description.rstrip()}\n{strategy}\n"
 
 
 def validate_template_family() -> None:
@@ -193,6 +206,21 @@ class USQlibFactorScenario(QlibFactorScenario):
         validate_factor_source()
         super().__init__()
 
+    def get_scenario_all_desc(
+        self,
+        task: Any = None,
+        filtered_tag: str | None = None,
+        simple_background: bool | None = None,
+    ) -> str:
+        description = super().get_scenario_all_desc(
+            task=task,
+            filtered_tag=filtered_tag,
+            simple_background=simple_background,
+        )
+        if simple_background:
+            return description
+        return _append_upstream_factor_strategy(description)
+
 
 class USQlibQuantScenario(QlibQuantScenario):
     """Require the immutable P3 US factor source before upstream construction."""
@@ -200,3 +228,21 @@ class USQlibQuantScenario(QlibQuantScenario):
     def __init__(self) -> None:
         validate_factor_source()
         super().__init__()
+
+    def get_scenario_all_desc(
+        self,
+        task: Any = None,
+        filtered_tag: str | None = None,
+        simple_background: bool | None = None,
+        action: str | None = None,
+    ) -> str | None:
+        description = super().get_scenario_all_desc(
+            task=task,
+            filtered_tag=filtered_tag,
+            simple_background=simple_background,
+            action=action,
+        )
+        factor_requested = filtered_tag in _FACTOR_DESCRIPTION_TAGS or action == "factor"
+        if simple_background or not factor_requested or description is None:
+            return description
+        return _append_upstream_factor_strategy(description)

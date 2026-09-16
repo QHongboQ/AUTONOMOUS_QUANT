@@ -1,5 +1,5 @@
 vars:
-  - P3_RUN_NAMESPACE: p3-fin-quant-003
+  - P3_RUN_NAMESPACE: p3-fin-quant-004
 
 stages:
   p2_certification_historical_rehearsal:
@@ -118,9 +118,8 @@ stages:
       - 10-data-system/dataset-snapshot/pit-universe/data
   p3_rdagent_us_quant_research:
     cmd: >-
-      wsl.exe -d Ubuntu-24.04
-      --cd /mnt/d/AQ_DATA/P3/rdagent-us-ragged
-      -- env
+      cd ../AQ_DATA/P3/rdagent-us-ragged &&
+      env
       PATH=/home/zhou/miniforge3/bin:/home/zhou/AQ_ENVS/rdagent/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       PYTHONPATH=/mnt/d/AUTONOMOUS_QUANT/30-research-system/rd-agent/binding
       CONDA_DEFAULT_ENV=rdagent4qlib
@@ -172,8 +171,8 @@ stages:
       - docs/project-brain/p3-rdagent-runtime-provenance-alignment-001.md
       - docs/project-brain/p3-rdagent-runtime-dependency-alignment-001.md
       - docs/project-brain/p3-rdagent-conda-discovery-path-configuration-resolution-001.md
-      - D:/AQ_DATA/P3/rdagent-us-ragged/factor-source
-      - D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      - ../AQ_DATA/P3/rdagent-us-ragged/factor-source
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
     outs:
-      - D:/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
+      - ../AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
           cache: false

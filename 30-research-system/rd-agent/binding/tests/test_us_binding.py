@@ -78,6 +78,7 @@ from rdagent.scenarios.qlib.developer.model_coder import QlibModelCoSTEER
 from rdagent.scenarios.qlib.developer.model_runner import QlibModelRunner
 from rdagent.scenarios.qlib.experiment.factor_experiment import QlibFactorExperiment
 from rdagent.scenarios.qlib.experiment.model_experiment import QlibModelExperiment
+from rdagent.utils.agent.tpl import T
 
 
 # Test discovery may import the sibling materializer first, which imports this
@@ -307,6 +308,60 @@ frame[["$factor"]].head(3).to_hdf("result.h5", key="data", mode="w")
         self.assertIn("daily_pv.h5", factor.get_source_data_desc())
         self.assertIn("daily_pv.h5", quant.get_source_data_desc())
         generator.assert_not_called()
+
+    def test_factor_strategy_is_exposed_once_only_for_factor_descriptions(self) -> None:
+        expected = T("scenarios.qlib.experiment.prompts:qlib_factor_strategy").r()
+        with patch.object(binding, "validate_factor_source"), patch.object(
+            binding.USQlibFactorScenario, "get_runtime_environment", return_value="pinned runtime"
+        ), patch.object(
+            binding.USQlibQuantScenario, "get_runtime_environment", return_value="pinned runtime"
+        ):
+            factor = binding.USQlibFactorScenario()
+            quant = binding.USQlibQuantScenario()
+            factor_desc = factor.get_scenario_all_desc()
+            factor_simple = factor.get_scenario_all_desc(simple_background=True)
+            quant_factor = quant.get_scenario_all_desc(filtered_tag="feature")
+            quant_model = quant.get_scenario_all_desc(filtered_tag="model")
+
+        for description in (factor_desc, quant_factor):
+            self.assertEqual(description.count(expected), 1)
+            for contract_term in ("daily_pv.h5", "$factor", "datetime", "instrument"):
+                self.assertIn(contract_term, description)
+        self.assertNotIn(expected, factor_simple)
+        self.assertNotIn(expected, quant_model)
+        source = inspect.getsource(binding)
+        self.assertIn("qlib_factor_strategy", source)
+        self.assertNotIn("Ensure that for every step of data processing", source)
+
+    def test_p3_dvc_stage_uses_native_wsl_and_portable_external_paths(self) -> None:
+        document = yaml.safe_load(DVC_TEXT)
+        self.assertEqual(document["vars"], [{"P3_RUN_NAMESPACE": "p3-fin-quant-004"}])
+        stage = document["stages"]["p3_rdagent_us_quant_research"]
+        command = stage["cmd"]
+        self.assertNotIn("wsl.exe", command)
+        self.assertIn("cd ../AQ_DATA/P3/rdagent-us-ragged &&", command)
+        self.assertIn(
+            "/home/zhou/AQ_ENVS/rdagent/bin/rdagent fin_quant --loop-n 1",
+            command,
+        )
+        self.assertIn(
+            "FACTOR_COSTEER_PYTHON_BIN=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python",
+            command,
+        )
+        self.assertIn("../AQ_DATA/P3/rdagent-us-ragged/factor-source", stage["deps"])
+        self.assertIn("../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data", stage["deps"])
+        self.assertEqual(
+            stage["outs"],
+            [
+                {
+                    "../AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}": {
+                        "cache": False
+                    }
+                }
+            ],
+        )
+        external = [value for value in stage["deps"] if "AQ_DATA" in value]
+        self.assertTrue(all(value.startswith("../AQ_DATA/") for value in external))
 
     def test_wrong_factor_source_path_fails_before_upstream_constructor(self) -> None:
         with patch.object(binding.FACTOR_COSTEER_SETTINGS, "data_folder", "/tmp/not-approved"), patch.object(
