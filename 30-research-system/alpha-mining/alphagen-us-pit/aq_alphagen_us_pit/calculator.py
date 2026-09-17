@@ -47,14 +47,22 @@ class USPitAlphaCalculator(TensorAlphaCalculator):
 
     def __init__(self, data: USPitDataView, target: Expression):
         self.data = data
-        super().__init__(normalize_by_day(target.evaluate(data)))
+        super().__init__(_normalize_preserving_missing(target.evaluate(data)))
 
     def evaluate_alpha(self, expr: Expression) -> torch.Tensor:
-        return normalize_by_day(expr.evaluate(self.data))
+        return _normalize_preserving_missing(expr.evaluate(self.data))
 
     @property
     def n_days(self) -> int:
         return self.data.n_days
+
+
+def _normalize_preserving_missing(raw: torch.Tensor) -> torch.Tensor:
+    """Delegate normalization upstream, then restore authoritative missingness."""
+    missing = torch.isnan(raw)
+    normalized = normalize_by_day(raw)
+    normalized[missing] = torch.nan
+    return normalized
 
 
 def load_authoritative_target(protocol_path: Path = PROTOCOL_PATH) -> TargetAuthority:

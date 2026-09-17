@@ -88,6 +88,23 @@ def membership_covering_instruments(
     )
 
 
+def membership_overlapping_instruments(
+    start_time: str | pd.Timestamp,
+    end_time: str | pd.Timestamp,
+    *,
+    provider_uri: Path = PROVIDER_URI,
+    market: str = MARKET,
+) -> list[str]:
+    """Return every identity with an accepted PIT episode overlapping the interval."""
+    start, end = pd.Timestamp(start_time), pd.Timestamp(end_time)
+    _validate_time_bounds(start, end)
+    _initialize_provider(provider_uri)
+    membership = D.list_instruments(
+        D.instruments(market), start_time=start, end_time=end, as_list=False
+    )
+    return sorted(instrument for instrument, intervals in membership.items() if intervals)
+
+
 @dataclass(frozen=True)
 class USPitDataView:
     """The exact five-channel tensor surface consumed by AlphaGen expressions."""
@@ -99,6 +116,7 @@ class USPitDataView:
     max_future_days: int
     evaluation_start: pd.Timestamp
     evaluation_end: pd.Timestamp
+    membership_mask: torch.Tensor
 
     @property
     def n_days(self) -> int:
@@ -152,20 +170,34 @@ def load_us_pit_view(
     if loaded_dates[-1] >= SEALED_OOS_START:
         raise ValueError("AlphaGen future buffer reaches sealed OOS")
 
-    membership = D.list_instruments(
+    evaluation_membership = D.list_instruments(
         D.instruments(market), start_time=start, end_time=end, as_list=False
     )
     uncovered = [
         instrument
         for instrument in instruments
-        if instrument not in membership
-        or not _covers_interval(membership[instrument], start, end)
+        if instrument not in evaluation_membership
+        or not evaluation_membership[instrument]
     ]
     if uncovered:
         raise ValueError(
-            "Requested identities lack continuous accepted PIT membership: "
+            "Requested identities lack accepted PIT membership overlap: "
             + ", ".join(uncovered)
         )
+
+    loaded_membership = D.list_instruments(
+        D.instruments(market),
+        start_time=loaded_dates[0],
+        end_time=loaded_dates[-1],
+        as_list=False,
+    )
+    membership_mask = np.zeros((len(loaded_dates), len(instruments)), dtype=bool)
+    for column, instrument in enumerate(instruments):
+        for left, right in loaded_membership.get(instrument, []):
+            membership_mask[:, column] |= (
+                (loaded_dates >= pd.Timestamp(left))
+                & (loaded_dates <= pd.Timestamp(right))
+            )
 
     fields = [field for _, field in FEATURE_FIELDS]
     frame = D.features(
@@ -181,6 +213,7 @@ def load_us_pit_view(
             raise ValueError("AlphaGen feature indices 0-4 do not match AQ channel order")
         wide = frame[field].unstack(level="instrument")
         wide = wide.reindex(index=loaded_dates, columns=list(instruments))
+        wide = wide.mask(~membership_mask)
         channels.append(wide.to_numpy(dtype=np.float32))
     tensor = torch.as_tensor(np.stack(channels, axis=1), device=device)
     return USPitDataView(
@@ -191,4 +224,5 @@ def load_us_pit_view(
         max_future_days=max_future_days,
         evaluation_start=start,
         evaluation_end=end,
+        membership_mask=torch.as_tensor(membership_mask, device=device),
     )

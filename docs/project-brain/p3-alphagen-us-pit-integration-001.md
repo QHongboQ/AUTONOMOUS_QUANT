@@ -18,17 +18,23 @@ P3_RUNTIME_POC_ALPHA = PROOF_ONLY_NOT_RESEARCH_EVIDENCE
 
 ## Module boundary
 
-Reusable project code is restricted to four real responsibilities:
+Reusable project code is restricted to five real responsibilities:
 
 - `data_view.py` exposes the existing Qlib `p2_pit` provider as AlphaGen's
-  OHLCV tensor surface, requires one date-valid membership interval for the
-  complete evaluation range, preserves provider NaNs, and excludes sealed OOS;
+  OHLCV tensor surface, admits identities with a date-valid membership overlap,
+  masks every off-membership observation, preserves provider NaNs, and excludes
+  sealed OOS;
 - `calculator.py` subclasses upstream `TensorAlphaCalculator` and binds the
   target directly to `P2_CERTIFICATION_PROTOCOL_V1` label-temporal authority;
+  upstream `normalize_by_day()` remains the numerical owner and AQ restores
+  only the authoritative missingness mask afterward;
 - `feature_mask.py` composes upstream `ActionMasker` with AlphaGen's native
   mask and removes only `SIZE_OP + int(FeatureType.VWAP)`;
 - `runner.py` only composes upstream `MseAlphaPool`, `AlphaEnv`, `MaskablePPO`,
-  and `LSTMSharedNet` from explicit caller parameters.
+  and `LSTMSharedNet` from explicit caller parameters;
+- `research_config.py` defines the bounded official least-squares research
+  configuration and fail-closed research-partition guards without adding a
+  custom optimizer, factor pool, RL implementation, or PPO implementation.
 
 The fixed dates, deterministic 32-instrument sample, 2,048-step budget, pool
 capacity five, and JSON evidence writing live only in `run_bounded_poc.py`.
@@ -44,17 +50,16 @@ SERIALIZATION_FIX_SCOPE = EVIDENCE_ONLY
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ```
 
-Using physical nonblank, non-comment lines as the deterministic counting rule,
-the reusable package is 372 LOC, the dedicated POC entrypoint is 158 LOC, and
-the focused test file is 129 LOC. There is no circular dependency and no
-copied AlphaGen implementation.
+There is no circular dependency and no copied AlphaGen implementation.
 
 ## Validation
 
-All nine focused tests pass. They cover OHLCV orientation, frozen target and
+All 18 focused tests pass. They cover OHLCV orientation, frozen target and
 two-session alignment, protocol-drift rejection, date-valid PIT membership,
 sealed-OOS rejection, expression semantics, VWAP-only mask delta,
-deterministic POC sampling, and module imports.
+deterministic POC sampling, module imports, ragged membership masking, NaN
+preservation, partition purging, the historical-TEST guard, the fixed fast
+configuration, and the upstream least-squares branch.
 
 One authorized structural-parity run used the same seed, provider, dates,
 mask, 32 instruments, and 2,048-step budget as the accepted POC. It initialized
@@ -75,5 +80,10 @@ The SHA-256 of `integration_summary.json` is:
 ALPHAFORGE_AND_ALPHAGPT = CHALLENGERS_NOT_CURRENT_MAINLINE
 RD_AGENT_LOCAL_BRAIN_SEARCH = PAUSED_NOT_P3_BLOCKER
 AUTONOMOUS_ATTEMPT_004_AUTHORIZED = NO
-CURRENT_NEXT = P3_ALPHAGEN_US_PIT_FACTOR_DISCOVERY_RUN_001
+PRIOR_DISCOVERY_RUN_001 = ABORTED_RESOURCE_CALIBRATION_INVALID
+ROOT_CAUSE = UPSTREAM_L1_POOL_OPTIMIZATION_NONLINEAR_COST
+RAGGED_PIT_CORRECTNESS = PASS
+ALPHAGEN_MSE_LSTSQ_FAST_V1 = QUALIFIED
+ALPHAGEN_MSE_L1_REFERENCE_V1 = REFERENCE_RESOURCE_EXPENSIVE
+CURRENT_NEXT = P3_ALPHAGEN_US_PIT_FACTOR_DISCOVERY_LSTSQ_RUN_001
 ```
