@@ -89,3 +89,12 @@ AUTONOMOUS_ATTEMPT_004_AUTHORIZED = NO
 CURRENT_NEXT = P3_ALPHAGEN_US_PIT_ADAPTER_BLOCKER_AUDIT_001
 FINAL_CLASSIFICATION = FEATURE_SPACE_COMPATIBILITY_BLOCKER
 ```
+
+## Subsequent resolution
+
+This blocker conclusion is historical and has been superseded by the bounded
+`P3_ALPHAGEN_US_PIT_VWAP_ACTION_MASK_POC_001` result. The official
+`sb3-contrib==2.0.0` `ActionMasker` composes outside AlphaGen's environment,
+preserves the complete upstream mask, and disables only the symbol-derived
+VWAP action. AlphaGen upstream source remained unchanged. See
+`p3-alphagen-us-pit-vwap-action-mask-poc-001.md` for current authority.
