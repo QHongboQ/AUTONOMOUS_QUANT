@@ -284,3 +284,112 @@ stages:
       hash: md5
       md5: d82262a75f85636cde98b464e222d517
       size: 1628
+  p3_formulaic_alpha_reproducibility_seal:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B
+      30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      --aq-head 04a9ae29069fb34164f5637c3a59df459f0ff67d --output
+      30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+    deps:
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      hash: md5
+      md5: fcd742578d6d89a5673bc1a618fc676b.dir
+      size: 25537236
+      nfiles: 3653
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+      isexec: true
+    - path: ../AQ_DATA/P3/alphagen-us-pit-factor-discovery-lstsq-run-001
+      hash: md5
+      md5: d5c68e2938f22a88ed5ee5d8a30f0472.dir
+      size: 767158
+      nfiles: 19
+    - path: ../AQ_DATA/P3/alphagen-us-pit-qlib-candidate-evaluation-001
+      hash: md5
+      md5: c5505ad3b17fd03f2b81a6a6dd6eb16d.dir
+      size: 167541768
+      nfiles: 158
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dependency_inventory.json
+      hash: md5
+      md5: 9af8c42bc71f01a63374d683e68783fd
+      size: 2809
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_conda_explicit.txt
+      hash: md5
+      md5: 0e42074249ed3a5e25e3675f18222768
+      size: 2338
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_pip_freeze.txt
+      hash: md5
+      md5: efe68f3032b8498b9ee6a8967b39842a
+      size: 4349
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_conda_explicit.txt
+      hash: md5
+      md5: a521a99d8de9749396d80738e2af0b73
+      size: 2338
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_pip_freeze.txt
+      hash: md5
+      md5: 57f1e19e326566a318b8565d18004ec1
+      size: 3872
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/preseal_authority_check.json
+      hash: md5
+      md5: b05724f6f29916fdfef1f3434b4e170f
+      size: 1048
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_freeze.txt
+      hash: md5
+      md5: 957f52ceacc90a08f4ffd5246d3a8107
+      size: 1175
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_identity.json
+      hash: md5
+      md5: 89568ef1f1062e0ef01b17969446cd23
+      size: 1523
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_provenance_audit.json
+      hash: md5
+      md5: ac2630e90634deee88f082d11e48d003
+      size: 2043
+      isexec: true
+    - path: 30-research-system/alpha-mining/alphagen-us-pit/aq_alphagen_us_pit
+      hash: md5
+      md5: b4909526bac8e098287c3d65f9001e62.dir
+      size: 19221
+      nfiles: 6
+    - path:
+        30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      hash: md5
+      md5: 3875015b79086077be5c37eba5a5dc8d
+      size: 8980
+      isexec: true
+    - path:
+        30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      hash: md5
+      md5: 71b83073f5f90f384aeb62aa1eca16aa
+      size: 2288
+      isexec: true
+    - path: 40-certification-system/protocol/p2-certification-protocol-v1.json
+      hash: md5
+      md5: 45772975b21617cad485cc793e1ed433
+      size: 13169
+      isexec: true
+    outs:
+    - path:
+        30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      hash: md5
+      md5: 2247c8d12da0bda075b172940284a94f
+      size: 9891
+      isexec: true

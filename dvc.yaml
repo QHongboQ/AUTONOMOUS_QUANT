@@ -176,3 +176,28 @@ stages:
     outs:
       - ../AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
           cache: false
+  p3_formulaic_alpha_reproducibility_seal:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      --aq-head 04a9ae29069fb34164f5637c3a59df459f0ff67d
+      --output 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+    deps:
+      - 30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      - 30-research-system/alpha-mining/alphagen-us-pit/aq_alphagen_us_pit
+      - 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      - 40-certification-system/protocol/p2-certification-protocol-v1.json
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - ../AQ_DATA/P3/alphagen-us-pit-factor-discovery-lstsq-run-001
+      - ../AQ_DATA/P3/alphagen-us-pit-qlib-candidate-evaluation-001
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_freeze.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_pip_freeze.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_conda_explicit.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_pip_freeze.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_conda_explicit.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_identity.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_provenance_audit.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/preseal_authority_check.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dependency_inventory.json
+    outs:
+      - 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
