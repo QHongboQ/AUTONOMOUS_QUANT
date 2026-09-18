@@ -1,0 +1,37 @@
+{
+  "candidate_contract": {
+    "contract_document_path": "30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md",
+    "contract_document_sha256": "49974251f0094c0a3d173369ba806e5a44715a3b4433e6c6241e10db54fc16e2",
+    "contract_schema_path": "30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json",
+    "contract_schema_sha256": "fb0775c4b8c9a947eb2023d66d3b2c17fda3b3215edcf31a36f3d30ef87fc8f2",
+    "contract_version": "P3_CANDIDATE_TO_P2_CONTRACT_V3"
+  },
+  "candidate_count": 17,
+  "candidate_ids": [
+    "sha256:1a0e410676276ef1a7381d94d7a13feace60969b8207f195e51ea77f23450719",
+    "sha256:20f058b616bed7ce14c4c820e4742c92cafb10b12447a1706b90364137e87f0b",
+    "sha256:36ef2725aea4552dcbe35791fc63b4deed4c889197d12afcc272089e19fee33b",
+    "sha256:5e2c2e5746a020393ced636cbae76d612aaf9334cfa2ea4addd6dd6ba1960d85",
+    "sha256:5f3c9e5f6ce0a1fdf38d87ab6a4609d94f3e170e70008c4289ef3828898e9b5d",
+    "sha256:61ae57c774925c90836ba69ff0fbfdbaa0ef015127f61f3a5b6e6b7f063adb4c",
+    "sha256:644a49049888306381197754c95574f536fd98267766431afebd46ac0f600934",
+    "sha256:7353d7a77ffb0883014e81b10457de323d4d300954be304f31c17c2b18230b15",
+    "sha256:80662d497b6e0da7f60f528d56e3048f20fa3531a1f179fc36587784fbe104e7",
+    "sha256:89397f82c2361985cde1e73ce740e8da808d4db005bc28885dbd1ad4271c5d5d",
+    "sha256:99bdafc3e9f0b1c7f895810d50f398eac92a2f8805f33b87c7fa00347f344195",
+    "sha256:aad1eaafe206dfa683dfd47934b17fa0d16df65fcf7b967534f19f518ba3a81b",
+    "sha256:c21850f3f1ef47bc22ec70096622118216452ec550013f8c06874a3b6a851086",
+    "sha256:c73944e9e3d16055e30d3ad5c3e1935450c32981aa3fc7408e0814662b9a88ec",
+    "sha256:de6ecb854a360ffe185ab055df5220d581da8a5e8c14f1a1adf24ef4cc60d577",
+    "sha256:e36c1cd6a92ee4b078cdf3e514f839739d74a72940596c0377dcb6bbbeeb3e16",
+    "sha256:f8409ded53d351c83de386794cf7fbf383813805cf7c60bd112dbb8fae1dc1cc"
+  ],
+  "cohort_version": "P2_FORMULAIC_ALPHA_CERTIFICATION_COHORT_V2",
+  "frozen_discovery_candidate_manifest_sha256": "de536d7396f6786ea7b27c6a2f5f0970826ce7894b1e17d80361bf11085ff145",
+  "materialization_manifest_sha256": "511ef7c25e55afc9cded8d6b2f13ed2715d248705c8cbad71918802d5210b8fd",
+  "producer": {
+    "engine": "ALPHAGEN",
+    "producer_kind": "FORMULAIC_ALPHA"
+  },
+  "validation_report_sha256": "efbbfd90d5068ddb49a787a08e3f8b5f9da526ae7b22fc326e976adf033473db"
+}

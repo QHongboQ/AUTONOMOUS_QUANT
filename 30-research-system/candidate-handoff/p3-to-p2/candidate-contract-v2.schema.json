@@ -1,0 +1,368 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AUTONOMOUS_QUANT P3 Candidate-to-P2 Contract V2",
+  "description": "V1-compatible top-level Candidate identity contract extended with required LLM execution identity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_contract_version",
+    "candidate_id",
+    "rdagent_research_identity",
+    "qlib_recorder_identity",
+    "artifact_identity_bundle",
+    "dataset_identity_bundle",
+    "runtime_identity_bundle",
+    "p2_target_and_eligibility_boundary"
+  ],
+  "properties": {
+    "candidate_contract_version": {
+      "const": "P3_CANDIDATE_TO_P2_CONTRACT_V2"
+    },
+    "candidate_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rdagent_research_identity": {
+      "$ref": "candidate-contract-v1.schema.json#/$defs/rdagentResearchIdentity"
+    },
+    "qlib_recorder_identity": {
+      "$ref": "candidate-contract-v1.schema.json#/$defs/qlibRecorderIdentity"
+    },
+    "artifact_identity_bundle": {
+      "$ref": "candidate-contract-v1.schema.json#/$defs/artifactIdentityBundle"
+    },
+    "dataset_identity_bundle": {
+      "$ref": "candidate-contract-v1.schema.json#/$defs/datasetIdentityBundle"
+    },
+    "runtime_identity_bundle": {
+      "$ref": "#/$defs/runtimeIdentityBundleV2"
+    },
+    "p2_target_and_eligibility_boundary": {
+      "$ref": "candidate-contract-v1.schema.json#/$defs/p2TargetAndEligibilityBoundary"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "chatResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "requested_model",
+        "resolved_model",
+        "provider_model_identity_kind",
+        "provider_model_identity",
+        "call_count"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "ollama",
+            "openai"
+          ]
+        },
+        "requested_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolved_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_model_identity_kind": {
+          "enum": [
+            "LOCAL_DIGEST",
+            "PROVIDER_SNAPSHOT",
+            "RESPONSE_MODEL_ONLY",
+            "UNAVAILABLE"
+          ]
+        },
+        "provider_model_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "call_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "fallbackReasonCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason_class",
+        "count"
+      ],
+      "properties": {
+        "reason_class": {
+          "enum": [
+            "CONNECTION_FAILURE",
+            "TIMEOUT",
+            "LOCAL_SERVER_ERROR",
+            "MODEL_UNAVAILABLE",
+            "BACKEND_RESOURCE_FAILURE"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "embeddingResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "requested_model",
+        "resolved_model",
+        "provider_model_identity_kind",
+        "provider_model_identity",
+        "dimensions"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "ollama",
+            "openai"
+          ]
+        },
+        "requested_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolved_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_model_identity_kind": {
+          "enum": [
+            "LOCAL_DIGEST",
+            "PROVIDER_SNAPSHOT",
+            "RESPONSE_MODEL_ONLY",
+            "UNAVAILABLE"
+          ]
+        },
+        "provider_model_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dimensions": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "llmExecutionIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "litellm_version",
+        "llm_configuration_sha256",
+        "native_trace_artifact_sha256",
+        "chat_logical_slot",
+        "chat_route_mode",
+        "chat_resolutions",
+        "fallback_occurred",
+        "fallback_reason_counts",
+        "embedding_logical_slot",
+        "embedding_resolution",
+        "embedding_epoch_sha256"
+      ],
+      "properties": {
+        "litellm_version": {
+          "const": "1.100.1"
+        },
+        "llm_configuration_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "native_trace_artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chat_logical_slot": {
+          "enum": [
+            "aq-brain-local",
+            "aq-brain-cloud",
+            "aq-brain"
+          ]
+        },
+        "chat_route_mode": {
+          "enum": [
+            "LOCAL_ONLY",
+            "CLOUD_ONLY",
+            "LOCAL_FIRST"
+          ]
+        },
+        "chat_resolutions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/chatResolution"
+          }
+        },
+        "fallback_occurred": {
+          "type": "boolean"
+        },
+        "fallback_reason_counts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/fallbackReasonCount"
+          }
+        },
+        "embedding_logical_slot": {
+          "enum": [
+            "aq-embedding-local",
+            "aq-embedding-cloud",
+            "aq-embedding"
+          ]
+        },
+        "embedding_resolution": {
+          "$ref": "#/$defs/embeddingResolution"
+        },
+        "embedding_epoch_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "chat_route_mode": {
+                "const": "LOCAL_ONLY"
+              }
+            },
+            "required": [
+              "chat_route_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "chat_logical_slot": {
+                "const": "aq-brain-local"
+              },
+              "chat_resolutions": {
+                "maxItems": 1,
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/chatResolution"
+                    },
+                    {
+                      "properties": {
+                        "provider": {
+                          "const": "ollama"
+                        },
+                        "provider_model_identity_kind": {
+                          "const": "LOCAL_DIGEST"
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "fallback_occurred": {
+                "const": false
+              },
+              "fallback_reason_counts": {
+                "maxItems": 0
+              },
+              "embedding_logical_slot": {
+                "const": "aq-embedding-local"
+              },
+              "embedding_resolution": {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/embeddingResolution"
+                  },
+                  {
+                    "properties": {
+                      "provider": {
+                        "const": "ollama"
+                      },
+                      "provider_model_identity_kind": {
+                        "const": "LOCAL_DIGEST"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "chat_route_mode": {
+                "const": "CLOUD_ONLY"
+              }
+            },
+            "required": [
+              "chat_route_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "chat_logical_slot": {
+                "const": "aq-brain-cloud"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "chat_route_mode": {
+                "const": "LOCAL_FIRST"
+              }
+            },
+            "required": [
+              "chat_route_mode"
+            ]
+          },
+          "then": {
+            "properties": {
+              "chat_logical_slot": {
+                "const": "aq-brain"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "runtimeIdentityBundleV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rdagent_source_git_sha",
+        "rdagent_installed_wheel_sha256",
+        "rdagent_environment_freeze_sha256",
+        "qlib_source_git_sha",
+        "llm_execution_identity"
+      ],
+      "properties": {
+        "rdagent_source_git_sha": {
+          "const": "32b3d395e73d9db5eee3fe9063d69aec0fdc83bd"
+        },
+        "rdagent_installed_wheel_sha256": {
+          "const": "6d4b78037016951d21879249152fee21df90e5dca0a752e233026a41afe64395"
+        },
+        "rdagent_environment_freeze_sha256": {
+          "const": "1d60835745fad44b917eff46918719f8c1c392fb05747f06fb4dde8cb8c1f67e"
+        },
+        "qlib_source_git_sha": {
+          "const": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
+        },
+        "llm_execution_identity": {
+          "$ref": "#/$defs/llmExecutionIdentity"
+        }
+      }
+    }
+  }
+}

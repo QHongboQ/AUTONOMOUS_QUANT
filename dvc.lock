@@ -284,3 +284,391 @@ stages:
       hash: md5
       md5: d82262a75f85636cde98b464e222d517
       size: 1628
+  p3_formulaic_alpha_reproducibility_seal:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B
+      30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      --aq-head 04a9ae29069fb34164f5637c3a59df459f0ff67d --output
+      30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+    deps:
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      hash: md5
+      md5: fcd742578d6d89a5673bc1a618fc676b.dir
+      size: 25537236
+      nfiles: 3653
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+      isexec: true
+    - path: ../AQ_DATA/P3/alphagen-us-pit-factor-discovery-lstsq-run-001
+      hash: md5
+      md5: d5c68e2938f22a88ed5ee5d8a30f0472.dir
+      size: 767158
+      nfiles: 19
+    - path: ../AQ_DATA/P3/alphagen-us-pit-qlib-candidate-evaluation-001
+      hash: md5
+      md5: c5505ad3b17fd03f2b81a6a6dd6eb16d.dir
+      size: 167541768
+      nfiles: 158
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dependency_inventory.json
+      hash: md5
+      md5: 9af8c42bc71f01a63374d683e68783fd
+      size: 2809
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_conda_explicit.txt
+      hash: md5
+      md5: 0e42074249ed3a5e25e3675f18222768
+      size: 2338
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_pip_freeze.txt
+      hash: md5
+      md5: efe68f3032b8498b9ee6a8967b39842a
+      size: 4349
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_conda_explicit.txt
+      hash: md5
+      md5: a521a99d8de9749396d80738e2af0b73
+      size: 2338
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_pip_freeze.txt
+      hash: md5
+      md5: 57f1e19e326566a318b8565d18004ec1
+      size: 3872
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/preseal_authority_check.json
+      hash: md5
+      md5: b05724f6f29916fdfef1f3434b4e170f
+      size: 1048
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_freeze.txt
+      hash: md5
+      md5: 957f52ceacc90a08f4ffd5246d3a8107
+      size: 1175
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_identity.json
+      hash: md5
+      md5: 89568ef1f1062e0ef01b17969446cd23
+      size: 1523
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_provenance_audit.json
+      hash: md5
+      md5: ac2630e90634deee88f082d11e48d003
+      size: 2043
+      isexec: true
+    - path: 30-research-system/alpha-mining/alphagen-us-pit/aq_alphagen_us_pit
+      hash: md5
+      md5: b4909526bac8e098287c3d65f9001e62.dir
+      size: 19221
+      nfiles: 6
+    - path:
+        30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      hash: md5
+      md5: 3875015b79086077be5c37eba5a5dc8d
+      size: 8980
+      isexec: true
+    - path:
+        30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      hash: md5
+      md5: 71b83073f5f90f384aeb62aa1eca16aa
+      size: 2288
+      isexec: true
+    - path: 40-certification-system/protocol/p2-certification-protocol-v1.json
+      hash: md5
+      md5: 45772975b21617cad485cc793e1ed433
+      size: 13169
+      isexec: true
+    outs:
+    - path:
+        30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      hash: md5
+      md5: 2247c8d12da0bda075b172940284a94f
+      size: 9891
+      isexec: true
+  p4_frouros_identity_projection:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py --projection ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json --projection-sha256 8b7fdf79d5b5d5805cefdc94488bb0ba4b408331daa0578f86676b22585e5725 --observation-stream ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json --detector-evidence ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json --ric-artifact ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl --identity-report ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json --runtime-freeze ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json --interpretation qlib_exporter=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py --interpretation frouros_runner=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py --interpretation metric_observation_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json --interpretation detector_evidence_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json --interpretation projection_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json --interpretation seal_script=40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py --output 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+    deps:
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json
+      hash: md5
+      md5: 19aa2709a8bc27d6adb1296d9dea64d7
+      size: 4744
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json
+      hash: md5
+      md5: 518f64fa9e5e3b71915c261152c8c4d1
+      size: 144035
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl
+      hash: md5
+      md5: 4a7df1e1f6948519bfaad8f3bb2c4422
+      size: 49002
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json
+      hash: md5
+      md5: 2d1fe3cfb95b8b9299d0ec7f57f68bd3
+      size: 1520
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json
+      hash: md5
+      md5: d458966a521cad077c420b1555438a81
+      size: 1629
+      isexec: true
+    - path: ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
+      hash: md5
+      md5: fd5905dab6c2d129c7f6d503beb5fbf5
+      size: 1669
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py
+      hash: md5
+      md5: 824ca0307190157b5657bc8531ac1a9c
+      size: 4919
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py
+      hash: md5
+      md5: 3b7ad12b1040a086408b27c53b9eb00c
+      size: 11561
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json
+      hash: md5
+      md5: 9c0e2355efa4393aa61393b6728d81f9
+      size: 2382
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json
+      hash: md5
+      md5: 5334e2369f68a478e7e71b9d01a3eb72
+      size: 999
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json
+      hash: md5
+      md5: 3928db87c80efa21ec92ec9c0bba3ba6
+      size: 3213
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      hash: md5
+      md5: b3ffe462afe782a4088d8792dbcd59f9
+      size: 12909
+      isexec: true
+    outs:
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+      hash: md5
+      md5: 174e2c65d907d69e8cdc072c0eaccdf9
+      size: 863
+      isexec: true
+  p4_shadow_evidence_path_fixture_seal:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py --fixture-task-config ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json --qlib-identity ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json --history ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json --tag-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json --prediction-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json --sigana-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json --shadow-fixture ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json --zero-capital ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json --pre-epoch ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json --ric-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl --prediction-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl --policy-module 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py --policy-schema 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json --policy-config 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json --output 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+    deps:
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json
+      hash: md5
+      md5: 24554f528e8a8de7e8a3de488210da52
+      size: 3089
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
+      hash: md5
+      md5: fcf3ce7fe13252620fcff7f4c33918ba
+      size: 10961
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl
+      hash: md5
+      md5: e8754de0d97390d172b9d21ea11d561c
+      size: 1422
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json
+      hash: md5
+      md5: 8fa84410b1c2485cf0636fb8ec7ad5a4
+      size: 715
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json
+      hash: md5
+      md5: 058e4ed70f533a8e8efda74e8e7385da
+      size: 2820
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json
+      hash: md5
+      md5: 8c23ffbf2308ad7645a41d02408c9714
+      size: 401
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json
+      hash: md5
+      md5: a217901c930d7e33ccb384a886a9a806
+      size: 475
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json
+      hash: md5
+      md5: 2f4c09396314134030296125a1281b6f
+      size: 1338
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json
+      hash: md5
+      md5: 3c4ed6d3a1792ee4f8dfb2742b18b1c4
+      size: 1206
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json
+      hash: md5
+      md5: e57b1920fb3b0e6d60c52b8556163850
+      size: 500
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json
+      hash: md5
+      md5: 189873eac490c78e5e3f23eab83eafa6
+      size: 286
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py
+      hash: md5
+      md5: a949ee5df86cd5373c000399211c651c
+      size: 30062
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json
+      hash: md5
+      md5: 0c9d6e6a0019410406c64fc3f8e275d6
+      size: 864
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json
+      hash: md5
+      md5: 68c42305bc945e1609af6be14cb495ea
+      size: 32388
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py
+      hash: md5
+      md5: 3e68a69e3fec51a02dc0b8168a9b3384
+      size: 9404
+      isexec: true
+    outs:
+    - path: 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+      hash: md5
+      md5: 0b9da08a9bbf16b1dd464f99f6b0f68a
+      size: 1714
+      isexec: true
+  p2_formulaic_alpha_protocol_v2_freeze:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B
+      40-certification-system/protocol/seal_formulaic_protocol_v2.py --protocol
+      40-certification-system/protocol/p2-certification-protocol-v2.json
+      --cohort
+      40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      --activation
+      40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      --v1-protocol
+      40-certification-system/protocol/p2-certification-protocol-v1.json
+      --candidate-contract
+      30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      --candidate-schema
+      30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      --materialization-manifest
+      ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      --validation-report
+      ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      --formulaic-dvc-identity
+      ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      --formulaic-seal
+      30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      --provider-report
+      ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --authority-facts
+      10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      --control-model-config
+      30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      --strategy-config
+      30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      --output
+      40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+    deps:
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      hash: md5
+      md5: 9a6699fe776a7e931e291e80bf980dec
+      size: 4503
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      hash: md5
+      md5: 2bd2cab99ac0beb401b2faad797a7142
+      size: 1057
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      hash: md5
+      md5: 0e46fad85ad854b2490774515affaa36
+      size: 998
+      isexec: true
+    - path:
+        10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      hash: md5
+      md5: 66f6fc0f1492772ae379e1fe41d76325
+      size: 11957
+      isexec: true
+    - path:
+        30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      hash: md5
+      md5: 2247c8d12da0bda075b172940284a94f
+      size: 9891
+      isexec: true
+    - path:
+        30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      hash: md5
+      md5: 6383835c17922a5cc41e1047e3bbf6ff
+      size: 6165
+      isexec: true
+    - path:
+        30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      hash: md5
+      md5: 739d386731d3953e69f112ce00a44b70
+      size: 19176
+      isexec: true
+    - path:
+        30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      hash: md5
+      md5: 71b83073f5f90f384aeb62aa1eca16aa
+      size: 2288
+      isexec: true
+    - path:
+        30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      hash: md5
+      md5: b81185713196f41d3a8ea0ba43f07dfc
+      size: 839
+      isexec: true
+    - path: 40-certification-system/protocol/p2-certification-protocol-v1.json
+      hash: md5
+      md5: 45772975b21617cad485cc793e1ed433
+      size: 13169
+      isexec: true
+    - path:
+        40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      hash: md5
+      md5: 69a58ed71977da5fef2896c04a318fbb
+      size: 460
+      isexec: true
+    - path: 40-certification-system/protocol/p2-certification-protocol-v2.json
+      hash: md5
+      md5: 7e8bc56893806b9efbe08242567fe4c5
+      size: 13967
+      isexec: true
+    - path:
+        40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      hash: md5
+      md5: b665e9ef90b2013ed6ed7675438ea05f
+      size: 2368
+      isexec: true
+    - path: 40-certification-system/protocol/seal_formulaic_protocol_v2.py
+      hash: md5
+      md5: a2be6f180c0707daf08d655b3bdc8d87
+      size: 12023
+      isexec: true
+    outs:
+    - path:
+        40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+      hash: md5
+      md5: 9568a446316a91deed7b961bd5d3d628
+      size: 1909
+      isexec: true

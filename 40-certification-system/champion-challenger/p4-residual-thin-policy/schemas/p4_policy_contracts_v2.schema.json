@@ -1,0 +1,1133 @@
+{
+  "$defs": {
+    "ChallengerReason": {
+      "enum": [
+        "NO_CHAMPION",
+        "CHAMPION_DEGRADED"
+      ],
+      "title": "ChallengerReason",
+      "type": "string"
+    },
+    "DecisionKind": {
+      "enum": [
+        "NO_CHANGE",
+        "ADMIT_SHADOW",
+        "PROMOTE_CHAMPION",
+        "MARK_DEGRADED",
+        "RETIRE",
+        "CHALLENGER_NEEDED",
+        "RESEARCH_REQUESTED",
+        "REJECT_TRANSITION"
+      ],
+      "title": "DecisionKind",
+      "type": "string"
+    },
+    "DecisionReason": {
+      "enum": [
+        "STRUCTURALLY_UNAUTHORIZED",
+        "VALID_P2_CERTIFICATION_REQUIRED",
+        "SHADOW_EVIDENCE_INVALID",
+        "SHADOW_ADMISSION_ELIGIBLE",
+        "SHADOW_EVIDENCE_NOT_COMPLETE_PASS",
+        "CHAMPION_PROMOTION_ELIGIBLE",
+        "DECAY_POLICY_NOT_PREREGISTERED",
+        "STATISTICAL_CHANGE_NOT_DETECTED",
+        "FINANCIAL_CORROBORATION_NOT_ADVERSE",
+        "FINANCIAL_DECAY_CORROBORATED",
+        "RETIREMENT_AUTHORIZATION_REQUIRED",
+        "RETIREMENT_AUTHORIZED",
+        "NO_CHAMPION",
+        "CHAMPION_DEGRADED"
+      ],
+      "title": "DecisionReason",
+      "type": "string"
+    },
+    "DetectorEvidenceReferenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "change_detected": {
+          "title": "Change Detected",
+          "type": "boolean"
+        },
+        "change_event_count": {
+          "minimum": 0,
+          "title": "Change Event Count",
+          "type": "integer"
+        },
+        "contract_version": {
+          "const": "DetectorEvidenceReferenceV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "detector_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Detector Evidence Identity",
+          "type": "string"
+        },
+        "metric_kind": {
+          "const": "RANK_IC",
+          "title": "Metric Kind",
+          "type": "string"
+        },
+        "metric_observation_stream_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Metric Observation Stream Identity",
+          "type": "string"
+        },
+        "upstream_identity_projection_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Upstream Identity Projection Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "candidate_id",
+        "detector_evidence_identity",
+        "metric_observation_stream_identity",
+        "upstream_identity_projection_identity",
+        "metric_kind",
+        "change_detected",
+        "change_event_count"
+      ],
+      "title": "DetectorEvidenceReferenceV1",
+      "type": "object"
+    },
+    "FinancialDecayPolicyConfigV1": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "FinancialDecayPolicyConfigV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "corroboration_required": {
+          "const": true,
+          "title": "Corroboration Required",
+          "type": "boolean"
+        },
+        "metric_kind": {
+          "const": "RANK_IC",
+          "title": "Metric Kind",
+          "type": "string"
+        },
+        "minimum_current_sample_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Current Sample Count"
+        },
+        "minimum_deterioration": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "maximum": 2.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Deterioration"
+        },
+        "minimum_reference_sample_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minimum Reference Sample Count"
+        },
+        "required_change_events": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Change Events"
+        },
+        "required_persistence_evidence_count": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Persistence Evidence Count"
+        },
+        "status": {
+          "enum": [
+            "UNSET_REQUIRES_PREREGISTRATION",
+            "TEST_ONLY_POLICY_CONFIG"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "status",
+        "metric_kind",
+        "corroboration_required"
+      ],
+      "title": "FinancialDecayPolicyConfigV1",
+      "type": "object"
+    },
+    "FinancialDecayPolicyConfigV2": {
+      "additionalProperties": false,
+      "description": "First preregistered production RankIC decay policy.",
+      "properties": {
+        "contract_version": {
+          "const": "FinancialDecayPolicyConfigV2",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "corroboration_required": {
+          "const": true,
+          "title": "Corroboration Required",
+          "type": "boolean"
+        },
+        "current_sample_sessions": {
+          "minimum": 1,
+          "title": "Current Sample Sessions",
+          "type": "integer"
+        },
+        "current_window_must_start_on_or_after_effective_epoch": {
+          "const": true,
+          "title": "Current Window Must Start On Or After Effective Epoch",
+          "type": "boolean"
+        },
+        "effective_epoch": {
+          "format": "date",
+          "title": "Effective Epoch",
+          "type": "string"
+        },
+        "metric_kind": {
+          "const": "RANK_IC",
+          "title": "Metric Kind",
+          "type": "string"
+        },
+        "minimum_current_sample_count": {
+          "minimum": 1,
+          "title": "Minimum Current Sample Count",
+          "type": "integer"
+        },
+        "minimum_deterioration": {
+          "exclusiveMinimum": 0.0,
+          "maximum": 2.0,
+          "title": "Minimum Deterioration",
+          "type": "number"
+        },
+        "minimum_reference_sample_count": {
+          "minimum": 1,
+          "title": "Minimum Reference Sample Count",
+          "type": "integer"
+        },
+        "persistence_confirmation": {
+          "const": "CONSECUTIVE_ELIGIBLE_EVALUATIONS",
+          "title": "Persistence Confirmation",
+          "type": "string"
+        },
+        "policy_evaluation_cadence_sessions": {
+          "minimum": 1,
+          "title": "Policy Evaluation Cadence Sessions",
+          "type": "integer"
+        },
+        "policy_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "reference_sample_sessions": {
+          "minimum": 1,
+          "title": "Reference Sample Sessions",
+          "type": "integer"
+        },
+        "required_change_events": {
+          "minimum": 1,
+          "title": "Required Change Events",
+          "type": "integer"
+        },
+        "required_persistence_evidence_count": {
+          "minimum": 1,
+          "title": "Required Persistence Evidence Count",
+          "type": "integer"
+        },
+        "retroactive_threshold_rewrite": {
+          "const": "PROHIBITED",
+          "title": "Retroactive Threshold Rewrite",
+          "type": "string"
+        },
+        "session_calendar": {
+          "const": "XNYS",
+          "title": "Session Calendar",
+          "type": "string"
+        },
+        "status": {
+          "const": "PREREGISTERED_PRODUCTION_POLICY",
+          "title": "Status",
+          "type": "string"
+        },
+        "window_semantics": {
+          "const": "FROZEN_REFERENCE_AND_TRAILING_CURRENT",
+          "title": "Window Semantics",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "status",
+        "policy_id",
+        "metric_kind",
+        "session_calendar",
+        "effective_epoch",
+        "window_semantics",
+        "current_window_must_start_on_or_after_effective_epoch",
+        "reference_sample_sessions",
+        "current_sample_sessions",
+        "policy_evaluation_cadence_sessions",
+        "persistence_confirmation",
+        "minimum_deterioration",
+        "minimum_reference_sample_count",
+        "minimum_current_sample_count",
+        "required_change_events",
+        "required_persistence_evidence_count",
+        "corroboration_required",
+        "retroactive_threshold_rewrite"
+      ],
+      "title": "FinancialDecayPolicyConfigV2",
+      "type": "object"
+    },
+    "LifecycleDecisionEvidenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "capital_authorized": {
+          "const": false,
+          "title": "Capital Authorized",
+          "type": "boolean"
+        },
+        "contract_version": {
+          "const": "LifecycleDecisionEvidenceV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "current_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LifecycleState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decision_kind": {
+          "$ref": "#/$defs/DecisionKind"
+        },
+        "evidence_classification": {
+          "enum": [
+            "REAL_EXTERNAL_EVIDENCE",
+            "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+          ],
+          "title": "Evidence Classification",
+          "type": "string"
+        },
+        "live_trading_authorized": {
+          "const": false,
+          "title": "Live Trading Authorized",
+          "type": "boolean"
+        },
+        "p4_champion_role_is_not_production_authorization": {
+          "const": true,
+          "title": "P4 Champion Role Is Not Production Authorization",
+          "type": "boolean"
+        },
+        "production_activation_authorized": {
+          "const": false,
+          "title": "Production Activation Authorized",
+          "type": "boolean"
+        },
+        "reason": {
+          "$ref": "#/$defs/DecisionReason"
+        },
+        "source_evidence_identities": {
+          "items": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Source Evidence Identities",
+          "type": "array"
+        },
+        "target_state": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LifecycleState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "contract_version",
+        "candidate_id",
+        "current_state",
+        "target_state",
+        "decision_kind",
+        "reason",
+        "source_evidence_identities",
+        "evidence_classification",
+        "live_trading_authorized",
+        "capital_authorized",
+        "production_activation_authorized",
+        "p4_champion_role_is_not_production_authorization"
+      ],
+      "title": "LifecycleDecisionEvidenceV1",
+      "type": "object"
+    },
+    "LifecycleState": {
+      "enum": [
+        "RESEARCH_CANDIDATE",
+        "CERTIFIED",
+        "SHADOW",
+        "CHAMPION",
+        "DEGRADED",
+        "RETIRED"
+      ],
+      "title": "LifecycleState",
+      "type": "string"
+    },
+    "P2CertificationEvidenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "const": "P2",
+          "title": "Authority",
+          "type": "string"
+        },
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "certification_artifact_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Artifact Identity",
+          "type": "string"
+        },
+        "certification_status": {
+          "enum": [
+            "CERTIFIED",
+            "REJECTED",
+            "NOT_ELIGIBLE_NO_PRISTINE_OOS"
+          ],
+          "title": "Certification Status",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": "P2CertificationEvidenceV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "evidence_classification": {
+          "enum": [
+            "REAL_P2_CERTIFICATION_EVIDENCE",
+            "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+          ],
+          "title": "Evidence Classification",
+          "type": "string"
+        },
+        "evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Evidence Identity",
+          "type": "string"
+        },
+        "protocol_identity": {
+          "const": "P2_CERTIFICATION_PROTOCOL_V1",
+          "title": "Protocol Identity",
+          "type": "string"
+        },
+        "protocol_version": {
+          "const": "V1",
+          "title": "Protocol Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "authority",
+        "candidate_id",
+        "protocol_identity",
+        "protocol_version",
+        "certification_artifact_identity",
+        "certification_status",
+        "evidence_identity",
+        "evidence_classification"
+      ],
+      "title": "P2CertificationEvidenceV1",
+      "type": "object"
+    },
+    "RankICSummaryEvidenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": "RankICSummaryEvidenceV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "current_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Current Evidence Identity",
+          "type": "string"
+        },
+        "current_rank_ic": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Current Rank Ic",
+          "type": "number"
+        },
+        "current_sample_count": {
+          "minimum": 1,
+          "title": "Current Sample Count",
+          "type": "integer"
+        },
+        "metric_kind": {
+          "const": "RANK_IC",
+          "title": "Metric Kind",
+          "type": "string"
+        },
+        "persistence_evidence_count": {
+          "minimum": 0,
+          "title": "Persistence Evidence Count",
+          "type": "integer"
+        },
+        "reference_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Reference Evidence Identity",
+          "type": "string"
+        },
+        "reference_rank_ic": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Reference Rank Ic",
+          "type": "number"
+        },
+        "reference_sample_count": {
+          "minimum": 1,
+          "title": "Reference Sample Count",
+          "type": "integer"
+        },
+        "upstream_identity_projection_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Upstream Identity Projection Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "candidate_id",
+        "metric_kind",
+        "upstream_identity_projection_identity",
+        "reference_evidence_identity",
+        "current_evidence_identity",
+        "reference_rank_ic",
+        "current_rank_ic",
+        "reference_sample_count",
+        "current_sample_count",
+        "persistence_evidence_count"
+      ],
+      "title": "RankICSummaryEvidenceV1",
+      "type": "object"
+    },
+    "RankICSummaryEvidenceV2": {
+      "additionalProperties": false,
+      "description": "Upstream-computed RankIC summaries with an explicit prospective boundary.",
+      "properties": {
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": "RankICSummaryEvidenceV2",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "current_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Current Evidence Identity",
+          "type": "string"
+        },
+        "current_rank_ic": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Current Rank Ic",
+          "type": "number"
+        },
+        "current_sample_count": {
+          "minimum": 1,
+          "title": "Current Sample Count",
+          "type": "integer"
+        },
+        "current_sample_sessions": {
+          "minimum": 1,
+          "title": "Current Sample Sessions",
+          "type": "integer"
+        },
+        "current_window_end": {
+          "format": "date",
+          "title": "Current Window End",
+          "type": "string"
+        },
+        "current_window_start": {
+          "format": "date",
+          "title": "Current Window Start",
+          "type": "string"
+        },
+        "evidence_classification": {
+          "enum": [
+            "REAL_UPSTREAM_EVIDENCE",
+            "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+          ],
+          "title": "Evidence Classification",
+          "type": "string"
+        },
+        "evidence_cutoff": {
+          "format": "date",
+          "title": "Evidence Cutoff",
+          "type": "string"
+        },
+        "metric_kind": {
+          "const": "RANK_IC",
+          "title": "Metric Kind",
+          "type": "string"
+        },
+        "persistence_evidence_count": {
+          "minimum": 0,
+          "title": "Persistence Evidence Count",
+          "type": "integer"
+        },
+        "policy_evaluation_cadence_sessions": {
+          "minimum": 1,
+          "title": "Policy Evaluation Cadence Sessions",
+          "type": "integer"
+        },
+        "policy_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Policy Id",
+          "type": "string"
+        },
+        "reference_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Reference Evidence Identity",
+          "type": "string"
+        },
+        "reference_rank_ic": {
+          "maximum": 1.0,
+          "minimum": -1.0,
+          "title": "Reference Rank Ic",
+          "type": "number"
+        },
+        "reference_sample_count": {
+          "minimum": 1,
+          "title": "Reference Sample Count",
+          "type": "integer"
+        },
+        "reference_sample_sessions": {
+          "minimum": 1,
+          "title": "Reference Sample Sessions",
+          "type": "integer"
+        },
+        "reference_window_end": {
+          "format": "date",
+          "title": "Reference Window End",
+          "type": "string"
+        },
+        "reference_window_start": {
+          "format": "date",
+          "title": "Reference Window Start",
+          "type": "string"
+        },
+        "upstream_identity_projection_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Upstream Identity Projection Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "candidate_id",
+        "policy_id",
+        "metric_kind",
+        "upstream_identity_projection_identity",
+        "reference_evidence_identity",
+        "current_evidence_identity",
+        "reference_rank_ic",
+        "current_rank_ic",
+        "reference_sample_count",
+        "current_sample_count",
+        "reference_sample_sessions",
+        "current_sample_sessions",
+        "policy_evaluation_cadence_sessions",
+        "reference_window_start",
+        "reference_window_end",
+        "current_window_start",
+        "current_window_end",
+        "evidence_cutoff",
+        "persistence_evidence_count",
+        "evidence_classification"
+      ],
+      "title": "RankICSummaryEvidenceV2",
+      "type": "object"
+    },
+    "ResearchRequestV1": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_research_families": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Allowed Research Families",
+          "type": "array"
+        },
+        "asset_universe_scope_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Asset Universe Scope Identity",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": "ResearchRequestV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "evidence_cutoff": {
+          "format": "date",
+          "title": "Evidence Cutoff",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/ChallengerReason"
+        },
+        "request_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "request_provenance": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Request Provenance",
+          "type": "string"
+        },
+        "research_budget_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Research Budget Identity",
+          "type": "string"
+        },
+        "source_evidence_identities": {
+          "items": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "title": "Source Evidence Identities",
+          "type": "array"
+        },
+        "target_protocol_context": {
+          "minLength": 1,
+          "title": "Target Protocol Context",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "request_id",
+        "reason",
+        "source_evidence_identities",
+        "asset_universe_scope_identity",
+        "allowed_research_families",
+        "research_budget_identity",
+        "target_protocol_context",
+        "evidence_cutoff",
+        "request_provenance"
+      ],
+      "title": "ResearchRequestV1",
+      "type": "object"
+    },
+    "RetirementAuthorizationV1": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "enum": [
+            "HUMAN_AUTHORITY",
+            "TEST_FIXTURE"
+          ],
+          "title": "Authority",
+          "type": "string"
+        },
+        "authorization_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Authorization Identity",
+          "type": "string"
+        },
+        "authorized": {
+          "title": "Authorized",
+          "type": "boolean"
+        },
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "contract_version": {
+          "const": "RetirementAuthorizationV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "evidence_classification": {
+          "enum": [
+            "HUMAN_AUTHORITY_RETIREMENT_AUTHORIZATION",
+            "TEST_ONLY_RETIREMENT_AUTHORIZATION"
+          ],
+          "title": "Evidence Classification",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_version",
+        "candidate_id",
+        "authorization_identity",
+        "authority",
+        "evidence_classification",
+        "authorized"
+      ],
+      "title": "RetirementAuthorizationV1",
+      "type": "object"
+    },
+    "ShadowEvidenceV1": {
+      "additionalProperties": false,
+      "properties": {
+        "calendar_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Calendar Identity",
+          "type": "string"
+        },
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "certification_artifact_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Artifact Identity",
+          "type": "string"
+        },
+        "certification_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Evidence Identity",
+          "type": "string"
+        },
+        "completion_status": {
+          "$ref": "#/$defs/ShadowStatus"
+        },
+        "contract_version": {
+          "const": "ShadowEvidenceV1",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "cost_assumption_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Cost Assumption Identity",
+          "type": "string"
+        },
+        "dvc_reproducibility_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Dvc Reproducibility Identity",
+          "type": "string"
+        },
+        "mlflow_experiment_id": {
+          "minLength": 1,
+          "title": "Mlflow Experiment Id",
+          "type": "string"
+        },
+        "mlflow_run_id": {
+          "minLength": 1,
+          "title": "Mlflow Run Id",
+          "type": "string"
+        },
+        "observation_end": {
+          "format": "date",
+          "title": "Observation End",
+          "type": "string"
+        },
+        "observation_start": {
+          "format": "date",
+          "title": "Observation Start",
+          "type": "string"
+        },
+        "outcome_return_evidence_identity": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Outcome Return Evidence Identity"
+        },
+        "prediction_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Prediction Evidence Identity",
+          "type": "string"
+        },
+        "qlib_experiment_id": {
+          "minLength": 1,
+          "title": "Qlib Experiment Id",
+          "type": "string"
+        },
+        "qlib_recorder_id": {
+          "minLength": 1,
+          "title": "Qlib Recorder Id",
+          "type": "string"
+        },
+        "zero_capital_attestation": {
+          "title": "Zero Capital Attestation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "contract_version",
+        "candidate_id",
+        "certification_evidence_identity",
+        "certification_artifact_identity",
+        "observation_start",
+        "observation_end",
+        "calendar_identity",
+        "prediction_evidence_identity",
+        "outcome_return_evidence_identity",
+        "cost_assumption_identity",
+        "qlib_experiment_id",
+        "qlib_recorder_id",
+        "mlflow_experiment_id",
+        "mlflow_run_id",
+        "dvc_reproducibility_identity",
+        "zero_capital_attestation",
+        "completion_status"
+      ],
+      "title": "ShadowEvidenceV1",
+      "type": "object"
+    },
+    "ShadowEvidenceV2": {
+      "additionalProperties": false,
+      "description": "Shadow evidence with explicit real-versus-fixture classification.",
+      "properties": {
+        "calendar_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Calendar Identity",
+          "type": "string"
+        },
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "certification_artifact_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Artifact Identity",
+          "type": "string"
+        },
+        "certification_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Evidence Identity",
+          "type": "string"
+        },
+        "completion_status": {
+          "$ref": "#/$defs/ShadowStatus"
+        },
+        "contract_version": {
+          "const": "ShadowEvidenceV2",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "cost_assumption_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Cost Assumption Identity",
+          "type": "string"
+        },
+        "dvc_reproducibility_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Dvc Reproducibility Identity",
+          "type": "string"
+        },
+        "evidence_classification": {
+          "enum": [
+            "TEST_FIXTURE_NOT_REAL_SHADOW",
+            "PROSPECTIVE_ZERO_CAPITAL_SHADOW"
+          ],
+          "title": "Evidence Classification",
+          "type": "string"
+        },
+        "mlflow_experiment_id": {
+          "minLength": 1,
+          "title": "Mlflow Experiment Id",
+          "type": "string"
+        },
+        "mlflow_run_id": {
+          "minLength": 1,
+          "title": "Mlflow Run Id",
+          "type": "string"
+        },
+        "observation_end": {
+          "format": "date",
+          "title": "Observation End",
+          "type": "string"
+        },
+        "observation_start": {
+          "format": "date",
+          "title": "Observation Start",
+          "type": "string"
+        },
+        "outcome_return_evidence_identity": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Outcome Return Evidence Identity"
+        },
+        "prediction_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Prediction Evidence Identity",
+          "type": "string"
+        },
+        "qlib_experiment_id": {
+          "minLength": 1,
+          "title": "Qlib Experiment Id",
+          "type": "string"
+        },
+        "qlib_recorder_id": {
+          "minLength": 1,
+          "title": "Qlib Recorder Id",
+          "type": "string"
+        },
+        "zero_capital_attestation": {
+          "const": true,
+          "title": "Zero Capital Attestation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "contract_version",
+        "evidence_classification",
+        "candidate_id",
+        "certification_evidence_identity",
+        "certification_artifact_identity",
+        "observation_start",
+        "observation_end",
+        "calendar_identity",
+        "prediction_evidence_identity",
+        "outcome_return_evidence_identity",
+        "cost_assumption_identity",
+        "qlib_experiment_id",
+        "qlib_recorder_id",
+        "mlflow_experiment_id",
+        "mlflow_run_id",
+        "dvc_reproducibility_identity",
+        "zero_capital_attestation",
+        "completion_status"
+      ],
+      "title": "ShadowEvidenceV2",
+      "type": "object"
+    },
+    "ShadowStatus": {
+      "enum": [
+        "INCOMPLETE",
+        "COMPLETE_PASS",
+        "COMPLETE_FAIL"
+      ],
+      "title": "ShadowStatus",
+      "type": "string"
+    }
+  },
+  "$id": "urn:autonomous-quant:P4ResidualThinPolicyContractsV2",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "$ref": "#/$defs/P2CertificationEvidenceV1"
+    },
+    {
+      "$ref": "#/$defs/ShadowEvidenceV1"
+    },
+    {
+      "$ref": "#/$defs/ShadowEvidenceV2"
+    },
+    {
+      "$ref": "#/$defs/DetectorEvidenceReferenceV1"
+    },
+    {
+      "$ref": "#/$defs/RankICSummaryEvidenceV1"
+    },
+    {
+      "$ref": "#/$defs/RankICSummaryEvidenceV2"
+    },
+    {
+      "$ref": "#/$defs/FinancialDecayPolicyConfigV1"
+    },
+    {
+      "$ref": "#/$defs/FinancialDecayPolicyConfigV2"
+    },
+    {
+      "$ref": "#/$defs/RetirementAuthorizationV1"
+    },
+    {
+      "$ref": "#/$defs/LifecycleDecisionEvidenceV1"
+    },
+    {
+      "$ref": "#/$defs/ResearchRequestV1"
+    }
+  ],
+  "title": "P4 Residual Thin Policy Contracts V2"
+}

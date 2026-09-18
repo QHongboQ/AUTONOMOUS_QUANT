@@ -1,0 +1,708 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/candidate-contract-v3.schema.json",
+  "title": "AUTONOMOUS_QUANT P3 Candidate-to-P2 Contract V3",
+  "description": "Producer-neutral, fail-closed identity contract for RD-Agent and Formulaic Alpha research candidates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_contract_version",
+    "candidate_id",
+    "research_producer_identity",
+    "qlib_recorder_identity",
+    "artifact_identity_bundle",
+    "dataset_identity_bundle",
+    "runtime_identity_bundle",
+    "p2_target_and_eligibility_boundary"
+  ],
+  "properties": {
+    "candidate_contract_version": {
+      "const": "P3_CANDIDATE_TO_P2_CONTRACT_V3"
+    },
+    "candidate_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "research_producer_identity": {
+      "$ref": "#/$defs/researchProducerIdentity"
+    },
+    "qlib_recorder_identity": {
+      "$ref": "#/$defs/qlibRecorderIdentity"
+    },
+    "artifact_identity_bundle": {
+      "$ref": "#/$defs/artifactIdentityBundle"
+    },
+    "dataset_identity_bundle": {
+      "$ref": "#/$defs/datasetIdentityBundle"
+    },
+    "runtime_identity_bundle": {
+      "$ref": "#/$defs/runtimeIdentityBundle"
+    },
+    "p2_target_and_eligibility_boundary": {
+      "$ref": "#/$defs/p2TargetAndEligibilityBoundary"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "research_producer_identity": {
+            "properties": {
+              "producer_kind": {
+                "const": "RD_AGENT"
+              }
+            },
+            "required": [
+              "producer_kind"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifact_identity_bundle": {
+            "$ref": "#/$defs/rdAgentArtifactIdentityBundle"
+          },
+          "runtime_identity_bundle": {
+            "$ref": "#/$defs/rdAgentRuntimeIdentityBundle"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "research_producer_identity": {
+            "properties": {
+              "producer_kind": {
+                "const": "FORMULAIC_ALPHA"
+              }
+            },
+            "required": [
+              "producer_kind"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifact_identity_bundle": {
+            "$ref": "#/$defs/formulaicArtifactIdentityBundle"
+          },
+          "runtime_identity_bundle": {
+            "$ref": "#/$defs/formulaicRuntimeIdentityBundle"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "contentIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_role",
+        "sha256"
+      ],
+      "properties": {
+        "logical_role": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "dvcIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "md5",
+            "sha256",
+            "etag"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        }
+      }
+    },
+    "dvcDependencyIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_role",
+        "dvc_identity"
+      ],
+      "properties": {
+        "logical_role": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "dvc_identity": {
+          "$ref": "#/$defs/dvcIdentity"
+        }
+      }
+    },
+    "originLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin_seed",
+        "pool_index"
+      ],
+      "properties": {
+        "origin_seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pool_index": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "formulaicAlphaResearchIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine_name",
+        "engine_git_sha",
+        "source_candidate_id",
+        "expression",
+        "expression_sha256",
+        "discovery_configuration_identity",
+        "discovery_summary_sha256",
+        "frozen_candidate_manifest_sha256",
+        "cluster_identity",
+        "origin_seeds",
+        "origin_locations"
+      ],
+      "properties": {
+        "engine_name": {
+          "const": "ALPHAGEN"
+        },
+        "engine_git_sha": {
+          "const": "259687e8f316994426416c530a94842a2fe6405e"
+        },
+        "source_candidate_id": {
+          "type": "string",
+          "pattern": "^candidate-[0-9]{3}$"
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expression_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "discovery_configuration_identity": {
+          "const": "ALPHAGEN_MSE_LSTSQ_FAST_V1"
+        },
+        "discovery_summary_sha256": {
+          "const": "5212564ed15b3fa15bde40f14b9fe9a067b725bc5dd472a6046af0013893523a"
+        },
+        "frozen_candidate_manifest_sha256": {
+          "const": "de536d7396f6786ea7b27c6a2f5f0970826ce7894b1e17d80361bf11085ff145"
+        },
+        "cluster_identity": {
+          "type": "string",
+          "pattern": "^cluster-[0-9]{3}$"
+        },
+        "origin_seeds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "origin_locations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/originLocation"
+          }
+        }
+      }
+    },
+    "researchProducerIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "producer_kind",
+            "rdagent_research_identity"
+          ],
+          "properties": {
+            "producer_kind": {
+              "const": "RD_AGENT"
+            },
+            "rdagent_research_identity": {
+              "$ref": "candidate-contract-v1.schema.json#/$defs/rdagentResearchIdentity"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "producer_kind",
+            "formulaic_alpha_research_identity"
+          ],
+          "properties": {
+            "producer_kind": {
+              "const": "FORMULAIC_ALPHA"
+            },
+            "formulaic_alpha_research_identity": {
+              "$ref": "#/$defs/formulaicAlphaResearchIdentity"
+            }
+          }
+        }
+      ]
+    },
+    "qlibRecorderIdentity": {
+      "$ref": "candidate-contract-v1.schema.json#/$defs/qlibRecorderIdentity"
+    },
+    "serializedModelArtifact": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "identity"
+          ],
+          "properties": {
+            "status": {
+              "const": "PERSISTED"
+            },
+            "identity": {
+              "$ref": "#/$defs/contentIdentity"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "const": "NOT_PERSISTED_BY_UPSTREAM"
+            }
+          }
+        }
+      ]
+    },
+    "formulaicArtifactIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dvc_stage_name",
+        "dvc_lock_file_sha256",
+        "dvc_stage_lock_entry_identity",
+        "seal_output_sha256",
+        "seal_output_dvc_identity",
+        "qlib_execution_config_authority",
+        "deterministic_run_config_identity",
+        "qlib_recorder_evidence_identity",
+        "prediction_artifact_identity",
+        "evaluation_artifact_identities",
+        "serialized_model_artifact"
+      ],
+      "properties": {
+        "dvc_stage_name": {
+          "const": "p3_formulaic_alpha_reproducibility_seal"
+        },
+        "dvc_lock_file_sha256": {
+          "const": "9d6019b8215ab626b1301cdb1d5e920df7641b5b1ae2baaebed44311f5342462"
+        },
+        "dvc_stage_lock_entry_identity": {
+          "const": "sha256:659b1ae448be57c915d5f096fa3b112afef0232f69739fb4eaa7ab267c301df1"
+        },
+        "seal_output_sha256": {
+          "const": "60e5d0b271fa6e5a074f329a752ea5d80abfe2a1cb49dd89d1ed33609052fecb"
+        },
+        "seal_output_dvc_identity": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/dvcIdentity"
+            },
+            {
+              "properties": {
+                "algorithm": {
+                  "const": "md5"
+                },
+                "value": {
+                  "const": "2247c8d12da0bda075b172940284a94f"
+                }
+              }
+            }
+          ]
+        },
+        "qlib_execution_config_authority": {
+          "const": "DETERMINISTIC_RUN_CONFIG_JSON"
+        },
+        "deterministic_run_config_identity": {
+          "$ref": "#/$defs/contentIdentity"
+        },
+        "qlib_recorder_evidence_identity": {
+          "$ref": "#/$defs/contentIdentity"
+        },
+        "prediction_artifact_identity": {
+          "$ref": "#/$defs/contentIdentity"
+        },
+        "evaluation_artifact_identities": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/contentIdentity"
+          }
+        },
+        "serialized_model_artifact": {
+          "$ref": "#/$defs/serializedModelArtifact"
+        }
+      }
+    },
+    "artifactIdentityBundle": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/rdAgentArtifactIdentityBundle"
+        },
+        {
+          "$ref": "#/$defs/formulaicArtifactIdentityBundle"
+        }
+      ]
+    },
+    "rdAgentArtifactIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_kind",
+        "rdagent_artifact_identity"
+      ],
+      "properties": {
+        "producer_kind": {
+          "const": "RD_AGENT"
+        },
+        "rdagent_artifact_identity": {
+          "$ref": "candidate-contract-v1.schema.json#/$defs/artifactIdentityBundle"
+        }
+      }
+    },
+    "formulaicArtifactIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_kind",
+        "formulaic_alpha_artifact_identity"
+      ],
+      "properties": {
+        "producer_kind": {
+          "const": "FORMULAIC_ALPHA"
+        },
+        "formulaic_alpha_artifact_identity": {
+          "$ref": "#/$defs/formulaicArtifactIdentity"
+        }
+      }
+    },
+    "datasetIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_build_report_sha256",
+        "calendar_sha256",
+        "all_instruments_sha256",
+        "p2_pit_instruments_sha256",
+        "date_bounds",
+        "security_identity_count",
+        "membership_range_count",
+        "member_session_row_count",
+        "p3_dvc_dependency_identities"
+      ],
+      "properties": {
+        "provider_build_report_sha256": {
+          "const": "eda5e8bb8e3f274d2893ea6a09f5764111f59c9cadf40eb32e3fbce199a68142"
+        },
+        "calendar_sha256": {
+          "const": "d4c0c100af851245f6f894e275e5d494d7e1cbd07f82d342c034cbdf7b7bfa4d"
+        },
+        "all_instruments_sha256": {
+          "const": "24d3a9010b725f8121ae1a999916bd0b6e76923eb9fad85be7e57d8653cc2cbc"
+        },
+        "p2_pit_instruments_sha256": {
+          "const": "e771f73b91664b26584e66c42eb007c4276c492071172e7d6594bc900f01f875"
+        },
+        "date_bounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start",
+            "end"
+          ],
+          "properties": {
+            "start": {
+              "const": "2015-01-02"
+            },
+            "end": {
+              "const": "2024-12-31"
+            }
+          }
+        },
+        "security_identity_count": {
+          "const": 730
+        },
+        "membership_range_count": {
+          "const": 745
+        },
+        "member_session_row_count": {
+          "const": 1267963
+        },
+        "p3_dvc_dependency_identities": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/dvcDependencyIdentity"
+          }
+        }
+      }
+    },
+    "executedRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment_identity",
+        "python_version",
+        "python_executable_sha256",
+        "pip_freeze_sha256",
+        "conda_explicit_sha256"
+      ],
+      "properties": {
+        "environment_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_executable_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "pip_freeze_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "conda_explicit_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "discoveryRuntime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment_identity",
+        "python_version",
+        "python_executable_sha256",
+        "pip_freeze_sha256",
+        "conda_explicit_sha256",
+        "stable_baselines3_version",
+        "sb3_contrib_version",
+        "gymnasium_version"
+      ],
+      "properties": {
+        "environment_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_executable_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "pip_freeze_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "conda_explicit_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "stable_baselines3_version": {
+          "const": "2.0.0"
+        },
+        "sb3_contrib_version": {
+          "const": "2.0.0"
+        },
+        "gymnasium_version": {
+          "const": "0.28.1"
+        }
+      }
+    },
+    "formulaicRuntimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alphagen_git_sha",
+        "qlib_git_sha",
+        "research_configuration_identity",
+        "research_configuration_sha256",
+        "runtime_freeze_sha256",
+        "runtime_env_drift_since_research",
+        "discovery_runtime",
+        "evaluation_runtime"
+      ],
+      "properties": {
+        "alphagen_git_sha": {
+          "const": "259687e8f316994426416c530a94842a2fe6405e"
+        },
+        "qlib_git_sha": {
+          "const": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
+        },
+        "research_configuration_identity": {
+          "const": "ALPHAGEN_MSE_LSTSQ_FAST_V1"
+        },
+        "research_configuration_sha256": {
+          "const": "2ba6dd3906f23a1b6a4010db7131fa79f9261fbe1ac2efcfc44e5fc1ea4a36dc"
+        },
+        "runtime_freeze_sha256": {
+          "const": "1c86d57b148510ccdde19c36edf4c35a8d3915f624bd8d5d2fb65f0ef040fab5"
+        },
+        "runtime_env_drift_since_research": {
+          "const": "NO_PROVEN_DRIFT"
+        },
+        "discovery_runtime": {
+          "$ref": "#/$defs/discoveryRuntime"
+        },
+        "evaluation_runtime": {
+          "$ref": "#/$defs/executedRuntime"
+        }
+      }
+    },
+    "runtimeIdentityBundle": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/rdAgentRuntimeIdentityBundle"
+        },
+        {
+          "$ref": "#/$defs/formulaicRuntimeIdentityBundle"
+        }
+      ]
+    },
+    "rdAgentRuntimeIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_kind",
+        "rdagent_runtime_identity"
+      ],
+      "properties": {
+        "producer_kind": {
+          "const": "RD_AGENT"
+        },
+        "rdagent_runtime_identity": {
+          "$ref": "candidate-contract-v2.schema.json#/$defs/runtimeIdentityBundleV2"
+        }
+      }
+    },
+    "formulaicRuntimeIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_kind",
+        "formulaic_alpha_runtime_identity"
+      ],
+      "properties": {
+        "producer_kind": {
+          "const": "FORMULAIC_ALPHA"
+        },
+        "formulaic_alpha_runtime_identity": {
+          "$ref": "#/$defs/formulaicRuntimeIdentity"
+        }
+      }
+    },
+    "p2TargetAndEligibilityBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_protocol_version",
+        "protocol_sha256",
+        "protocol_activation_sha256",
+        "protocol_freeze_merge_sha",
+        "protocol_freeze_authority",
+        "candidate_eligibility_status",
+        "eligibility_authority",
+        "historical_research_test_accessed",
+        "historical_research_test_status",
+        "sealed_oos_start",
+        "sealed_oos_accessed_by_p3",
+        "p3_can_issue_certified",
+        "p3_can_edit_protocol",
+        "p3_can_promote_to_production"
+      ],
+      "properties": {
+        "target_protocol_version": {
+          "const": "P2_CERTIFICATION_PROTOCOL_V1"
+        },
+        "protocol_sha256": {
+          "const": "0fc22f259b27499f6d2d344767b179a5fa2c4c55daf15bb593ba0c9001e2289d"
+        },
+        "protocol_activation_sha256": {
+          "const": "d1ac67558f59d917eb71d666e48967f8f20bafc48bfc1ff616b7c85e262eef54"
+        },
+        "protocol_freeze_merge_sha": {
+          "const": "8cd703b4108d2e377d146de8384b63c0355e93a6"
+        },
+        "protocol_freeze_authority": {
+          "const": "P2_CERTIFICATION"
+        },
+        "candidate_eligibility_status": {
+          "const": "INELIGIBLE_REQUIRES_PROTOCOL_EXPANSION"
+        },
+        "eligibility_authority": {
+          "const": "P2_CERTIFICATION"
+        },
+        "historical_research_test_accessed": {
+          "const": true
+        },
+        "historical_research_test_status": {
+          "const": "CONSUMED_AS_RESEARCH_EVIDENCE"
+        },
+        "sealed_oos_start": {
+          "const": "2026-09-14"
+        },
+        "sealed_oos_accessed_by_p3": {
+          "const": false
+        },
+        "p3_can_issue_certified": {
+          "const": false
+        },
+        "p3_can_edit_protocol": {
+          "const": false
+        },
+        "p3_can_promote_to_production": {
+          "const": false
+        }
+      }
+    }
+  }
+}

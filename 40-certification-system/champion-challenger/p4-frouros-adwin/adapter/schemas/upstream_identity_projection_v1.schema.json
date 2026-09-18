@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:autonomous-quant:UpstreamIdentityProjectionV1",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {"const": "UpstreamIdentityProjectionV1"},
+    "detector_evidence_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "fixture_classification": {"const": "TEST_FIXTURE_NOT_REAL_RESEARCH"},
+    "frouros_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "installed_adwin_module_sha256": {"const": "f3b2c06acf88b6938eac907909ca16b8daa382133eb1247e297a12f299ebd8fd"},
+        "runtime_freeze_sha256": {"const": "8c66ad3fde0f116d89aa31c0454a093eba00b16fe6d5946ac973bd5850dfb5d5"},
+        "version": {"const": "0.9.0"}
+      },
+      "required": ["version", "runtime_freeze_sha256", "installed_adwin_module_sha256"],
+      "type": "object"
+    },
+    "interpretation_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "detector_evidence_schema": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "frouros_runner": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "metric_observation_schema": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "projection_schema": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "qlib_exporter": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "seal_script": {"pattern": "^[0-9a-f]{64}$", "type": "string"}
+      },
+      "required": ["qlib_exporter", "frouros_runner", "metric_observation_schema", "detector_evidence_schema", "projection_schema", "seal_script"],
+      "type": "object"
+    },
+    "metric_kind": {"const": "RANK_IC"},
+    "metric_observation_stream_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "mlflow_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_logical_path": {"const": "sig_analysis/ric.pkl"},
+        "artifact_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "experiment_id": {"minLength": 1, "type": "string"},
+        "run_id": {"minLength": 1, "type": "string"},
+        "status": {"const": "FINISHED"},
+        "version": {"const": "3.16.0"}
+      },
+      "required": ["experiment_id", "run_id", "status", "artifact_logical_path", "artifact_sha256", "version"],
+      "type": "object"
+    },
+    "qlib_identity": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_logical_path": {"const": "sig_analysis/ric.pkl"},
+        "artifact_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "experiment_id": {"minLength": 1, "type": "string"},
+        "recorder_id": {"minLength": 1, "type": "string"},
+        "status": {"const": "FINISHED"},
+        "version": {"const": "0.9.8.dev26"}
+      },
+      "required": ["experiment_id", "recorder_id", "status", "artifact_logical_path", "artifact_sha256", "version"],
+      "type": "object"
+    }
+  },
+  "required": ["contract_version", "fixture_classification", "metric_kind", "metric_observation_stream_sha256", "detector_evidence_sha256", "qlib_identity", "mlflow_identity", "frouros_identity", "interpretation_identity"],
+  "title": "UpstreamIdentityProjectionV1",
+  "type": "object"
+}

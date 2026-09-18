@@ -1,3 +1,6 @@
+vars:
+  - P3_RUN_NAMESPACE: p3-fin-quant-004
+
 stages:
   p2_certification_historical_rehearsal:
     cmd: >-
@@ -113,3 +116,192 @@ stages:
       - D:/AQ_DATA/P1/pit/raw/fja_sp500/repo/S&P 500 Historical Components & Changes (Updated).csv
     outs:
       - 10-data-system/dataset-snapshot/pit-universe/data
+  p3_rdagent_us_quant_research:
+    cmd: >-
+      cd ../AQ_DATA/P3/rdagent-us-ragged &&
+      env
+      PATH=/home/zhou/miniforge3/bin:/home/zhou/AQ_ENVS/rdagent/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PYTHONPATH=/mnt/d/AUTONOMOUS_QUANT/30-research-system/rd-agent/binding
+      CONDA_DEFAULT_ENV=rdagent4qlib
+      FACTOR_COSTEER_PYTHON_BIN=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python
+      WORKSPACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/workspaces
+      PICKLE_CACHE_FOLDER_PATH_STR=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/pickle-cache
+      LOG_TRACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/trace
+      QLIB_MLFLOW_URI=sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/mlflow.db
+      OLLAMA_API_BASE=http://127.0.0.1:11434
+      BACKEND=aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
+      LITELLM_CHAT_MODEL=ollama_chat/aq-brain-local
+      LITELLM_EMBEDDING_MODEL=ollama/aq-embedding-local
+      LITELLM_CHAT_TOKEN_LIMIT=28672
+      LITELLM_CHAT_MAX_TOKENS=4096
+      LITELLM_CHAT_TEMPERATURE=0.2
+      LITELLM_REASONING_THINK_RM=true
+      LITELLM_MAX_RETRY=1
+      QLIB_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibFactorHypothesis2Experiment
+      QLIB_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibModelHypothesis2Experiment
+      QLIB_QUANT_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibFactorHypothesis2Experiment
+      QLIB_QUANT_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibModelHypothesis2Experiment
+      QLIB_FACTOR_SCEN=aq_rdagent_us_binding.USQlibFactorScenario
+      QLIB_QUANT_SCEN=aq_rdagent_us_binding.USQlibQuantScenario
+      FACTOR_COSTEER_DATA_FOLDER=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source/full
+      FACTOR_COSTEER_DATA_FOLDER_DEBUG=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source/debug
+      QLIB_FACTOR_TRAIN_START=2015-01-02
+      QLIB_FACTOR_TRAIN_END=2019-12-31
+      QLIB_FACTOR_VALID_START=2020-01-02
+      QLIB_FACTOR_VALID_END=2021-12-31
+      QLIB_FACTOR_TEST_START=2022-01-03
+      QLIB_FACTOR_TEST_END=2024-12-31
+      QLIB_MODEL_TRAIN_START=2015-01-02
+      QLIB_MODEL_TRAIN_END=2019-12-31
+      QLIB_MODEL_VALID_START=2020-01-02
+      QLIB_MODEL_VALID_END=2021-12-31
+      QLIB_MODEL_TEST_START=2022-01-03
+      QLIB_MODEL_TEST_END=2024-12-31
+      QLIB_QUANT_TRAIN_START=2015-01-02
+      QLIB_QUANT_TRAIN_END=2019-12-31
+      QLIB_QUANT_VALID_START=2020-01-02
+      QLIB_QUANT_VALID_END=2021-12-31
+      QLIB_QUANT_TEST_START=2022-01-03
+      QLIB_QUANT_TEST_END=2024-12-31
+      /home/zhou/AQ_ENVS/rdagent/bin/rdagent fin_quant --loop-n 1
+    deps:
+      - 30-research-system/rd-agent/binding/aq_rdagent_us_binding
+      - 30-research-system/rd-agent/config/p3-local-logical-llm-slots-v1.json
+      - 30-research-system/rd-agent/templates/p3-us-ragged
+      - docs/project-brain/p3-rdagent-runtime-provenance-alignment-001.md
+      - docs/project-brain/p3-rdagent-runtime-dependency-alignment-001.md
+      - docs/project-brain/p3-rdagent-conda-discovery-path-configuration-resolution-001.md
+      - ../AQ_DATA/P3/rdagent-us-ragged/factor-source
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+    outs:
+      - ../AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
+          cache: false
+  p3_formulaic_alpha_reproducibility_seal:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      --aq-head 04a9ae29069fb34164f5637c3a59df459f0ff67d
+      --output 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+    deps:
+      - 30-research-system/alpha-mining/alphagen-us-pit/seal_formulaic_reproducibility.py
+      - 30-research-system/alpha-mining/alphagen-us-pit/aq_alphagen_us_pit
+      - 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      - 40-certification-system/protocol/p2-certification-protocol-v1.json
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - ../AQ_DATA/P3/alphagen-us-pit-factor-discovery-lstsq-run-001
+      - ../AQ_DATA/P3/alphagen-us-pit-qlib-candidate-evaluation-001
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_freeze.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_pip_freeze.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/discovery_conda_explicit.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_pip_freeze.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/evaluation_conda_explicit.txt
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_identity.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/runtime_provenance_audit.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/preseal_authority_check.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dependency_inventory.json
+    outs:
+      - 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+  p4_frouros_identity_projection:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      --projection ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json
+      --projection-sha256 8b7fdf79d5b5d5805cefdc94488bb0ba4b408331daa0578f86676b22585e5725
+      --observation-stream ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json
+      --detector-evidence ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json
+      --ric-artifact ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl
+      --identity-report ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json
+      --runtime-freeze ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
+      --interpretation qlib_exporter=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py
+      --interpretation frouros_runner=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py
+      --interpretation metric_observation_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json
+      --interpretation detector_evidence_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json
+      --interpretation projection_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json
+      --interpretation seal_script=40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      --output 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+    deps:
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json
+      - ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
+    outs:
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+  p4_shadow_evidence_path_fixture_seal:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py
+      --fixture-task-config ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json
+      --qlib-identity ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json
+      --history ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json
+      --tag-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json
+      --prediction-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json
+      --sigana-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json
+      --shadow-fixture ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json
+      --zero-capital ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json
+      --pre-epoch ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json
+      --ric-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl
+      --prediction-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
+      --policy-module 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py
+      --policy-schema 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json
+      --policy-config 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json
+      --output 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+    deps:
+      - 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py
+      - 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py
+      - 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json
+      - 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
+    outs:
+      - 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+  p2_formulaic_alpha_protocol_v2_freeze:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/protocol/seal_formulaic_protocol_v2.py
+      --protocol 40-certification-system/protocol/p2-certification-protocol-v2.json
+      --cohort 40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      --activation 40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      --v1-protocol 40-certification-system/protocol/p2-certification-protocol-v1.json
+      --candidate-contract 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      --candidate-schema 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      --materialization-manifest ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      --validation-report ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      --formulaic-dvc-identity ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      --formulaic-seal 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      --provider-report ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --authority-facts 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      --control-model-config 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      --strategy-config 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      --output 40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+    deps:
+      - 40-certification-system/protocol/seal_formulaic_protocol_v2.py
+      - 40-certification-system/protocol/p2-certification-protocol-v2.json
+      - 40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      - 40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      - 40-certification-system/protocol/p2-certification-protocol-v1.json
+      - 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      - 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      - ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      - ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      - 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      - 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      - 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+    outs:
+      - 40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
