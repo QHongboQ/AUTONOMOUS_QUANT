@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/episode-sec-cik-binding-v1.schema.json",
+  "additionalProperties": false,
+  "description": "One immutable, date-bounded binding from a full P1 InstrumentEpisodeV1 identity to an SEC filer CIK.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^P1EP-[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "cik": {
+      "pattern": "^[0-9]{10}$",
+      "type": "string"
+    },
+    "valid_from": {
+      "format": "date",
+      "type": "string"
+    },
+    "valid_to": {
+      "format": "date",
+      "type": "string"
+    },
+    "binding_classification": {
+      "enum": [
+        "PASS_EXACT",
+        "PASS_CORROBORATED"
+      ],
+      "type": "string"
+    },
+    "evidence_source_identities": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "binding_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "episode_id",
+    "cik",
+    "valid_from",
+    "valid_to",
+    "binding_classification",
+    "evidence_source_identities",
+    "binding_id"
+  ],
+  "title": "EpisodeSecCikBindingV1",
+  "type": "object"
+}
