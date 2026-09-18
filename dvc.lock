@@ -393,3 +393,72 @@ stages:
       md5: 2247c8d12da0bda075b172940284a94f
       size: 9891
       isexec: true
+  p4_frouros_identity_projection:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py --projection ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json --projection-sha256 8b7fdf79d5b5d5805cefdc94488bb0ba4b408331daa0578f86676b22585e5725 --observation-stream ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json --detector-evidence ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json --ric-artifact ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl --identity-report ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json --runtime-freeze ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json --interpretation qlib_exporter=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py --interpretation frouros_runner=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py --interpretation metric_observation_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json --interpretation detector_evidence_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json --interpretation projection_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json --interpretation seal_script=40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py --output 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+    deps:
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json
+      hash: md5
+      md5: 19aa2709a8bc27d6adb1296d9dea64d7
+      size: 4744
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json
+      hash: md5
+      md5: 518f64fa9e5e3b71915c261152c8c4d1
+      size: 144035
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl
+      hash: md5
+      md5: 4a7df1e1f6948519bfaad8f3bb2c4422
+      size: 49002
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json
+      hash: md5
+      md5: 2d1fe3cfb95b8b9299d0ec7f57f68bd3
+      size: 1520
+      isexec: true
+    - path: ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json
+      hash: md5
+      md5: d458966a521cad077c420b1555438a81
+      size: 1629
+      isexec: true
+    - path: ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
+      hash: md5
+      md5: fd5905dab6c2d129c7f6d503beb5fbf5
+      size: 1669
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py
+      hash: md5
+      md5: 824ca0307190157b5657bc8531ac1a9c
+      size: 4919
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py
+      hash: md5
+      md5: 3b7ad12b1040a086408b27c53b9eb00c
+      size: 11561
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json
+      hash: md5
+      md5: 9c0e2355efa4393aa61393b6728d81f9
+      size: 2382
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json
+      hash: md5
+      md5: 5334e2369f68a478e7e71b9d01a3eb72
+      size: 999
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json
+      hash: md5
+      md5: 3928db87c80efa21ec92ec9c0bba3ba6
+      size: 3213
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      hash: md5
+      md5: b3ffe462afe782a4088d8792dbcd59f9
+      size: 12909
+      isexec: true
+    outs:
+    - path: 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+      hash: md5
+      md5: 174e2c65d907d69e8cdc072c0eaccdf9
+      size: 863
+      isexec: true

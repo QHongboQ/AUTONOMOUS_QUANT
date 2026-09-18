@@ -201,3 +201,35 @@ stages:
       - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dependency_inventory.json
     outs:
       - 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+  p4_frouros_identity_projection:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      --projection ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json
+      --projection-sha256 8b7fdf79d5b5d5805cefdc94488bb0ba4b408331daa0578f86676b22585e5725
+      --observation-stream ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json
+      --detector-evidence ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json
+      --ric-artifact ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl
+      --identity-report ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json
+      --runtime-freeze ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
+      --interpretation qlib_exporter=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py
+      --interpretation frouros_runner=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py
+      --interpretation metric_observation_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json
+      --interpretation detector_evidence_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json
+      --interpretation projection_schema=40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json
+      --interpretation seal_script=40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      --output 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+    deps:
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/identity_projection.py
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/export_rank_ic.py
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/run_adwin.py
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/metric_observation_stream_v1.schema.json
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/detector_evidence_v1.schema.json
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/adapter/schemas/upstream_identity_projection_v1.schema.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/upstream_identity_projection.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/metric_observation_stream.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/detector_evidence.json
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/mlruns/1/5cc4123dd93f454383652330544eba26/artifacts/sig_analysis/ric.pkl
+      - ../AQ_DATA/P4/qlib-mlflow-dvc-identity-projection-integration-001/qlib_mlflow_identity_report.json
+      - ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
+    outs:
+      - 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
