@@ -1,0 +1,44 @@
+{
+  "schema_version": "FundamentalEvidenceV1",
+  "entity": {
+    "cik": "0000320193",
+    "issuer_name": "Apple Inc."
+  },
+  "filing": {
+    "accession": "0000320193-21-000105",
+    "form": "10-K",
+    "filing_date": "2021-10-29",
+    "report_period_end": "2021-09-25",
+    "acceptance_datetime": "2021-10-28T22:04:28Z",
+    "amendment_status": "ORIGINAL",
+    "filing_vintage_role": "ORIGINAL_ANNUAL_REPORT"
+  },
+  "availability": {
+    "first_available_at": "2021-10-28T22:04:28Z"
+  },
+  "source": {
+    "authoritative_source": "SEC_EDGAR",
+    "source_document_identity": "SEC_FULL_SUBMISSION:0000320193-21-000105",
+    "source_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019321000105/0000320193-21-000105.txt",
+    "source_document_sha256": "fc28841903236990d6f79b9ffab95ebce1f86983221b3128173c1a1d3ecaecd0"
+  },
+  "fact": {
+    "taxonomy_namespace": "us-gaap",
+    "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "value": "365817000000",
+    "unit": "USD",
+    "currency": "USD",
+    "period_start": "2020-09-27",
+    "period_end": "2021-09-25",
+    "instant": null,
+    "context_identity": "i55e5364a9af5491886caee077afe8d44_D20200927-20210925",
+    "dimensions": null,
+    "statement_classification": "INCOME_STATEMENT"
+  },
+  "upstream": {
+    "parser_provider": "EDGARTOOLS",
+    "edgartools_version": "5.58.0",
+    "upstream_identity": "PYPI_DISTRIBUTION:edgartools==5.58.0"
+  },
+  "evidence_id": "sha256:e207505e20b270d9c16767d3befc6f4d50bc912c0a9650e75584e9ce97d18772"
+}
