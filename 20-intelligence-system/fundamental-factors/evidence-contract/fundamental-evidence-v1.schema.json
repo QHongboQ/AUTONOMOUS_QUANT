@@ -1,0 +1,358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/fundamental-evidence-v1.schema.json",
+  "$defs": {
+    "AvailabilityIdentityV1": {
+      "additionalProperties": false,
+      "properties": {
+        "first_available_at": {
+          "format": "date-time",
+          "title": "First Available At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "first_available_at"
+      ],
+      "title": "AvailabilityIdentityV1",
+      "type": "object"
+    },
+    "EntityIdentityV1": {
+      "additionalProperties": false,
+      "properties": {
+        "cik": {
+          "pattern": "^[0-9]{10}$",
+          "title": "Cik",
+          "type": "string"
+        },
+        "issuer_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuer Name"
+        }
+      },
+      "required": [
+        "cik"
+      ],
+      "title": "EntityIdentityV1",
+      "type": "object"
+    },
+    "FilingIdentityV1": {
+      "additionalProperties": false,
+      "properties": {
+        "accession": {
+          "pattern": "^[0-9]{10}-[0-9]{2}-[0-9]{6}$",
+          "title": "Accession",
+          "type": "string"
+        },
+        "form": {
+          "minLength": 1,
+          "title": "Form",
+          "type": "string"
+        },
+        "filing_date": {
+          "format": "date",
+          "title": "Filing Date",
+          "type": "string"
+        },
+        "report_period_end": {
+          "format": "date",
+          "title": "Report Period End",
+          "type": "string"
+        },
+        "acceptance_datetime": {
+          "format": "date-time",
+          "title": "Acceptance Datetime",
+          "type": "string"
+        },
+        "amendment_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "ORIGINAL",
+                "AMENDMENT"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amendment Status"
+        },
+        "filing_vintage_role": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Filing Vintage Role"
+        }
+      },
+      "required": [
+        "accession",
+        "form",
+        "filing_date",
+        "report_period_end",
+        "acceptance_datetime"
+      ],
+      "title": "FilingIdentityV1",
+      "type": "object"
+    },
+    "FundamentalFactV1": {
+      "additionalProperties": false,
+      "properties": {
+        "taxonomy_namespace": {
+          "minLength": 1,
+          "title": "Taxonomy Namespace",
+          "type": "string"
+        },
+        "concept": {
+          "minLength": 1,
+          "title": "Concept",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "period_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period Start"
+        },
+        "period_end": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Period End"
+        },
+        "instant": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instant"
+        },
+        "context_identity": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Context Identity"
+        },
+        "dimensions": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "propertyNames": {
+                "minLength": 1
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dimensions"
+        },
+        "statement_classification": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Statement Classification"
+        }
+      },
+      "required": [
+        "taxonomy_namespace",
+        "concept",
+        "value",
+        "unit"
+      ],
+      "title": "FundamentalFactV1",
+      "type": "object"
+    },
+    "SourceIdentityV1": {
+      "additionalProperties": false,
+      "properties": {
+        "authoritative_source": {
+          "const": "SEC_EDGAR",
+          "title": "Authoritative Source",
+          "type": "string"
+        },
+        "source_document_identity": {
+          "minLength": 1,
+          "title": "Source Document Identity",
+          "type": "string"
+        },
+        "source_document_url": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Document Url"
+        },
+        "source_document_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Document Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative_source",
+        "source_document_identity",
+        "source_document_sha256"
+      ],
+      "title": "SourceIdentityV1",
+      "type": "object"
+    },
+    "UpstreamIdentityV1": {
+      "additionalProperties": false,
+      "properties": {
+        "parser_provider": {
+          "const": "EDGARTOOLS",
+          "title": "Parser Provider",
+          "type": "string"
+        },
+        "edgartools_version": {
+          "minLength": 1,
+          "title": "Edgartools Version",
+          "type": "string"
+        },
+        "upstream_identity": {
+          "minLength": 1,
+          "title": "Upstream Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parser_provider",
+        "edgartools_version",
+        "upstream_identity"
+      ],
+      "title": "UpstreamIdentityV1",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One numeric XBRL fact from one filing vintage and one availability time.",
+  "properties": {
+    "schema_version": {
+      "const": "FundamentalEvidenceV1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "entity": {
+      "$ref": "#/$defs/EntityIdentityV1"
+    },
+    "filing": {
+      "$ref": "#/$defs/FilingIdentityV1"
+    },
+    "availability": {
+      "$ref": "#/$defs/AvailabilityIdentityV1"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceIdentityV1"
+    },
+    "fact": {
+      "$ref": "#/$defs/FundamentalFactV1"
+    },
+    "upstream": {
+      "$ref": "#/$defs/UpstreamIdentityV1"
+    },
+    "evidence_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Evidence Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "entity",
+    "filing",
+    "availability",
+    "source",
+    "fact",
+    "upstream",
+    "evidence_id"
+  ],
+  "title": "FundamentalEvidenceV1",
+  "type": "object"
+}

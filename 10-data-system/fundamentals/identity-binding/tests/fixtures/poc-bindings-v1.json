@@ -1,0 +1,152 @@
+{
+  "authoritative_episodes": [
+    {
+      "episode_id": "P1EP-d8a26f517328f04ccf141b98cc183d9bb1ffcbae0601222e5df12519cdd1b566",
+      "valid_from": "2010-01-04",
+      "valid_to": "2025-01-01"
+    },
+    {
+      "episode_id": "P1EP-522dbce4d4f9d307309951b8b1429dde5da83ef42e015cd77eed923f8b285309",
+      "valid_from": "2010-01-04",
+      "valid_to": "2020-09-18"
+    },
+    {
+      "episode_id": "P1EP-7ef55684efbb384e340eaa6990f5316bb65e12370ae11d8eae07901a8760a38d",
+      "valid_from": "2010-01-04",
+      "valid_to": "2017-07-26"
+    },
+    {
+      "episode_id": "P1EP-4e4d037ca51566f18404e9401bddf91659bef7325e07e9ae7699c1f460c39604",
+      "valid_from": "2017-07-26",
+      "valid_to": "2022-10-03"
+    },
+    {
+      "episode_id": "P1EP-82fdce3b51fa21cb1470e4933fb0b558502d07253e6bd533ffeae1211e294896",
+      "valid_from": "2010-01-04",
+      "valid_to": "2017-09-01"
+    },
+    {
+      "episode_id": "P1EP-3d55f073e02856479c1d74a8c661adf958119df942b47482968c06140aeaa2b8",
+      "valid_from": "2019-06-03",
+      "valid_to": "2025-01-01"
+    },
+    {
+      "episode_id": "P1EP-036bcd3babe7c1528814f1855887d9031ba3075fc7fcda20be5834bf83955082",
+      "valid_from": "2013-12-23",
+      "valid_to": "2022-06-09"
+    },
+    {
+      "episode_id": "P1EP-7a59c7ebbafb65b8a7f8d368df24198fc7b88b86dccb93edad721dd77827c68d",
+      "valid_from": "2010-01-04",
+      "valid_to": "2012-03-13"
+    }
+  ],
+  "bindings": [
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:58a3fd15b687a8d6b9ddedaebb1efc4738af7febbf0d100a799bcddce3ceefd2",
+      "cik": "0000320193",
+      "episode_id": "P1EP-d8a26f517328f04ccf141b98cc183d9bb1ffcbae0601222e5df12519cdd1b566",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:7cfee48d53078edc7c47fa561058b753e8d988f28d2dddd3ed049eca206bef20",
+        "QUANTIACS_ASSET:NAS:AAPL:CIK0000320193",
+        "SEC_ACCESSION:0001193125-09-214859:SHA256:3c604bf8e3ea86d714f39bc173d23ad04ae958d6ca58ec3d1379709160ef9dd2",
+        "SEC_ACCESSION:0000320193-21-000105:SHA256:fc28841903236990d6f79b9ffab95ebce1f86983221b3128173c1a1d3ecaecd0"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2025-01-01"
+    },
+    {
+      "binding_classification": "PASS_EXACT",
+      "binding_id": "sha256:72efe1cdcaa2c9872faba87fe06b34d57eb2e44dc8a8beba8d64959143ff719a",
+      "cik": "0000018926",
+      "episode_id": "P1EP-522dbce4d4f9d307309951b8b1429dde5da83ef42e015cd77eed923f8b285309",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:1e90a20dc98b26839f11e51ab9d426d67a793f63d3bbc032040def0be03f1f9c",
+        "SEC_ACCESSION:0000018926-20-000028:HTML_SHA256:df859d3c1260279ba45ce6708a2b4d60726ca21e65d2a6dbaa39e944226c29c5",
+        "P2_PROVIDER_BINDING:P2PAB-e1b9285641f65ed44d0e70a3"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2020-09-18"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:ecdfca416334bad8230519ee9bf15d77719f1bbf4e205c557ffe3db39bbacbed",
+      "cik": "0000886158",
+      "episode_id": "P1EP-7ef55684efbb384e340eaa6990f5316bb65e12370ae11d8eae07901a8760a38d",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:5769c52cab2ee74f2787e6c1d0da76284811ee3b79da404fa34754a39f23f0a8",
+        "P2_PROVIDER_BINDING:P2PAB-974dc7cb00ee58d395a3b4d3",
+        "QUANTIACS_ASSET:NAS:BBBY:CIK0000886158",
+        "CONFLICTING_REUSED_TICKER_ASSET:NYS:BBBY:CIK0001130713"
+      ],
+      "valid_from": "2015-01-02",
+      "valid_to": "2017-07-26"
+    },
+    {
+      "binding_classification": "PASS_EXACT",
+      "binding_id": "sha256:99f9b5cdfa23b33a8c1b382dc8a517ac82bbb0a4aade167873d343317c7cfb9d",
+      "cik": "0000783280",
+      "episode_id": "P1EP-4e4d037ca51566f18404e9401bddf91659bef7325e07e9ae7699c1f460c39604",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:7493667bcd32fe55e2b4755281c4e821b3ee9a5ade708fcc38b8a0821d7a988a",
+        "SEC_ACCESSION:0001104659-22-105242:HTML_SHA256:a3bf8e7ff0f4adcb96bc03d8611ad91f32d4c07b21cc6808903c528d46267da2"
+      ],
+      "valid_from": "2017-07-26",
+      "valid_to": "2022-10-03"
+    },
+    {
+      "binding_classification": "PASS_EXACT",
+      "binding_id": "sha256:a848d3f7a37cf174b98b100449da2b689a58b4ae3465595c6e5924578c435263",
+      "cik": "0001666700",
+      "episode_id": "P1EP-3d55f073e02856479c1d74a8c661adf958119df942b47482968c06140aeaa2b8",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:0ed5c49bb00eb603327541ebb8a4e8953e1f755019fe056c89af97da8657874c",
+        "SEC_ACCESSION:0001193125-19-163322:HTML_SHA256:9c5d02c69afefcedaddae2b87f3826ad231aa4125afd14869784f3c677d3baed",
+        "QUANTIACS_ASSET:NYS:DD~1:CIK0001666700"
+      ],
+      "valid_from": "2019-06-03",
+      "valid_to": "2025-01-01"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:54345b1e2f841321eb2a3b99c8a8a6c5ebd46afeb7954bb57113dfb67a98db1a",
+      "cik": "0001326801",
+      "episode_id": "P1EP-036bcd3babe7c1528814f1855887d9031ba3075fc7fcda20be5834bf83955082",
+      "evidence_source_identities": [
+        "P1_TICKER_EVENT:P1TID-e2b4536a30c030014d6404aa0a63e06c9ce434ec4afe314540864bc77ecde6bc",
+        "SEC_ACCESSION:0001326801-22-000070:UNCHANGED_CUSIP_CLASS_A_CONTINUITY",
+        "SIMFIN_ID:121021:ISIN:US30303M1027",
+        "P2_SECURITY_IDENTITY:P2SECB67FDEC163A498438421BE5FD801EC9383E74ED7EE9DF0B64E0286D9F937AD0F"
+      ],
+      "valid_from": "2013-12-23",
+      "valid_to": "2022-06-09"
+    }
+  ],
+  "non_admitted_cases": [
+    {
+      "case": "DD_OLD_CURRENT_SYMBOL_BACKFILL",
+      "attempted_record": {
+        "episode_id": "P1EP-82fdce3b51fa21cb1470e4933fb0b558502d07253e6bd533ffeae1211e294896",
+        "cik": "0001666700",
+        "valid_from": "2010-01-04",
+        "valid_to": "2017-09-01",
+        "binding_classification": "AMBIGUOUS_FAIL_CLOSED",
+        "evidence_source_identities": ["CURRENT_SYMBOL_BACKFILL:REJECTED"],
+        "binding_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "case": "CEG_OLD_MISSING_AUTHORITY",
+      "attempted_record": {
+        "episode_id": "P1EP-7a59c7ebbafb65b8a7f8d368df24198fc7b88b86dccb93edad721dd77827c68d",
+        "cik": null,
+        "valid_from": "2010-01-04",
+        "valid_to": "2012-03-13",
+        "binding_classification": "MISSING_AUTHORITY",
+        "evidence_source_identities": [],
+        "binding_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ]
+}

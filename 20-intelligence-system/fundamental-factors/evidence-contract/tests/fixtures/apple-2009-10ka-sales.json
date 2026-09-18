@@ -1,0 +1,44 @@
+{
+  "schema_version": "FundamentalEvidenceV1",
+  "entity": {
+    "cik": "0000320193",
+    "issuer_name": "Apple Inc."
+  },
+  "filing": {
+    "accession": "0001193125-10-012091",
+    "form": "10-K/A",
+    "filing_date": "2010-01-25",
+    "report_period_end": "2009-09-26",
+    "acceptance_datetime": "2010-01-25T21:25:58Z",
+    "amendment_status": "AMENDMENT",
+    "filing_vintage_role": "AMENDED_ANNUAL_REPORT"
+  },
+  "availability": {
+    "first_available_at": "2010-01-25T21:25:58Z"
+  },
+  "source": {
+    "authoritative_source": "SEC_EDGAR",
+    "source_document_identity": "SEC_FULL_SUBMISSION:0001193125-10-012091",
+    "source_document_url": "https://www.sec.gov/Archives/edgar/data/320193/000119312510012091/0001193125-10-012091.txt",
+    "source_document_sha256": "dafd0899e51aa3742ab590d401393735c05ceafe60a0c5ee70b0b861a0d9d1bc"
+  },
+  "fact": {
+    "taxonomy_namespace": "us-gaap",
+    "concept": "SalesRevenueNet",
+    "value": "42905000000",
+    "unit": "USD",
+    "currency": "USD",
+    "period_start": "2008-09-28",
+    "period_end": "2009-09-26",
+    "instant": null,
+    "context_identity": null,
+    "dimensions": null,
+    "statement_classification": "INCOME_STATEMENT"
+  },
+  "upstream": {
+    "parser_provider": "EDGARTOOLS",
+    "edgartools_version": "5.58.0",
+    "upstream_identity": "PYPI_DISTRIBUTION:edgartools==5.58.0"
+  },
+  "evidence_id": "sha256:d8812094f516152344b62d5c94f314209b5cb44c50660f4d887b4576b8777117"
+}

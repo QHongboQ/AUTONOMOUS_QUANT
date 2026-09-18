@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "runtime_path": "/home/zhou/AQ_ENVS/p5-fundamental-intelligence",
+  "python_version": "3.14.7",
+  "selected_packages": {
+    "openbb-core": "1.6.13",
+    "openbb-sec": "1.6.7",
+    "edgartools": "5.58.0"
+  },
+  "audited_edgartools_source": {
+    "repository": "dgunning/edgartools",
+    "commit": "e23d04eba952e70310c0f62402f4c2523f9a44bf",
+    "installed_distribution_byte_identity_claimed": false
+  },
+  "ownership": {
+    "SEC_EDGAR": "UPSTREAM_WHOLE_SOURCE_AUTHORITY",
+    "OPENBB_SEC": "UPSTREAM_LEAF_PARTIAL_PIT_STRUCTURED_GATEWAY",
+    "EDGARTOOLS": "UPSTREAM_WHOLE_OR_LEAF_FOR_FILING_DOCUMENT_XBRL_AND_SKILL",
+    "AQ": "PIT_ADMISSION_BOUNDARY_AND_EVIDENCE_IDENTITY_ONLY"
+  },
+  "openbb_pit_mode": "PARTIAL",
+  "openbb_standalone_pit_authority": false,
+  "first_available_at_policy": "SEC_ACCEPTANCE_DATETIME_OR_RAW_ACCEPTANCE_DATETIME_FAIL_CLOSED",
+  "restatement_handling": "FAIL_CLOSED_AND_EXPLICIT",
+  "edgar_identity_configured": false,
+  "live_sec_network_test": "BLOCKED_IDENTITY_NOT_CONFIGURED",
+  "runtime_identity_sha256": "9af9c7aee64f7f74ac3fe1529dce6082e2eb497e3d945510c67605fbb94f7804",
+  "private_evidence_root": "D:/AQ_DATA/P5/selected-upstream-deployment-001"
+}

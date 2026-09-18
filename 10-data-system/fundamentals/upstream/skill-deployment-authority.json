@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "skill": "EdgarTools",
+  "deployment_mode": "PRIVATE_UPSTREAM_EXPORT",
+  "private_install_path": "D:/AQ_DATA/P5/selected-upstream-deployment-001/skills/edgartools",
+  "private_package_path": "D:/AQ_DATA/P5/selected-upstream-deployment-001/skills/package/edgartools.zip",
+  "global_install": false,
+  "export_method": "edgar.ai.install_skill(use_symlinks=False) and edgar.ai.package_skill",
+  "file_count": 22,
+  "skill_md_sha256": "65ff350a67cbb8ff9ca0dc6038aa9b6856fe3855e9e4b008bfe81124617d4791",
+  "package_sha256": "63e29e5794ec577817199cf6551c9acd83f988146da7bf20d07d9b74891eaf6c",
+  "content_manifest_sha256": "08b0a196d4e31ce6317753493a3699205bad67029b50cfdfcb9968a07bb40549",
+  "matches_prior_audit": true,
+  "upstream_skill_modified": false,
+  "agent_skill_consumption": "PASS"
+}
