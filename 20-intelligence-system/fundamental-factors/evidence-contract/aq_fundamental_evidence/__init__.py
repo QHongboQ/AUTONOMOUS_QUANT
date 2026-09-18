@@ -11,7 +11,6 @@ import rfc8785
 from pydantic import (
     BaseModel,
     ConfigDict,
-    Field,
     StringConstraints,
     field_validator,
     model_validator,
