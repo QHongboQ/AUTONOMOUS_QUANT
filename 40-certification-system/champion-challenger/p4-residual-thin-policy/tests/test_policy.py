@@ -71,6 +71,35 @@ def shadow(
     return policy.ShadowEvidenceV1(**values)
 
 
+def shadow_v2(
+    status: policy.ShadowStatus = policy.ShadowStatus.INCOMPLETE,
+    **changes: object,
+) -> policy.ShadowEvidenceV2:
+    cert = certification()
+    values: dict[str, object] = {
+        "contract_version": "ShadowEvidenceV2",
+        "evidence_classification": "TEST_FIXTURE_NOT_REAL_SHADOW",
+        "candidate_id": CANDIDATE_ID,
+        "certification_evidence_identity": cert.evidence_identity,
+        "certification_artifact_identity": cert.certification_artifact_identity,
+        "observation_start": date(2021, 1, 4),
+        "observation_end": date(2021, 3, 4),
+        "calendar_identity": identity("xnys-calendar"),
+        "prediction_evidence_identity": identity("prediction"),
+        "outcome_return_evidence_identity": None,
+        "cost_assumption_identity": identity("zero-capital"),
+        "qlib_experiment_id": "synthetic-experiment",
+        "qlib_recorder_id": "synthetic-run",
+        "mlflow_experiment_id": "synthetic-experiment",
+        "mlflow_run_id": "synthetic-run",
+        "dvc_reproducibility_identity": identity("dvc"),
+        "zero_capital_attestation": True,
+        "completion_status": status,
+    }
+    values.update(changes)
+    return policy.ShadowEvidenceV2(**values)
+
+
 def detector(change: bool = True, **changes: object) -> policy.DetectorEvidenceReferenceV1:
     values: dict[str, object] = {
         "contract_version": "DetectorEvidenceReferenceV1",
@@ -317,6 +346,71 @@ class CertificationAndShadowTests(unittest.TestCase):
             self.assertFalse(decision.capital_authorized)
             self.assertFalse(decision.production_activation_authorized)
             self.assertTrue(decision.p4_champion_role_is_not_production_authorization)
+
+    def test_v2_complete_states_require_outcome_evidence(self) -> None:
+        for status in (
+            policy.ShadowStatus.COMPLETE_PASS,
+            policy.ShadowStatus.COMPLETE_FAIL,
+        ):
+            with self.subTest(status=status), self.assertRaises(ValidationError):
+                shadow_v2(status)
+
+    def test_v2_incomplete_fixture_can_omit_outcome_evidence(self) -> None:
+        evidence = shadow_v2()
+        decision = policy.admit_shadow(
+            current_state=policy.LifecycleState.CERTIFIED,
+            candidate_id=CANDIDATE_ID,
+            certification=certification(),
+            shadow=evidence,
+            allow_test_fixture=True,
+        )
+        self.assertEqual(policy.DecisionKind.ADMIT_SHADOW, decision.decision_kind)
+        self.assertEqual(policy.ShadowStatus.INCOMPLETE, evidence.completion_status)
+
+    def test_v1_cannot_admit_real_p2_certification(self) -> None:
+        real = certification(evidence_classification="REAL_P2_CERTIFICATION_EVIDENCE")
+        evidence = shadow(
+            certification_evidence_identity=real.evidence_identity,
+            certification_artifact_identity=real.certification_artifact_identity,
+        )
+        decision = policy.admit_shadow(
+            current_state=policy.LifecycleState.CERTIFIED,
+            candidate_id=CANDIDATE_ID,
+            certification=real,
+            shadow=evidence,
+        )
+        self.assertEqual(policy.DecisionKind.REJECT_TRANSITION, decision.decision_kind)
+
+    def test_real_promotion_requires_prospective_v2_with_outcome(self) -> None:
+        real = certification(evidence_classification="REAL_P2_CERTIFICATION_EVIDENCE")
+        evidence = shadow_v2(
+            policy.ShadowStatus.COMPLETE_PASS,
+            evidence_classification="PROSPECTIVE_ZERO_CAPITAL_SHADOW",
+            certification_evidence_identity=real.evidence_identity,
+            certification_artifact_identity=real.certification_artifact_identity,
+            outcome_return_evidence_identity=identity("realized-outcome"),
+        )
+        decision = policy.promote_champion(
+            current_state=policy.LifecycleState.SHADOW,
+            candidate_id=CANDIDATE_ID,
+            certification=real,
+            shadow=evidence,
+        )
+        self.assertEqual(policy.DecisionKind.PROMOTE_CHAMPION, decision.decision_kind)
+
+    def test_fixture_shadow_cannot_bind_real_p2_certification(self) -> None:
+        real = certification(evidence_classification="REAL_P2_CERTIFICATION_EVIDENCE")
+        evidence = shadow_v2(
+            certification_evidence_identity=real.evidence_identity,
+            certification_artifact_identity=real.certification_artifact_identity,
+        )
+        decision = policy.admit_shadow(
+            current_state=policy.LifecycleState.CERTIFIED,
+            candidate_id=CANDIDATE_ID,
+            certification=real,
+            shadow=evidence,
+        )
+        self.assertEqual(policy.DecisionKind.REJECT_TRANSITION, decision.decision_kind)
 
 
 class DecayAndRetirementTests(unittest.TestCase):

@@ -100,6 +100,7 @@ class FinancialDecayPolicyV2Tests(unittest.TestCase):
         contracts = Union[
             policy.P2CertificationEvidenceV1,
             policy.ShadowEvidenceV1,
+            policy.ShadowEvidenceV2,
             policy.DetectorEvidenceReferenceV1,
             policy.RankICSummaryEvidenceV1,
             policy.RankICSummaryEvidenceV2,

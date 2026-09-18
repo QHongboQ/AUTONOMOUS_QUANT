@@ -462,3 +462,87 @@ stages:
       md5: 174e2c65d907d69e8cdc072c0eaccdf9
       size: 863
       isexec: true
+  p4_shadow_evidence_path_fixture_seal:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py --fixture-task-config ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json --qlib-identity ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json --history ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json --tag-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json --prediction-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json --sigana-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json --shadow-fixture ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json --zero-capital ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json --pre-epoch ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json --ric-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl --prediction-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl --policy-module 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py --policy-schema 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json --policy-config 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json --output 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+    deps:
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json
+      hash: md5
+      md5: 24554f528e8a8de7e8a3de488210da52
+      size: 3089
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
+      hash: md5
+      md5: fcf3ce7fe13252620fcff7f4c33918ba
+      size: 10961
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl
+      hash: md5
+      md5: e8754de0d97390d172b9d21ea11d561c
+      size: 1422
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json
+      hash: md5
+      md5: 8fa84410b1c2485cf0636fb8ec7ad5a4
+      size: 715
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json
+      hash: md5
+      md5: 058e4ed70f533a8e8efda74e8e7385da
+      size: 2820
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json
+      hash: md5
+      md5: 8c23ffbf2308ad7645a41d02408c9714
+      size: 401
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json
+      hash: md5
+      md5: a217901c930d7e33ccb384a886a9a806
+      size: 475
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json
+      hash: md5
+      md5: 2f4c09396314134030296125a1281b6f
+      size: 1338
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json
+      hash: md5
+      md5: 3c4ed6d3a1792ee4f8dfb2742b18b1c4
+      size: 1206
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json
+      hash: md5
+      md5: e57b1920fb3b0e6d60c52b8556163850
+      size: 500
+      isexec: true
+    - path: ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json
+      hash: md5
+      md5: 189873eac490c78e5e3f23eab83eafa6
+      size: 286
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py
+      hash: md5
+      md5: a949ee5df86cd5373c000399211c651c
+      size: 30062
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json
+      hash: md5
+      md5: 0c9d6e6a0019410406c64fc3f8e275d6
+      size: 864
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json
+      hash: md5
+      md5: 68c42305bc945e1609af6be14cb495ea
+      size: 32388
+      isexec: true
+    - path: 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py
+      hash: md5
+      md5: 3e68a69e3fec51a02dc0b8168a9b3384
+      size: 9404
+      isexec: true
+    outs:
+    - path: 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+      hash: md5
+      md5: 0b9da08a9bbf16b1dd464f99f6b0f68a
+      size: 1714
+      isexec: true

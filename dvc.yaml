@@ -233,3 +233,39 @@ stages:
       - ../AQ_DATA/P4/selected-upstream-components-deployment-001/runtime_freeze_manifest.json
     outs:
       - 40-certification-system/champion-challenger/p4-frouros-adwin/.private/identity-projection-seal.json
+  p4_shadow_evidence_path_fixture_seal:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py
+      --fixture-task-config ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json
+      --qlib-identity ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json
+      --history ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json
+      --tag-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json
+      --prediction-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json
+      --sigana-report ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json
+      --shadow-fixture ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json
+      --zero-capital ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json
+      --pre-epoch ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json
+      --ric-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl
+      --prediction-artifact ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
+      --policy-module 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py
+      --policy-schema 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json
+      --policy-config 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json
+      --output 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+    deps:
+      - 40-certification-system/champion-challenger/p4-shadow-evidence-path/seal_fixture.py
+      - 40-certification-system/champion-challenger/p4-residual-thin-policy/aq_p4_policy/__init__.py
+      - 40-certification-system/champion-challenger/p4-residual-thin-policy/schemas/p4_policy_contracts_v2.schema.json
+      - 40-certification-system/champion-challenger/p4-residual-thin-policy/config/financial_decay_policy_v2.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/fixture_task_config.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/qlib_online_identity_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_history_manifest.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/online_tag_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/prediction_identity_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/sigana_identity_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/shadow_fixture.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/zero_capital_attestation.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/pre_epoch_firewall_report.json
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/sig_analysis/ric.pkl
+      - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
+    outs:
+      - 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json

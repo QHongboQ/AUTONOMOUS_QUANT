@@ -132,6 +132,48 @@ class ShadowEvidenceV1(BaseModel):
         return self
 
 
+class ShadowEvidenceV2(BaseModel):
+    """Shadow evidence with explicit real-versus-fixture classification."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    contract_version: Literal["ShadowEvidenceV2"]
+    evidence_classification: Literal[
+        "TEST_FIXTURE_NOT_REAL_SHADOW", "PROSPECTIVE_ZERO_CAPITAL_SHADOW"
+    ]
+    candidate_id: Sha256Identity
+    certification_evidence_identity: Sha256Identity
+    certification_artifact_identity: Sha256Identity
+    observation_start: date
+    observation_end: date
+    calendar_identity: Sha256Identity
+    prediction_evidence_identity: Sha256Identity
+    outcome_return_evidence_identity: Sha256Identity | None
+    cost_assumption_identity: Sha256Identity
+    qlib_experiment_id: NonEmptyIdentity
+    qlib_recorder_id: NonEmptyIdentity
+    mlflow_experiment_id: NonEmptyIdentity
+    mlflow_run_id: NonEmptyIdentity
+    dvc_reproducibility_identity: Sha256Identity
+    zero_capital_attestation: Literal[True]
+    completion_status: ShadowStatus
+
+    @model_validator(mode="after")
+    def validate_boundary(self) -> "ShadowEvidenceV2":
+        if self.observation_end < self.observation_start:
+            raise ValueError("Shadow observation interval is reversed")
+        if self.qlib_experiment_id != self.mlflow_experiment_id:
+            raise ValueError("Qlib and MLflow experiment identities differ")
+        if self.qlib_recorder_id != self.mlflow_run_id:
+            raise ValueError("Qlib Recorder and MLflow run identities differ")
+        if (
+            self.completion_status
+            in {ShadowStatus.COMPLETE_PASS, ShadowStatus.COMPLETE_FAIL}
+            and self.outcome_return_evidence_identity is None
+        ):
+            raise ValueError("complete Shadow evidence requires outcome/evaluation identity")
+        return self
+
+
 class DetectorEvidenceReferenceV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     contract_version: Literal["DetectorEvidenceReferenceV1"]
@@ -427,19 +469,31 @@ def _certification_valid(
 def _shadow_valid(
     candidate_id: str,
     certification: P2CertificationEvidenceV1,
-    shadow: ShadowEvidenceV1,
+    shadow: ShadowEvidenceV1 | ShadowEvidenceV2,
 ) -> bool:
-    return (
+    common_valid = (
         shadow.candidate_id == candidate_id
         and shadow.certification_evidence_identity == certification.evidence_identity
         and shadow.certification_artifact_identity
         == certification.certification_artifact_identity
         and shadow.zero_capital_attestation
     )
+    if not common_valid:
+        return False
+    if isinstance(shadow, ShadowEvidenceV1):
+        return certification.evidence_classification == "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+    return (
+        shadow.evidence_classification == "TEST_FIXTURE_NOT_REAL_SHADOW"
+        and certification.evidence_classification == "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+    ) or (
+        shadow.evidence_classification == "PROSPECTIVE_ZERO_CAPITAL_SHADOW"
+        and certification.evidence_classification == "REAL_P2_CERTIFICATION_EVIDENCE"
+    )
 
 
 def _shadow_sources(
-    certification: P2CertificationEvidenceV1 | None, shadow: ShadowEvidenceV1
+    certification: P2CertificationEvidenceV1 | None,
+    shadow: ShadowEvidenceV1 | ShadowEvidenceV2,
 ) -> tuple[str, ...]:
     return (shadow.dvc_reproducibility_identity,) + (
         () if certification is None else (certification.evidence_identity,)
@@ -448,7 +502,8 @@ def _shadow_sources(
 
 def admit_shadow(
     *, current_state: LifecycleState, candidate_id: str,
-    certification: P2CertificationEvidenceV1 | None, shadow: ShadowEvidenceV1,
+    certification: P2CertificationEvidenceV1 | None,
+    shadow: ShadowEvidenceV1 | ShadowEvidenceV2,
     allow_test_fixture: bool = False,
 ) -> LifecycleDecisionEvidenceV1:
     test = certification is not None and certification.evidence_classification.startswith("TEST_")
@@ -464,7 +519,8 @@ def admit_shadow(
 
 def promote_champion(
     *, current_state: LifecycleState, candidate_id: str,
-    certification: P2CertificationEvidenceV1 | None, shadow: ShadowEvidenceV1,
+    certification: P2CertificationEvidenceV1 | None,
+    shadow: ShadowEvidenceV1 | ShadowEvidenceV2,
     allow_test_fixture: bool = False,
 ) -> LifecycleDecisionEvidenceV1:
     test = certification is not None and certification.evidence_classification.startswith("TEST_")

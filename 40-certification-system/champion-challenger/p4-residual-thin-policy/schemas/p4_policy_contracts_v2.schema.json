@@ -956,6 +956,132 @@
       "title": "ShadowEvidenceV1",
       "type": "object"
     },
+    "ShadowEvidenceV2": {
+      "additionalProperties": false,
+      "description": "Shadow evidence with explicit real-versus-fixture classification.",
+      "properties": {
+        "calendar_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Calendar Identity",
+          "type": "string"
+        },
+        "candidate_id": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "certification_artifact_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Artifact Identity",
+          "type": "string"
+        },
+        "certification_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Certification Evidence Identity",
+          "type": "string"
+        },
+        "completion_status": {
+          "$ref": "#/$defs/ShadowStatus"
+        },
+        "contract_version": {
+          "const": "ShadowEvidenceV2",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "cost_assumption_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Cost Assumption Identity",
+          "type": "string"
+        },
+        "dvc_reproducibility_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Dvc Reproducibility Identity",
+          "type": "string"
+        },
+        "evidence_classification": {
+          "enum": [
+            "TEST_FIXTURE_NOT_REAL_SHADOW",
+            "PROSPECTIVE_ZERO_CAPITAL_SHADOW"
+          ],
+          "title": "Evidence Classification",
+          "type": "string"
+        },
+        "mlflow_experiment_id": {
+          "minLength": 1,
+          "title": "Mlflow Experiment Id",
+          "type": "string"
+        },
+        "mlflow_run_id": {
+          "minLength": 1,
+          "title": "Mlflow Run Id",
+          "type": "string"
+        },
+        "observation_end": {
+          "format": "date",
+          "title": "Observation End",
+          "type": "string"
+        },
+        "observation_start": {
+          "format": "date",
+          "title": "Observation Start",
+          "type": "string"
+        },
+        "outcome_return_evidence_identity": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Outcome Return Evidence Identity"
+        },
+        "prediction_evidence_identity": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Prediction Evidence Identity",
+          "type": "string"
+        },
+        "qlib_experiment_id": {
+          "minLength": 1,
+          "title": "Qlib Experiment Id",
+          "type": "string"
+        },
+        "qlib_recorder_id": {
+          "minLength": 1,
+          "title": "Qlib Recorder Id",
+          "type": "string"
+        },
+        "zero_capital_attestation": {
+          "const": true,
+          "title": "Zero Capital Attestation",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "contract_version",
+        "evidence_classification",
+        "candidate_id",
+        "certification_evidence_identity",
+        "certification_artifact_identity",
+        "observation_start",
+        "observation_end",
+        "calendar_identity",
+        "prediction_evidence_identity",
+        "outcome_return_evidence_identity",
+        "cost_assumption_identity",
+        "qlib_experiment_id",
+        "qlib_recorder_id",
+        "mlflow_experiment_id",
+        "mlflow_run_id",
+        "dvc_reproducibility_identity",
+        "zero_capital_attestation",
+        "completion_status"
+      ],
+      "title": "ShadowEvidenceV2",
+      "type": "object"
+    },
     "ShadowStatus": {
       "enum": [
         "INCOMPLETE",
@@ -974,6 +1100,9 @@
     },
     {
       "$ref": "#/$defs/ShadowEvidenceV1"
+    },
+    {
+      "$ref": "#/$defs/ShadowEvidenceV2"
     },
     {
       "$ref": "#/$defs/DetectorEvidenceReferenceV1"

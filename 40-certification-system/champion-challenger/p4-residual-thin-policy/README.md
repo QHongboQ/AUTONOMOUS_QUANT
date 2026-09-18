@@ -43,6 +43,15 @@ detector evidence, and its upstream identity projection. A Frouros change is
 insufficient for degradation without separately supplied adverse RankIC
 summary evidence and an explicit policy configuration.
 
+`ShadowEvidenceV1` remains a historical test-fixture contract and cannot bind
+real P2 certification evidence. `ShadowEvidenceV2` adds an explicit
+`TEST_FIXTURE_NOT_REAL_SHADOW` versus `PROSPECTIVE_ZERO_CAPITAL_SHADOW`
+classification. Both complete states require an outcome/evaluation identity,
+so a real `COMPLETE_PASS` without realized evaluation evidence is
+structurally impossible. Real promotion requires V2, real P2 certification,
+prospective zero-capital classification, identity consistency, and
+`COMPLETE_PASS`; V1 remains available only for historical synthetic tests.
+
 V1 remains unchanged and retains its historical unset/test-only meanings:
 
 ```text
