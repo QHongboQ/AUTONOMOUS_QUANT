@@ -53,3 +53,12 @@ context metadata. It does not require a permanent SEC mirror or retention of
 every attachment. Source bytes may be replaced by deterministic re-download
 only while the exact accession-bound document remains available and its bytes
 recompute to `source_document_sha256`; otherwise the evidence fails closed.
+
+## Thin materialization boundary
+
+`aq_fundamental_evidence.materialize.materialize_edgartools_fact` is a pure
+projection from an already-parsed EdgarTools `Filing` plus fact mapping into
+this contract. It performs no network access, filing/XBRL parsing, taxonomy
+normalization, statement reconstruction, storage, or scheduling. Deterministic
+sample and concept selection belong to bounded private evidence work, not this
+module.

@@ -42,7 +42,7 @@ def _require_utc(value: datetime, field_name: str) -> datetime:
     return value
 
 
-def _canonical_decimal(value: str) -> str:
+def canonical_decimal_value(value: str) -> str:
     """Return the exact V1 decimal spelling, rejecting rounding and exponents."""
 
     try:
@@ -115,7 +115,7 @@ class FundamentalFactV1(_FrozenModel):
     @field_validator("value")
     @classmethod
     def validate_canonical_value(cls, value: str) -> str:
-        return _canonical_decimal(value)
+        return canonical_decimal_value(value)
 
     @model_validator(mode="after")
     def validate_period_and_dimensions(self) -> "FundamentalFactV1":
@@ -203,5 +203,6 @@ __all__ = [
     "SCHEMA_VERSION",
     "RFC8785_IMPLEMENTATION",
     "VALUE_CANONICALIZATION_POLICY",
+    "canonical_decimal_value",
     "evidence_id_for",
 ]
