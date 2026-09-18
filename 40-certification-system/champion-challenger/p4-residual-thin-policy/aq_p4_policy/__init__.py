@@ -13,7 +13,12 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 Sha256Identity = Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")]
 NonEmptyIdentity = Annotated[str, StringConstraints(min_length=1)]
 PRODUCTION_DECAY_POLICY_STATUS = "UNSET_REQUIRES_PREREGISTRATION"
+PREREGISTERED_PRODUCTION_DECAY_POLICY_STATUS = "PREREGISTERED_PRODUCTION_POLICY"
 DEFAULT_PRODUCTION_DECAY_THRESHOLDS = None
+
+
+def _content_identity(fields: dict[str, object]) -> str:
+    return "sha256:" + hashlib.sha256(rfc8785.dumps(fields)).hexdigest()
 
 
 class LifecycleState(str, Enum):
@@ -160,6 +165,45 @@ class RankICSummaryEvidenceV1(BaseModel):
     persistence_evidence_count: int = Field(ge=0)
 
 
+class RankICSummaryEvidenceV2(BaseModel):
+    """Upstream-computed RankIC summaries with an explicit prospective boundary."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    contract_version: Literal["RankICSummaryEvidenceV2"]
+    candidate_id: Sha256Identity
+    policy_id: Sha256Identity
+    metric_kind: Literal["RANK_IC"]
+    upstream_identity_projection_identity: Sha256Identity
+    reference_evidence_identity: Sha256Identity
+    current_evidence_identity: Sha256Identity
+    reference_rank_ic: float = Field(ge=-1.0, le=1.0)
+    current_rank_ic: float = Field(ge=-1.0, le=1.0)
+    reference_sample_count: int = Field(ge=1)
+    current_sample_count: int = Field(ge=1)
+    reference_sample_sessions: int = Field(ge=1)
+    current_sample_sessions: int = Field(ge=1)
+    policy_evaluation_cadence_sessions: int = Field(ge=1)
+    reference_window_start: date
+    reference_window_end: date
+    current_window_start: date
+    current_window_end: date
+    evidence_cutoff: date
+    persistence_evidence_count: int = Field(ge=0)
+    evidence_classification: Literal[
+        "REAL_UPSTREAM_EVIDENCE", "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+    ]
+
+    @model_validator(mode="after")
+    def validate_windows(self) -> "RankICSummaryEvidenceV2":
+        if not (
+            self.reference_window_start <= self.reference_window_end
+            < self.current_window_start <= self.current_window_end
+            == self.evidence_cutoff
+        ):
+            raise ValueError("RankIC evidence windows violate non-lookahead ordering")
+        return self
+
+
 class FinancialDecayPolicyConfigV1(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     contract_version: Literal["FinancialDecayPolicyConfigV1"]
@@ -185,6 +229,44 @@ class FinancialDecayPolicyConfigV1(BaseModel):
             raise ValueError("unregistered production policy cannot carry thresholds")
         if self.status == "TEST_ONLY_POLICY_CONFIG" and any(v is None for v in values):
             raise ValueError("test policy must supply every condition")
+        return self
+
+
+class FinancialDecayPolicyConfigV2(BaseModel):
+    """First preregistered production RankIC decay policy."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    contract_version: Literal["FinancialDecayPolicyConfigV2"]
+    status: Literal["PREREGISTERED_PRODUCTION_POLICY"]
+    policy_id: Sha256Identity
+    metric_kind: Literal["RANK_IC"]
+    session_calendar: Literal["XNYS"]
+    effective_epoch: date
+    window_semantics: Literal["FROZEN_REFERENCE_AND_TRAILING_CURRENT"]
+    current_window_must_start_on_or_after_effective_epoch: Literal[True]
+    reference_sample_sessions: int = Field(ge=1)
+    current_sample_sessions: int = Field(ge=1)
+    policy_evaluation_cadence_sessions: int = Field(ge=1)
+    persistence_confirmation: Literal["CONSECUTIVE_ELIGIBLE_EVALUATIONS"]
+    minimum_deterioration: float = Field(gt=0.0, le=2.0)
+    minimum_reference_sample_count: int = Field(ge=1)
+    minimum_current_sample_count: int = Field(ge=1)
+    required_change_events: int = Field(ge=1)
+    required_persistence_evidence_count: int = Field(ge=1)
+    corroboration_required: Literal[True]
+    retroactive_threshold_rewrite: Literal["PROHIBITED"]
+
+    @model_validator(mode="after")
+    def validate_identity_and_samples(self) -> "FinancialDecayPolicyConfigV2":
+        if self.status != PREREGISTERED_PRODUCTION_DECAY_POLICY_STATUS:
+            raise ValueError("unsupported production policy status")
+        if self.minimum_reference_sample_count > self.reference_sample_sessions:
+            raise ValueError("reference minimum exceeds reference window")
+        if self.minimum_current_sample_count > self.current_sample_sessions:
+            raise ValueError("current minimum exceeds current window")
+        fields = self.model_dump(mode="json", exclude={"policy_id"})
+        if self.policy_id != _content_identity(fields):
+            raise ValueError("policy_id does not match RFC 8785 identity")
         return self
 
 
@@ -290,7 +372,13 @@ def challenger_role_allowed(state: LifecycleState) -> bool:
 
 
 def _request_id(fields: dict[str, object]) -> str:
-    return "sha256:" + hashlib.sha256(rfc8785.dumps(fields)).hexdigest()
+    return _content_identity(fields)
+
+
+def financial_decay_policy_identity(fields: dict[str, object]) -> str:
+    """Return the RFC 8785 + SHA-256 identity of non-ID policy fields."""
+
+    return _content_identity(fields)
 
 
 def _decision(
@@ -394,14 +482,17 @@ def promote_champion(
 
 def mark_degraded(
     *, current_state: LifecycleState, candidate_id: str,
-    detector: DetectorEvidenceReferenceV1, financial: RankICSummaryEvidenceV1,
-    config: FinancialDecayPolicyConfigV1 | None,
+    detector: DetectorEvidenceReferenceV1,
+    financial: RankICSummaryEvidenceV1 | RankICSummaryEvidenceV2,
+    config: FinancialDecayPolicyConfigV1 | FinancialDecayPolicyConfigV2 | None,
 ) -> LifecycleDecisionEvidenceV1:
     sources = (
         detector.detector_evidence_identity, detector.metric_observation_stream_identity,
         detector.upstream_identity_projection_identity,
         financial.reference_evidence_identity, financial.current_evidence_identity,
     )
+    if isinstance(config, FinancialDecayPolicyConfigV2):
+        sources += (config.policy_id,)
     if not is_structurally_authorized_transition(current_state, LifecycleState.DEGRADED):
         return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.REJECT_TRANSITION, DecisionReason.STRUCTURALLY_UNAUTHORIZED, sources)
     identities_match = (
@@ -411,10 +502,29 @@ def mark_degraded(
     )
     if not identities_match:
         return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.REJECT_TRANSITION, DecisionReason.FINANCIAL_CORROBORATION_NOT_ADVERSE, sources)
-    if config is None or config.status == PRODUCTION_DECAY_POLICY_STATUS:
+    if config is None or (
+        isinstance(config, FinancialDecayPolicyConfigV1)
+        and config.status == PRODUCTION_DECAY_POLICY_STATUS
+    ):
         return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.REJECT_TRANSITION, DecisionReason.DECAY_POLICY_NOT_PREREGISTERED, sources)
+    test = isinstance(financial, RankICSummaryEvidenceV1) or (
+        financial.evidence_classification == "TEST_FIXTURE_NOT_REAL_EVIDENCE"
+    )
+    if isinstance(config, FinancialDecayPolicyConfigV2):
+        if not isinstance(financial, RankICSummaryEvidenceV2) or financial.policy_id != config.policy_id:
+            return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.REJECT_TRANSITION, DecisionReason.DECAY_POLICY_NOT_PREREGISTERED, sources, test)
+        if financial.current_window_start < config.effective_epoch:
+            return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.REJECT_TRANSITION, DecisionReason.DECAY_POLICY_NOT_PREREGISTERED, sources, test)
+        semantics_match = (
+            financial.reference_sample_sessions == config.reference_sample_sessions
+            and financial.current_sample_sessions == config.current_sample_sessions
+            and financial.policy_evaluation_cadence_sessions
+            == config.policy_evaluation_cadence_sessions
+        )
+        if not semantics_match:
+            return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.REJECT_TRANSITION, DecisionReason.FINANCIAL_CORROBORATION_NOT_ADVERSE, sources, test)
     if not detector.change_detected or detector.change_event_count < config.required_change_events:
-        return _decision(candidate_id, current_state, None, DecisionKind.NO_CHANGE, DecisionReason.STATISTICAL_CHANGE_NOT_DETECTED, sources, True)
+        return _decision(candidate_id, current_state, None, DecisionKind.NO_CHANGE, DecisionReason.STATISTICAL_CHANGE_NOT_DETECTED, sources, test)
     adverse = (
         financial.reference_sample_count >= config.minimum_reference_sample_count
         and financial.current_sample_count >= config.minimum_current_sample_count
@@ -424,8 +534,8 @@ def mark_degraded(
         and financial.current_rank_ic < financial.reference_rank_ic
     )
     if not adverse:
-        return _decision(candidate_id, current_state, None, DecisionKind.NO_CHANGE, DecisionReason.FINANCIAL_CORROBORATION_NOT_ADVERSE, sources, True)
-    return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.MARK_DEGRADED, DecisionReason.FINANCIAL_DECAY_CORROBORATED, sources, True)
+        return _decision(candidate_id, current_state, None, DecisionKind.NO_CHANGE, DecisionReason.FINANCIAL_CORROBORATION_NOT_ADVERSE, sources, test)
+    return _decision(candidate_id, current_state, LifecycleState.DEGRADED, DecisionKind.MARK_DEGRADED, DecisionReason.FINANCIAL_DECAY_CORROBORATED, sources, test)
 
 
 def retire(

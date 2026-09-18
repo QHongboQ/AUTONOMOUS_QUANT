@@ -20,7 +20,7 @@ closed P4 policy module, one generated JSON Schema snapshot, and focused
 synthetic tests. It contains no workflow, FSM, rules, metric, drift,
 persistence, registry, event-store, or scheduler engine.
 
-## Closed V1 semantics
+## Closed V1 and preregistered V2 semantics
 
 The lifecycle states are exactly `RESEARCH_CANDIDATE`, `CERTIFIED`, `SHADOW`,
 `CHAMPION`, `DEGRADED`, and `RETIRED`. The only edges are:
@@ -43,7 +43,7 @@ detector evidence, and its upstream identity projection. A Frouros change is
 insufficient for degradation without separately supplied adverse RankIC
 summary evidence and an explicit policy configuration.
 
-Production decay thresholds remain absent:
+V1 remains unchanged and retains its historical unset/test-only meanings:
 
 ```text
 PRODUCTION_DECAY_POLICY_STATUS = UNSET_REQUIRES_PREREGISTRATION
@@ -52,6 +52,26 @@ DEFAULT_PRODUCTION_DECAY_THRESHOLDS = NONE
 
 Only synthetic tests may use `TEST_ONLY_POLICY_CONFIG` and
 `TEST_FIXTURE_NOT_REAL_EVIDENCE`.
+
+The first production policy is the immutable
+`config/financial_decay_policy_v2.json`. Its RFC 8785 semantic identity is:
+
+```text
+sha256:3b95c4671bf75c933437659b971477ae6241f70428c638ae81690c4aa6182854
+```
+
+It monitors only upstream-computed daily RankIC. The reference is a frozen
+252-session baseline; the current window contains 63 trailing XNYS sessions;
+policy evaluation occurs every 21 sessions; and three consecutive eligible
+evaluations are required. A current window may not begin before the
+2026-10-01 effective epoch. One ADWIN event alone is never sufficient:
+financial deterioration of at least 0.03, complete sample counts, and all
+three persistence confirmations must also be present. Pre-epoch observations
+may establish the frozen reference, but they are not prospective validation
+evidence.
+
+Any threshold change requires a new version, content identity, rationale, and
+future effective epoch. Retroactive relabeling is prohibited.
 
 ## Research Request identity
 
@@ -69,10 +89,11 @@ no package is installed or added by this implementation:
 PYTHONPATH=/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs \
   /home/zhou/miniforge3/envs/rdagent4qlib/bin/python -m unittest discover \
   -s 40-certification-system/champion-challenger/p4-residual-thin-policy/tests \
-  -p 'test_policy.py' -v
+  -p 'test_*.py' -v
 ```
 
 The test suite covers all 36 ordered state pairs, P2 and Shadow fail-closed
 boundaries, statistical-versus-financial corroboration, retirement authority,
-RFC 8785 request identity, deterministic replay, and absence of runtime or
-persistence dependencies. It uses no historical TEST or sealed OOS data.
+RFC 8785 request and policy identity, prospective effective-epoch enforcement,
+deterministic replay, and absence of runtime or persistence dependencies. It
+uses no real Candidate RankIC, historical TEST, Shadow, or sealed OOS data.

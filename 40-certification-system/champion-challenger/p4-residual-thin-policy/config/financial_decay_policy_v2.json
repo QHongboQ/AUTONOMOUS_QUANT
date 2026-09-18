@@ -1,0 +1,21 @@
+{
+  "contract_version": "FinancialDecayPolicyConfigV2",
+  "corroboration_required": true,
+  "current_sample_sessions": 63,
+  "current_window_must_start_on_or_after_effective_epoch": true,
+  "effective_epoch": "2026-10-01",
+  "metric_kind": "RANK_IC",
+  "minimum_current_sample_count": 63,
+  "minimum_deterioration": 0.03,
+  "minimum_reference_sample_count": 252,
+  "persistence_confirmation": "CONSECUTIVE_ELIGIBLE_EVALUATIONS",
+  "policy_evaluation_cadence_sessions": 21,
+  "policy_id": "sha256:3b95c4671bf75c933437659b971477ae6241f70428c638ae81690c4aa6182854",
+  "reference_sample_sessions": 252,
+  "required_change_events": 1,
+  "required_persistence_evidence_count": 3,
+  "retroactive_threshold_rewrite": "PROHIBITED",
+  "session_calendar": "XNYS",
+  "status": "PREREGISTERED_PRODUCTION_POLICY",
+  "window_semantics": "FROZEN_REFERENCE_AND_TRAILING_CURRENT"
+}
