@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:autonomous-quant:MetricObservationStreamV1",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {"const": "MetricObservationStreamV1"},
+    "metric_kind": {"const": "RANK_IC"},
+    "observations": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "observation_time": {"minLength": 1, "type": "string"},
+          "value": {"maximum": 1.0, "minimum": -1.0, "type": "number"}
+        },
+        "required": ["observation_time", "value"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "source_artifact_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "source_format": {"const": "QLIB_SIGANA_RIC_PICKLE"}
+  },
+  "required": [
+    "contract_version",
+    "metric_kind",
+    "source_artifact_sha256",
+    "source_format",
+    "observations"
+  ],
+  "title": "MetricObservationStreamV1",
+  "type": "object"
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:autonomous-quant:DetectorEvidenceV1",
+  "additionalProperties": false,
+  "properties": {
+    "change_detected": {"type": "boolean"},
+    "change_indices": {"items": {"minimum": 0, "type": "integer"}, "type": "array"},
+    "contract_version": {"const": "DetectorEvidenceV1"},
+    "detector_config": {
+      "additionalProperties": false,
+      "properties": {
+        "clock": {"const": 32},
+        "delta": {"const": 0.002},
+        "m": {"const": 5},
+        "min_num_instances": {"const": 10},
+        "min_window_size": {"const": 5}
+      },
+      "required": ["clock", "delta", "m", "min_num_instances", "min_window_size"],
+      "type": "object"
+    },
+    "detector_kind": {"const": "ADWIN"},
+    "detector_project": {"const": "FROUROS"},
+    "detector_version": {"const": "0.9.0"},
+    "first_observation_time": {"minLength": 1, "type": "string"},
+    "frouros_runtime_freeze_sha256": {"const": "8c66ad3fde0f116d89aa31c0454a093eba00b16fe6d5946ac973bd5850dfb5d5"},
+    "installed_adwin_module_sha256": {"const": "f3b2c06acf88b6938eac907909ca16b8daa382133eb1247e297a12f299ebd8fd"},
+    "last_observation_time": {"minLength": 1, "type": "string"},
+    "metric_kind": {"const": "RANK_IC"},
+    "observation_count": {"minimum": 1, "type": "integer"},
+    "original_domain": {"const": [-1.0, 1.0]},
+    "source_artifact_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "source_observation_stream_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "state_authority": {"const": "REPLAY_FROM_IMMUTABLE_OBSERVATIONS"},
+    "translated_domain": {"const": [0.0, 2.0]},
+    "translation_constant": {"const": 1.0},
+    "translation_kind": {"const": "CONSTANT_ADDITIVE_OFFSET"}
+  },
+  "required": [
+    "contract_version",
+    "metric_kind",
+    "source_artifact_sha256",
+    "source_observation_stream_sha256",
+    "observation_count",
+    "first_observation_time",
+    "last_observation_time",
+    "translation_kind",
+    "translation_constant",
+    "original_domain",
+    "translated_domain",
+    "detector_project",
+    "detector_version",
+    "detector_kind",
+    "frouros_runtime_freeze_sha256",
+    "installed_adwin_module_sha256",
+    "detector_config",
+    "state_authority",
+    "change_detected",
+    "change_indices"
+  ],
+  "title": "DetectorEvidenceV1",
+  "type": "object"
+}
