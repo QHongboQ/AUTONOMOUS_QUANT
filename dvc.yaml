@@ -269,3 +269,39 @@ stages:
       - ../AQ_DATA/P4/shadow-evidence-path-and-qlib-online-integration-001/mlruns/1/344e70a13c14478e80f61500a4412081/artifacts/pred.pkl
     outs:
       - 40-certification-system/champion-challenger/p4-shadow-evidence-path/.private/shadow-fixture-seal.json
+  p2_formulaic_alpha_protocol_v2_freeze:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 40-certification-system/protocol/seal_formulaic_protocol_v2.py
+      --protocol 40-certification-system/protocol/p2-certification-protocol-v2.json
+      --cohort 40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      --activation 40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      --v1-protocol 40-certification-system/protocol/p2-certification-protocol-v1.json
+      --candidate-contract 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      --candidate-schema 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      --materialization-manifest ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      --validation-report ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      --formulaic-dvc-identity ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      --formulaic-seal 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      --provider-report ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --authority-facts 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      --control-model-config 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      --strategy-config 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      --output 40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+    deps:
+      - 40-certification-system/protocol/seal_formulaic_protocol_v2.py
+      - 40-certification-system/protocol/p2-certification-protocol-v2.json
+      - 40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      - 40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      - 40-certification-system/protocol/p2-certification-protocol-v1.json
+      - 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      - 30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      - ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      - ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      - ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      - 30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - 10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      - 30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      - 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+    outs:
+      - 40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json

@@ -1,0 +1,11 @@
+{
+  "activation_status": "PENDING_ORIGIN_MAIN_MERGE",
+  "calendar_name": "XNYS",
+  "freeze_merge_sha": "UNRESOLVED",
+  "minimum_sealed_oos_sessions": 126,
+  "one_shot_release": true,
+  "pre_activation_sessions_count_toward_certification": false,
+  "protocol_version": "P2_CERTIFICATION_PROTOCOL_V2",
+  "sealed_oos_start_session": "UNRESOLVED",
+  "start_rule": "THE_FIRST_XNYS_SESSION_STRICTLY_AFTER_THE_PROTOCOL_V2_FREEZE_COMMIT_BECOMES_PART_OF_ORIGIN_MAIN"
+}

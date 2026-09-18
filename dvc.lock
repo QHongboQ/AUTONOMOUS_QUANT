@@ -546,3 +546,129 @@ stages:
       md5: 0b9da08a9bbf16b1dd464f99f6b0f68a
       size: 1714
       isexec: true
+  p2_formulaic_alpha_protocol_v2_freeze:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B
+      40-certification-system/protocol/seal_formulaic_protocol_v2.py --protocol
+      40-certification-system/protocol/p2-certification-protocol-v2.json
+      --cohort
+      40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      --activation
+      40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      --v1-protocol
+      40-certification-system/protocol/p2-certification-protocol-v1.json
+      --candidate-contract
+      30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      --candidate-schema
+      30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      --materialization-manifest
+      ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      --validation-report
+      ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      --formulaic-dvc-identity
+      ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      --formulaic-seal
+      30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      --provider-report
+      ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --authority-facts
+      10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      --control-model-config
+      30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      --strategy-config
+      30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      --output
+      40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+    deps:
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/candidate-v3-materialization-001/materialization_manifest.json
+      hash: md5
+      md5: 9a6699fe776a7e931e291e80bf980dec
+      size: 4503
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/candidate-v3-materialization-001/validation_report.json
+      hash: md5
+      md5: 2bd2cab99ac0beb401b2faad797a7142
+      size: 1057
+      isexec: true
+    - path:
+        ../AQ_DATA/P3/formulaic-alpha-dvc-reproducibility-seal-001/dvc_stage_identity.json
+      hash: md5
+      md5: 0e46fad85ad854b2490774515affaa36
+      size: 998
+      isexec: true
+    - path:
+        10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json
+      hash: md5
+      md5: 66f6fc0f1492772ae379e1fe41d76325
+      size: 11957
+      isexec: true
+    - path:
+        30-research-system/alpha-mining/alphagen-us-pit/.private/formulaic-alpha-reproducibility-seal.json
+      hash: md5
+      md5: 2247c8d12da0bda075b172940284a94f
+      size: 9891
+      isexec: true
+    - path:
+        30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.md
+      hash: md5
+      md5: 6383835c17922a5cc41e1047e3bbf6ff
+      size: 6165
+      isexec: true
+    - path:
+        30-research-system/candidate-handoff/p3-to-p2/candidate-contract-v3.schema.json
+      hash: md5
+      md5: 739d386731d3953e69f112ce00a44b70
+      size: 19176
+      isexec: true
+    - path:
+        30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml
+      hash: md5
+      md5: 71b83073f5f90f384aeb62aa1eca16aa
+      size: 2288
+      isexec: true
+    - path:
+        30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
+      hash: md5
+      md5: b81185713196f41d3a8ea0ba43f07dfc
+      size: 839
+      isexec: true
+    - path: 40-certification-system/protocol/p2-certification-protocol-v1.json
+      hash: md5
+      md5: 45772975b21617cad485cc793e1ed433
+      size: 13169
+      isexec: true
+    - path:
+        40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json
+      hash: md5
+      md5: 69a58ed71977da5fef2896c04a318fbb
+      size: 460
+      isexec: true
+    - path: 40-certification-system/protocol/p2-certification-protocol-v2.json
+      hash: md5
+      md5: 7e8bc56893806b9efbe08242567fe4c5
+      size: 13967
+      isexec: true
+    - path:
+        40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json
+      hash: md5
+      md5: b665e9ef90b2013ed6ed7675438ea05f
+      size: 2368
+      isexec: true
+    - path: 40-certification-system/protocol/seal_formulaic_protocol_v2.py
+      hash: md5
+      md5: a2be6f180c0707daf08d655b3bdc8d87
+      size: 12023
+      isexec: true
+    outs:
+    - path:
+        40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+      hash: md5
+      md5: 9568a446316a91deed7b961bd5d3d628
+      size: 1909
+      isexec: true

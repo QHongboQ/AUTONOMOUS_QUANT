@@ -1,0 +1,366 @@
+{
+  "acceptance_policy": {
+    "candidate_result_vocabulary": [
+      "CERTIFIED",
+      "REJECTED",
+      "NOT_ELIGIBLE_INSUFFICIENT_SEALED_OOS"
+    ],
+    "certification_decision_owner": "P2_CERTIFICATION",
+    "certification_does_not_imply": [
+      "SHADOW_COMPLETE_PASS",
+      "CHAMPION",
+      "LIVE_TRADING_AUTHORIZED",
+      "CAPITAL_AUTHORIZED"
+    ],
+    "candidate_wise_all_required": [
+      "TEMPORAL_INTEGRITY_PASS",
+      "PANDERA_VALIDATION_PASS",
+      "XNYS_VALIDATION_PASS",
+      "WALKFORWARD_POLICY_GATES_PASS",
+      "CPCV_POLICY_GATES_PASS",
+      "STEPM_CANDIDATE_IN_SUPERIOR_SET",
+      "MCS_95_CANDIDATE_IN_SET",
+      "BASE_COST_GATE_PASS",
+      "TWO_X_COST_GATE_PASS",
+      "PARAMETER_ROBUSTNESS_GATE_PASS",
+      "DVC_REPRODUCIBILITY_PASS"
+    ],
+    "family_all_required": [
+      "SPA_FAMILY_GATE_PASS",
+      "REALITYCHECK_FAMILY_GATE_PASS"
+    ],
+    "insufficient_oos_result": "NOT_ELIGIBLE_INSUFFICIENT_SEALED_OOS",
+    "p4_champion_selection_owner": "P4_AFTER_CERTIFIED_AND_SHADOW"
+  },
+  "activation": {
+    "activation_placeholder_path": "40-certification-system/protocol/p2-certification-protocol-v2-activation-pending.json",
+    "activation_placeholder_sha256": "fda55b0f7b00a4be017b10ebc0fa5f2bc93b3c38d2dc055f0eb083e68c9fe269",
+    "activation_status": "PENDING_ORIGIN_MAIN_MERGE",
+    "freeze_merge_sha": "UNRESOLVED",
+    "sealed_oos_start_session": "UNRESOLVED",
+    "v2_pre_activation_sessions_count_toward_certification": false
+  },
+  "based_on_protocol": {
+    "protocol_version": "P2_CERTIFICATION_PROTOCOL_V1",
+    "v1_activation_modified": false,
+    "v1_candidate_inventory_changed": false,
+    "v1_protocol_path": "40-certification-system/protocol/p2-certification-protocol-v1.json",
+    "v1_protocol_sha256": "a9aed881c229f9eb7f85fa23b866168a55dc9c00be3c3b178d91a4af20451dfb",
+    "v1_sealed_oos_clock_reset": false
+  },
+  "candidate_cohort": {
+    "addition": "PROHIBITED",
+    "candidate_contract_schema_sha256": "fb0775c4b8c9a947eb2023d66d3b2c17fda3b3215edcf31a36f3d30ef87fc8f2",
+    "candidate_contract_version": "P3_CANDIDATE_TO_P2_CONTRACT_V3",
+    "candidate_count": 17,
+    "candidate_id_unique_count": 17,
+    "cohort_manifest_path": "40-certification-system/protocol/p2-formulaic-alpha-v2-candidate-cohort.json",
+    "cohort_manifest_sha256": "53920302856592fb43bbffb011423731893ac0a995a04194541c39d69ecfde70",
+    "cohort_release": "TOGETHER_ONE_SHOT",
+    "current_external_eligibility": "ELIGIBLE_PENDING_PROTOCOL_V2_ACTIVATION",
+    "engine": "ALPHAGEN",
+    "formulaic_dvc_seal_output_sha256": "60e5d0b271fa6e5a074f329a752ea5d80abfe2a1cb49dd89d1ed33609052fecb",
+    "formulaic_dvc_stage_lock_entry_identity": "sha256:659b1ae448be57c915d5f096fa3b112afef0232f69739fb4eaa7ab267c301df1",
+    "frozen_discovery_candidate_manifest_sha256": "de536d7396f6786ea7b27c6a2f5f0970826ce7894b1e17d80361bf11085ff145",
+    "materialization_manifest_sha256": "511ef7c25e55afc9cded8d6b2f13ed2715d248705c8cbad71918802d5210b8fd",
+    "producer_kind": "FORMULAIC_ALPHA",
+    "ranking_before_sealed_oos_release": "PROHIBITED",
+    "removal": "PROHIBITED",
+    "substitution": "PROHIBITED",
+    "validation_report_sha256": "efbbfd90d5068ddb49a787a08e3f8b5f9da526ae7b22fc326e976adf033473db"
+  },
+  "candidate_representation": {
+    "alpha_source": "EXACT_CANDIDATE_V3_ALPHAGEN_EXPRESSION_IDENTITY",
+    "fit_policy": "TRAIN_ONLY",
+    "model": {
+      "class": "LinearModel",
+      "config_identity": "30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml#task.model@sha256:b9a92537a9737ce909284e77e583ad20c0a3d2b18f795271d85db6c5ba5eafc1",
+      "estimator": "ols",
+      "module_path": "qlib.contrib.model.linear",
+      "owner": "MICROSOFT_QLIB"
+    },
+    "same_wrapper_for_all_candidates": true,
+    "tuning_from_historical_test": "PROHIBITED"
+  },
+  "certification_state": {
+    "certified_candidate_count": 0,
+    "current_next": "P2_FORMULAIC_ALPHA_PROTOCOL_V2_ACTIVATION_MERGE_GATE_001",
+    "protocol_activated": false,
+    "protocol_status": "FROZEN_PENDING_MAIN_ACTIVATION",
+    "sealed_oos_running": false
+  },
+  "cost_stress_policy": {
+    "base_close_cost": 0.0015,
+    "base_open_cost": 0.0005,
+    "deal_price": "close",
+    "inherited_frozen_p2_control_semantics": true,
+    "limit_threshold": 0.095,
+    "owner": "MICROSOFT_QLIB_EXCHANGE_AND_BACKTEST",
+    "scenarios": [
+      {
+        "close_cost_multiplier": 1.0,
+        "gate": "MEDIAN_ACTIVE_RETURN_GREATER_THAN_ZERO",
+        "id": "BASE",
+        "open_cost_multiplier": 1.0
+      },
+      {
+        "close_cost_multiplier": 2.0,
+        "gate": "MEDIAN_ACTIVE_RETURN_GREATER_THAN_ZERO",
+        "id": "TWO_X",
+        "open_cost_multiplier": 2.0
+      },
+      {
+        "close_cost_multiplier": 3.0,
+        "gate": "MANDATORY_EVIDENCE_ONLY_NOT_A_VETO_GATE",
+        "id": "THREE_X",
+        "open_cost_multiplier": 3.0
+      }
+    ]
+  },
+  "dataset_authority": {
+    "authority_fact_count": 12,
+    "authority_fact_path": "10-data-system/market-data/provider-binding-authority/accepted_provider_binding_facts.json",
+    "authority_fact_sha256": "3cd9b13a1424609120a4e069ac2cf9f9b9aa61e2df919aa48cf51eeac616bc69",
+    "history_end": "2024-12-31",
+    "history_start": "2015-01-02",
+    "member_session_rows": 1267963,
+    "membership_ranges": 745,
+    "provider_build_report_path": "D:/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json",
+    "provider_build_report_sha256": "eda5e8bb8e3f274d2893ea6a09f5764111f59c9cadf40eb32e3fbce199a68142",
+    "qlib_provider_path": "D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data",
+    "region": "us",
+    "security_identities": 730,
+    "source_precedence": "QUANTIACS_PRIMARY_SIMFIN_BOUNDED_SECONDARY"
+  },
+  "historical_data_policy": {
+    "formulaic_historical_test_effective_end": "2024-12-27",
+    "formulaic_historical_test_start": "2022-01-03",
+    "historical_test_can_be_relabelled": false,
+    "historical_test_can_be_reused_for_v2_subset_selection": false,
+    "historical_test_is_certification_evidence": false,
+    "historical_test_is_pristine_oos": false,
+    "historical_test_status": "CONSUMED_AS_RESEARCH_EVIDENCE",
+    "temporal_cv_can_restore_pristine_oos": false
+  },
+  "label_temporal_policy": {
+    "effective_lookahead_sessions": 2,
+    "expression": "Ref($close, -2)/Ref($close, -1) - 1",
+    "source_class": "qlib.contrib.data.handler.Alpha158",
+    "source_path": "qlib/contrib/data/handler.py",
+    "source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
+  },
+  "market_benchmark_policy": {
+    "certification_claim_to_beat_spy": "PROHIBITED",
+    "market_benchmark_certification_evidence": "NOT_AVAILABLE",
+    "statistical_control_is_certification_benchmark": true
+  },
+  "metrics": {
+    "mandatory_upstream_evidence": [
+      "NET_RETURN",
+      "ACTIVE_RETURN_VERSUS_STATISTICAL_CONTROL",
+      "ANNUALIZED_RETURN",
+      "INFORMATION_RATIO_WHERE_UPSTREAM_EMITS_IT",
+      "MAXIMUM_DRAWDOWN",
+      "TURNOVER",
+      "TRANSACTION_COST",
+      "IC_WHERE_UPSTREAM_EMITS_IT",
+      "RANK_IC_WHERE_UPSTREAM_EMITS_IT",
+      "WALKFORWARD_FOLD_RESULTS",
+      "CPCV_SPLIT_RESULTS",
+      "SPA_EVIDENCE",
+      "REALITYCHECK_EVIDENCE",
+      "STEPM_EVIDENCE",
+      "MCS_EVIDENCE",
+      "COST_STRESS_RESULTS",
+      "PARAMETER_ROBUSTNESS_RESULTS"
+    ],
+    "production_capital_or_live_risk_ceilings_established": false
+  },
+  "multiple_testing_policy": {
+    "bootstrap_block_size": 10,
+    "bootstrap_method": "STATIONARY",
+    "bootstrap_replications": 5000,
+    "bootstrap_seed": 20260913,
+    "candidate_family": "ALL_17_FORMULAIC_ALPHA_V3_CANDIDATES",
+    "candidate_wise_gates": {
+      "mcs_95_percent": "CANDIDATE_IN_SET",
+      "stepm": "CANDIDATE_IN_SUPERIOR_SET"
+    },
+    "family_gates": {
+      "reality_check_pvalue": "LESS_THAN_OR_EQUAL_TO_0.05",
+      "spa_consistent_pvalue": "LESS_THAN_OR_EQUAL_TO_0.05"
+    },
+    "hidden_trial_removal": "PROHIBITED",
+    "loss": "NEGATIVE_NET_DAILY_RETURN",
+    "owner": "ARCH_8.0.0",
+    "primary_benchmark_loss": "NEGATIVE_NET_DAILY_RETURN_OF_PREREGISTERED_LINEAR_OLS_CONTROL",
+    "required_procedures": [
+      "SPA",
+      "RealityCheck",
+      "StepM",
+      "MCS"
+    ],
+    "result_multiplicity": "ZERO_ONE_OR_MULTIPLE_CANDIDATES_MAY_BE_CERTIFIED",
+    "significance_alpha": 0.05
+  },
+  "non_authorizations": {
+    "aq_backtest_engine": false,
+    "aq_experiment_registry": false,
+    "aq_model_engine": false,
+    "aq_new_generic_engine_count": 0,
+    "aq_protocol_engine": false,
+    "aq_state_database": false,
+    "aq_statistics_engine": false,
+    "backtest": false,
+    "certification_decision_executed": false,
+    "cpcv_executed": false,
+    "future_market_data_accessed": false,
+    "historical_test_accessed_this_task": false,
+    "historical_test_performance_accessed": false,
+    "model_training": false,
+    "new_predictions": false,
+    "sealed_oos_accessed": false,
+    "spa_realitycheck_stepm_mcs_executed": false,
+    "walkforward_executed": false
+  },
+  "ownership": {
+    "aq": "PROTOCOL_POLICY_COHORT_IDENTITY_SEALED_OOS_AUTHORITY_AND_CERTIFICATION_DECISION_SEMANTICS_ONLY",
+    "arch": "SPA_REALITYCHECK_STEPM_MCS_AND_BOOTSTRAP_PROCEDURES",
+    "dvc": "DEPENDENCY_SNAPSHOT_AND_EVIDENCE_REPRODUCIBILITY",
+    "exchange_calendars": "XNYS_SESSION_AUTHORITY",
+    "microsoft_qlib": "DATASETH_MODELS_PREDICTIONS_TOPKDROPOUTSTRATEGY_BACKTEST_EXCHANGE_COST_RECORDER_MLFLOW_AND_PORTFOLIO_ANALYSIS",
+    "p4": "POST_CERTIFICATION_SHADOW_AND_CHAMPION_AUTHORITY",
+    "pandera": "GENERIC_TABULAR_VALIDATION",
+    "skfolio": "WALKFORWARD_CPCV_PURGE_AND_EMBARGO_MECHANICS"
+  },
+  "parameter_robustness_policy": {
+    "configurations": [
+      {
+        "id": "P0",
+        "n_drop": 3,
+        "role": "PRIMARY",
+        "topk": 30
+      },
+      {
+        "id": "P1",
+        "n_drop": 3,
+        "role": "NEIGHBOR",
+        "topk": 25
+      },
+      {
+        "id": "P2",
+        "n_drop": 3,
+        "role": "NEIGHBOR",
+        "topk": 35
+      },
+      {
+        "id": "P3",
+        "n_drop": 2,
+        "role": "NEIGHBOR",
+        "topk": 30
+      },
+      {
+        "id": "P4",
+        "n_drop": 4,
+        "role": "NEIGHBOR",
+        "topk": 30
+      }
+    ],
+    "inherited_frozen_p2_control_semantics": true,
+    "median_active_return_all_five": "GREATER_THAN_ZERO",
+    "minimum_positive_sign_preserving_neighbors": 3,
+    "neighbor_count": 4,
+    "owner": "MICROSOFT_QLIB_TOPKDROPOUTSTRATEGY"
+  },
+  "protocol_version": "P2_CERTIFICATION_PROTOCOL_V2",
+  "regime_evidence_policy": {
+    "blocks": [
+      "2015-2016",
+      "2017-2018",
+      "2019-2020",
+      "2021-2022",
+      "2023-2024"
+    ],
+    "hard_veto": false,
+    "historical_classification": "SUPPORTING_REHEARSAL_EVIDENCE_ONLY",
+    "missing_prediction_policy": "RECORD_BLOCK_UNAVAILABLE_DO_NOT_FABRICATE_PREDICTIONS",
+    "required": true,
+    "segmentation_owner": "MICROSOFT_QLIB_BOUNDED_CALENDAR_SEGMENTS"
+  },
+  "sealed_oos_policy": {
+    "candidate_by_candidate_early_release": "PROHIBITED",
+    "early_result_access": "PROHIBITED",
+    "intermediate_peek": "PROHIBITED",
+    "minimum_sessions": 126,
+    "one_shot_release": true,
+    "pre_activation_sessions_count": 0,
+    "released_window_becomes_historical_for_future_versions": true,
+    "reuse_for_retuning": "PROHIBITED",
+    "start_rule": "THE_FIRST_XNYS_SESSION_STRICTLY_AFTER_THE_PROTOCOL_V2_FREEZE_COMMIT_BECOMES_PART_OF_ORIGIN_MAIN",
+    "start_session": "UNRESOLVED_PENDING_MAIN_ACTIVATION"
+  },
+  "serialization": {
+    "encoding": "UTF-8",
+    "indent_spaces": 2,
+    "key_order": "LEXICOGRAPHIC",
+    "line_endings": "LF",
+    "terminal_newline": true
+  },
+  "statistical_control": {
+    "alpha_source": "QLIB_ALPHA158_COMPATIBLE_CONTROL",
+    "model": {
+      "class": "LinearModel",
+      "config_identity": "30-research-system/qlib/model-comparison/workflow_config_linear_Alpha158_US.yaml#task.model@sha256:b9a92537a9737ce909284e77e583ad20c0a3d2b18f795271d85db6c5ba5eafc1",
+      "estimator": "ols",
+      "module_path": "qlib.contrib.model.linear",
+      "owner": "MICROSOFT_QLIB"
+    },
+    "strategy_projection": "COMMON_V2_TOPK30_NDROP3_FOR_CANDIDATE_CONTROL_COMPARABILITY",
+    "tuning_from_formulaic_performance": "PROHIBITED"
+  },
+  "strategy_wrapper": {
+    "class": "TopkDropoutStrategy",
+    "config_identity": "30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml#candidates.concentrated@sha256:b96e88cedb0755f36facc0afbc51e38970217582631c2585c645dcbaf7462588",
+    "module_path": "qlib.contrib.strategy",
+    "n_drop": 3,
+    "owner": "MICROSOFT_QLIB",
+    "same_for_all_candidates": true,
+    "topk": 30
+  },
+  "temporal_cv_policy": {
+    "active_return_definition": "CANDIDATE_NET_RETURN_MINUS_PREREGISTERED_STATISTICAL_CONTROL_NET_RETURN_FOR_THE_SAME_EVALUATION_WINDOW",
+    "cpcv": {
+      "embargo_size_sessions": 2,
+      "median_active_return": "GREATER_THAN_ZERO",
+      "minimum_positive_active_return_fraction": 0.6,
+      "n_folds": 10,
+      "n_test_folds": 2,
+      "owner": "SKFOLIO_1.0.6_COMBINATORIALPURGEDCV",
+      "purged_size_sessions": 2
+    },
+    "historical_robustness_is_supporting_evidence_only": true,
+    "walkforward": {
+      "expand_train": false,
+      "median_active_return": "GREATER_THAN_ZERO",
+      "minimum_positive_active_return_fraction": 0.6,
+      "owner": "SKFOLIO_1.0.6_WALKFORWARD",
+      "purged_size_sessions": 2,
+      "reduce_test": false,
+      "step_sessions": 63,
+      "test_size_sessions": 63,
+      "train_size_sessions": 504
+    }
+  },
+  "trial_multiplicity_provenance": {
+    "alphagen_seeds": 3,
+    "correlation_clusters": 17,
+    "expressions_evaluated_total": 2720,
+    "expressions_generated_total": 7993,
+    "frozen_certification_cohort": 17,
+    "hidden_trial_removal": "PROHIBITED",
+    "primary_candidate_selected_from_historical_test": false,
+    "test_rankic_used_for_v2_selection": false,
+    "unique_final_expressions": 60,
+    "valid_test_sign_consistency_used_for_v2_selection": false
+  }
+}
