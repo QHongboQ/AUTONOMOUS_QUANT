@@ -1,0 +1,7 @@
+# P5 selected upstream runtime, frozen 2026-09-18.
+# Runtime: /home/zhou/AQ_ENVS/p5-fundamental-intelligence (CPython 3.14.7)
+# Full transitive environment freeze is private evidence at:
+# D:/AQ_DATA/P5/selected-upstream-deployment-001/pip_freeze.txt
+openbb-core==1.6.13
+openbb-sec==1.6.7
+edgartools[ai]==5.58.0
