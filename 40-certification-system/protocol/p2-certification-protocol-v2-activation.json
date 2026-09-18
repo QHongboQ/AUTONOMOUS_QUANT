@@ -1,0 +1,12 @@
+{
+  "calendar_name": "XNYS",
+  "calendar_version": "4.13.2",
+  "early_result_access": "PROHIBITED",
+  "freeze_merge_sha": "9f97c1dc9fd419cadb5bb5a9a304505a5d87411b",
+  "freeze_merged_at_utc": "2026-09-18T07:50:31Z",
+  "minimum_sealed_oos_sessions": 126,
+  "one_shot_release": true,
+  "protocol_sha256": "18b80277b6529422298e43681bb344e54199a58477cdba20d96fd8220bdc950a",
+  "protocol_version": "P2_CERTIFICATION_PROTOCOL_V2",
+  "sealed_oos_start_session": "2026-09-18"
+}
