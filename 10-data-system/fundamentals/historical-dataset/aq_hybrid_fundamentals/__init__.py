@@ -14,20 +14,65 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-FROZEN_STANDARD_METRICS = (
+FROZEN_STANDARD_CONCEPTS = (
     "Revenue",
-    "Net Income",
-    "Total Assets",
-    "Total Liabilities",
-    "Total Stockholders' Equity",
-    "Net Cash from Operating Activities",
-    "Cash and Cash Equivalents",
-    "Total Current Assets",
-    "Total Current Liabilities",
-    "Short Term Debt",
-    "Long Term Debt",
+    "NetIncome",
+    "Assets",
+    "Liabilities",
+    "CommonEquity",
+    "NetCashFromOperatingActivities",
+    "CashAndCashEquivalents",
+    "CurrentAssetsTotal",
+    "CurrentLiabilitiesTotal",
+    "ShortTermDebt",
+    "LongTermDebt",
 )
+PERIOD_CLASSES = frozenset(
+    {
+        "INSTANT",
+        "DURATION_QUARTERLY",
+        "DURATION_SEMI_ANNUAL",
+        "DURATION_NINE_MONTHS",
+        "DURATION_ANNUAL",
+        "DURATION_OTHER",
+    }
+)
+_UPSTREAM_DURATION_CLASSES = {
+    "Quarterly": "DURATION_QUARTERLY",
+    "Semi-Annual": "DURATION_SEMI_ANNUAL",
+    "Nine Months": "DURATION_NINE_MONTHS",
+    "Annual": "DURATION_ANNUAL",
+}
 ALLOWED_BINDING_CLASSIFICATIONS = frozenset({"PASS_EXACT", "PASS_CORROBORATED"})
+
+
+def admit_period_class(period_type: str, upstream_duration_class: str | None = None) -> str:
+    """Admit an EdgarTools period result without reproducing its duration rules."""
+
+    if period_type == "instant":
+        return "INSTANT"
+    if period_type != "duration":
+        raise ValueError("unsupported XBRL period type")
+    return _UPSTREAM_DURATION_CLASSES.get(str(upstream_duration_class), "DURATION_OTHER")
+
+
+def consolidated_projection_events(events: pd.DataFrame) -> pd.DataFrame:
+    """Apply the frozen consolidated-only policy without aggregating dimensions."""
+
+    if "dimensions" not in events.columns:
+        raise ValueError("dimension identity is required before projection admission")
+    dimensionless = events["dimensions"].map(lambda value: not bool(value))
+    return events.loc[dimensionless].copy().reset_index(drop=True)
+
+
+def feature_identity(standard_concept: str, period_class: str) -> str:
+    """Return deterministic project glue for an upstream concept/period pair."""
+
+    if standard_concept not in FROZEN_STANDARD_CONCEPTS:
+        raise ValueError("unfrozen EdgarTools standard concept")
+    if period_class not in PERIOD_CLASSES:
+        raise ValueError("unsupported period class")
+    return f"{standard_concept}__{period_class}"
 
 
 def _utc(value: object, name: str) -> pd.Timestamp:
@@ -98,20 +143,25 @@ def project_events_asof(grid: pd.DataFrame, events: pd.DataFrame) -> pd.DataFram
 
     grid_required = {"session", "episode_id", "instrument", "cik", "binding_id"}
     event_required = {
-        "cik", "standard_metric", "period_class", "effective_session",
-        "evidence_id", "accession", "canonical_value",
+        "cik", "standard_concept", "period_class", "effective_session",
+        "evidence_id", "accession", "canonical_value", "report_period_start",
+        "report_period_end",
     }
     if not grid_required.issubset(grid.columns) or not event_required.issubset(events.columns):
         raise ValueError("projection relation lacks required columns")
-    if not bool(events["standard_metric"].isin(FROZEN_STANDARD_METRICS).all()):
-        raise ValueError("event uses an unfrozen standard metric")
+    if not bool(events["standard_concept"].isin(FROZEN_STANDARD_CONCEPTS).all()):
+        raise ValueError("event uses an unfrozen EdgarTools standard concept")
+    if not bool(events["period_class"].isin(PERIOD_CLASSES).all()):
+        raise ValueError("event uses an unsupported period class")
+    if "dimensions" in events.columns and bool(events["dimensions"].map(bool).any()):
+        raise ValueError("dimension-bearing evidence is excluded from consolidated projection")
     left_parts: list[pd.DataFrame] = []
-    combinations = events[["cik", "standard_metric", "period_class"]].drop_duplicates()
+    combinations = events[["cik", "standard_concept", "period_class"]].drop_duplicates()
     for _, key in combinations.iterrows():
         matching = grid[grid["cik"] == key["cik"]].copy()
         if matching.empty:
             continue
-        matching["standard_metric"] = key["standard_metric"]
+        matching["standard_concept"] = key["standard_concept"]
         matching["period_class"] = key["period_class"]
         left_parts.append(matching)
     if not left_parts:
@@ -126,11 +176,11 @@ def project_events_asof(grid: pd.DataFrame, events: pd.DataFrame) -> pd.DataFram
         "datetime64[ns]"
     )
     right = right.sort_values(
-        ["effective_session", "cik", "standard_metric", "period_class", "accession", "evidence_id"],
+        ["effective_session", "cik", "standard_concept", "period_class", "accession", "evidence_id"],
         kind="mergesort",
     )
     left = left.sort_values(
-        ["session", "cik", "standard_metric", "period_class", "episode_id"],
+        ["session", "cik", "standard_concept", "period_class", "episode_id"],
         kind="mergesort",
     )
     projected = pd.merge_asof(
@@ -138,7 +188,7 @@ def project_events_asof(grid: pd.DataFrame, events: pd.DataFrame) -> pd.DataFram
         right,
         left_on="session",
         right_on="effective_session",
-        by=["cik", "standard_metric", "period_class"],
+        by=["cik", "standard_concept", "period_class"],
         direction="backward",
         allow_exact_matches=True,
         suffixes=("", "_event"),
@@ -157,7 +207,7 @@ def project_events_asof(grid: pd.DataFrame, events: pd.DataFrame) -> pd.DataFram
     if not early.empty:
         raise ValueError("early fundamental visibility")
     return projected.sort_values(
-        ["session", "instrument", "standard_metric", "period_class"], kind="mergesort"
+        ["session", "instrument", "standard_concept", "period_class"], kind="mergesort"
     ).reset_index(drop=True)
 
 
@@ -205,11 +255,15 @@ def artifact_identity(paths: Iterable[Path]) -> list[dict[str, object]]:
 
 
 __all__ = [
-    "FROZEN_STANDARD_METRICS",
+    "FROZEN_STANDARD_CONCEPTS",
+    "PERIOD_CLASSES",
+    "admit_period_class",
     "artifact_identity",
     "canonical_sha256",
+    "consolidated_projection_events",
     "effective_session",
     "eligible_episode_sessions",
+    "feature_identity",
     "project_events_asof",
     "write_exact_event_parquet",
 ]
