@@ -672,3 +672,42 @@ stages:
       md5: 9568a446316a91deed7b961bd5d3d628
       size: 1909
       isexec: true
+  p5_hybrid_historical_dataset_pilot_seal:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 10-data-system/fundamentals/historical-dataset/seal_pilot.py --manifest ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/manifests/pilot_manifest.json --events ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/standardized-events/admitted --projection ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/session-projection/projected_long.parquet --provenance ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/session-projection/provenance.parquet --quality ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/reports/quality_report.json --output ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/dvc/pilot-seal.json
+    deps:
+    - path: ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/manifests/pilot_manifest.json
+      hash: md5
+      md5: 986f4341b7f953334194c4051df906f5
+      size: 1886
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/reports/quality_report.json
+      hash: md5
+      md5: b70ad9697431965445524f964b96b58d
+      size: 1437
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/session-projection/projected_long.parquet
+      hash: md5
+      md5: b99c39c1f19d9173bcd8572863262827
+      size: 42241
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/session-projection/provenance.parquet
+      hash: md5
+      md5: 646d72051e8a79b3c54dfe0384eb943a
+      size: 34008
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/standardized-events/admitted
+      hash: md5
+      md5: f80a58ae14362f84a284e359eebfeaf3.dir
+      size: 41284
+      nfiles: 8
+    - path: 10-data-system/fundamentals/historical-dataset/seal_pilot.py
+      hash: md5
+      md5: b8dea56c7fe81596d85bda9fa58b1d5e
+      size: 2154
+      isexec: true
+    outs:
+    - path: ../AQ_DATA/P5/hybrid-historical-dataset-build-pilot-001/dvc/pilot-seal.json
+      hash: md5
+      md5: aa4fa52c719991a609ee13229bc5b93a
+      size: 3362
+      isexec: true
