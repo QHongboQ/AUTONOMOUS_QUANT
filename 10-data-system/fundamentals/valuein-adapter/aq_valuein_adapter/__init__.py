@@ -1,23 +1,14 @@
-"""Direct, fail-closed Valuein projections into existing P5 contracts."""
+"""Thin, fail-closed projection from native Valuein identity rows."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
 from datetime import date, datetime
 import math
-from typing import Any, Literal
+from typing import Any
 
 from aq_episode_sec_cik_binding import EpisodeSecCikBindingV1
 
-IdentityClassification = Literal[
-    "EXACT",
-    "COMPATIBLE_CANDIDATE",
-    "PARTIAL",
-    "AMBIGUOUS",
-    "NO_MATCH",
-    "CONFLICT",
-]
 
 def _missing(value: object) -> bool:
     return value is None or (isinstance(value, float) and math.isnan(value))
@@ -57,41 +48,71 @@ def _episode_field(episode: object, name: str) -> object:
     return value
 
 
-@dataclass(frozen=True, slots=True)
-class ValueinIdentityDecision:
-    episode_id: str
-    ticker: str
-    episode_valid_from: date
-    episode_valid_to: date
-    classification: IdentityClassification
-    candidates: tuple[Mapping[str, Any], ...]
-    membership_intervals: tuple[Mapping[str, Any], ...]
-    candidate_ciks: tuple[str, ...]
-    reason: str
-
-    def as_dict(self) -> dict[str, object]:
-        return {
-            "episode_id": self.episode_id,
-            "ticker": self.ticker,
-            "episode_valid_from": self.episode_valid_from.isoformat(),
-            "episode_valid_to": self.episode_valid_to.isoformat(),
-            "classification": self.classification,
-            "candidate_count": len(self.candidates),
-            "candidate_ciks": list(self.candidate_ciks),
-            "candidates": [dict(row) for row in self.candidates],
-            "membership_intervals": [dict(row) for row in self.membership_intervals],
-            "reason": self.reason,
-        }
+def _security_id(row: Mapping[str, Any]) -> str:
+    value = row.get("security_id")
+    if _missing(value):
+        value = row.get("id")
+    if _missing(value) or str(value).strip() == "":
+        raise ValueError("Valuein row is missing security_id")
+    return str(value)
 
 
-def classify_valuein_identity(
+def _start(row: Mapping[str, Any], name: str) -> date:
+    return _iso_date(_required(row, name), name)
+
+
+def _end(row: Mapping[str, Any], name: str) -> date:
+    value = row.get(name)
+    return date.max if _missing(value) else _iso_date(value, name)
+
+
+def _overlaps(
+    left_from: date,
+    left_to: date,
+    right_from: date,
+    right_to: date,
+) -> bool:
+    return left_from < right_to and right_from < left_to
+
+
+def _contains(
+    outer_from: date,
+    outer_to: date,
+    inner_from: date,
+    inner_to: date,
+) -> bool:
+    return outer_from <= inner_from and outer_to >= inner_to
+
+
+def _identity_part(value: object) -> str:
+    return "NONE" if _missing(value) else str(value).strip() or "NONE"
+
+
+def project_valuein_native_binding(
     episode: object,
-    security_rows: Iterable[Mapping[str, Any]],
-    membership_rows: Iterable[Mapping[str, Any]],
     *,
-    accepted_cik: str | None = None,
-) -> ValueinIdentityDecision:
-    """Classify exact-symbol historical rows without creating binding authority."""
+    authoritative_episodes: Iterable[object],
+    security_rows: Iterable[Mapping[str, Any]],
+    entity_rows: Iterable[Mapping[str, Any]],
+    membership_rows: Iterable[Mapping[str, Any]],
+    reference_rows: Iterable[Mapping[str, Any]],
+    snapshot_identity: str,
+) -> EpisodeSecCikBindingV1:
+    """Project one native Valuein identity or fail closed.
+
+    P1 owns the episode boundary. Valuein must provide one containing security
+    identity, its exact entity/reference relations, and containing membership
+    evidence from ``index_membership`` where ``index_name == "SP500"``.
+    """
+
+    if len(snapshot_identity) != 64 or any(
+        character not in "0123456789abcdef" for character in snapshot_identity
+    ):
+        raise ValueError("Valuein snapshot_identity must be an exact SHA-256")
+    if str(_episode_field(episode, "resolution_state")) != "RESOLVED":
+        raise ValueError("P1 episode must be RESOLVED")
+    if str(_episode_field(episode, "index_id")) != "SP500":
+        raise ValueError("P1 episode must belong to SP500")
 
     episode_id = str(_episode_field(episode, "episode_id"))
     ticker = str(_episode_field(episode, "normalized_ticker")).strip().upper()
@@ -100,135 +121,100 @@ def classify_valuein_identity(
     if episode_from >= episode_to:
         raise ValueError("P1 episode interval is empty")
 
-    candidates: list[Mapping[str, Any]] = []
+    overlapping: list[Mapping[str, Any]] = []
     for row in security_rows:
         if str(row.get("symbol") or "").strip().upper() != ticker:
             continue
-        start = date.min if _missing(row.get("valid_from")) else _iso_date(row["valid_from"], "valid_from")
-        end = date.max if _missing(row.get("valid_to")) else _iso_date(row["valid_to"], "valid_to")
-        if start <= episode_to and episode_from <= end:
-            candidates.append(row)
+        valid_from = _start(row, "valid_from")
+        valid_to = _end(row, "valid_to")
+        if _overlaps(valid_from, valid_to, episode_from, episode_to):
+            overlapping.append(row)
+    if len(overlapping) != 1:
+        raise ValueError("P1 ticker interval lacks one unambiguous Valuein security")
 
-    if not candidates:
-        return ValueinIdentityDecision(
-            episode_id, ticker, episode_from, episode_to, "NO_MATCH", (), (), (),
-            "no exact-symbol historical Valuein security interval overlaps the P1 episode",
-        )
+    security = overlapping[0]
+    security_from = _start(security, "valid_from")
+    security_to = _end(security, "valid_to")
+    if not _contains(security_from, security_to, episode_from, episode_to):
+        raise ValueError("Valuein security interval does not contain the P1 episode")
+    security_id = _security_id(security)
+    cik = _cik(_required(security, "entity_id"))
+    if not _missing(security.get("cik")) and _cik(security["cik"]) != cik:
+        raise ValueError("Valuein security CIK conflicts with entity_id")
 
-    identities: set[tuple[str, str, str]] = set()
-    invalid_identity = False
-    for row in candidates:
-        try:
-            identities.add(
-                (
-                    str(_required(row, "security_id")),
-                    str(_required(row, "entity_id")),
-                    _cik(_required(row, "cik")),
-                )
-            )
-        except ValueError:
-            invalid_identity = True
-    candidate_ciks = tuple(sorted({identity[2] for identity in identities}))
-    relevant_membership = tuple(
-        row
-        for row in membership_rows
-        if not _missing(row.get("cik")) and _cik(row["cik"]) in candidate_ciks
-    )
+    entities = [row for row in entity_rows if _cik(_required(row, "cik")) == cik]
+    if len(entities) != 1:
+        raise ValueError("Valuein security lacks one exact entity relation")
 
-    normalized_accepted = _cik(accepted_cik) if accepted_cik is not None else None
-    if invalid_identity or (normalized_accepted and candidate_ciks != (normalized_accepted,)):
-        classification: IdentityClassification = "CONFLICT"
-        reason = "candidate identity is incomplete or conflicts with accepted episode authority"
-    elif len(identities) != 1 or len(candidates) != 1:
-        classification = "AMBIGUOUS"
-        reason = "more than one security-level Valuein identity overlaps the episode"
-    else:
-        candidate = candidates[0]
-        start = date.min if _missing(candidate.get("valid_from")) else _iso_date(candidate["valid_from"], "valid_from")
-        end = date.max if _missing(candidate.get("valid_to")) else _iso_date(candidate["valid_to"], "valid_to")
-        if start == episode_from and end == episode_to:
-            classification = "EXACT"
-            reason = "one security-level identity exactly matches the P1 episode interval"
-        elif start <= episode_from and end >= episode_to:
-            classification = "COMPATIBLE_CANDIDATE"
-            reason = "one identity contains the episode but is not automatic binding authority"
-        else:
-            classification = "PARTIAL"
-            reason = "one identity overlaps but does not contain the full P1 episode"
+    references = [row for row in reference_rows if _security_id(row) == security_id]
+    if len(references) != 1:
+        raise ValueError("Valuein security lacks one exact references relation")
+    reference = references[0]
+    if _cik(_required(reference, "cik")) != cik:
+        raise ValueError("Valuein references CIK conflicts with entity relation")
 
-    return ValueinIdentityDecision(
-        episode_id,
-        ticker,
-        episode_from,
-        episode_to,
-        classification,
-        tuple(candidates),
-        relevant_membership,
-        candidate_ciks,
-        reason,
-    )
+    containing_memberships: list[Mapping[str, Any]] = []
+    for row in membership_rows:
+        if str(row.get("index_name") or "") != "SP500":
+            continue
+        if str(row.get("source") or "").strip().lower() == "fund_holdings":
+            continue
+        if _cik(_required(row, "cik")) != cik:
+            continue
+        effective_date = _start(row, "effective_date")
+        removal_date = _end(row, "removal_date")
+        if _contains(effective_date, removal_date, episode_from, episode_to):
+            containing_memberships.append(row)
+    if not containing_memberships:
+        raise ValueError("Valuein identity lacks containing SP500 membership evidence")
 
-
-def admit_exact_valuein_binding(
-    decision: ValueinIdentityDecision,
-    *,
-    authoritative_episodes: Iterable[object],
-    episode: object,
-    snapshot_identity: str,
-) -> EpisodeSecCikBindingV1:
-    """Admit only an exact, membership-consistent Valuein relation."""
-
-    if len(snapshot_identity) != 64 or any(
-        character not in "0123456789abcdef" for character in snapshot_identity
-    ):
-        raise ValueError("Valuein snapshot_identity must be an exact SHA-256")
-    if decision.classification != "EXACT" or len(decision.candidates) != 1:
-        raise ValueError("only an EXACT Valuein relation may be admitted")
-    candidate = decision.candidates[0]
-    cik = _cik(_required(candidate, "cik"))
-    if decision.candidate_ciks != (cik,):
-        raise ValueError("exact Valuein relation lacks one unambiguous CIK")
-    supporting = []
-    for row in decision.membership_intervals:
-        start = date.min if _missing(row.get("effective_date")) else _iso_date(row["effective_date"], "effective_date")
-        end = date.max if _missing(row.get("removal_date")) else _iso_date(row["removal_date"], "removal_date")
-        if _cik(_required(row, "cik")) == cik and start <= decision.episode_valid_from and end >= decision.episode_valid_to:
-            supporting.append(row)
-    if not supporting:
-        raise ValueError("exact Valuein relation lacks containing historical membership evidence")
-    membership = sorted(
-        supporting,
-        key=lambda row: (
-            str(row.get("effective_date") or ""),
-            str(row.get("removal_date") or ""),
-            str(row.get("source") or ""),
-        ),
-    )[0]
     provenance_hash = str(_episode_field(episode, "provenance_hash"))
-    evidence = (
+    evidence = [
         f"P1_PROVENANCE:{provenance_hash}",
         f"VALUEIN_SNAPSHOT_SHA256:{snapshot_identity}",
         "VALUEIN_SECURITY:"
-        f"{_required(candidate, 'security_id')}:{_required(candidate, 'entity_id')}:"
-        f"{cik}:{decision.episode_valid_from.isoformat()}:{decision.episode_valid_to.isoformat()}",
-        "VALUEIN_MEMBERSHIP:"
-        f"{membership.get('source') or 'UNKNOWN'}:{cik}:"
-        f"{membership.get('effective_date')}:{membership.get('removal_date')}",
+        f"{security_id}:{cik}:{security_from.isoformat()}:"
+        f"{None if security_to == date.max else security_to.isoformat()}:"
+        f"{_identity_part(security.get('exchange'))}",
+        f"VALUEIN_ENTITY:{cik}",
+        "VALUEIN_REFERENCE:"
+        f"{security_id}:{cik}:{_identity_part(reference.get('figi'))}:"
+        f"{_identity_part(reference.get('composite_figi'))}:"
+        f"{_identity_part(reference.get('share_class_figi'))}",
+    ]
+    for membership in containing_memberships:
+        effective_date = _start(membership, "effective_date")
+        removal_date = _end(membership, "removal_date")
+        membership_id = _identity_part(membership.get("id"))
+        source = _identity_part(membership.get("source"))
+        evidence.append(
+            "VALUEIN_SP500_MEMBERSHIP:"
+            f"{membership_id}:{source}:{cik}:{effective_date.isoformat()}:"
+            f"{None if removal_date == date.max else removal_date.isoformat()}"
+        )
+    evidence_identities = tuple(dict.fromkeys(sorted(evidence)))
+
+    exact_membership = any(
+        _start(row, "effective_date") == episode_from
+        and _end(row, "removal_date") == episode_to
+        for row in containing_memberships
+    )
+    classification = (
+        "PASS_EXACT"
+        if security_from == episode_from
+        and security_to == episode_to
+        and exact_membership
+        else "PASS_CORROBORATED"
     )
     return EpisodeSecCikBindingV1.admit(
         authoritative_episodes=authoritative_episodes,
-        episode_id=decision.episode_id,
+        episode_id=episode_id,
         cik=cik,
-        valid_from=decision.episode_valid_from,
-        valid_to=decision.episode_valid_to,
-        binding_classification="PASS_EXACT",
-        evidence_source_identities=evidence,
+        valid_from=episode_from,
+        valid_to=episode_to,
+        binding_classification=classification,
+        evidence_source_identities=evidence_identities,
     )
 
 
-__all__ = [
-    "IdentityClassification",
-    "ValueinIdentityDecision",
-    "admit_exact_valuein_binding",
-    "classify_valuein_identity",
-]
+__all__ = ["project_valuein_native_binding"]
