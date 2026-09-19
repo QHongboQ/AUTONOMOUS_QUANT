@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date
-from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 FROZEN_STANDARD_CONCEPTS = (
     "Revenue",
@@ -211,59 +205,13 @@ def project_events_asof(grid: pd.DataFrame, events: pd.DataFrame) -> pd.DataFram
     ).reset_index(drop=True)
 
 
-def write_exact_event_parquet(rows: Sequence[Mapping[str, object]], root: Path) -> tuple[Path, ...]:
-    """Write exact canonical values as strings, partitioned only by availability year."""
-
-    if root.exists():
-        raise FileExistsError(f"event root already exists: {root}")
-    by_year: dict[int, list[dict[str, object]]] = {}
-    for raw in rows:
-        row = dict(raw)
-        value = str(row["canonical_value"])
-        if str(Decimal(value)) != value and format(Decimal(value), "f") != value:
-            raise ValueError("canonical_value is not an exact decimal string")
-        available = _utc(row["first_available_at"], "first_available_at")
-        row["canonical_value"] = value
-        row["first_available_at"] = available.isoformat()
-        by_year.setdefault(available.year, []).append(row)
-    paths: list[Path] = []
-    for year, records in sorted(by_year.items()):
-        partition = root / f"first_available_year={year}"
-        partition.mkdir(parents=True)
-        records.sort(key=lambda row: (str(row["cik"]), str(row["first_available_at"]), str(row["accession"]), str(row["evidence_id"])))
-        table = pa.Table.from_pylist(records)
-        path = partition / "events.parquet"
-        pq.write_table(table, path, compression="zstd")
-        replay = pq.read_table(path).to_pylist()
-        if [row["canonical_value"] for row in replay] != [row["canonical_value"] for row in records]:
-            raise ValueError("lossy canonical value Parquet roundtrip")
-        paths.append(path)
-    return tuple(paths)
-
-
-def canonical_sha256(value: object) -> str:
-    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
-
-
-def artifact_identity(paths: Iterable[Path]) -> list[dict[str, object]]:
-    result = []
-    for path in sorted(paths, key=lambda item: item.as_posix()):
-        payload = path.read_bytes()
-        result.append({"path": path.as_posix(), "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()})
-    return result
-
-
 __all__ = [
     "FROZEN_STANDARD_CONCEPTS",
     "PERIOD_CLASSES",
     "admit_period_class",
-    "artifact_identity",
-    "canonical_sha256",
     "consolidated_projection_events",
     "effective_session",
     "eligible_episode_sessions",
     "feature_identity",
     "project_events_asof",
-    "write_exact_event_parquet",
 ]
