@@ -1,0 +1,1344 @@
+{
+  "classification_counts": {
+    "CONFLICT_REMAINS_FAIL_CLOSED": 2,
+    "INSUFFICIENT_EVIDENCE": 33,
+    "NO_FREE_UPSTREAM_COVERAGE": 76
+  },
+  "exclusion_record_schema": "EpisodeSecCikExclusionV1",
+  "record_count": 111,
+  "records": [
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:3627913d7cb4c6a48f9cbd4c0ce04923cd1ea07cdc68dc590f2cfe676c89be61",
+      "episode_id": "P1EP-00b5d8ca9a85f665a3073521d3e78ca570156f8ec7d484d60b37a1881284ac19",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-00b5d8ca9a85f665a3073521d3e78ca570156f8ec7d484d60b37a1881284ac19",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:8148f109dbcc286acd732ec68c00fc43685bf2750d0d67d8661b46c3c6ba387b",
+      "episode_id": "P1EP-01d62b0e4d4e9c9edca0e900405bd21c7150fe0517644f107afefef58cbf1744",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-01d62b0e4d4e9c9edca0e900405bd21c7150fe0517644f107afefef58cbf1744",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:d3be1b81e9b60fb26cec178555bc28605d9238fc26d28f1d88fc0a6f8230f2a6",
+      "episode_id": "P1EP-04f0bf672b459a205beb4f19d7783370a80f321f62b15d78e9b73bebcb6f57fd",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-04f0bf672b459a205beb4f19d7783370a80f321f62b15d78e9b73bebcb6f57fd",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:153c23f295fcb469261544080dfa650118c154c360e9e2ddbd8a97d82511d535",
+      "episode_id": "P1EP-0524ca40f99f7117b3be50ea37a2b82d51582f61233f90051e81adda166f9964",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-0524ca40f99f7117b3be50ea37a2b82d51582f61233f90051e81adda166f9964",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:9e8173672823d9b67ff49ec08956080ed7a1280af5b9b40e0c6c21a7741b5039",
+      "episode_id": "P1EP-07edafd33c8936667e06c60d5f720344829a517aff92ab42e09d556dab329aa2",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-07edafd33c8936667e06c60d5f720344829a517aff92ab42e09d556dab329aa2",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:d358d7bdafadf22fdc91a439bddf16cbebc3a4304cd0ba20e674f927bc2f10ef",
+      "episode_id": "P1EP-0b575362394ef294ad8bbe2289b3b6d310818a7a1aa3457a33be58c44fa5e266",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-0b575362394ef294ad8bbe2289b3b6d310818a7a1aa3457a33be58c44fa5e266",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:e8860ce6f0db3da4bf4fc1d11899cb08b5c64e410d3ff1e1996860d6a91c75a0",
+      "episode_id": "P1EP-0c7d53cdda5f5e2c2e69113b4eba9351d80f21f5923d56e510f5f141aec03be8",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-0c7d53cdda5f5e2c2e69113b4eba9351d80f21f5923d56e510f5f141aec03be8",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:4440f1b947bee19cbe9e9d04f69249b5541fea429390dfac25d7f78c15d5ffb7",
+      "episode_id": "P1EP-0ca8ad44258eb62a1160d50226cbf67c2ed80f516b86678a66ce0c4eeebfda29",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-0ca8ad44258eb62a1160d50226cbf67c2ed80f516b86678a66ce0c4eeebfda29",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:1651ba9183e9d576007cae9142e5381a7bf800b48582593a1133b2d31e993e13",
+      "episode_id": "P1EP-0f36a3aeef74c372736faae7188433064a5b1bf90e0caa159399714959733c67",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-0f36a3aeef74c372736faae7188433064a5b1bf90e0caa159399714959733c67",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:524f30b7bdc8ffec1f9058d9d3d9391e124ba884c6616ec62ed5e52a9470835e",
+      "episode_id": "P1EP-105efe0b27204b999df846085db50d48ef5e5f3dcd2c9e99ffcbe72a17dc8a4e",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-105efe0b27204b999df846085db50d48ef5e5f3dcd2c9e99ffcbe72a17dc8a4e",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:68e8c833b5d1d52bc2cccb2cf2f92b3774c951921ce924e263ac179e04d7f9f8",
+      "episode_id": "P1EP-11cfa63758a3f4c949e88ae493d5c6c7ef18484055dbcc8f729472c45ee1225b",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-11cfa63758a3f4c949e88ae493d5c6c7ef18484055dbcc8f729472c45ee1225b",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:fba81db1908540ba8ac69c6eba218a61653f6c67290cd197072185b25bc1b717",
+      "episode_id": "P1EP-1549344e0d604ffb2c505ad8eff4ad9901fad421484bf99871b9ceb84023e889",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-1549344e0d604ffb2c505ad8eff4ad9901fad421484bf99871b9ceb84023e889",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:3145a3020dfb65ba7685220d142311cd19354393973c9742c86e7e9e4bfa48cd",
+      "episode_id": "P1EP-1670d2b530a0622c04a1f9a113393f6623abff4c9e5fb82ec91839e0170524f9",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-1670d2b530a0622c04a1f9a113393f6623abff4c9e5fb82ec91839e0170524f9",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:4f9aec1f55db4ea1c7e33bf7db9a210e5d45da3f07c7cd167e9991e8ed3401b4",
+      "episode_id": "P1EP-18d027ed854e71a9bc493084796cc636989c086b4b9c929374e50a7494503a23",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-18d027ed854e71a9bc493084796cc636989c086b4b9c929374e50a7494503a23",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:a2dc79d9022405102b5f2025a7d3e8649e697c37bb37c1d6dd89c491262d6afe",
+      "episode_id": "P1EP-1a7ac0317d501d197f324fbf58e672ab36362740910cf7033178083bb328b254",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-1a7ac0317d501d197f324fbf58e672ab36362740910cf7033178083bb328b254",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:3e03ed42b41249674e27af7e55d3e1e5fd812ee8f3e2f1cd2a3d152c7d66d7a4",
+      "episode_id": "P1EP-1ca0e1eeb3a9ab1302adafd1edcb98e31530635b181175832c9ce7df65cf00b7",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-1ca0e1eeb3a9ab1302adafd1edcb98e31530635b181175832c9ce7df65cf00b7",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:a01c01cd6fa4b267bafd08fc09d4b965377ebe2349696e69291b3a7db3ac18a6",
+      "episode_id": "P1EP-1d15ad9235c2d7bf4d4b4d4bab3d9d089524d084ecfcbc11f2ad2fcd47613fe9",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-1d15ad9235c2d7bf4d4b4d4bab3d9d089524d084ecfcbc11f2ad2fcd47613fe9",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:a9021b425f209fbcdedb63ddd70dae9b75f019717e778a1fefe21abdfc079db5",
+      "episode_id": "P1EP-1d515b022368637e32c50e3e356b291c7c217ab316564e148ef9e562a32c0f3b",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-1d515b022368637e32c50e3e356b291c7c217ab316564e148ef9e562a32c0f3b",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:3600a539170e6a7ad4e95417888b218bce8a2d271efb25c1ce419ff4ad24d6ce",
+      "episode_id": "P1EP-20f5cb62f2795d027a4aad5b3fca9cc16ff447faa7e19379e258d797b70c4fd1",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-20f5cb62f2795d027a4aad5b3fca9cc16ff447faa7e19379e258d797b70c4fd1",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0ce7bcc557828d646367dc0845347e020eaef73c673a9368cffcfdd288adae02",
+      "episode_id": "P1EP-21962cf82c4890cee97f047c309bdbead919d2ebcfd53f724391ac364cde6697",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-21962cf82c4890cee97f047c309bdbead919d2ebcfd53f724391ac364cde6697",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:1075c4206218ca1d03f47a5e0cff1f3b3003864928572fdfdc071c0ead26eb02",
+      "episode_id": "P1EP-22231d8dc8d43046479cb2a3d92e4e662799569aea485adaf00dff467e92ca75",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-22231d8dc8d43046479cb2a3d92e4e662799569aea485adaf00dff467e92ca75",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:a243365847db7fd5ccd2ed889062971f50112a8664083ce48fa18c96f5eb5b54",
+      "episode_id": "P1EP-22e431bfec418ca52e0c35d5d46bd497cd4919d48809e8d33285fd3e9bc82ed9",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-22e431bfec418ca52e0c35d5d46bd497cd4919d48809e8d33285fd3e9bc82ed9",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:2e2c2db4e0792033c7d3fde0a98c0c8b882db8e9c400391233e21051547e96a5",
+      "episode_id": "P1EP-2603a59b1f81ec958f3b6632ccd7186590e5b880fc8c8e34b162dd1a62e3d106",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2603a59b1f81ec958f3b6632ccd7186590e5b880fc8c8e34b162dd1a62e3d106",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:4124189f67e7b101219c081d8f307dd30df1ce4561d280dc1028985b5014d7fa",
+      "episode_id": "P1EP-2a2216de4035a2971dec8c4d298377bfef77237c40faf040eed0ccbe9ef150cc",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2a2216de4035a2971dec8c4d298377bfef77237c40faf040eed0ccbe9ef150cc",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:3da695ce23d7546debdecd1015d7c3867a64e92a92a13c4eabcab5bb66410cf0",
+      "episode_id": "P1EP-2bb6d28e42e72539d51b3dc3b4407ae9edbbb5f15c544765c5202d271a4c50bb",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2bb6d28e42e72539d51b3dc3b4407ae9edbbb5f15c544765c5202d271a4c50bb",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:c4565ca7965546e8a169cf5b7dc3f95fa985c0a98431801efec1628c0bf4acbf",
+      "episode_id": "P1EP-2c2e0ed6d4db13074bf4554aa5357443d8023e0255c0dde217a20e38708590cc",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2c2e0ed6d4db13074bf4554aa5357443d8023e0255c0dde217a20e38708590cc",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:9f079b8f92705b8dc64ca624c97afb4551532a9f6c2cc0d56657dac7cffda1d2",
+      "episode_id": "P1EP-2ca38eafbe352ab285d3b3fad83276147927eaca4d46550d9a1cb2d483c7122a",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2ca38eafbe352ab285d3b3fad83276147927eaca4d46550d9a1cb2d483c7122a",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:476a8c1249477a3e81f62a451065a4c416bd4c151719c4d73136c4e2d0fc5f45",
+      "episode_id": "P1EP-2dac7ce83d27c5ee61e5fa67e21782901dd6bb17040019603e0385c260aa8670",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2dac7ce83d27c5ee61e5fa67e21782901dd6bb17040019603e0385c260aa8670",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:267982cb6dfdb699983bbc2d37c8dbb287df173da58bcf7f108be34683d427a6",
+      "episode_id": "P1EP-2e4a5bd05fa9c2002f6ded209cd8c18a2def41a95231ab1f309c70d642543a1f",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2e4a5bd05fa9c2002f6ded209cd8c18a2def41a95231ab1f309c70d642543a1f",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:e7930edc154044e3aa85180902b5ebfe8e19e460735c353015bc13dcd8406e78",
+      "episode_id": "P1EP-2eb247776a4156e9434c2c2efec331eacb10464c763e80a51e44009c4f5cd68a",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-2eb247776a4156e9434c2c2efec331eacb10464c763e80a51e44009c4f5cd68a",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:bcb7b36aefaca33dbc40f333a354215bc46cdfbed2f9653384499c83d2b6ccea",
+      "episode_id": "P1EP-32eb8493d783d609cb63f3dc636bd538ae5da202836a2da67026f5d1e984a824",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-32eb8493d783d609cb63f3dc636bd538ae5da202836a2da67026f5d1e984a824",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:e070ac6dae1203b1e9dd3aa06c9f9eac662ab4366e96606f1f8dedf475eb637d",
+      "episode_id": "P1EP-33e3153b7d8fa7c316c6547cb329895666ed948838f67fdc179c99067d1d59e3",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-33e3153b7d8fa7c316c6547cb329895666ed948838f67fdc179c99067d1d59e3",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:d95b2a41161ed52cb8c6ef4a03bfaaea4ac15c4dbfb7b1e180de013a523a9b38",
+      "episode_id": "P1EP-342a13ebb1e1239ecafda1e31e26cc1676c57c6800e4c2df0092e1270e2d08f8",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-342a13ebb1e1239ecafda1e31e26cc1676c57c6800e4c2df0092e1270e2d08f8",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:7e8baa10f1111575838ef654e4830ed2e02604cb9f07856b2335eea6d19ae8ed",
+      "episode_id": "P1EP-37333cff97774676606ea30b14826ee2b1a26e403a393aeed274938f4b38c567",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-37333cff97774676606ea30b14826ee2b1a26e403a393aeed274938f4b38c567",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:a188fcb9842cd8165cbcdb3179b231cc164aecff8b572b90a23b55dcf5385e25",
+      "episode_id": "P1EP-3c59776ff4d923ea052bd6ca4e42f8fb6491487ee484de6fe82ab2a996ebd2f0",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-3c59776ff4d923ea052bd6ca4e42f8fb6491487ee484de6fe82ab2a996ebd2f0",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:47acf0c89506614b34193efefe191fe384da1693dec9d86fdbde21bb19b4eac0",
+      "episode_id": "P1EP-438bf0ac42ab2f43ed258ec1fabd5eca73a1e3f1fcbd321d1a28813f12323774",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-438bf0ac42ab2f43ed258ec1fabd5eca73a1e3f1fcbd321d1a28813f12323774",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0c0866a5682f4959b4beeb8555aaf2f40e89b8cb3a9e36d0a283c8bfc6dfcad4",
+      "episode_id": "P1EP-45e988baa9b9ed4826aea4e1ed16e7d583809fcda7f6ddf1387f57fd8c349084",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-45e988baa9b9ed4826aea4e1ed16e7d583809fcda7f6ddf1387f57fd8c349084",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:adcf23103c09bb33a2394fa6141b86b41d9f0be22d8b9b91336a7fd2e13979d2",
+      "episode_id": "P1EP-4950e82d210742a096507518e552442b17ce3688f1d1c326e07d34b07e4d52c7",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-4950e82d210742a096507518e552442b17ce3688f1d1c326e07d34b07e4d52c7",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:27d9c75939f5c23027934d231d464bfb230f4f8679a6a92cceb4777f8940fd3f",
+      "episode_id": "P1EP-49f6aa8496e91da70d90f98dd23528ccaae684cdfda5ea32e58055ad28beee23",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-49f6aa8496e91da70d90f98dd23528ccaae684cdfda5ea32e58055ad28beee23",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:095dfa63f9349c0e70e7bccd723148a26956a7f3bdf82ac105ad7b225e065020",
+      "episode_id": "P1EP-50e82c320766c093e62935e0e2208e0e3b82824233e42ce48e9c3444b17af266",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-50e82c320766c093e62935e0e2208e0e3b82824233e42ce48e9c3444b17af266",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:5fd67ff0f1f7632e42f4816077c2dc20f8df8aa2c810164488f135062b2ad133",
+      "episode_id": "P1EP-511b72fa8cc98d8f52879a7e518220528544def2d9f3c947a22ef08b96c10524",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-511b72fa8cc98d8f52879a7e518220528544def2d9f3c947a22ef08b96c10524",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:d02db3eb54f934ed27d3641cba9a9519baf4022be6df48526f50ed29db0a64d8",
+      "episode_id": "P1EP-52e99dfe83482526b4a75dee8e2fcaafa39a50116044c3b9593da95672499e2c",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-52e99dfe83482526b4a75dee8e2fcaafa39a50116044c3b9593da95672499e2c",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:e68bd592514459dba4ec614698fa727385ebcd430adb4af0907da03eb3e1b99c",
+      "episode_id": "P1EP-53f64256154bf3f9cfabdff337bcd0c2275f381e73f4a9204ecd3279627f5b3d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-53f64256154bf3f9cfabdff337bcd0c2275f381e73f4a9204ecd3279627f5b3d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:a3a0e77bfb403cac2617651e82435fd9deec5da6c5048765a5763024cb02a6c6",
+      "episode_id": "P1EP-54b7ee244805bd85be8bd2b57cc99699faa6a5bac6d0dabb9facc1eeecba2504",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-54b7ee244805bd85be8bd2b57cc99699faa6a5bac6d0dabb9facc1eeecba2504",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:65f80e8ade83d9e34758f5de3909cd2fe7d48027de24d132a3c91d22e7a36ce1",
+      "episode_id": "P1EP-56ce30d02fd25e0a5632e4df6f4aaf7a6631f69ff3e0096bb5c865beb5025b42",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-56ce30d02fd25e0a5632e4df6f4aaf7a6631f69ff3e0096bb5c865beb5025b42",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:49750490c0f7da2d12140b619405ffd22c8c9022710059ebb66427c8bc838a63",
+      "episode_id": "P1EP-57ecece89270ee29bf87b695d392363a4eac62ca043bbfa670f04c27126071d6",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-57ecece89270ee29bf87b695d392363a4eac62ca043bbfa670f04c27126071d6",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:a7c55a36c6e945938756ce9e694e5238a7524e16fc3884d7909f50722b8f51d0",
+      "episode_id": "P1EP-58fd4a0d984649b8ad2c86c640802914f81e016fd3f097c9a281a78c56bf33be",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-58fd4a0d984649b8ad2c86c640802914f81e016fd3f097c9a281a78c56bf33be",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:248875fbabad5e861dea718fec7433cfdef9fd0d7803b47fd6c7da47b53cef56",
+      "episode_id": "P1EP-5b860506a58fe7a776f9f68dca995504b5d4b8b4c6ac45868ab9b71208acd075",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-5b860506a58fe7a776f9f68dca995504b5d4b8b4c6ac45868ab9b71208acd075",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:f8ae199ef4cede8c9d7a73af55ae25030b5e6d1e84d0213b49a21f77094e1a68",
+      "episode_id": "P1EP-5cfa89ac75ea6984b8e195a52278615977eaac531a7afbbac8263c06bd3ce99a",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-5cfa89ac75ea6984b8e195a52278615977eaac531a7afbbac8263c06bd3ce99a",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:837232993acd2857ec8f3fde0be88b8887300de3970548e41449f50b4777e82a",
+      "episode_id": "P1EP-5dab81ccb8dca771a7df545ee80098b04d39f22162eec9aa382dbd53b6c523d4",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-5dab81ccb8dca771a7df545ee80098b04d39f22162eec9aa382dbd53b6c523d4",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:07df0582da1a7a244e6d266a963a4fd6edd0eba0e78b388180a3830e3c2f1d45",
+      "episode_id": "P1EP-60cda695a0bb23b3ef8748fab773cfb569f5763523b98c77f6dc3ec0bf9bc6a6",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-60cda695a0bb23b3ef8748fab773cfb569f5763523b98c77f6dc3ec0bf9bc6a6",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:78bdead91ba11564d3eb06db4ac697b4cb6ae3a8fecd5a9fc23c3615d5515c88",
+      "episode_id": "P1EP-6457f82f57a89cbbb9afda7adecae6b15cee86d765fe63c8cda52fc1ebb20c63",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-6457f82f57a89cbbb9afda7adecae6b15cee86d765fe63c8cda52fc1ebb20c63",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:bc459c6f832367380045f05dc5696101aafac3c345ef558f772043c0ffc2027b",
+      "episode_id": "P1EP-66fea0c060ac4e325b92fed660eb9215b56a007dfddfdb177b0e70cf6167e04d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-66fea0c060ac4e325b92fed660eb9215b56a007dfddfdb177b0e70cf6167e04d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0ceb34cd713ef6fd4e01ba7fea31b23453e0387271ff6c5e1ff72ebbffed28c3",
+      "episode_id": "P1EP-6a9bc4e56829b7b841e7593946341fbc6d898faf208e658e9d6285ca3e8f44c4",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-6a9bc4e56829b7b841e7593946341fbc6d898faf208e658e9d6285ca3e8f44c4",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:763fc3ffd52a3b6df935913a27a5cc407e49c0ab0d34918f3f73b8e91122ce26",
+      "episode_id": "P1EP-6ba3b0727f5a7e1420bfe002ae0d65afeb62d4323c398fd16102e4575d848558",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-6ba3b0727f5a7e1420bfe002ae0d65afeb62d4323c398fd16102e4575d848558",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:2171dccd292396e43406966218e646c12b2a851ac9e4e8a1389a594b6b53f02f",
+      "episode_id": "P1EP-6ca35088218913399d08352bfe32bded77881e995b4dfa489b53e8143c5f97bf",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-6ca35088218913399d08352bfe32bded77881e995b4dfa489b53e8143c5f97bf",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:661277ab0cb240a18d00e460fcbd282ee6f221c5fa77f224793b69bfe5f73909",
+      "episode_id": "P1EP-6f1dbcbf1eb6db036916f9b67d2d00fd5bf5956d78f5cd9b413f7d1d7ce631ad",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-6f1dbcbf1eb6db036916f9b67d2d00fd5bf5956d78f5cd9b413f7d1d7ce631ad",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:601fb13a69dea7ea7a103f880636e08eaaed14c7666aab9dd3dd3e14c070a4a6",
+      "episode_id": "P1EP-6fcccaae2b03ae7c51d9057328917c6b332ce01987a892d966e079d8e2beeea2",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-6fcccaae2b03ae7c51d9057328917c6b332ce01987a892d966e079d8e2beeea2",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:1fec28b8eadce8563b1b007281ee9073886dfeee976584b6706cb8b80a42b928",
+      "episode_id": "P1EP-70d7eabf4a8083ae59ecab11254610252fbea37ce56fd4e8f7745e25476fa624",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-70d7eabf4a8083ae59ecab11254610252fbea37ce56fd4e8f7745e25476fa624",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:00662a3ee2c7c227138bab55c051a6e176446da1fd2febc3702640b4613a947d",
+      "episode_id": "P1EP-71757aafc5ecab44c5d865f324f04cd25dfcf2a59b03b0b2ce7b768a1c8efb58",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-71757aafc5ecab44c5d865f324f04cd25dfcf2a59b03b0b2ce7b768a1c8efb58",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:06989952dd3f4499def161eb38a8cdf97fa86517877e482173d5858362dc79c0",
+      "episode_id": "P1EP-7a59c7ebbafb65b8a7f8d368df24198fc7b88b86dccb93edad721dd77827c68d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-7a59c7ebbafb65b8a7f8d368df24198fc7b88b86dccb93edad721dd77827c68d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:949b752427b04efd72e469bbda2c88dd47015ea64dc3851db30bd3a543123142",
+      "episode_id": "P1EP-7ab88b06f331af2ec96ee4fc4b5005963708d837553bd9905f7e0e49587e6de8",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-7ab88b06f331af2ec96ee4fc4b5005963708d837553bd9905f7e0e49587e6de8",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:d99d771be5041a487e2ec4a8444ca93c85dfed773826deaa9bc888a206db6459",
+      "episode_id": "P1EP-7cd541c4d79eae54921b51305e62f8ae1eed447de81538d677c81d0ed806eee2",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-7cd541c4d79eae54921b51305e62f8ae1eed447de81538d677c81d0ed806eee2",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:3421c945afe8ff493cc13fc40c9a0c080f6fc93c32053d5dd9e72e67158a25d4",
+      "episode_id": "P1EP-7ef55684efbb384e340eaa6990f5316bb65e12370ae11d8eae07901a8760a38d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-7ef55684efbb384e340eaa6990f5316bb65e12370ae11d8eae07901a8760a38d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "Existing binding covers only a proper subinterval of the P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:22594ec502d9290ed9384b2ae3e30d4960bc893ef59dfb54c2485dedd4060217",
+      "episode_id": "P1EP-82fdce3b51fa21cb1470e4933fb0b558502d07253e6bd533ffeae1211e294896",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-82fdce3b51fa21cb1470e4933fb0b558502d07253e6bd533ffeae1211e294896",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0abcb59c26fedda72c3e4252c944ca9156a840f935953a31ab87998bd19d0518",
+      "episode_id": "P1EP-88c15cc15d8c836ba04e1125902d814fe473231f131d2536c2212bd622c3b454",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-88c15cc15d8c836ba04e1125902d814fe473231f131d2536c2212bd622c3b454",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:cdd8301908eb82bccc16a60df1abf998f8820014f2c4532bb53e8d02b2c2daf1",
+      "episode_id": "P1EP-891c48f08f8c5624300f4e0f6c9692f56e590060f001bcc79282f0bf82868ea5",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-891c48f08f8c5624300f4e0f6c9692f56e590060f001bcc79282f0bf82868ea5",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:ab5e6448d43e46694f809acdefb413941e3badd806acc0ec4ba51a439d0429c7",
+      "episode_id": "P1EP-8a7e34baf401eeb9a07438f60d808433721dba2161a9587714e050d6d57a6eea",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-8a7e34baf401eeb9a07438f60d808433721dba2161a9587714e050d6d57a6eea",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:25d4a1bed4f185979aadb0772eea85e8e05eb3f5887d46632a841a4386aee630",
+      "episode_id": "P1EP-8cf37eedc2208bb589a5de23efef1d0197733786a5eb0600dae738d011c5a1e6",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-8cf37eedc2208bb589a5de23efef1d0197733786a5eb0600dae738d011c5a1e6",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "CONFLICT_REMAINS_FAIL_CLOSED",
+      "decision_id": "sha256:4a2bfca99a9471505e61831fac59f47456c006b8d3a7379930a33187a1ab1c04",
+      "episode_id": "P1EP-9317c09edbf3ba96596376a28b883d581db77c79781af84617e16931a4bad639",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-9317c09edbf3ba96596376a28b883d581db77c79781af84617e16931a4bad639",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_CONFLICT",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:CONFLICT_REMAINS_FAIL_CLOSED"
+      ],
+      "reason": "Overlapping native CIK owners remain unresolved by higher authority."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:76cc77df625066b6719cba562c3d37597472b56cd2e5cb033af85e3efd634bf3",
+      "episode_id": "P1EP-938b1b4c5f9476ee6b58dac63bf8be72a491bbc436227b41ee4e7778482d6371",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-938b1b4c5f9476ee6b58dac63bf8be72a491bbc436227b41ee4e7778482d6371",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:205b30c38f48f1863fdf2d95d92c92182c52ee1d0c76cf87a6e5e8fd68265ae1",
+      "episode_id": "P1EP-9ad89d8ee3c0e93f7964f03a0a4d2759250b2cc7236a8173983798d000be5f7e",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-9ad89d8ee3c0e93f7964f03a0a4d2759250b2cc7236a8173983798d000be5f7e",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:e1fd2322e06040fa5601d8cee186f32326ba206223de1f9bdc8ba667846be36d",
+      "episode_id": "P1EP-9de307795e8a2a6016cd90e83befed9373d81e0802772ab367fbb8b74077256d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-9de307795e8a2a6016cd90e83befed9373d81e0802772ab367fbb8b74077256d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:9bdf0ad5bddc08280d328ec5acc43d7fcc99fdccd08e3e2f52049128f72c6759",
+      "episode_id": "P1EP-9ed0d6a8d679b9ddb6843c80092c358648d7452973bbf9f572b3d347f430cbb6",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-9ed0d6a8d679b9ddb6843c80092c358648d7452973bbf9f572b3d347f430cbb6",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:bcb975cbbe600bbc00854981cbb5fbc45160d06e393776fa4692c8361978bf64",
+      "episode_id": "P1EP-a1ec2d40e0e16a370c8cb0afdd121e6a6ab531c4937bb863e62a782250a4a0df",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-a1ec2d40e0e16a370c8cb0afdd121e6a6ab531c4937bb863e62a782250a4a0df",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:fbd79881f11e3e992646d1a877405c024edce9a1b17a68bda5bcc794b59dcf76",
+      "episode_id": "P1EP-a54413cb4003425f2b7755512638387fa44e09ac497ee4786a8c2630235e18c4",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-a54413cb4003425f2b7755512638387fa44e09ac497ee4786a8c2630235e18c4",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:5c2da174943f69ef5b9e6db6a3d738fa2385346703cde93a4d99cb0fefbf043e",
+      "episode_id": "P1EP-ab022e4974cfb5bd070a3edeef02be52017baefd488fb64ef904068e5a97f0ad",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-ab022e4974cfb5bd070a3edeef02be52017baefd488fb64ef904068e5a97f0ad",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:01221f8fefb898329326aa45ae534ed2d63a784eaf417db5884a26eca939781d",
+      "episode_id": "P1EP-ab4e00114b8f1e1c62d5e8b5bd58a4af5d5ac2716a7ceb63a91a8906dbfa873c",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-ab4e00114b8f1e1c62d5e8b5bd58a4af5d5ac2716a7ceb63a91a8906dbfa873c",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:57983232c5f0b9e120ee18c53dc2537381d0b32a1b25bd50c80a2120b30ec7de",
+      "episode_id": "P1EP-b542e8b25d8e27c91359f3494f57e519918a347df57b09585fa1ec433a37b090",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-b542e8b25d8e27c91359f3494f57e519918a347df57b09585fa1ec433a37b090",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0d79b211e37082f43429ae3fece8d66290a941712848dbfb3dcc4740b8def440",
+      "episode_id": "P1EP-b8096bec66985d7810c885fdeb0c30bdb7114ccb2b78fdf6e68c597c9be73f84",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-b8096bec66985d7810c885fdeb0c30bdb7114ccb2b78fdf6e68c597c9be73f84",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:2934487facbf1d636dd7813852e3ab1ad816204390636995ded6d5c120e47256",
+      "episode_id": "P1EP-b82fbdfeef59bfb44412fe2183eff02d86cdebf30c3f0decec1bebf3151e4be1",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-b82fbdfeef59bfb44412fe2183eff02d86cdebf30c3f0decec1bebf3151e4be1",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:a9610c0ba659fe988f99cf89ea752502bef1200c11934ea57192661c9d900886",
+      "episode_id": "P1EP-b88ac280e1a17b3867a6325002392cd2f4ab165d5fe36d898f23cd7d7507048e",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-b88ac280e1a17b3867a6325002392cd2f4ab165d5fe36d898f23cd7d7507048e",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:3a13b5983fbe06c16d1c74dbd8aa4bd63d00bd1d3369d69b07aca0c62673573b",
+      "episode_id": "P1EP-bc87f4372705a7ea519a2f728105cb87392d7a95edbb028242d99135572ffb89",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-bc87f4372705a7ea519a2f728105cb87392d7a95edbb028242d99135572ffb89",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0a4aea48300851c06f15da9d77b21f5aa0698c0c245d6c78a58ae4f8658d773f",
+      "episode_id": "P1EP-beb5f51a2703a38022385617634825a48c1f1017ce8a8da2bf4686b781158d69",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-beb5f51a2703a38022385617634825a48c1f1017ce8a8da2bf4686b781158d69",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:3fdbaef846ea2c0e805ffa1ff73ac4e346931ff5186b5d6f01b1f305d4124f88",
+      "episode_id": "P1EP-bfad6ffbffc531bf242832fbf12ff6cf3c2c1ffd3981dd823bbb4890cff2771c",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-bfad6ffbffc531bf242832fbf12ff6cf3c2c1ffd3981dd823bbb4890cff2771c",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:a4b14e30994ea0da7ea4f2935a3b63900e9aada811e813a8a2280afe8f61253e",
+      "episode_id": "P1EP-c01d69b5e1b09882f5189ff3e0c684c885d6739720bdd3b04f869efc56ac4e9d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-c01d69b5e1b09882f5189ff3e0c684c885d6739720bdd3b04f869efc56ac4e9d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:757d4beb3dfff7c46f36cada93137423f4bf6588a1f2d1748257962d83dfa94c",
+      "episode_id": "P1EP-c16f7e7aba9ee4265cc855e6b007d78881abfd83fe387e92a11d0491bc5037ad",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-c16f7e7aba9ee4265cc855e6b007d78881abfd83fe387e92a11d0491bc5037ad",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:5ce0961e049fa7e3a80e71887eda6d5cb8c0e46e3c3850a3a8b4bdc30b1b3836",
+      "episode_id": "P1EP-c5700bfb119ebcc8bebcbe13b908a3faa9def95d651c403b75bca06858a841d8",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-c5700bfb119ebcc8bebcbe13b908a3faa9def95d651c403b75bca06858a841d8",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:28e54c9717eacb0e91fa4d8a0195b48720d6e05cdd0accf4bb2aeb95b89a4477",
+      "episode_id": "P1EP-c84ffbb1c0ca8cd887e3a5973df244313df86760d52b210e43ec7e90ef5b7b5b",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-c84ffbb1c0ca8cd887e3a5973df244313df86760d52b210e43ec7e90ef5b7b5b",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:83c078d85b4340d01662b01967b801c64264dca71fa40f077323e0d935a002bd",
+      "episode_id": "P1EP-cd4dcedce8d7df28559f7368f88d0df61a2c4b1052335c8573afd7bc5068a03a",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-cd4dcedce8d7df28559f7368f88d0df61a2c4b1052335c8573afd7bc5068a03a",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:b98ad03ed33969c5a34e124834624421b8afe3f2ba680e81bbb969f856fc21b8",
+      "episode_id": "P1EP-ceb11ca00422c5825836739f62f6766b491d4624d0dce03247a4b7886ab2865f",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-ceb11ca00422c5825836739f62f6766b491d4624d0dce03247a4b7886ab2865f",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:2b7778fe9a4922f025764ba9d86704fed724ffe83f04693ee79f63087f3c5137",
+      "episode_id": "P1EP-cecfdc90fa4adb1274c4e5e7a10274fd62f2a7d1bc83a5f0d10e5938dfc9596f",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-cecfdc90fa4adb1274c4e5e7a10274fd62f2a7d1bc83a5f0d10e5938dfc9596f",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:03dd2b3908e6746cbe5701869a90c5dbe441444398e267315defd5429a3996da",
+      "episode_id": "P1EP-d4a58e2ef01f9d02561deeb336ba25a427ac61ea3ec5d99775f11bd0bcf80654",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-d4a58e2ef01f9d02561deeb336ba25a427ac61ea3ec5d99775f11bd0bcf80654",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:973ed33f683807e073e9bd7b28cd6cac5210ffc0a134d2681c847c8cd8770ba5",
+      "episode_id": "P1EP-d5c87fa520c7f7ec1d6d217750cb39c53634ebc79745c61c24a6a86e236d3562",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-d5c87fa520c7f7ec1d6d217750cb39c53634ebc79745c61c24a6a86e236d3562",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0059c05c41bd7919f9a1b30d1ec70e40567127da985474295828be32016e079f",
+      "episode_id": "P1EP-d88979365924185f91ca3d3fff289c681c52df23d0b1c62e26789ec210000b14",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-d88979365924185f91ca3d3fff289c681c52df23d0b1c62e26789ec210000b14",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:d2ea5782a3afd9d236f05d29d5cfc4ea115b8a5d207c8c4dac0c7f262c65dc9a",
+      "episode_id": "P1EP-db467c2777609e601746f033576e3d972f756d47894918aedf8e73c3366c98a0",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-db467c2777609e601746f033576e3d972f756d47894918aedf8e73c3366c98a0",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:034c89bfd342d2d14fe94225b2638c1b85d555609106761795fa1f425d855000",
+      "episode_id": "P1EP-dcb4feb649a864a3cef033c630e3931e678b71486337f78081263624c480c10b",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-dcb4feb649a864a3cef033c630e3931e678b71486337f78081263624c480c10b",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:6b8faf435774cd8c27c21c9246fd68ade7095096f7ab38237dd3faf7fc82b3f6",
+      "episode_id": "P1EP-dd6dc711d58db772ce2154c557d5bfa16016eb6ffbcc8b2142878d6f59c21973",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-dd6dc711d58db772ce2154c557d5bfa16016eb6ffbcc8b2142878d6f59c21973",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:f683b4cf86f80f0da20b8e22e49f3d9d3e29db9f9c15290a4901df3ff6d57e43",
+      "episode_id": "P1EP-e19d45c6e3c55553968c16fe73b65e73a0193be6e9e93f9f7cd56b55bf168a32",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-e19d45c6e3c55553968c16fe73b65e73a0193be6e9e93f9f7cd56b55bf168a32",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:46f5b8d2a960812e2f31642a7923a69b3a9b0140f870849cbedda0d260f5389b",
+      "episode_id": "P1EP-e1b62baba635e06ff3e78fba842e7112c5dcb49fdf5203e26559d7bfd951ab46",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-e1b62baba635e06ff3e78fba842e7112c5dcb49fdf5203e26559d7bfd951ab46",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:b682606f3db7cc8f6e7571a17c3385eaa64685485fbe0b77acb920c2c45022e5",
+      "episode_id": "P1EP-ea24002f7bda9959ef7f3fe80c6d72831122dd23e977c3ac620a9acbb207d2d1",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-ea24002f7bda9959ef7f3fe80c6d72831122dd23e977c3ac620a9acbb207d2d1",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:18b5ecfcbf0518879d702a6f7a0d1dc2d8c586d33b71b65b3661329ce68cbcc7",
+      "episode_id": "P1EP-ea2bf7bc3b086a33ae6d562440c96d06f699d5823a7e5393d8ba2784bbb8216c",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-ea2bf7bc3b086a33ae6d562440c96d06f699d5823a7e5393d8ba2784bbb8216c",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:f8de81d346f7745fb2082060482eda65fb5f37b3f8d38d747a656022af0163b7",
+      "episode_id": "P1EP-eb32f994a21304390e5c7f33028364fc29727802a8fcf5a2e1875a601a939e3c",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-eb32f994a21304390e5c7f33028364fc29727802a8fcf5a2e1875a601a939e3c",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:79d15f492221fad65cdc1cfeec9a4f7f5262a714b863f7a6ba36d08dde24219b",
+      "episode_id": "P1EP-efcc525f27f0e27a1aec8b0682a0dbee5271ea74ca4a72dbce24a79495cfe922",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-efcc525f27f0e27a1aec8b0682a0dbee5271ea74ca4a72dbce24a79495cfe922",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:466cbda6d005bd1f8054b2e388718e02b45f2e29178e3d638084940c62505218",
+      "episode_id": "P1EP-f4734f1555538a2802b2cefca06f49f0b188e777c370b837fbdce3d497218b9d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f4734f1555538a2802b2cefca06f49f0b188e777c370b837fbdce3d497218b9d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:8e8675a98fbb09edf76a803eb84364c084eaf0997341405d3cf12ca38714285d",
+      "episode_id": "P1EP-f6cc6cc9a260744fad60321d9092fa321aef9db1e4af66f2847624fc331445f7",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f6cc6cc9a260744fad60321d9092fa321aef9db1e4af66f2847624fc331445f7",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "INSUFFICIENT_EVIDENCE",
+      "decision_id": "sha256:26c123836579dbc832df3972f3da8a6878dd5abb95b767016d00c8a0005d0817",
+      "episode_id": "P1EP-f706d612c9707eaa977dd79ea9b7aabf48efc20ca7ca4b152a8ad563466d5a8d",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f706d612c9707eaa977dd79ea9b7aabf48efc20ca7ca4b152a8ad563466d5a8d",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:INSUFFICIENT_EVIDENCE"
+      ],
+      "reason": "The assigned free evidence route does not prove the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:0a016874288374abe8b61b3da42b4b8c8523473d88ded85346467e2106bb32a3",
+      "episode_id": "P1EP-f721d2b052a37aa774d644b53638ec3a358f1178129aa2c4cfebc7552ab91359",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f721d2b052a37aa774d644b53638ec3a358f1178129aa2c4cfebc7552ab91359",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:a877816243d5ecc423af3d4cecb7fd2087c5aaf3d98635d1597a951b68d2f6fe",
+      "episode_id": "P1EP-f885d804d3f8e63200c68582d7e3b3c4c1dc91bdf9b913146bf2f6a63a149f84",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f885d804d3f8e63200c68582d7e3b3c4c1dc91bdf9b913146bf2f6a63a149f84",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "NO_FREE_UPSTREAM_COVERAGE",
+      "decision_id": "sha256:c72057475a3b26772812de0cfd1dca0de4bac7b1c088b14b60197948b2a5b497",
+      "episode_id": "P1EP-f924a73a64885fb0af25915aa39149fbb219823f42903fbd1d03ae4239e3b339",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f924a73a64885fb0af25915aa39149fbb219823f42903fbd1d03ae4239e3b339",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_NO_COVERAGE",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:NO_FREE_UPSTREAM_COVERAGE"
+      ],
+      "reason": "No date-valid free evidence covers the complete P1 episode."
+    },
+    {
+      "classification": "CONFLICT_REMAINS_FAIL_CLOSED",
+      "decision_id": "sha256:ab6d924ce7c1c50e65fbbe8620f70ec139fafe0a3f6deb37fa9edfc4f0f94d16",
+      "episode_id": "P1EP-f9f35dd7729caa1da44fe3d8aff598dbd97d5be96cda07bee8d636bdcb6f3461",
+      "evidence_source_identities": [
+        "P1_EPISODE:P1EP-f9f35dd7729caa1da44fe3d8aff598dbd97d5be96cda07bee8d636bdcb6f3461",
+        "P5_RESIDUAL_AUDIT_CHECKSUMS_SHA256:508d560b61915726de49beef36ca4d430eaf478a2da44e93c7687e4abf604d45",
+        "P5_RESIDUAL_SOURCE_CLASSIFICATION:VALUEIN_NATIVE_CONFLICT",
+        "P5_RESIDUAL_FINAL_CLASSIFICATION:CONFLICT_REMAINS_FAIL_CLOSED"
+      ],
+      "reason": "Overlapping native CIK owners remain unresolved by higher authority."
+    }
+  ],
+  "schema": "AQ_ACCEPTED_EPISODE_SEC_CIK_EXCLUSIONS_V1"
+}

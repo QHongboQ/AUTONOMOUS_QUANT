@@ -11,7 +11,7 @@ CIK_ROOT = REPO_ROOT / "10-data-system" / "fundamentals" / "identity-binding"
 for path in (ADAPTER_ROOT, CIK_ROOT):
     sys.path.insert(0, str(path))
 
-from aq_valuein_adapter import project_valuein_native_binding  # noqa: E402
+from aq_valuein_adapter import project_valuein_native_binding
 
 
 def episode(ticker: str, start: str, end: str, marker: str) -> dict[str, object]:

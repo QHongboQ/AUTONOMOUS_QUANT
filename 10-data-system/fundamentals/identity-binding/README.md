@@ -17,3 +17,18 @@ Intervals use `[valid_from, valid_to)` semantics. A binding set may contain
 non-overlapping intervals, but any overlap for one episode fails closed,
 including overlaps that repeat the same CIK. Coverage reporting is descriptive
 only (`FULL`, `PARTIAL`, or `UNBOUND`) and never creates authority.
+
+`EpisodeSecCikExclusionV1` is the separate immutable decision contract for a
+P1 episode that lacks authoritative SEC-CIK coverage. It contains no nullable
+or placeholder CIK. Its only classifications are `INSUFFICIENT_EVIDENCE`,
+`NO_FREE_UPSTREAM_COVERAGE`, and `CONFLICT_REMAINS_FAIL_CLOSED`; its
+`decision_id` is RFC 8785 + SHA-256 over the other four fields.
+
+`accepted_supplemental_episode_sec_cik_bindings.json` retains the 13 immutable
+records covering the 12 already-adjudicated residual episodes not supplied by
+the 709-episode Valuein native common path. One episode has two contiguous,
+non-overlapping records; the other 11 have one record each. The ledger stores
+authority facts and does not add runtime ticker rules or identity inference.
+`accepted_episode_sec_cik_exclusions.json` retains the 111 explicit unresolved
+episodes. Exclusion affects fundamental identity availability only: it does not
+remove a P1 episode from universe membership, eligibility, or denominators.

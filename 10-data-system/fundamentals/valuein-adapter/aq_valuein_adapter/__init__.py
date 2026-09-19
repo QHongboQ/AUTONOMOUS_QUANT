@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime
-import math
 from typing import Any
 
 from aq_episode_sec_cik_binding import EpisodeSecCikBindingV1
@@ -172,12 +172,12 @@ def project_valuein_native_binding(
     evidence = [
         f"P1_PROVENANCE:{provenance_hash}",
         f"VALUEIN_SNAPSHOT_SHA256:{snapshot_identity}",
-        "VALUEIN_SECURITY:"
+        "VALUEIN_SECURITY:"  # noqa: ISC004 - one evidence identity string.
         f"{security_id}:{cik}:{security_from.isoformat()}:"
         f"{None if security_to == date.max else security_to.isoformat()}:"
         f"{_identity_part(security.get('exchange'))}",
         f"VALUEIN_ENTITY:{cik}",
-        "VALUEIN_REFERENCE:"
+        "VALUEIN_REFERENCE:"  # noqa: ISC004 - one evidence identity string.
         f"{security_id}:{cik}:{_identity_part(reference.get('figi'))}:"
         f"{_identity_part(reference.get('composite_figi'))}:"
         f"{_identity_part(reference.get('share_class_figi'))}",
