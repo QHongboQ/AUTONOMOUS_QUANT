@@ -44,15 +44,15 @@ network requests were zero.
 |---|---:|
 | `VALUEIN_NATIVE_EXACT_AGREEMENT` | 1 |
 | `VALUEIN_NATIVE_CONTAINING_AGREEMENT` | 708 |
-| `VALUEIN_NATIVE_PARTIAL_AGREEMENT` | 0 |
-| `VALUEIN_NATIVE_MEMBERSHIP_BOUNDARY_DIFFERENCE` | 2 |
+| `VALUEIN_NATIVE_PARTIAL_AGREEMENT` | 1 |
+| `VALUEIN_NATIVE_MEMBERSHIP_BOUNDARY_DIFFERENCE` | 0 |
 | `VALUEIN_NATIVE_TICKER_BOUNDARY_DIFFERENCE` | 41 |
 | `VALUEIN_NATIVE_AMBIGUOUS` | 0 |
-| `VALUEIN_NATIVE_CONFLICT` | 3 |
-| `VALUEIN_NATIVE_NO_COVERAGE` | 77 |
+| `VALUEIN_NATIVE_CONFLICT` | 2 |
+| `VALUEIN_NATIVE_NO_COVERAGE` | 79 |
 | **Total** | **832** |
 
-The three conflicts are real overlapping alternative identities and remain
+The two conflicts are real overlapping alternative identities and remain
 fail-closed. No current-ticker or latest-owner backfill was used.
 
 ## Projectable identity boundary
@@ -63,17 +63,17 @@ the P1 interval, Valuein membership does not contradict it, and no overlapping
 alternative identity exists. Under that rule:
 
 ```text
-VALUEIN_NATIVE_PROJECTABLE_BINDING_COUNT = 711
+VALUEIN_NATIVE_PROJECTABLE_BINDING_COUNT = 709
 PRIOR_EXACT_ONLY_ADMISSION_COUNT = 1
-PRIOR_831_RESIDUAL_RESOLVED_COUNT = 710
-VALUEIN_NATIVE_UNRESOLVED_COUNT = 121
+PRIOR_831_RESIDUAL_RESOLVED_COUNT = 708
+VALUEIN_NATIVE_UNRESOLVED_COUNT = 123
 ```
 
-Two of the 711 projectable identities have Valuein membership-boundary gaps.
-They remain valid identity projections because P1—not Valuein—owns membership,
-and the missing Valuein membership evidence does not conflict with the unique
-date-valid security-to-CIK relation. The boundary difference is retained as
-explicit evidence rather than silently converted into membership authority.
+The native inner join corrected a defect in the earlier diagnostic: KMI and
+the 2024 DELL episode had been paired with `RUSSELL1000`/`RUSSELL3000`
+`fund_holdings` rows rather than `index_membership.index_name = 'SP500'`.
+They are therefore not projectable through the requested Valuein S&P 500
+whole path. The historical exact-only FRC admission is unaffected.
 
 ## Control cases
 
@@ -100,7 +100,7 @@ PRODUCTION_LOC_ADDED = 0
 ```
 
 The next implementation must retire the exact-only behavior and project only
-the 711 upstream-native, date-contained identities through the existing
+the 709 upstream-native, date-contained identities through the existing
 `EpisodeSecCikBindingV1` contract. It must not add a security master, identity
 inference engine, provider registry, or manual exception table.
 
@@ -115,7 +115,7 @@ D:\AQ_DATA\P5\valuein-native-pit-whole-path-revalidation-001
 `checksums.json` SHA-256:
 
 ```text
-4550f6a6473f1e815b102f7aa57fe14e5cbac85154324813c6d9af0dd2657c80
+1ac91680183225ce04711b72e4861c8e3cb05aa4ee604ad338b7289e325a87d4
 ```
 
 No historical dataset was built, no factor/model/backtest was run, and P2 V2
