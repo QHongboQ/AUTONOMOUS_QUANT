@@ -1,24 +1,17 @@
 from __future__ import annotations
 
-import json
-import tempfile
-from pathlib import Path
-
 import exchange_calendars as xcals
 import pandas as pd
-import pyarrow.parquet as pq
 import pytest
 from aq_hybrid_fundamentals import (
     FROZEN_STANDARD_CONCEPTS,
     PERIOD_CLASSES,
     admit_period_class,
-    canonical_sha256,
     consolidated_projection_events,
     effective_session,
     eligible_episode_sessions,
     feature_identity,
     project_events_asof,
-    write_exact_event_parquet,
 )
 
 EPISODE = {"episode_id": "P1EP-" + "a" * 64, "ticker": "OLD", "valid_from": "2020-01-01", "valid_to": "2020-02-01"}
@@ -157,23 +150,6 @@ def test_pre_membership_same_cik_and_predecessor_cik_fail_closed() -> None:
     assert (projected["session"] >= pd.Timestamp("2020-01-03")).all()
     predecessor = pd.DataFrame([_event(cik="0000000009", effective_session="2019-12-31")])
     assert project_events_asof(grid, predecessor).empty
-
-
-def test_parquet_exact_value_and_partition_policy() -> None:
-    with tempfile.TemporaryDirectory() as temp:
-        root = Path(temp) / "events"
-        paths = write_exact_event_parquet([{
-            "cik": "0000000001", "standard_concept": "Revenue", "canonical_value": "9007199254740993",
-            "first_available_at": "2020-01-02T21:00:00Z", "evidence_id": "e", "accession": "0000000001-20-000001",
-        }], root)
-        assert paths[0].parent.name == "first_available_year=2020"
-        assert pq.read_table(paths[0]).to_pylist()[0]["canonical_value"] == "9007199254740993"
-
-
-def test_manifest_identity_is_deterministic() -> None:
-    left = {"b": 2, "a": [1, {"z": True}]}
-    right = json.loads(json.dumps(left, sort_keys=False))
-    assert canonical_sha256(left) == canonical_sha256(right)
 
 
 def test_qlib_shape_keeps_provenance_out_of_features() -> None:

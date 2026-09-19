@@ -17,6 +17,33 @@
       "title": "AvailabilityIdentityV1",
       "type": "object"
     },
+    "EdgarToolsUpstreamIdentityV1": {
+      "additionalProperties": false,
+      "properties": {
+        "parser_provider": {
+          "const": "EDGARTOOLS",
+          "title": "Parser Provider",
+          "type": "string"
+        },
+        "edgartools_version": {
+          "minLength": 1,
+          "title": "Edgartools Version",
+          "type": "string"
+        },
+        "upstream_identity": {
+          "minLength": 1,
+          "title": "Upstream Identity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parser_provider",
+        "edgartools_version",
+        "upstream_identity"
+      ],
+      "title": "EdgarToolsUpstreamIdentityV1",
+      "type": "object"
+    },
     "EntityIdentityV1": {
       "additionalProperties": false,
       "properties": {
@@ -283,17 +310,17 @@
       "title": "SourceIdentityV1",
       "type": "object"
     },
-    "UpstreamIdentityV1": {
+    "ValueinUpstreamIdentityV1": {
       "additionalProperties": false,
       "properties": {
         "parser_provider": {
-          "const": "EDGARTOOLS",
+          "const": "VALUEIN",
           "title": "Parser Provider",
           "type": "string"
         },
-        "edgartools_version": {
+        "valuein_sdk_version": {
           "minLength": 1,
-          "title": "Edgartools Version",
+          "title": "Valuein Sdk Version",
           "type": "string"
         },
         "upstream_identity": {
@@ -304,10 +331,10 @@
       },
       "required": [
         "parser_provider",
-        "edgartools_version",
+        "valuein_sdk_version",
         "upstream_identity"
       ],
-      "title": "UpstreamIdentityV1",
+      "title": "ValueinUpstreamIdentityV1",
       "type": "object"
     }
   },
@@ -335,7 +362,22 @@
       "$ref": "#/$defs/FundamentalFactV1"
     },
     "upstream": {
-      "$ref": "#/$defs/UpstreamIdentityV1"
+      "discriminator": {
+        "mapping": {
+          "EDGARTOOLS": "#/$defs/EdgarToolsUpstreamIdentityV1",
+          "VALUEIN": "#/$defs/ValueinUpstreamIdentityV1"
+        },
+        "propertyName": "parser_provider"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/EdgarToolsUpstreamIdentityV1"
+        },
+        {
+          "$ref": "#/$defs/ValueinUpstreamIdentityV1"
+        }
+      ],
+      "title": "Upstream"
     },
     "evidence_id": {
       "pattern": "^sha256:[0-9a-f]{64}$",

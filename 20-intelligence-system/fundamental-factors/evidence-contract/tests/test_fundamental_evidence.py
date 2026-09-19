@@ -81,6 +81,28 @@ class FundamentalEvidenceContractTests(unittest.TestCase):
         second = FundamentalEvidenceV1.model_validate(copy.deepcopy(self.apple_2021))
         self.assertEqual(first.evidence_id, second.evidence_id)
 
+    def test_upstream_identity_is_strictly_discriminated(self) -> None:
+        edgar = FundamentalEvidenceV1.model_validate(self.apple_2021)
+        self.assertEqual("EDGARTOOLS", edgar.upstream.parser_provider)
+        payload = copy.deepcopy(self.apple_2021)
+        payload["upstream"] = {
+            "parser_provider": "VALUEIN",
+            "valuein_sdk_version": "5.2.0",
+            "upstream_identity": "PYPI_DISTRIBUTION:valuein-sdk==5.2.0",
+        }
+        projection = {key: value for key, value in payload.items() if key != "evidence_id"}
+        payload["evidence_id"] = evidence_id_for(projection)
+        valuein = FundamentalEvidenceV1.model_validate(payload)
+        self.assertEqual("VALUEIN", valuein.upstream.parser_provider)
+
+        invalid = copy.deepcopy(payload)
+        invalid["upstream"] = {
+            "parser_provider": "VALUEIN",
+            "edgartools_version": "5.58.0",
+            "upstream_identity": "INVALID",
+        }
+        self.assert_rejected(invalid)
+
     def test_missing_accession_rejected(self) -> None:
         payload = copy.deepcopy(self.apple_2021)
         del payload["filing"]["accession"]
