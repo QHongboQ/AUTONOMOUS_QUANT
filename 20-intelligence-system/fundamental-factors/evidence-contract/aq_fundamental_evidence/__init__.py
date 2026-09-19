@@ -11,7 +11,6 @@ import rfc8785
 from pydantic import (
     BaseModel,
     ConfigDict,
-    Field,
     StringConstraints,
     field_validator,
     model_validator,
@@ -133,22 +132,10 @@ class FundamentalFactV1(_FrozenModel):
         return self
 
 
-class EdgarToolsUpstreamIdentityV1(_FrozenModel):
+class UpstreamIdentityV1(_FrozenModel):
     parser_provider: Literal["EDGARTOOLS"]
     edgartools_version: NonEmptyString
     upstream_identity: NonEmptyString
-
-
-class ValueinUpstreamIdentityV1(_FrozenModel):
-    parser_provider: Literal["VALUEIN"]
-    valuein_sdk_version: NonEmptyString
-    upstream_identity: NonEmptyString
-
-
-UpstreamIdentityV1 = Annotated[
-    EdgarToolsUpstreamIdentityV1 | ValueinUpstreamIdentityV1,
-    Field(discriminator="parser_provider"),
-]
 
 
 class FundamentalEvidenceProjectionV1(_FrozenModel):
@@ -210,13 +197,11 @@ class FundamentalEvidenceV1(FundamentalEvidenceProjectionV1):
 
 
 __all__ = [
-    "EdgarToolsUpstreamIdentityV1",
     "FundamentalEvidenceV1",
     "FundamentalEvidenceProjectionV1",
     "SCHEMA_VERSION",
     "RFC8785_IMPLEMENTATION",
     "VALUE_CANONICALIZATION_POLICY",
-    "ValueinUpstreamIdentityV1",
     "canonical_decimal_value",
     "evidence_id_for",
 ]
