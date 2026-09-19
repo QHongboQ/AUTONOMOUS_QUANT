@@ -12,12 +12,16 @@ from pydantic import ValidationError
 CONTRACT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CONTRACT_ROOT))
 
-from aq_episode_sec_cik_binding import (  # noqa: E402
+from aq_episode_sec_cik_binding import (
     EpisodeSecCikBindingV1,
+    EpisodeSecCikExclusionV1,
     binding_id_for,
     classify_episode_coverage,
+    exclusion_decision_id_for,
     validate_binding_record,
     validate_binding_set,
+    validate_exclusion_record,
+    validate_exclusion_set,
 )
 
 FIXTURE = json.loads(
@@ -229,6 +233,144 @@ class EpisodeSecCikBindingTests(unittest.TestCase):
         binding = self.validate(self.bindings[0])
         with self.assertRaises(ValidationError):
             binding.cik = "0000018926"
+
+
+class EpisodeSecCikExclusionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.authority = FIXTURE["authoritative_episodes"]
+        cls.schema = json.loads(
+            (CONTRACT_ROOT / "episode-sec-cik-exclusion-v1.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        Draft202012Validator.check_schema(cls.schema)
+
+    def admitted(self, marker: int = 0) -> EpisodeSecCikExclusionV1:
+        return EpisodeSecCikExclusionV1.admit(
+            authoritative_episodes=self.authority,
+            episode_id=self.authority[marker]["episode_id"],
+            classification="INSUFFICIENT_EVIDENCE",
+            reason="Date-valid authority does not cover the complete episode.",
+            evidence_source_identities=("AUDIT:sha256:" + "a" * 64,),
+        )
+
+    def test_exact_public_contract_and_deterministic_identity(self) -> None:
+        expected = {
+            "episode_id",
+            "classification",
+            "reason",
+            "evidence_source_identities",
+            "decision_id",
+        }
+        self.assertEqual(expected, set(self.schema["required"]))
+        self.assertEqual(expected, set(self.schema["properties"]))
+        first = self.admitted()
+        second = self.admitted()
+        self.assertEqual(first.decision_id, second.decision_id)
+        self.assertEqual(
+            first.decision_id,
+            exclusion_decision_id_for(
+                first.model_dump(mode="python", exclude={"decision_id"})
+            ),
+        )
+        Draft202012Validator(self.schema).validate(first.model_dump(mode="json"))
+
+    def test_unknown_episode_and_fake_classification_fail_closed(self) -> None:
+        admitted = self.admitted().model_dump(mode="json")
+        for payload in (
+            {**admitted, "episode_id": "P1EP-" + "f" * 64},
+            {**admitted, "classification": "PLACEHOLDER_CIK"},
+        ):
+            with self.subTest(payload=payload), self.assertRaises(ValidationError):
+                validate_exclusion_record(payload, authoritative_episodes=self.authority)
+
+    def test_duplicate_episode_exclusions_fail_closed(self) -> None:
+        first = self.admitted()
+        changed = EpisodeSecCikExclusionV1.admit(
+            authoritative_episodes=self.authority,
+            episode_id=first.episode_id,
+            classification="NO_FREE_UPSTREAM_COVERAGE",
+            reason="No free date-valid upstream coverage exists.",
+            evidence_source_identities=("AUDIT:sha256:" + "b" * 64,),
+        )
+        with self.assertRaisesRegex(ValueError, "duplicate exclusion episode_id"):
+            validate_exclusion_set(
+                [first, changed], authoritative_episodes=self.authority
+            )
+
+    def test_exclusion_is_immutable(self) -> None:
+        exclusion = self.admitted()
+        with self.assertRaises(ValidationError):
+            exclusion.reason = "changed"
+
+
+class AcceptedIdentityAuthorityLedgerTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.supplemental = json.loads(
+            (
+                CONTRACT_ROOT
+                / "accepted_supplemental_episode_sec_cik_bindings.json"
+            ).read_text(encoding="utf-8")
+        )
+        cls.exclusions = json.loads(
+            (CONTRACT_ROOT / "accepted_episode_sec_cik_exclusions.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        cls.exclusion_schema = json.loads(
+            (CONTRACT_ROOT / "episode-sec-cik-exclusion-v1.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+    def test_two_supplemental_bindings_preserve_accepted_evidence(self) -> None:
+        records = self.supplemental["records"]
+        self.assertEqual(2, self.supplemental["record_count"])
+        self.assertEqual(2, len({row["episode_id"] for row in records}))
+        fixture_by_id = {row["binding_id"]: row for row in FIXTURE["bindings"]}
+        self.assertEqual(records, [fixture_by_id[row["binding_id"]] for row in records])
+
+    def test_111_exclusions_are_deterministic_and_schema_valid(self) -> None:
+        records = self.exclusions["records"]
+        self.assertEqual(111, self.exclusions["record_count"])
+        self.assertEqual(111, len({row["episode_id"] for row in records}))
+        self.assertEqual(111, len({row["decision_id"] for row in records}))
+        self.assertEqual(
+            {
+                "INSUFFICIENT_EVIDENCE": 33,
+                "NO_FREE_UPSTREAM_COVERAGE": 76,
+                "CONFLICT_REMAINS_FAIL_CLOSED": 2,
+            },
+            self.exclusions["classification_counts"],
+        )
+        authority = [
+            {
+                "episode_id": row["episode_id"],
+                "valid_from": "2010-01-01",
+                "valid_to": "2025-01-01",
+            }
+            for row in records
+        ]
+        validated = validate_exclusion_set(records, authoritative_episodes=authority)
+        self.assertEqual(111, len(validated))
+        for row in records:
+            Draft202012Validator(self.exclusion_schema).validate(row)
+            self.assertEqual(
+                row["decision_id"],
+                exclusion_decision_id_for(
+                    {key: value for key, value in row.items() if key != "decision_id"}
+                ),
+            )
+            self.assertNotIn("cik", row)
+
+    def test_binding_and_exclusion_episode_sets_are_disjoint(self) -> None:
+        binding_ids = {
+            row["episode_id"] for row in self.supplemental["records"]
+        }
+        exclusion_ids = {row["episode_id"] for row in self.exclusions["records"]}
+        self.assertFalse(binding_ids & exclusion_ids)
 
 
 if __name__ == "__main__":

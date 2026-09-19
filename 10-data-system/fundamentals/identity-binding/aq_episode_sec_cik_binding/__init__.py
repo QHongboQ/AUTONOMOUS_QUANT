@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Iterable, Mapping
 from datetime import date
+from itertools import pairwise
 from typing import Annotated, Literal
 
 import rfc8785
@@ -24,6 +25,12 @@ NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_len
 BindingId = Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")]
 BindingClassification = Literal["PASS_EXACT", "PASS_CORROBORATED"]
 CoverageClassification = Literal["FULL", "PARTIAL", "UNBOUND"]
+ExclusionClassification = Literal[
+    "INSUFFICIENT_EVIDENCE",
+    "NO_FREE_UPSTREAM_COVERAGE",
+    "CONFLICT_REMAINS_FAIL_CLOSED",
+]
+DecisionId = Annotated[str, StringConstraints(pattern=r"^sha256:[0-9a-f]{64}$")]
 
 SCHEMA_VERSION = "EpisodeSecCikBindingV1"
 RFC8785_IMPLEMENTATION = "rfc8785==0.1.4"
@@ -52,10 +59,27 @@ class _BindingProjection(_FrozenModel):
         return value
 
     @model_validator(mode="after")
-    def require_half_open_interval(self) -> "_BindingProjection":
+    def require_half_open_interval(self) -> _BindingProjection:
         if self.valid_from >= self.valid_to:
             raise ValueError("binding interval must be non-empty and half-open")
         return self
+
+
+class _ExclusionProjection(_FrozenModel):
+    episode_id: EpisodeId
+    classification: ExclusionClassification
+    reason: NonEmptyString
+    evidence_source_identities: Annotated[
+        tuple[NonEmptyString, ...],
+        Field(min_length=1, json_schema_extra={"uniqueItems": True}),
+    ]
+
+    @field_validator("evidence_source_identities")
+    @classmethod
+    def require_distinct_evidence(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(set(value)) != len(value):
+            raise ValueError("evidence_source_identities must be unique")
+        return value
 
 
 def binding_id_for(fields: Mapping[str, object] | _BindingProjection) -> str:
@@ -65,6 +89,20 @@ def binding_id_for(fields: Mapping[str, object] | _BindingProjection) -> str:
         fields
         if isinstance(fields, _BindingProjection)
         else _BindingProjection.model_validate(fields)
+    )
+    canonical = rfc8785.dumps(projection.model_dump(mode="json"))
+    return "sha256:" + hashlib.sha256(canonical).hexdigest()
+
+
+def exclusion_decision_id_for(
+    fields: Mapping[str, object] | _ExclusionProjection,
+) -> str:
+    """Return the RFC 8785 + SHA-256 identity of an exclusion decision."""
+
+    projection = (
+        fields
+        if isinstance(fields, _ExclusionProjection)
+        else _ExclusionProjection.model_validate(fields)
     )
     canonical = rfc8785.dumps(projection.model_dump(mode="json"))
     return "sha256:" + hashlib.sha256(canonical).hexdigest()
@@ -117,7 +155,7 @@ class EpisodeSecCikBindingV1(_BindingProjection):
     @model_validator(mode="after")
     def validate_identity_and_episode_authority(
         self, info: ValidationInfo
-    ) -> "EpisodeSecCikBindingV1":
+    ) -> EpisodeSecCikBindingV1:
         expected = binding_id_for(
             _BindingProjection.model_validate(
                 self.model_dump(mode="python", exclude={"binding_id"})
@@ -129,7 +167,9 @@ class EpisodeSecCikBindingV1(_BindingProjection):
         context = info.context if isinstance(info.context, Mapping) else None
         authority = context.get("episode_authority") if context is not None else None
         if not isinstance(authority, Mapping):
-            raise ValueError("full P1 InstrumentEpisodeV1 authority is required")
+            raise ValueError(  # noqa: TRY004 - Pydantic must wrap this as ValidationError.
+                "full P1 InstrumentEpisodeV1 authority is required"
+            )
         interval = authority.get(self.episode_id)
         if interval is None:
             raise ValueError("binding episode_id is unknown to full P1 authority")
@@ -144,13 +184,57 @@ class EpisodeSecCikBindingV1(_BindingProjection):
         *,
         authoritative_episodes: Iterable[object],
         **authoritative_fields: object,
-    ) -> "EpisodeSecCikBindingV1":
+    ) -> EpisodeSecCikBindingV1:
         """Create an immutable record only after exact P1 authority validation."""
 
         projection = _BindingProjection.model_validate(authoritative_fields)
         payload = {
             **projection.model_dump(mode="python"),
             "binding_id": binding_id_for(projection),
+        }
+        return cls.model_validate(
+            payload,
+            context={"episode_authority": _episode_authority_map(authoritative_episodes)},
+        )
+
+
+class EpisodeSecCikExclusionV1(_ExclusionProjection):
+    """One immutable, fail-closed absence-of-authority decision for a P1 episode."""
+
+    decision_id: DecisionId
+
+    @model_validator(mode="after")
+    def validate_identity_and_episode_authority(
+        self, info: ValidationInfo
+    ) -> EpisodeSecCikExclusionV1:
+        expected = exclusion_decision_id_for(
+            _ExclusionProjection.model_validate(
+                self.model_dump(mode="python", exclude={"decision_id"})
+            )
+        )
+        if self.decision_id != expected:
+            raise ValueError("decision_id does not match RFC 8785 identity")
+        context = info.context if isinstance(info.context, Mapping) else None
+        authority = context.get("episode_authority") if context is not None else None
+        if not isinstance(authority, Mapping):
+            raise ValueError(  # noqa: TRY004 - Pydantic must wrap this as ValidationError.
+                "full P1 InstrumentEpisodeV1 authority is required"
+            )
+        if self.episode_id not in authority:
+            raise ValueError("exclusion episode_id is unknown to full P1 authority")
+        return self
+
+    @classmethod
+    def admit(
+        cls,
+        *,
+        authoritative_episodes: Iterable[object],
+        **authoritative_fields: object,
+    ) -> EpisodeSecCikExclusionV1:
+        projection = _ExclusionProjection.model_validate(authoritative_fields)
+        payload = {
+            **projection.model_dump(mode="python"),
+            "decision_id": exclusion_decision_id_for(projection),
         }
         return cls.model_validate(
             payload,
@@ -168,6 +252,44 @@ def validate_binding_record(
         payload,
         context={"episode_authority": _episode_authority_map(authoritative_episodes)},
     )
+
+
+def validate_exclusion_record(
+    record: Mapping[str, object] | EpisodeSecCikExclusionV1,
+    *,
+    authoritative_episodes: Iterable[object],
+) -> EpisodeSecCikExclusionV1:
+    payload = record.model_dump(mode="python") if isinstance(record, BaseModel) else record
+    return EpisodeSecCikExclusionV1.model_validate(
+        payload,
+        context={"episode_authority": _episode_authority_map(authoritative_episodes)},
+    )
+
+
+def validate_exclusion_set(
+    records: Iterable[Mapping[str, object] | EpisodeSecCikExclusionV1],
+    *,
+    authoritative_episodes: Iterable[object],
+) -> tuple[EpisodeSecCikExclusionV1, ...]:
+    """Validate identities and reject duplicate episode exclusion decisions."""
+
+    authority = _episode_authority_map(authoritative_episodes)
+    validated: list[EpisodeSecCikExclusionV1] = []
+    decision_ids: set[str] = set()
+    episode_ids: set[str] = set()
+    for record in records:
+        payload = record.model_dump(mode="python") if isinstance(record, BaseModel) else record
+        exclusion = EpisodeSecCikExclusionV1.model_validate(
+            payload, context={"episode_authority": authority}
+        )
+        if exclusion.decision_id in decision_ids:
+            raise ValueError(f"duplicate decision_id: {exclusion.decision_id}")
+        if exclusion.episode_id in episode_ids:
+            raise ValueError(f"duplicate exclusion episode_id: {exclusion.episode_id}")
+        decision_ids.add(exclusion.decision_id)
+        episode_ids.add(exclusion.episode_id)
+        validated.append(exclusion)
+    return tuple(validated)
 
 
 def validate_binding_set(
@@ -195,7 +317,7 @@ def validate_binding_set(
         by_episode.setdefault(binding.episode_id, []).append(binding)
     for episode_id, episode_bindings in by_episode.items():
         ordered = sorted(episode_bindings, key=lambda item: (item.valid_from, item.valid_to))
-        for previous, current in zip(ordered, ordered[1:]):
+        for previous, current in pairwise(ordered):
             if current.valid_from < previous.valid_to:
                 conflict = (
                     "CONFLICTING_CIK_OVERLAP"
@@ -230,11 +352,15 @@ def classify_episode_coverage(
 
 
 __all__ = [
-    "EpisodeSecCikBindingV1",
-    "SCHEMA_VERSION",
     "RFC8785_IMPLEMENTATION",
+    "SCHEMA_VERSION",
+    "EpisodeSecCikBindingV1",
+    "EpisodeSecCikExclusionV1",
     "binding_id_for",
     "classify_episode_coverage",
+    "exclusion_decision_id_for",
     "validate_binding_record",
     "validate_binding_set",
+    "validate_exclusion_record",
+    "validate_exclusion_set",
 ]

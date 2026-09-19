@@ -1,0 +1,35 @@
+{
+  "binding_record_schema": "EpisodeSecCikBindingV1",
+  "episode_count": 2,
+  "record_count": 2,
+  "records": [
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:54345b1e2f841321eb2a3b99c8a8a6c5ebd46afeb7954bb57113dfb67a98db1a",
+      "cik": "0001326801",
+      "episode_id": "P1EP-036bcd3babe7c1528814f1855887d9031ba3075fc7fcda20be5834bf83955082",
+      "evidence_source_identities": [
+        "P1_TICKER_EVENT:P1TID-e2b4536a30c030014d6404aa0a63e06c9ce434ec4afe314540864bc77ecde6bc",
+        "SEC_ACCESSION:0001326801-22-000070:UNCHANGED_CUSIP_CLASS_A_CONTINUITY",
+        "SIMFIN_ID:121021:ISIN:US30303M1027",
+        "P2_SECURITY_IDENTITY:P2SECB67FDEC163A498438421BE5FD801EC9383E74ED7EE9DF0B64E0286D9F937AD0F"
+      ],
+      "valid_from": "2013-12-23",
+      "valid_to": "2022-06-09"
+    },
+    {
+      "binding_classification": "PASS_EXACT",
+      "binding_id": "sha256:72efe1cdcaa2c9872faba87fe06b34d57eb2e44dc8a8beba8d64959143ff719a",
+      "cik": "0000018926",
+      "episode_id": "P1EP-522dbce4d4f9d307309951b8b1429dde5da83ef42e015cd77eed923f8b285309",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:1e90a20dc98b26839f11e51ab9d426d67a793f63d3bbc032040def0be03f1f9c",
+        "SEC_ACCESSION:0000018926-20-000028:HTML_SHA256:df859d3c1260279ba45ce6708a2b4d60726ca21e65d2a6dbaa39e944226c29c5",
+        "P2_PROVIDER_BINDING:P2PAB-e1b9285641f65ed44d0e70a3"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2020-09-18"
+    }
+  ],
+  "schema": "AQ_ACCEPTED_SUPPLEMENTAL_EPISODE_SEC_CIK_BINDINGS_V1"
+}

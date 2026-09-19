@@ -24,4 +24,12 @@ is an upstream oracle and conflict check; Valuein security lifetime is allowed
 to contain rather than equal the P1 episode. The projected binding uses P1's
 interval and distinguishes `PASS_EXACT` from `PASS_CORROBORATED`.
 
+The bounded multi-record entry point `project_valuein_native_bindings` adds two
+fail-closed cases without ticker branches: a terminal provider boundary may
+differ from P1 only when the supplied authoritative XNYS session set proves
+zero uncovered sessions, and exactly two contiguous security rows may be
+projected only when Valuein supplies one explicit SP500 `successor_cik`
+relation. The original singular entry point delegates to this logic and still
+rejects any result containing more than one binding record.
+
 Valuein fundamentals and the audited 11-metric correspondence are oracle evidence only. They have no tracked production admission path. `FundamentalEvidenceV1` remains EdgarTools-only and EdgarTools remains the exact fundamentals authority.

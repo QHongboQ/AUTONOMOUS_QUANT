@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/episode-sec-cik-exclusion-v1.schema.json",
+  "additionalProperties": false,
+  "description": "One immutable decision that a P1 InstrumentEpisodeV1 lacks an authoritative SEC-CIK binding for the required interval.",
+  "properties": {
+    "episode_id": {
+      "pattern": "^P1EP-[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "classification": {
+      "enum": [
+        "INSUFFICIENT_EVIDENCE",
+        "NO_FREE_UPSTREAM_COVERAGE",
+        "CONFLICT_REMAINS_FAIL_CLOSED"
+      ],
+      "type": "string"
+    },
+    "reason": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "evidence_source_identities": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "decision_id": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "episode_id",
+    "classification",
+    "reason",
+    "evidence_source_identities",
+    "decision_id"
+  ],
+  "title": "EpisodeSecCikExclusionV1",
+  "type": "object"
+}
