@@ -1,7 +1,7 @@
 {
   "binding_record_schema": "EpisodeSecCikBindingV1",
-  "episode_count": 2,
-  "record_count": 2,
+  "episode_count": 12,
+  "record_count": 13,
   "records": [
     {
       "binding_classification": "PASS_CORROBORATED",
@@ -18,6 +18,78 @@
       "valid_to": "2022-06-09"
     },
     {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:2aabb24a3b4838dece5a27b7cebb4ce98f257e480749f489c6762afb4fa1390c",
+      "cik": "0000012355",
+      "episode_id": "P1EP-04515d21aadedd0fc869cd4f6863f8abf61951ae22264b86c0e2b25ac56ea5b7",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:bb28a8f08323ea7294d662fdc9473d7eea678c9a17e2295268c7fddf3213ec30",
+        "VALUEIN_ENTITY:0000012355",
+        "VALUEIN_REFERENCE:234868:0000012355:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234868:0000012355:1995-03-20:2010-03-13:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:284:historical_seed:0000012355:1996-01-02:2010-03-15",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234868:1995-03-20:2010-03-13:2010-01-04:2010-03-15",
+        "XNYS_EPISODE_SESSIONS_SHA256:e13ca3271e5d8099620a60bd3efb278e5374893ec4eeaf7f167cd984c422a155"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2010-03-15"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:5095ad8df23d84edc4dce04361822b3cceb72ba29e53ff0aca1ee5efa4ff3aea",
+      "cik": "0000800459",
+      "episode_id": "P1EP-18623612c046a49352f63c26eb4e13678619fc7e1e882e1ff2e69f9eaf4997c2",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:e8bdd6bf432c0fedc8b9826a0451265c651454dcc101da19a849fede909b408a",
+        "VALUEIN_ENTITY:0000800459",
+        "VALUEIN_REFERENCE:234595:0000800459:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234595:0000800459:1994-02-11:2017-03-11:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:380:historical_seed:0000800459:2006-02-01:2017-03-13",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234595:1994-02-11:2017-03-11:2010-01-04:2017-03-13",
+        "XNYS_EPISODE_SESSIONS_SHA256:cde5d82482e715a7b85f4cbd75dc2f1703fba05081d03631027bc81b9c0ff674"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2017-03-13"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:7122c3f2cabb978a9b62d2f0b81c1f1d4f8331798f7c55406c5f1d30562b3f7e",
+      "cik": "0000070530",
+      "episode_id": "P1EP-4ab860b7437b754aac8f53de12d8611086b74739f9a8c946c5a7fdc48574fde4",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:e0cd378e957c3bf929e599c6e05e4e89acbb2d77213d8493f17f53f3979dc2ca",
+        "VALUEIN_ENTITY:0000070530",
+        "VALUEIN_REFERENCE:234525:0000070530:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234525:0000070530:1994-03-18:2011-09-24:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:301:historical_seed:0000070530:1996-01-02:2011-09-26",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234525:1994-03-18:2011-09-24:2010-01-04:2011-09-26",
+        "XNYS_EPISODE_SESSIONS_SHA256:ccdc7ab300862a4029d294042c2884d8369427f1de7f737525c916eec20dcebe"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2011-09-26"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:9e6671e51e37ff2ef1719f4e7a642b20a5128e9364592c921f0b7163bf65eb8f",
+      "cik": "0000721683",
+      "episode_id": "P1EP-4f38df676d2165f4b387e2b8da54f6047837a53ccae34bb6fd694e9595e8dc10",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:d445a4093a66a954887ebd6a0a14501e9868632d1bf1d6aed7c5b28acfda7fb2",
+        "VALUEIN_ENTITY:0000721683",
+        "VALUEIN_REFERENCE:234617:0000721683:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234617:0000721683:1995-03-27:2019-09-21:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:427:historical_seed:0000721683:2008-01-02:2019-09-23",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234617:1995-03-27:2019-09-21:2010-01-04:2019-09-23",
+        "XNYS_EPISODE_SESSIONS_SHA256:61714d9c0b6e0a256d48d003fc554148ead966a09a150ef9c7b0f299eb5f547f"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2019-09-23"
+    },
+    {
       "binding_classification": "PASS_EXACT",
       "binding_id": "sha256:72efe1cdcaa2c9872faba87fe06b34d57eb2e44dc8a8beba8d64959143ff719a",
       "cik": "0000018926",
@@ -29,6 +101,130 @@
       ],
       "valid_from": "2010-01-04",
       "valid_to": "2020-09-18"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:c16d1927cb2ffef7b769edffbbf59645696a815dbec2c666aa8fce9e668941c1",
+      "cik": "0001364742",
+      "episode_id": "P1EP-5c0fb720ba365bbc5a7d8ac692b6758658dbdaf23d16b89fbf0b9bdd0f8d49b8",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:57536b2874b98a7d5a11703445ce5ae2462e7b303a32b75a0031c2f0348909bd",
+        "VALUEIN_ENTITY:0001364742",
+        "VALUEIN_EXPLICIT_SUCCESSOR_PAIR:234081:0001364742:232835:0002012383:2024-02-20",
+        "VALUEIN_REFERENCE:234081:0001364742:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234081:0001364742:2006-10-30:2024-02-20:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:156043:succession_config:0001364742:2011-04-04:2024-02-20:SUCCESSOR_CIK:0002012383"
+      ],
+      "valid_from": "2011-04-04",
+      "valid_to": "2024-02-20"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:4b74a941f7e0e0b54ddd31838726918a0b69601dfc3895decffdc99850284c7d",
+      "cik": "0002012383",
+      "episode_id": "P1EP-5c0fb720ba365bbc5a7d8ac692b6758658dbdaf23d16b89fbf0b9bdd0f8d49b8",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:57536b2874b98a7d5a11703445ce5ae2462e7b303a32b75a0031c2f0348909bd",
+        "VALUEIN_ENTITY:0002012383",
+        "VALUEIN_EXPLICIT_SUCCESSOR_PAIR:234081:0001364742:232835:0002012383:2024-02-20",
+        "VALUEIN_REFERENCE:232835:0002012383:BBG01PSW2WN4:BBG01PSW2WN4:BBG01PSW2WR0",
+        "VALUEIN_SECURITY:232835:0002012383:2024-02-20:None:NYSE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:156043:succession_config:0001364742:2011-04-04:2024-02-20:SUCCESSOR_CIK:0002012383"
+      ],
+      "valid_from": "2024-02-20",
+      "valid_to": "2025-01-01"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:10be20c2f3831f711ba21bedd36b2209ba27db42d24daaa625720758bc999a3e",
+      "cik": "0000868809",
+      "episode_id": "P1EP-7e6af7a0d9679b4f68137a373e063e73f6b2c63dd0da3c98be1aed0b397aefd7",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:ed29f20cedcce923eab18cc1ac7fc288b2b95590fa9544c67669bd34cdaa9a09",
+        "VALUEIN_ENTITY:0000868809",
+        "VALUEIN_REFERENCE:234513:0000868809:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234513:0000868809:1996-05-14:2010-06-26:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:286:historical_seed:0000868809:2004-12-29:2010-06-28",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234513:1996-05-14:2010-06-26:2010-01-04:2010-06-28",
+        "XNYS_EPISODE_SESSIONS_SHA256:135fc3a75d04005eadb391a73c9b29995f9f464dc6f17945bcb8f1611dad24c0"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2010-06-28"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:f5f941c0d008442eca16df134dbaaf26bfc838d88176b82f4a10f0a1edce5144",
+      "cik": "0000003673",
+      "episode_id": "P1EP-8520f3524c71a2a6eab981bfd259cbcf0970ab5f705e781e7f9410583c5d5c2f",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:cc215d92d7520c691dc06778ec6990fd0a74fa48b12dd2d46c8f34dcc2f05d1d",
+        "VALUEIN_ENTITY:0000003673",
+        "VALUEIN_REFERENCE:234519:0000003673:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234519:0000003673:1994-03-14:2011-02-26:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:295:historical_seed:0000003673:2000-12-11:2011-02-28",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234519:1994-03-14:2011-02-26:2010-01-04:2011-02-28",
+        "XNYS_EPISODE_SESSIONS_SHA256:26c2895d26bdf9305f10db0f2f4c623b87d70a6e3f3170197bb31e27ee1e8e2c"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2011-02-28"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:d000960a2bac16c6cca83ade03614821993980b467471f2abb1e19b351cbb786",
+      "cik": "0000002135",
+      "episode_id": "P1EP-86263ec7b3c16fa43c2c0e935d9c12c9755b4dec3b412d7d2dc2946af4722bca",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:9c2536318490a397a216d356a2e56f0f5e7925824f76f63bf05b40f9739c1701",
+        "VALUEIN_ENTITY:0000002135",
+        "VALUEIN_REFERENCE:234867:0000002135:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234867:0000002135:1998-05-14:2010-02-06:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:281:historical_seed:0000002135:2004-04-02:2010-02-08",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234867:1998-05-14:2010-02-06:2010-01-04:2010-02-08",
+        "XNYS_EPISODE_SESSIONS_SHA256:bde3f8316c341d1075301a772e61d3ef4674691505c563e530fdd5b56cdfaf19"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2010-02-08"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:47ab5ddef1f19378df2aab3c692a02814cad4fd04495ef8be72d42a1e7bdb492",
+      "cik": "0001047122",
+      "episode_id": "P1EP-a1154a7465a32aa944d32b37285da747fe8ad72f1bba7873e8fe8c5de2fc2632",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:dbc2499992a89b15a4f5356f84ffdcdcee7f7027a5636a1dc7820212200e4b82",
+        "VALUEIN_ENTITY:0001047122",
+        "VALUEIN_REFERENCE:234623:0001047122:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234623:0001047122:1997-12-18:2020-04-04:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:442:historical_seed:0001047122:1996-01-02:2020-04-06",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234623:1997-12-18:2020-04-04:2010-01-04:2020-04-06",
+        "XNYS_EPISODE_SESSIONS_SHA256:183b2b9b4518ac856729e79b29daef9893f01411d2078c51749f7d6c1caf8df2"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2020-04-06"
+    },
+    {
+      "binding_classification": "PASS_CORROBORATED",
+      "binding_id": "sha256:6e9a7eb7afd1288876a54f827e53a79d77708a53856734f13843452b43943b5b",
+      "cik": "0000849213",
+      "episode_id": "P1EP-ecf2a4559318c6f9c93f5853364fb0ac08b61c354faed5444d51a1b263f93937",
+      "evidence_source_identities": [
+        "P1_PROVENANCE:2caa1eaca0a1335ae3c65601e7d562b1900cf14535ff521736765c1a42d882ed",
+        "VALUEIN_ENTITY:0000849213",
+        "VALUEIN_REFERENCE:234576:0000849213:NONE:NONE:NONE",
+        "VALUEIN_SECURITY:234576:0000849213:1994-03-14:2016-02-20:NONE",
+        "VALUEIN_SNAPSHOT_SHA256:67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4",
+        "VALUEIN_SP500_MEMBERSHIP:363:historical_seed:0000849213:2002-01-17:2016-02-22",
+        "VALUEIN_ZERO_XNYS_SESSION_GAP:234576:1994-03-14:2016-02-20:2010-01-04:2016-02-22",
+        "XNYS_EPISODE_SESSIONS_SHA256:f546e3e0654f76916044fa4bd3d351756b1c6f4a6ebdc4ffc1b83a4642f874fa"
+      ],
+      "valid_from": "2010-01-04",
+      "valid_to": "2016-02-22"
     }
   ],
   "schema": "AQ_ACCEPTED_SUPPLEMENTAL_EPISODE_SEC_CIK_BINDINGS_V1"

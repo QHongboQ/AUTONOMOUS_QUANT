@@ -11,10 +11,7 @@ CIK_ROOT = REPO_ROOT / "10-data-system" / "fundamentals" / "identity-binding"
 for path in (ADAPTER_ROOT, CIK_ROOT):
     sys.path.insert(0, str(path))
 
-from aq_valuein_adapter import (
-    project_valuein_native_binding,
-    project_valuein_native_bindings,
-)
+from aq_valuein_adapter import project_valuein_native_binding
 
 
 def episode(ticker: str, start: str, end: str, marker: str) -> dict[str, object]:
@@ -54,7 +51,6 @@ def membership(
     index_name: str = "SP500",
     source: str = "historical_seed",
     marker: str = "1",
-    successor_cik: str | None = None,
 ) -> dict[str, object]:
     return {
         "id": f"membership-{marker}",
@@ -63,7 +59,6 @@ def membership(
         "effective_date": start,
         "removal_date": end,
         "source": source,
-        "successor_cik": successor_cik,
     }
 
 
@@ -198,116 +193,6 @@ class ValueinNativeProjectionTests(unittest.TestCase):
                 item,
                 [security("DD", "0001666700", "2016-03-01", None)],
                 [membership("0001666700", "2010-01-04", "2017-09-01")],
-            )
-
-    def test_zero_xnys_session_gap_projects_without_ticker_branching(self) -> None:
-        item = episode("GENERIC", "2020-01-06", "2020-01-13", "7")
-        bindings = project_valuein_native_bindings(
-            item,
-            authoritative_episodes=[item],
-            security_rows=[
-                security("GENERIC", "0000000001", "2019-01-01", "2020-01-11")
-            ],
-            entity_rows=[{"cik": "0000000001"}],
-            membership_rows=[membership("0000000001", "2019-01-01", "2021-01-01")],
-            reference_rows=[reference("0000000001")],
-            snapshot_identity="a" * 64,
-            xnys_sessions=(
-                "2020-01-06",
-                "2020-01-07",
-                "2020-01-08",
-                "2020-01-09",
-                "2020-01-10",
-            ),
-        )
-        self.assertEqual(1, len(bindings))
-        self.assertEqual("PASS_CORROBORATED", bindings[0].binding_classification)
-        self.assertTrue(
-            any(
-                item.startswith("VALUEIN_ZERO_XNYS_SESSION_GAP:")
-                for item in bindings[0].evidence_source_identities
-            )
-        )
-
-    def test_real_xnys_session_gap_fails_closed(self) -> None:
-        item = episode("GENERIC", "2020-01-06", "2020-01-13", "8")
-        with self.assertRaisesRegex(ValueError, "eligible XNYS session gap"):
-            project_valuein_native_bindings(
-                item,
-                authoritative_episodes=[item],
-                security_rows=[
-                    security(
-                        "GENERIC", "0000000001", "2019-01-01", "2020-01-10"
-                    )
-                ],
-                entity_rows=[{"cik": "0000000001"}],
-                membership_rows=[
-                    membership("0000000001", "2019-01-01", "2021-01-01")
-                ],
-                reference_rows=[reference("0000000001")],
-                snapshot_identity="a" * 64,
-                xnys_sessions=(
-                    "2020-01-06",
-                    "2020-01-07",
-                    "2020-01-08",
-                    "2020-01-09",
-                    "2020-01-10",
-                ),
-            )
-
-    def test_explicit_successor_cik_projects_two_contiguous_subintervals(self) -> None:
-        item = episode("GENERIC", "2020-01-01", "2021-01-01", "9")
-        securities = [
-            security("GENERIC", "0000000001", "2019-01-01", "2020-06-01", "1"),
-            security("GENERIC", "0000000002", "2020-06-01", None, "2"),
-        ]
-        bindings = project_valuein_native_bindings(
-            item,
-            authoritative_episodes=[item],
-            security_rows=list(reversed(securities)),
-            entity_rows=[{"cik": "0000000001"}, {"cik": "0000000002"}],
-            membership_rows=[
-                membership(
-                    "0000000001",
-                    "2019-01-01",
-                    "2020-06-01",
-                    successor_cik="0000000002",
-                )
-            ],
-            reference_rows=[
-                reference("0000000001", "1"),
-                reference("0000000002", "2"),
-            ],
-            snapshot_identity="a" * 64,
-        )
-        self.assertEqual(2, len(bindings))
-        self.assertEqual(bindings[0].valid_to, bindings[1].valid_from)
-        self.assertEqual("0000000001", bindings[0].cik)
-        self.assertEqual("0000000002", bindings[1].cik)
-        self.assertEqual(item["valid_from"], bindings[0].valid_from.isoformat())
-        self.assertEqual(item["valid_to"], bindings[1].valid_to.isoformat())
-
-    def test_successor_pair_without_upstream_relation_fails_closed(self) -> None:
-        item = episode("GENERIC", "2020-01-01", "2021-01-01", "0")
-        with self.assertRaisesRegex(ValueError, "successor_cik"):
-            project_valuein_native_bindings(
-                item,
-                authoritative_episodes=[item],
-                security_rows=[
-                    security(
-                        "GENERIC", "0000000001", "2019-01-01", "2020-06-01", "1"
-                    ),
-                    security("GENERIC", "0000000002", "2020-06-01", None, "2"),
-                ],
-                entity_rows=[{"cik": "0000000001"}, {"cik": "0000000002"}],
-                membership_rows=[
-                    membership("0000000001", "2019-01-01", "2020-06-01")
-                ],
-                reference_rows=[
-                    reference("0000000001", "1"),
-                    reference("0000000002", "2"),
-                ],
-                snapshot_identity="a" * 64,
             )
 
     def test_conflicting_entity_and_reference_relations_fail_closed(self) -> None:

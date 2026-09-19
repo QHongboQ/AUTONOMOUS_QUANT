@@ -324,13 +324,93 @@ class AcceptedIdentityAuthorityLedgerTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
+        cls.binding_schema = json.loads(
+            (CONTRACT_ROOT / "episode-sec-cik-binding-v1.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
 
-    def test_two_supplemental_bindings_preserve_accepted_evidence(self) -> None:
+    def test_13_supplemental_bindings_are_valid_and_deterministic(self) -> None:
         records = self.supplemental["records"]
-        self.assertEqual(2, self.supplemental["record_count"])
-        self.assertEqual(2, len({row["episode_id"] for row in records}))
+        self.assertEqual(13, self.supplemental["record_count"])
+        self.assertEqual(12, self.supplemental["episode_count"])
+        self.assertEqual(12, len({row["episode_id"] for row in records}))
+
+        episode_ranges: dict[str, tuple[str, str]] = {}
+        for row in records:
+            current = episode_ranges.get(row["episode_id"])
+            episode_ranges[row["episode_id"]] = (
+                min(row["valid_from"], current[0]) if current else row["valid_from"],
+                max(row["valid_to"], current[1]) if current else row["valid_to"],
+            )
+            Draft202012Validator(self.binding_schema).validate(row)
+            self.assertEqual(
+                row["binding_id"],
+                binding_id_for(
+                    {key: value for key, value in row.items() if key != "binding_id"}
+                ),
+            )
+        authority = [
+            {"episode_id": episode_id, "valid_from": start, "valid_to": end}
+            for episode_id, (start, end) in episode_ranges.items()
+        ]
+        self.assertEqual(
+            13, len(validate_binding_set(records, authoritative_episodes=authority))
+        )
+
+    def test_supplemental_authority_preserves_bounded_residual_evidence(self) -> None:
+        records = self.supplemental["records"]
+        by_episode: dict[str, list[dict[str, object]]] = {}
+        for row in records:
+            by_episode.setdefault(row["episode_id"], []).append(row)
+
+        split = [rows for rows in by_episode.values() if len(rows) == 2]
+        self.assertEqual(1, len(split))
+        ordered = sorted(split[0], key=lambda row: row["valid_from"])
+        self.assertEqual(ordered[0]["valid_to"], ordered[1]["valid_from"])
+        self.assertNotEqual(ordered[0]["cik"], ordered[1]["cik"])
+        self.assertTrue(
+            all(
+                any(
+                    evidence.startswith("VALUEIN_EXPLICIT_SUCCESSOR_PAIR:")
+                    for evidence in row["evidence_source_identities"]
+                )
+                for row in ordered
+            )
+        )
+
+        boundary = [
+            row
+            for row in records
+            if any(
+                evidence.startswith("VALUEIN_ZERO_XNYS_SESSION_GAP:")
+                for evidence in row["evidence_source_identities"]
+            )
+        ]
+        self.assertEqual(9, len(boundary))
+        self.assertTrue(
+            all(
+                any(
+                    evidence.startswith("XNYS_EPISODE_SESSIONS_SHA256:")
+                    for evidence in row["evidence_source_identities"]
+                )
+                for row in boundary
+            )
+        )
+
+    def test_ctl_and_fb_preserve_existing_accepted_bytes(self) -> None:
+        records_by_id = {
+            row["binding_id"]: row for row in self.supplemental["records"]
+        }
         fixture_by_id = {row["binding_id"]: row for row in FIXTURE["bindings"]}
-        self.assertEqual(records, [fixture_by_id[row["binding_id"]] for row in records])
+        accepted_ids = {
+            "sha256:54345b1e2f841321eb2a3b99c8a8a6c5ebd46afeb7954bb57113dfb67a98db1a",
+            "sha256:72efe1cdcaa2c9872faba87fe06b34d57eb2e44dc8a8beba8d64959143ff719a",
+        }
+        self.assertEqual(
+            {binding_id: fixture_by_id[binding_id] for binding_id in accepted_ids},
+            {binding_id: records_by_id[binding_id] for binding_id in accepted_ids},
+        )
 
     def test_111_exclusions_are_deterministic_and_schema_valid(self) -> None:
         records = self.exclusions["records"]
@@ -365,12 +445,34 @@ class AcceptedIdentityAuthorityLedgerTests(unittest.TestCase):
             )
             self.assertNotIn("cik", row)
 
+    def test_dell_and_sun_conflicts_remain_fail_closed(self) -> None:
+        conflicts = {
+            row["episode_id"]
+            for row in self.exclusions["records"]
+            if row["classification"] == "CONFLICT_REMAINS_FAIL_CLOSED"
+        }
+        self.assertEqual(
+            {
+                "P1EP-9317c09edbf3ba96596376a28b883d581db77c79781af84617e16931a4bad639",
+                "P1EP-f9f35dd7729caa1da44fe3d8aff598dbd97d5be96cda07bee8d636bdcb6f3461",
+            },
+            conflicts,
+        )
+
     def test_binding_and_exclusion_episode_sets_are_disjoint(self) -> None:
         binding_ids = {
             row["episode_id"] for row in self.supplemental["records"]
         }
         exclusion_ids = {row["episode_id"] for row in self.exclusions["records"]}
         self.assertFalse(binding_ids & exclusion_ids)
+
+    def test_full_identity_accounting_reconciles(self) -> None:
+        self.assertEqual(
+            832,
+            709
+            + self.supplemental["episode_count"]
+            + self.exclusions["record_count"],
+        )
 
 
 if __name__ == "__main__":
