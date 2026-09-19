@@ -672,3 +672,42 @@ stages:
       md5: 9568a446316a91deed7b961bd5d3d628
       size: 1909
       isexec: true
+  p5_hybrid_historical_dataset_pilot_seal:
+    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 10-data-system/fundamentals/historical-dataset/seal_pilot.py --manifest ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json --events ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted --projection ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet --provenance ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet --quality ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json --output ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json
+    deps:
+    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json
+      hash: md5
+      md5: 9c5dd6b01f18487cb0c78afa80798ff5
+      size: 1886
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json
+      hash: md5
+      md5: f866ed483a1fd8c305e91b08b61700db
+      size: 2643
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet
+      hash: md5
+      md5: 2dc3db84b1951a49ca5d7600d897ad0e
+      size: 51780
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet
+      hash: md5
+      md5: 4535a3fa7ce6e258db064b4679ea23b1
+      size: 42466
+      isexec: true
+    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted
+      hash: md5
+      md5: 8265262453f6ee1d05e555cee548602d.dir
+      size: 50144
+      nfiles: 8
+    - path: 10-data-system/fundamentals/historical-dataset/seal_pilot.py
+      hash: md5
+      md5: b8dea56c7fe81596d85bda9fa58b1d5e
+      size: 2154
+      isexec: true
+    outs:
+    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json
+      hash: md5
+      md5: c03279d603e8a173a673750080ca0339
+      size: 3412
+      isexec: true

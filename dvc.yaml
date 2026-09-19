@@ -305,3 +305,22 @@ stages:
       - 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
     outs:
       - 40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
+  p5_hybrid_historical_dataset_pilot_seal:
+    cmd: >-
+      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 10-data-system/fundamentals/historical-dataset/seal_pilot.py
+      --manifest ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json
+      --events ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted
+      --projection ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet
+      --provenance ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet
+      --quality ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json
+      --output ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json
+    deps:
+      - 10-data-system/fundamentals/historical-dataset/seal_pilot.py
+      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json
+      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted
+      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet
+      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet
+      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json
+    outs:
+      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json:
+          cache: false
