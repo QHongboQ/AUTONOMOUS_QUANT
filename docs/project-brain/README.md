@@ -2028,6 +2028,41 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_FILING_INTELLIGENCE_FEATURE_POLICY_SELECTION_001
 ```
 
+### P5 deterministic filing-intelligence feature policy
+
+PR #69 squash-merged the EdgarTools filing-intelligence authority at
+`3503bf11125164b19427fde494eac6c7a0830dfb`. A policy-only preregistration then
+audited 33 candidates and selected five P5 V1 filing features: filing lag,
+after-close acceptance, amendment status, native press-release exhibit
+presence, and native authorized exhibit count.
+
+The five features are accession-bound, deterministic, visible only from the
+existing XNYS effective session, and distinct from the eleven structured
+fundamental metrics. Six semantic/LLM/embedding candidates remain deferred to
+P6 and 22 candidates are explicitly rejected. No parser, NLP pipeline,
+calculator, production feature code, model training, backtest, or SEC request
+was added. See [P5 Filing Intelligence Deterministic Feature Policy
+001](p5-filing-intelligence-deterministic-feature-policy-001.md).
+
+```text
+P5_FILING_INTELLIGENCE_AUTHORITY_MERGE_PR = 69
+P5_FILING_INTELLIGENCE_AUTHORITY_MERGE_SHA = 3503bf11125164b19427fde494eac6c7a0830dfb
+P5_FILING_FEATURE_CANDIDATE_COUNT = 33
+P5_SELECTED_V1_FILING_FEATURE_COUNT = 5
+P5_DEFERRED_P6_FILING_FEATURE_COUNT = 6
+P5_REJECTED_FILING_FEATURE_COUNT = 22
+P5_LLM_FEATURE_COUNT = 0
+P5_EMBEDDING_FEATURE_COUNT = 0
+P5_CUSTOM_PARSER_FEATURE_COUNT = 0
+P5_NEW_FEATURE_PRODUCTION_LOC = 0
+P5_FILING_FEATURE_POLICY_SELECTED = YES
+P5_SEC_DATA_REQUEST_COUNT = 0
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PARALLEL_DEVELOPMENT_NEXT = P5_FILING_INTELLIGENCE_SELECTED_FEATURE_THIN_MATERIALIZATION_POC_001
+```
+
 ---
 
 ## 27. First Principle
