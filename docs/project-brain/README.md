@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — EdgarTools Native Full Universe Historical Build 001**
+> Active Development: **P5 — EdgarTools Selective Full Historical Build Execution 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -1837,11 +1837,45 @@ P5_EDGARTOOLS_NATIVE_QLIB_HANDOFF_PLAN = COMPLETE
 P5_FULL_HISTORICAL_BUILD_AUTHORIZED = YES
 P5_HISTORICAL_DATASET_BUILT = NO
 P5_EDGARTOOLS_NATIVE_BUILD_DESIGN_PRIVATE_CHECKSUM_LEDGER_SHA256 = bd1e8d07fdece2a11b0aafb0f26d5b1905df3802ba35f9f9ce770a4cd26232b1
-CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_NATIVE_FULL_UNIVERSE_HISTORICAL_BUILD_001
+P5_ENTITYFACTS_FIRST_PATH = PASS
+P5_SELECTIVE_REQUIRED_ACCESSION_COUNT = 36206
+P5_SELECTED_SOURCE_ACQUISITION = EDGARTOOLS_NATIVE_REQUIRED_ASSETS_REMOTE_FIRST
+P5_SAMPLE_SOURCE_NETWORK_REDUCTION_RATE = 69.1469159664%
+P5_SELECTIVE_BUILD_PRODUCTION_LOC = 758
+P5_DUPLICATE_DECIMAL_IMPLEMENTATION_COUNT = 0
+P5_BROAD_ACCESSION_ACQUISITION_STARTED = NO
+P5_FULL_HISTORICAL_BUILD_STARTED = NO
+CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_SELECTIVE_FULL_HISTORICAL_BUILD_EXECUTION_001
 CURRENT_NEXT = P2_FORMULAIC_ALPHA_SEALED_OOS_ACCUMULATION_001
 P2_V2_SEALED_OOS_ACCESSED = NO
 NEWS_INTELLIGENCE = PLANNED / NOT STARTED
 MULTI_ASSET = PLANNED / NOT STARTED
+```
+
+### P5 EdgarTools selective historical build production canary
+
+The frozen 256-accession production canary is complete and passed. All 256
+accessions reached `COMPLETE_WITH_EVIDENCE`; 34,379 unique immutable evidence
+rows and 8,668 consolidated standardized events were sealed with zero duplicate
+evidence IDs. Effective-session projection reported zero early visibility,
+cross-CIK contamination, or period-class mixing failures. Qlib
+`StaticDataLoader -> DataHandlerLP -> DatasetH` consumed the 508,842-row canary
+panel without training, prediction, or backtest.
+
+The final checkpoint replay reused 256/256 accessions, reprocessed zero, and
+read zero network bytes. The 2 GiB cache ceiling was not approached, and the
+ordinary transient source cache was evicted after seal verification. The broad
+36,206-accession execution did not start. See
+[P5 EdgarTools Selective Historical Build Production Canary 001](p5-edgartools-selective-historical-build-production-canary-001.md).
+
+```text
+P5_EDGARTOOLS_PRODUCTION_CANARY = PASS
+PRODUCTION_CANARY_ACCESSION_COUNT = 256
+FULL_BUILD_CANARY_STATUS = PASS
+BROAD_FULL_UNIVERSE_EXECUTION_STARTED = NO
+P5_HISTORICAL_DATASET_BUILT = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_SELECTIVE_FULL_HISTORICAL_BUILD_EXECUTION_001
 ```
 
 ---
