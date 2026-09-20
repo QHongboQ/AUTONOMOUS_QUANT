@@ -26,20 +26,24 @@ EdgarTools filing/XBRL validation. Accession is the deduplication and recovery
 unit.
 
 The older 36,582-accession native filing inventory remains a diagnostic
-superset, not an instruction to persist every numeric XBRL fact. The bounded
-32-accession sample and a metadata-only 711-CIK EntityFacts pass measure the
-selective fact/accession population and enforce the 176 GiB persistent / 192
-GiB peak storage gate before any broad acquisition.
+superset, not an instruction to persist every numeric XBRL fact. The frozen
+32-accession sample and completed metadata-only 711-CIK EntityFacts pass define
+the selective 36,206-accession population. They are audit evidence and are not
+reimplemented by the production entry point.
 
-Source storage is remote-first. Ordinary SEC filing bytes are an EdgarTools-
-managed or bounded build cache, not a permanent dataset surface. AQ seals the
-source identity, URL, byte count and SHA-256 with its structured PIT evidence;
-the ordinary cache becomes evictable only after all derived output hashes have
-sealed. Re-extraction must reacquire through SEC/EdgarTools and match that hash
-exactly. DVC owns the structured evidence and build authority, not a complete
-SEC source mirror.
+Source storage is remote-first. EdgarTools' native `XBRLAttachments` selection
+defines the required instance/schema/linkbase asset set; the complete SGML
+submission is not acquired merely to support numeric XBRL facts. AQ seals a
+deterministic manifest of each native asset's SEC-relative identity, URL,
+byte count, role, and SHA-256. Re-extraction must reacquire through
+SEC/EdgarTools and match every asset and the manifest hash exactly. The
+ordinary cache becomes evictable only after all derived output hashes seal.
+DVC owns the structured evidence and build authority, not a SEC source mirror.
 
-The companion `aq_edgartools_full_build` module contains only deterministic
-build accounting, sampling, checkpoint/hash validation and storage admission.
+The companion `aq_edgartools_full_build` module contains only finite selection,
+bounded batches, native-source manifest projection, minimal checkpoint/hash
+validation, and failure accounting. Decimal admission and the concept
+vocabulary remain in the existing evidence and hybrid-dataset authorities.
 It does not contain a SEC client, form router, XBRL/statement parser, identity
-engine, generic ETL framework, warehouse, or as-of implementation.
+engine, generic checkpoint framework, ETL framework, warehouse, or as-of
+implementation.

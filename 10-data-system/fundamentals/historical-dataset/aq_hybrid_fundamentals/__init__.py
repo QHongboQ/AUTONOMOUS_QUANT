@@ -21,6 +21,22 @@ FROZEN_STANDARD_CONCEPTS = (
     "ShortTermDebt",
     "LongTermDebt",
 )
+# Direct projection from EdgarTools' public StandardConcept enum values into
+# the already-frozen AQ feature identifiers. Raw issuer XBRL aliases remain
+# wholly owned by EdgarTools.
+EDGARTOOLS_STANDARD_CONCEPT_PROJECTION = {
+    "Revenue": "Revenue",
+    "Net Income": "NetIncome",
+    "Total Assets": "Assets",
+    "Total Liabilities": "Liabilities",
+    "Total Stockholders' Equity": "CommonEquity",
+    "Net Cash from Operating Activities": "NetCashFromOperatingActivities",
+    "Cash and Cash Equivalents": "CashAndCashEquivalents",
+    "Total Current Assets": "CurrentAssetsTotal",
+    "Total Current Liabilities": "CurrentLiabilitiesTotal",
+    "Short Term Debt": "ShortTermDebt",
+    "Long Term Debt": "LongTermDebt",
+}
 PERIOD_CLASSES = frozenset(
     {
         "INSTANT",
@@ -67,6 +83,14 @@ def feature_identity(standard_concept: str, period_class: str) -> str:
     if period_class not in PERIOD_CLASSES:
         raise ValueError("unsupported period class")
     return f"{standard_concept}__{period_class}"
+
+
+def project_edgartools_standard_concept(value: str | None) -> str | None:
+    """Project one upstream standard concept; never map a raw issuer tag."""
+
+    if value is None:
+        return None
+    return EDGARTOOLS_STANDARD_CONCEPT_PROJECTION.get(value)
 
 
 def _utc(value: object, name: str) -> pd.Timestamp:
@@ -207,11 +231,13 @@ def project_events_asof(grid: pd.DataFrame, events: pd.DataFrame) -> pd.DataFram
 
 __all__ = [
     "FROZEN_STANDARD_CONCEPTS",
+    "EDGARTOOLS_STANDARD_CONCEPT_PROJECTION",
     "PERIOD_CLASSES",
     "admit_period_class",
     "consolidated_projection_events",
     "effective_session",
     "eligible_episode_sessions",
     "feature_identity",
+    "project_edgartools_standard_concept",
     "project_events_asof",
 ]
