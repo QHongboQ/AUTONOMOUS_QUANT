@@ -1852,6 +1852,32 @@ NEWS_INTELLIGENCE = PLANNED / NOT STARTED
 MULTI_ASSET = PLANNED / NOT STARTED
 ```
 
+### P5 EdgarTools selective historical build production canary
+
+The frozen 256-accession production canary is complete and passed. All 256
+accessions reached `COMPLETE_WITH_EVIDENCE`; 34,379 unique immutable evidence
+rows and 8,668 consolidated standardized events were sealed with zero duplicate
+evidence IDs. Effective-session projection reported zero early visibility,
+cross-CIK contamination, or period-class mixing failures. Qlib
+`StaticDataLoader -> DataHandlerLP -> DatasetH` consumed the 508,842-row canary
+panel without training, prediction, or backtest.
+
+The final checkpoint replay reused 256/256 accessions, reprocessed zero, and
+read zero network bytes. The 2 GiB cache ceiling was not approached, and the
+ordinary transient source cache was evicted after seal verification. The broad
+36,206-accession execution did not start. See
+[P5 EdgarTools Selective Historical Build Production Canary 001](p5-edgartools-selective-historical-build-production-canary-001.md).
+
+```text
+P5_EDGARTOOLS_PRODUCTION_CANARY = PASS
+PRODUCTION_CANARY_ACCESSION_COUNT = 256
+FULL_BUILD_CANARY_STATUS = PASS
+BROAD_FULL_UNIVERSE_EXECUTION_STARTED = NO
+P5_HISTORICAL_DATASET_BUILT = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_SELECTIVE_FULL_HISTORICAL_BUILD_EXECUTION_001
+```
+
 ---
 
 ## 27. First Principle

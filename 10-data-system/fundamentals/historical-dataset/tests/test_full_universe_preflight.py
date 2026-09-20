@@ -28,9 +28,14 @@ from aq_edgartools_full_build import (
     verify_native_xbrl_source_manifest,
 )
 from aq_fundamental_evidence.materialize import materialize_edgartools_fact
+from aq_fundamental_evidence import canonical_decimal_value
 from aq_hybrid_fundamentals import (
     FROZEN_STANDARD_CONCEPTS,
     project_edgartools_standard_concept,
+)
+from run_full_universe_preflight import (
+    _HomepageFilingView,
+    _install_transient_native_cache,
 )
 
 
@@ -87,11 +92,24 @@ def test_numeric_admission_reuses_existing_canonical_decimal_authority(value: st
     ) == (NUMERIC_FACT_SELECTED, value)
 
 
-@pytest.mark.parametrize("value", ["42.500", "1.25E+3", "-0", "NaN"])
-def test_noncanonical_numeric_value_fails_closed_in_existing_authority(value: str) -> None:
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [("42.500", "42.5"), ("1.25E+3", "1250"), ("-0", "0")],
+)
+def test_exact_xbrl_lexical_value_is_normalized_before_existing_authority(
+    value: str, expected: str
+) -> None:
+    assert select_numeric_fact_value(
+        {"value": value, "numeric_value": 1, "unit_ref": "USD"}
+    ) == (NUMERIC_FACT_SELECTED, expected)
+    with pytest.raises(ValueError):
+        canonical_decimal_value(value)
+
+
+def test_nonfinite_native_numeric_value_fails_closed() -> None:
     with pytest.raises(ValueError):
         select_numeric_fact_value(
-            {"value": value, "numeric_value": 1, "unit_ref": "USD"}
+            {"value": "NaN", "numeric_value": 1, "unit_ref": "USD"}
         )
 
 
@@ -210,6 +228,52 @@ def test_native_asset_manifest_is_deterministic_and_avoids_full_submission() -> 
     assert [row["role"] for row in first["assets"]] == ["instance", "schema", "label"]
     assert first["source_document_identity"].startswith("SEC_XBRL_ASSET_MANIFEST:")
     assert first["source_storage_class"] == REACQUIRABLE_SOURCE_CACHE
+
+
+def test_homepage_view_and_lazy_cache_do_not_touch_sgml_or_unselected_files(
+    tmp_path: Path,
+) -> None:
+    class LazyAttachment:
+        def __init__(self, document_type: str, document: str, payload: str) -> None:
+            self.document_type = document_type
+            self.document = document
+            self.path = f"/Archives/{document}"
+            self.url = f"https://www.sec.gov{self.path}"
+            self.payload = payload
+            self.read_count = 0
+
+        @property
+        def extension(self) -> str:
+            return Path(self.document).suffix
+
+        @property
+        def content(self) -> str:
+            override = getattr(self, "_content_override", None)
+            if override is not None:
+                return override() if callable(override) else override
+            self.read_count += 1
+            return self.payload
+
+        @content.setter
+        def content(self, value: object) -> None:
+            self._content_override = value
+
+    instance = LazyAttachment("EX-101.INS", "instance.xml", "<xbrl></xbrl>")
+    unselected = LazyAttachment("OTHER", "other.txt", "not xbrl")
+    attachments = SimpleNamespace(data_files=[instance, unselected])
+    original = SimpleNamespace(accession_no="0000000001-20-000001", form="10-K")
+    view = _HomepageFilingView(
+        original, attachments, period_of_report="2019-12-31"
+    )
+    stats = {"current_bytes": 0, "max_bytes": 0, "breach_count": 0}
+    _install_transient_native_cache(attachments, tmp_path, stats)
+    assert instance.read_count == 0
+    assert unselected.read_count == 0
+    manifest = native_xbrl_source_manifest(view)
+    assert [row["role"] for row in manifest["assets"]] == ["instance"]
+    assert instance.read_count == 1
+    assert unselected.read_count == 0
+    assert view.sgml() is None
 
 
 def test_native_asset_manifest_reacquisition_hash_mismatch_fails_closed() -> None:

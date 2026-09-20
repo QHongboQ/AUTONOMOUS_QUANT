@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import rfc8785
@@ -89,7 +90,18 @@ def select_numeric_fact_value(fact: Mapping[str, object]) -> tuple[str, str | No
         return NIL_FACT_NOT_ELIGIBLE, None
     if fact.get("numeric_value") is None and fact.get("unit_ref") is None:
         return NON_NUMERIC_FACT_NOT_ELIGIBLE, None
-    return NUMERIC_FACT_SELECTED, canonical_decimal_value(str(value))
+    try:
+        exact = Decimal(str(value))
+    except InvalidOperation as exc:
+        raise ValueError("native XBRL numeric value is not an exact decimal") from exc
+    if not exact.is_finite():
+        raise ValueError("native XBRL numeric value must be finite")
+    canonical = format(exact, "f")
+    if "." in canonical:
+        canonical = canonical.rstrip("0").rstrip(".")
+    if canonical in {"-0", ""}:
+        canonical = "0"
+    return NUMERIC_FACT_SELECTED, canonical_decimal_value(canonical)
 
 
 def native_financial_object_info(
