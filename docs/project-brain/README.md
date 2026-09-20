@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — EdgarTools Selective Full Historical Build Execution 001**
+> Active Development: **P5 — Historical Build Required Accession Failure Closeout 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -1876,6 +1876,28 @@ BROAD_FULL_UNIVERSE_EXECUTION_STARTED = NO
 P5_HISTORICAL_DATASET_BUILT = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
 CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_SELECTIVE_FULL_HISTORICAL_BUILD_EXECUTION_001
+```
+
+### P5 EdgarTools selective full historical build execution
+
+The full execution failed closed before accession processing because the frozen
+36,206-accession selection is not completely joinable to the frozen native
+filing-metadata inventory. Four required accessions lack native metadata. Two
+resolve to empty SEC filing homepages, while the other two are authoritative
+`10-KT` / `10-QT` filings outside the frozen EdgarTools periodic-object
+admission. Substituting another accession or rewriting the source form would
+break accession-bound provenance, so no broad acquisition or final seal was
+started. See [P5 EdgarTools Selective Full Historical Build Execution
+001](p5-edgartools-selective-full-historical-build-execution-001.md).
+
+```text
+P5_EDGARTOOLS_FULL_BUILD_EXECUTION = BLOCKED_PREEXECUTION_INPUT_INTEGRITY
+SELECTIVE_REQUIRED_ACCESSION_COUNT = 36206
+PREEXECUTION_REQUIRED_ACCESSION_BLOCKER_COUNT = 4
+BROAD_FULL_UNIVERSE_EXECUTION_STARTED = NO
+P5_HISTORICAL_DATASET_BUILT = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P5_HISTORICAL_BUILD_REQUIRED_ACCESSION_FAILURE_CLOSEOUT_001
 ```
 
 ---
