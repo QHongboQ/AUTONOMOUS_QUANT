@@ -34,6 +34,7 @@ SELECTIVE_POLICY_IDENTITY = (
 MAX_EXTRACTION_ACCESSIONS = 200
 MAX_ACTIVE_BATCH_SOURCE_BYTES = 2 * 1024**3
 NATIVE_PERIODIC_OBJECT_TYPES = frozenset({"TenK", "TenQ", "TwentyF", "FortyF"})
+TRANSITION_FINANCIAL_FORMS = frozenset({"10-KT", "10-KT/A", "10-QT", "10-QT/A"})
 XBRL_ASSET_ROLES = (
     "instance",
     "schema",
@@ -117,7 +118,7 @@ def native_financial_object_info(
         get_info = get_obj_info
     has_object, object_type, _description = get_info(form)
     base_form = form.split("/", 1)[0]
-    admitted = bool(
+    admitted = form in TRANSITION_FINANCIAL_FORMS or bool(
         has_object
         and (
             object_type in NATIVE_PERIODIC_OBJECT_TYPES
@@ -375,6 +376,7 @@ __all__ = [
     "SELECTIVE_POLICY_IDENTITY",
     "SELECTIVE_REQUIRED_ACCESSION_COUNT",
     "SourceHashMismatchError",
+    "TRANSITION_FINANCIAL_FORMS",
     "bounded_batches",
     "checkpoint_identity",
     "checkpoint_reusable",

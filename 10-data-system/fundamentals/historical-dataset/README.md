@@ -31,6 +31,15 @@ superset, not an instruction to persist every numeric XBRL fact. The frozen
 the selective 36,206-accession population. They are audit evidence and are not
 reimplemented by the production entry point.
 
+The corrected execution authority preserves all 36,206 discovered accessions
+as 36,204 source-verifiable required accessions plus two immutable
+`SOURCE_UNAVAILABLE_FOR_FINAL_PROVENANCE` accounting records. The latter cannot
+become `FundamentalEvidenceV1`, receive a source hash, or name a replacement
+accession. Four SEC transition forms (`10-KT`, `10-KT/A`, `10-QT`, and
+`10-QT/A`) have one narrow admission leaf into the unchanged EdgarTools native
+XBRL path. Their filed form is preserved, while fact period classes continue to
+come only from native XBRL instant/duration semantics.
+
 Source storage is remote-first. EdgarTools' native `XBRLAttachments` selection
 defines the required instance/schema/linkbase asset set; the complete SGML
 submission is not acquired merely to support numeric XBRL facts. AQ seals a

@@ -14,6 +14,7 @@ from aq_edgartools_full_build import (
     NUMERIC_FACT_SELECTED,
     REACQUIRABLE_SOURCE_CACHE,
     SourceHashMismatchError,
+    TRANSITION_FINANCIAL_FORMS,
     bounded_batches,
     checkpoint_identity,
     checkpoint_reusable,
@@ -35,7 +36,12 @@ from aq_hybrid_fundamentals import (
 )
 from run_full_universe_preflight import (
     _HomepageFilingView,
+    _canonical_identity,
     _install_transient_native_cache,
+    _validate_source_unavailable_record,
+    SOURCE_UNAVAILABLE_ACCESSION_COUNT,
+    SOURCE_UNAVAILABLE_CLASSIFICATION,
+    SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT,
 )
 
 
@@ -68,6 +74,97 @@ def test_pinned_edgartools_object_capability_is_the_runtime_authority() -> None:
     assert native_financial_object_info("10-K") == (True, "TenK")
     assert native_financial_object_info("6-K") == (True, "CurrentReport")
     assert native_financial_object_info("8-K") == (False, "EightK")
+
+
+@pytest.mark.parametrize("form", sorted(TRANSITION_FINANCIAL_FORMS))
+def test_transition_financial_forms_have_a_narrow_admission_leaf(form: str) -> None:
+    assert native_financial_object_info(form, get_info=_object_info) == (True, None)
+
+
+@pytest.mark.parametrize("form", ["10-KT", "10-QT"])
+def test_transition_forms_use_the_existing_native_xbrl_asset_path(form: str) -> None:
+    filing = _Filing()
+    filing.form = form
+    manifest = native_xbrl_source_manifest(filing)
+    assert manifest["accession"] == filing.accession_no
+    assert [row["role"] for row in manifest["assets"]] == [
+        "instance",
+        "schema",
+        "label",
+    ]
+
+
+@pytest.mark.parametrize("form", sorted(TRANSITION_FINANCIAL_FORMS))
+def test_transition_form_is_preserved_and_does_not_set_fact_period(form: str) -> None:
+    filing = SimpleNamespace(
+        accession_no="0000000001-20-000001",
+        form=form,
+        cik=1,
+        company="Issuer",
+        filing_date=date(2020, 2, 1),
+    )
+    evidence = materialize_edgartools_fact(
+        filing,
+        {
+            "concept": "us-gaap:Assets",
+            "value": "10",
+            "unit_ref": "USD",
+            "period_type": "instant",
+            "period_instant": "2019-12-31",
+        },
+        acceptance_datetime=datetime(2020, 2, 1, 22, tzinfo=timezone.utc),
+        report_period_end="2019-12-31",
+        source_document_sha256="a" * 64,
+        source_document_identity="SEC_XBRL_ASSET_MANIFEST:" + "b" * 64,
+        source_document_url="https://www.sec.gov/example.xml",
+        edgartools_version="5.58.0",
+        upstream_identity="PYPI_DISTRIBUTION:edgartools==5.58.0",
+    )
+    assert evidence.filing.form == form
+    assert evidence.fact.instant == date(2019, 12, 31)
+    assert evidence.fact.period_start is None
+    assert evidence.fact.period_end is None
+
+
+def test_source_unavailable_record_is_accounting_only_and_fail_closed() -> None:
+    body = {
+        "accession": "0001100682-20-000033",
+        "cik": "0001100682",
+        "entityfacts_observed_form": "10-Q",
+        "selected_fact_count": 1,
+        "affected_standard_concepts": ["Assets"],
+        "affected_periods": [],
+        "discovery_source_identity": "SEC_ENTITYFACTS_REPORT_SHA256:example",
+        "classification": SOURCE_UNAVAILABLE_CLASSIFICATION,
+        "reason": "Exact SEC accession exposes no usable filing attachments.",
+    }
+    record = {**body, "decision_identity": _canonical_identity(body)}
+    assert _validate_source_unavailable_record(record) == record
+    for prohibited in ("source_document_sha256", "replacement_accession"):
+        altered = {**body, prohibited: "fabricated"}
+        altered["decision_identity"] = _canonical_identity(altered)
+        with pytest.raises(RuntimeError, match="fail-closed"):
+            _validate_source_unavailable_record(altered)
+    with pytest.raises(ValueError, match="missing accession_no"):
+        materialize_edgartools_fact(
+            SimpleNamespace(**record),
+            {},
+            acceptance_datetime=datetime(2020, 2, 1, tzinfo=timezone.utc),
+            report_period_end="2019-12-31",
+            source_document_sha256="a" * 64,
+            edgartools_version="5.58.0",
+            upstream_identity="PYPI_DISTRIBUTION:edgartools==5.58.0",
+        )
+
+
+def test_corrected_execution_accounting_is_exact() -> None:
+    assert SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT == 36_204
+    assert SOURCE_UNAVAILABLE_ACCESSION_COUNT == 2
+    assert (
+        SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT
+        + SOURCE_UNAVAILABLE_ACCESSION_COUNT
+        == 36_206
+    )
 
 
 @pytest.mark.parametrize("value", ["text block", "true", "2024-12-31", "MemberEnum"])

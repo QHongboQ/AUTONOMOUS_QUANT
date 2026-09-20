@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Historical Build Required Accession Failure Closeout 001**
+> Active Development: **P5 — EdgarTools Selective Full Historical Build Execution Resume 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -1898,6 +1898,36 @@ BROAD_FULL_UNIVERSE_EXECUTION_STARTED = NO
 P5_HISTORICAL_DATASET_BUILT = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
 CURRENT_DEVELOPMENT_NEXT = P5_HISTORICAL_BUILD_REQUIRED_ACCESSION_FAILURE_CLOSEOUT_001
+```
+
+### P5 historical build required-accession failure closeout
+
+The four pre-execution blockers are closed without rerunning discovery or
+starting the broad build. Exact SEC/EdgarTools confirmation found no filing row
+and no usable attachments for `0001100682-20-000033` and
+`0001108524-21-000014`; both remain explicit
+`SOURCE_UNAVAILABLE_FOR_FINAL_PROVENANCE` records and cannot become final
+fundamental evidence. The exact filings `0001193125-10-257767` (`10-KT`) and
+`0001418135-18-000016` (`10-QT`) passed the unchanged EdgarTools XBRL,
+provenance, materialization, and seal path with 115 evidence rows. Filed forms
+and native period semantics remain unchanged.
+
+The immutable corrected execution inventory reconciles 36,204 source-verifiable
+required accessions plus two source-unavailable records to the original 36,206.
+No replacement accession, fabricated source hash, custom form router, or custom
+XBRL engine was introduced. See [P5 Historical Build Required Accession Failure
+Closeout 001](p5-historical-build-required-accession-failure-closeout-001.md).
+
+```text
+P5_REQUIRED_ACCESSION_FAILURE_CLOSEOUT = PASS
+SELECTIVE_DISCOVERED_ACCESSION_COUNT = 36206
+SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT = 36204
+SOURCE_UNAVAILABLE_ACCESSION_COUNT = 2
+TRANSITION_FINANCIAL_ACCESSION_COUNT = 2
+BROAD_FULL_UNIVERSE_EXECUTION_STARTED = NO
+P5_HISTORICAL_DATASET_BUILT = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_SELECTIVE_FULL_HISTORICAL_BUILD_EXECUTION_RESUME_001
 ```
 
 ---
