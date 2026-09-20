@@ -1930,6 +1930,41 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 CURRENT_DEVELOPMENT_NEXT = P5_EDGARTOOLS_SELECTIVE_FULL_HISTORICAL_BUILD_EXECUTION_RESUME_001
 ```
 
+### P5 EdgarTools complete capability census and native interface activation
+
+An isolated, zero-SEC-request census of the installed EdgarTools 5.58.0
+runtime audited 66 filing-intelligence capabilities. EdgarTools directly owns
+55, and ten require only thin AQ eligibility, accession-state, evidence, or PIT
+policy. The only upstream gap is push/webhook delivery; the native current
+filings feed and pagination already provide the polling surface required for
+future incremental ingestion, so no AQ SEC poller or watcher engine is needed.
+
+Current AQ P5 code contains no duplicate SEC client, filing/XBRL/financial
+statement engine, statement stitcher, document parser, or live poller. The
+future live and narrative paths are therefore activated as direct EdgarTools
+interfaces, without adding a cosmetic wrapper or production code. The active
+historical build remains untouched. See [P5 EdgarTools Complete Capability
+Census and Native Interface Activation 001](p5-edgartools-complete-capability-census-native-interface-activation-001.md).
+
+```text
+P5_EDGARTOOLS_CAPABILITY_COUNT_AUDITED = 66
+P5_EDGARTOOLS_NATIVE_DIRECT_COUNT = 55
+P5_EDGARTOOLS_NATIVE_WITH_THIN_AQ_POLICY_COUNT = 10
+P5_EDGARTOOLS_TRUE_UPSTREAM_GAP_COUNT = 1
+P5_CURRENT_AQ_DUPLICATE_COUNT = 0
+P5_AQ_DUPLICATES_RETIREABLE_COUNT = 0
+P5_SELECTED_LIVE_FILING_DISCOVERY_OWNER = EDGARTOOLS
+P5_SELECTED_FINANCIAL_STATEMENT_OWNER = EDGARTOOLS
+P5_SELECTED_XBRL_OWNER = EDGARTOOLS
+P5_SELECTED_DOCUMENT_OWNER = EDGARTOOLS
+P5_SELECTED_NOTES_OWNER = EDGARTOOLS
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P5_SEC_DATA_REQUEST_COUNT = 0
+P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT_AFTER_HISTORICAL_BUILD = P5_LIVE_INCREMENTAL_FILING_INGESTION_DESIGN_AND_POC_001
+```
+
 ---
 
 ## 27. First Principle
