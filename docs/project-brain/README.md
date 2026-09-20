@@ -1997,6 +1997,37 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_EDGARTOOLS_NATIVE_FILING_INTELLIGENCE_CAPABILITY_ACTIVATION_001
 ```
 
+### P5 EdgarTools native filing-intelligence capability activation
+
+PR #68 squash-merged the offline native live-path activation at
+`99e5eba56ec5d401f8dc6fbc82e8cc0e2a5dadb0`. A new isolated zero-network proof
+then exercised EdgarTools 5.58.0 typed 10-K, 10-Q, 8-K, and 6-K objects plus
+native `Document`, `Note`/`Notes`, `Attachment`/`Attachments`, exhibits, and
+press-release selection. Foreign-report and parsed-XBRL interfaces without a
+local content fixture are explicitly classified as interface-present rather
+than falsely reported as content-proven.
+
+The filing-intelligence matrix contains 32 rows: 22 are direct upstream
+capabilities, ten need only future AQ feature eligibility/PIT/evidence policy,
+and none is a true upstream gap. No production wrapper or parsing code was
+added. The independent historical build remains untouched. See [P5 EdgarTools
+Native Filing Intelligence Capability Activation 001](p5-edgartools-native-filing-intelligence-capability-activation-001.md).
+
+```text
+P5_NATIVE_LIVE_MERGE_PR = 68
+P5_NATIVE_LIVE_MERGE_SHA = 99e5eba56ec5d401f8dc6fbc82e8cc0e2a5dadb0
+P5_FILING_INTELLIGENCE_CAPABILITY_COUNT_AUDITED = 32
+P5_EDGARTOOLS_NATIVE_DIRECT_COUNT = 22
+P5_EDGARTOOLS_NATIVE_WITH_THIN_AQ_FEATURE_POLICY_COUNT = 10
+P5_TRUE_UPSTREAM_GAP_COUNT = 0
+P5_NEW_FILING_INTELLIGENCE_PRODUCTION_LOC = 0
+P5_SEC_DATA_REQUEST_COUNT = 0
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PARALLEL_DEVELOPMENT_NEXT = P5_FILING_INTELLIGENCE_FEATURE_POLICY_SELECTION_001
+```
+
 ---
 
 ## 27. First Principle
