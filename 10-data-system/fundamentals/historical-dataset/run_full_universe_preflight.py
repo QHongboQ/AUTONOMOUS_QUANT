@@ -38,6 +38,7 @@ from aq_edgartools_full_build import (  # noqa: E402
     ENTITYFACTS_DISCOVERY_ROLE,
     SELECTIVE_REQUIRED_ACCESSION_COUNT,
     SELECTIVE_POLICY_IDENTITY,
+    TRANSITION_FINANCIAL_FORMS,
     bounded_batches,
     checkpoint_identity,
     checkpoint_reusable,
@@ -68,6 +69,30 @@ EXPECTED_ENTITYFACTS_REPORT_SHA256 = (
 CANARY_ACCESSION_COUNT = 256
 CANARY_SET_NAME = "production_canary_accession_set.json"
 CACHE_LIMIT_BYTES = 2 * 1024**3
+SOURCE_UNAVAILABLE_CLASSIFICATION = "SOURCE_UNAVAILABLE_FOR_FINAL_PROVENANCE"
+SOURCE_UNAVAILABLE_ACCESSION_COUNT = 2
+SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT = (
+    SELECTIVE_REQUIRED_ACCESSION_COUNT - SOURCE_UNAVAILABLE_ACCESSION_COUNT
+)
+SOURCE_UNAVAILABLE_ACCESSIONS = frozenset(
+    {"0001100682-20-000033", "0001108524-21-000014"}
+)
+TRANSITION_FINANCIAL_ACCESSIONS = {
+    "0001193125-10-257767": "10-KT",
+    "0001418135-18-000016": "10-QT",
+}
+EXPECTED_SOURCE_UNAVAILABLE_LEDGER_SHA256 = (
+    "57f22bfa0f392995fb250e5c1b1ba5469a1a1cc3b298d68f7cf0fa7c1e11fb51"
+)
+EXPECTED_SOURCE_UNAVAILABLE_LEDGER_IDENTITY = (
+    "sha256:d9539cb308420f73c89d09951e75ad283170a731953d97fd058b61d8de1d4349"
+)
+EXPECTED_EXECUTION_INVENTORY_SHA256 = (
+    "1b5c311186446513272891a9075d3dac132b19a6fc1cad9916b5cd0508340642"
+)
+EXPECTED_EXECUTION_INVENTORY_IDENTITY = (
+    "sha256:6ece8afef367396c71c8cb55fb99e4391ca34e6b1fb4be4242c78af22fcb2b7b"
+)
 
 
 class _HomepageFilingView:
@@ -254,6 +279,137 @@ def validate_frozen_selective_inventory(root: Path) -> dict[str, object]:
         "entityfacts_final_source_authority": False,
         "broad_accession_acquisition_started": False,
         "full_historical_build_started": False,
+    }
+
+
+def _verified_identity_document(path: Path, identity_field: str) -> dict[str, object]:
+    value = _read_json(path)
+    if not isinstance(value, dict):
+        raise RuntimeError(f"{path.name} is not an object")
+    claimed = str(value.get(identity_field) or "")
+    body = dict(value)
+    body.pop(identity_field, None)
+    if claimed != _canonical_identity(body):
+        raise RuntimeError(f"{path.name} identity mismatch")
+    return value
+
+
+def _validate_source_unavailable_record(
+    row: Mapping[str, object],
+) -> dict[str, object]:
+    """Validate one non-evidence accounting record without inventing provenance."""
+
+    prohibited = {
+        "source_document_sha256",
+        "source_hash",
+        "replacement_accession",
+        "substitute_accession",
+    }
+    body = dict(row)
+    claimed = str(body.pop("decision_identity", ""))
+    if (
+        row.get("classification") != SOURCE_UNAVAILABLE_CLASSIFICATION
+        or prohibited.intersection(row)
+        or claimed != _canonical_identity(body)
+    ):
+        raise RuntimeError("source-unavailable record is not fail-closed")
+    return dict(row)
+
+
+def validate_corrected_execution_inventory(root: Path) -> dict[str, object]:
+    """Validate the immutable 36,204 + 2 execution accounting correction."""
+
+    frozen = validate_frozen_selective_inventory(root)
+    original_rows = _read_json(
+        root / "selective/entityfacts_selective_accessions.json"
+    )["rows"]
+    original = {str(row["accession"]): dict(row) for row in original_rows}
+    if len(original) != SELECTIVE_REQUIRED_ACCESSION_COUNT:
+        raise RuntimeError("original selective accession identity is not unique")
+
+    unavailable_path = root / "selective/source_unavailable_accessions_v1.json"
+    if sha256_file(unavailable_path) != EXPECTED_SOURCE_UNAVAILABLE_LEDGER_SHA256:
+        raise RuntimeError("source-unavailable ledger byte hash mismatch")
+    unavailable = _verified_identity_document(
+        unavailable_path,
+        "ledger_identity",
+    )
+    unavailable_rows = unavailable.get("records")
+    if not isinstance(unavailable_rows, list):
+        raise RuntimeError("source-unavailable ledger records are absent")
+    unavailable_accessions = {
+        str(row.get("accession") or "") for row in unavailable_rows
+    }
+    for row in unavailable_rows:
+        _validate_source_unavailable_record(row)
+    if (
+        unavailable.get("ledger_identity")
+        != EXPECTED_SOURCE_UNAVAILABLE_LEDGER_IDENTITY
+        or len(unavailable_rows) != SOURCE_UNAVAILABLE_ACCESSION_COUNT
+        or unavailable_accessions != SOURCE_UNAVAILABLE_ACCESSIONS
+        or not unavailable_accessions.issubset(original)
+    ):
+        raise RuntimeError("source-unavailable accession accounting mismatch")
+
+    execution_path = root / "selective/selective_execution_inventory_v2.json"
+    if sha256_file(execution_path) != EXPECTED_EXECUTION_INVENTORY_SHA256:
+        raise RuntimeError("corrected execution inventory byte hash mismatch")
+    execution = _verified_identity_document(
+        execution_path,
+        "execution_inventory_identity",
+    )
+    rows = execution.get("rows")
+    supplemental = execution.get("supplemental_native_metadata")
+    if not isinstance(rows, list) or not isinstance(supplemental, list):
+        raise RuntimeError("corrected execution inventory rows are absent")
+    required = {str(row.get("accession") or ""): dict(row) for row in rows}
+    if (
+        execution.get("execution_inventory_identity")
+        != EXPECTED_EXECUTION_INVENTORY_IDENTITY
+        or len(rows) != SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT
+        or len(required) != SOURCE_VERIFIABLE_REQUIRED_ACCESSION_COUNT
+        or set(required).intersection(unavailable_accessions)
+        or set(required).union(unavailable_accessions) != set(original)
+        or execution.get("source_unavailable_ledger_identity")
+        != unavailable.get("ledger_identity")
+    ):
+        raise RuntimeError("corrected 36,204 + 2 accounting mismatch")
+
+    metadata_rows = _read_json(root / "inventory/accession_inventory.json")["rows"]
+    metadata = {str(row["accession"]): dict(row) for row in metadata_rows}
+    supplements = {
+        str(row.get("accession") or ""): dict(row) for row in supplemental
+    }
+    if (
+        {accession: row.get("form") for accession, row in supplements.items()}
+        != TRANSITION_FINANCIAL_ACCESSIONS
+        or any(accession in metadata for accession in supplements)
+    ):
+        raise RuntimeError("transition-filing metadata boundary mismatch")
+    metadata.update(supplements)
+    if set(required).difference(metadata):
+        raise RuntimeError("corrected execution accession lacks frozen native metadata")
+    hydrated = [
+        {**required[accession], **metadata[accession]} for accession in required
+    ]
+
+    expected_build_spec_identity = _canonical_identity(
+        {
+            "base_build_spec_identity": frozen["build_spec_identity"],
+            "execution_inventory_identity": execution["execution_inventory_identity"],
+            "source_unavailable_ledger_identity": unavailable["ledger_identity"],
+            "transition_financial_forms": sorted(TRANSITION_FINANCIAL_FORMS),
+        }
+    )
+    return {
+        "status": "PASS",
+        "discovered_accession_count": len(original),
+        "source_unavailable_accession_count": len(unavailable_rows),
+        "source_verifiable_required_accession_count": len(hydrated),
+        "execution_inventory_identity": execution["execution_inventory_identity"],
+        "source_unavailable_ledger_identity": unavailable["ledger_identity"],
+        "execution_build_spec_identity": expected_build_spec_identity,
+        "rows": hydrated,
     }
 
 
@@ -886,19 +1042,33 @@ def finalize_production_canary(build_root: Path) -> dict[str, object]:
 def execute_frozen_inventory(root: Path) -> dict[str, object]:
     """Execute only the frozen inventory in bounded, independently sealed batches."""
 
-    frozen = validate_frozen_selective_inventory(root)
-    selected = _read_json(root / "selective/entityfacts_selective_accessions.json")["rows"]
-    metadata_rows = _read_json(root / "inventory/accession_inventory.json")["rows"]
-    metadata = {str(row["accession"]): row for row in metadata_rows}
-    if any(str(row["accession"]) not in metadata for row in selected):
-        raise RuntimeError("selective accession lacks frozen native metadata")
-    hydrated = [{**dict(row), **metadata[str(row["accession"])]} for row in selected]
+    corrected = validate_corrected_execution_inventory(root)
     return execute_accession_set(
         build_root=root,
         output_root=root,
-        selected=hydrated,
-        build_spec_identity=str(frozen["build_spec_identity"]),
+        selected=list(corrected["rows"]),
+        build_spec_identity=str(corrected["execution_build_spec_identity"]),
         invocation_name="selective-execution",
+    )
+
+
+def execute_transition_validation(root: Path) -> dict[str, object]:
+    """Execute only the two corrected transition filings through production."""
+
+    corrected = validate_corrected_execution_inventory(root)
+    selected = [
+        row
+        for row in corrected["rows"]
+        if row.get("form") in TRANSITION_FINANCIAL_FORMS
+    ]
+    if len(selected) != 2:
+        raise RuntimeError("transition validation requires exactly two filings")
+    return execute_accession_set(
+        build_root=root,
+        output_root=root,
+        selected=selected,
+        build_spec_identity=str(corrected["execution_build_spec_identity"]),
+        invocation_name="transition-validation",
     )
 
 
@@ -906,7 +1076,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "command",
-        choices=("validate", "execute", "canary", "finalize-canary"),
+        choices=(
+            "validate",
+            "validate-corrected",
+            "validate-transitions",
+            "execute",
+            "canary",
+            "finalize-canary",
+        ),
         default="validate",
         nargs="?",
     )
@@ -914,6 +1091,11 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "validate":
         result = validate_frozen_selective_inventory(args.root)
+    elif args.command == "validate-corrected":
+        result = validate_corrected_execution_inventory(args.root)
+        result.pop("rows", None)
+    elif args.command == "validate-transitions":
+        result = execute_transition_validation(args.root)
     elif args.command == "canary":
         result = execute_production_canary(args.root)
     elif args.command == "finalize-canary":
