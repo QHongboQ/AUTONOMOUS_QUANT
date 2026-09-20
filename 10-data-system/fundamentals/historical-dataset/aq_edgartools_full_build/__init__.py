@@ -61,6 +61,11 @@ REACQUIRABLE_SOURCE_CACHE = "REACQUIRABLE_SOURCE_CACHE"
 NON_NUMERIC_FACT_NOT_ELIGIBLE = "NON_NUMERIC_FACT_NOT_ELIGIBLE_FOR_NUMERIC_EVIDENCE"
 NIL_FACT_NOT_ELIGIBLE = "NIL_FACT_NOT_ELIGIBLE_FOR_NUMERIC_EVIDENCE"
 NUMERIC_FACT_SELECTED = "NUMERIC_FACT_SELECTED"
+LIVE_ADMIT_EXISTING_PROCESSOR = "ADMIT_EXISTING_ACCESSION_PROCESSOR"
+LIVE_SKIP_DUPLICATE_ACCESSION = "SKIP_DUPLICATE_ACCESSION"
+LIVE_REJECT_NON_BOUND_CIK = "REJECT_NON_BOUND_CIK"
+LIVE_SKIP_NON_PERIODIC_FILING = "SKIP_NON_PERIODIC_NATIVE_FILING"
+LIVE_SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE_FOR_FINAL_PROVENANCE"
 
 
 class SourceHashMismatchError(ValueError):
@@ -126,6 +131,70 @@ def native_financial_object_info(
         )
     )
     return admitted, object_type
+
+
+def plan_native_current_filings_page(
+    current_filings: object,
+    *,
+    accepted_ciks: Iterable[str | int],
+    processed_accessions: Iterable[str],
+    source_unavailable_accessions: Iterable[str] = (),
+) -> dict[str, object]:
+    """Apply bounded AQ policy to one EdgarTools ``CurrentFilings`` page.
+
+    EdgarTools owns feed acquisition, parsing and pagination.  This pure policy
+    boundary neither fetches nor processes filings; selected rows retain the
+    metadata needed by the existing exact-accession processor.
+    """
+
+    data = getattr(current_filings, "data", None)
+    if data is None or not callable(getattr(data, "to_pylist", None)):
+        raise TypeError("current_filings must expose native tabular data")
+
+    def normalized_cik(value: object) -> str:
+        return str(int(str(value)))
+
+    eligible = {normalized_cik(value) for value in accepted_ciks}
+    seen = {str(value) for value in processed_accessions}
+    unavailable = {str(value) for value in source_unavailable_accessions}
+    selected: list[dict[str, object]] = []
+    decisions: list[dict[str, object]] = []
+    for raw in data.to_pylist():
+        accession = str(raw.get("accession_number") or raw.get("accession_no") or "")
+        if not accession:
+            raise ValueError("native current filing lacks accession identity")
+        cik = normalized_cik(raw.get("cik"))
+        form = str(raw.get("form") or "")
+        decision = LIVE_ADMIT_EXISTING_PROCESSOR
+        if cik not in eligible:
+            decision = LIVE_REJECT_NON_BOUND_CIK
+        elif accession in seen:
+            decision = LIVE_SKIP_DUPLICATE_ACCESSION
+        elif accession in unavailable:
+            decision = LIVE_SOURCE_UNAVAILABLE
+        elif not native_financial_object_info(form)[0]:
+            decision = LIVE_SKIP_NON_PERIODIC_FILING
+
+        normalized = {
+            "accession": accession,
+            "cik": cik,
+            "form": form,
+            "filing_date": str(raw.get("filing_date") or ""),
+            "acceptance_datetime": raw.get("accepted") or raw.get("acceptance_datetime"),
+            "issuer_name": str(raw.get("company") or ""),
+            "report_period": raw.get("report_period"),
+        }
+        decisions.append({**normalized, "decision": decision})
+        if decision == LIVE_ADMIT_EXISTING_PROCESSOR:
+            selected.append(normalized)
+            seen.add(accession)
+
+    return {
+        "observed_count": len(decisions),
+        "selected_count": len(selected),
+        "selected": selected,
+        "decisions": decisions,
+    }
 
 
 def selective_policy_identity() -> str:
@@ -372,6 +441,11 @@ __all__ = [
     "NIL_FACT_NOT_ELIGIBLE",
     "NON_NUMERIC_FACT_NOT_ELIGIBLE",
     "NUMERIC_FACT_SELECTED",
+    "LIVE_ADMIT_EXISTING_PROCESSOR",
+    "LIVE_REJECT_NON_BOUND_CIK",
+    "LIVE_SKIP_DUPLICATE_ACCESSION",
+    "LIVE_SKIP_NON_PERIODIC_FILING",
+    "LIVE_SOURCE_UNAVAILABLE",
     "REACQUIRABLE_SOURCE_CACHE",
     "SELECTIVE_POLICY_IDENTITY",
     "SELECTIVE_REQUIRED_ACCESSION_COUNT",
@@ -383,6 +457,7 @@ __all__ = [
     "failure_record",
     "native_financial_object_info",
     "native_xbrl_source_manifest",
+    "plan_native_current_filings_page",
     "select_authorized_entityfacts",
     "select_numeric_fact_value",
     "selective_policy_identity",

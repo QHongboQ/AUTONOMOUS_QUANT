@@ -437,7 +437,7 @@ def _output_paths(root: Path, accession: str) -> dict[str, Path]:
     }
 
 
-def _process_accession(
+def process_exact_accession(
     row: Mapping[str, object],
     metadata: Mapping[str, object],
     *,
@@ -464,10 +464,13 @@ def _process_accession(
         accession_no=accession,
     )
     homepage = filing.homepage
+    report_period = str(metadata.get("report_period") or filing.period_of_report or "")
+    if not report_period:
+        raise ValueError("EdgarTools filing lacks report period")
     view = _HomepageFilingView(
         filing,
         homepage.attachments,
-        period_of_report=str(metadata["report_period"]),
+        period_of_report=report_period,
     )
     accession_cache = root / "transient-cache" / accession
     _install_transient_native_cache(view.attachments, accession_cache, cache_stats)
@@ -521,7 +524,7 @@ def _process_accession(
             filing,
             fact,
             acceptance_datetime=_acceptance(metadata["acceptance_datetime"]),
-            report_period_end=str(metadata["report_period"]),
+            report_period_end=report_period,
             source_document_sha256=str(source_manifest["source_document_sha256"]),
             source_document_identity=str(source_manifest["source_document_identity"]),
             source_document_url=str(source_manifest["source_document_url"]),
@@ -796,7 +799,7 @@ def execute_accession_set(
                 attempts = 0
                 for attempts in range(1, 4):
                     try:
-                        checkpoint = _process_accession(
+                        checkpoint = process_exact_accession(
                             row,
                             row,
                             root=output_root,

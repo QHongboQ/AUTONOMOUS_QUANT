@@ -1965,6 +1965,38 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 CURRENT_DEVELOPMENT_NEXT_AFTER_HISTORICAL_BUILD = P5_LIVE_INCREMENTAL_FILING_INGESTION_DESIGN_AND_POC_001
 ```
 
+### P5 EdgarTools capability authority merge and native live-path offline activation
+
+PR #67 squash-merged the 66-capability EdgarTools ownership census at
+`5ad77c006a25f5fcd0739d0f355824f368368e11`. An isolated offline proof now
+composes one native `CurrentFilings` page with accepted-CIK, exact-accession
+deduplication, frozen form, and source-availability policy, then passes selected
+rows to the same exact-accession processor used by the historical build.
+
+The proof covers unseen periodic filings, duplicate observations, amendments,
+transition forms, non-bound CIKs, source-unavailable accessions, and an 8-K
+that remains natively readable without false structured-fundamental admission.
+No scheduler, poller, SEC client, feed parser, form router, XBRL engine,
+document parser, or second materializer was introduced. Live production is not
+active. See [P5 EdgarTools Capability Authority Merge and Native Live Path
+Offline Activation 001](p5-edgartools-capability-authority-merge-and-native-live-path-offline-activation-001.md).
+
+```text
+P5_EDGARTOOLS_CAPABILITY_AUTHORITY_MERGE_PR = 67
+P5_EDGARTOOLS_CAPABILITY_AUTHORITY_MERGE_SHA = 5ad77c006a25f5fcd0739d0f355824f368368e11
+P5_EDGARTOOLS_CURRENT_FILINGS_OWNER = EDGARTOOLS
+P5_EXISTING_ACCESSION_PROCESSOR_REUSED = YES
+P5_ACCESSION_IS_DEDUP_KEY = YES
+P5_LIVE_INCREMENTAL_INTERFACE_OFFLINE_POC = PASS
+P5_LIVE_INCREMENTAL_PRODUCTION_ACTIVE = NO
+P5_NEW_LIVE_PRODUCTION_LOC = 78_NET
+P5_SEC_DATA_REQUEST_COUNT = 0
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PARALLEL_DEVELOPMENT_NEXT = P5_EDGARTOOLS_NATIVE_FILING_INTELLIGENCE_CAPABILITY_ACTIVATION_001
+```
+
 ---
 
 ## 27. First Principle
