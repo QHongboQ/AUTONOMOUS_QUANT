@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — EdgarTools Selective Full Historical Build Execution Resume 001**
+> Active Development: **P6 — Selected Upstream Leaves Deployment and Bounded POC 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -2138,6 +2138,54 @@ P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+```
+
+### P6 information-intelligence upstream handoff census
+
+PR #72 squash-merged the completed P5 filing-feature historical
+materialization and ablation design at
+`2e194950e70bc3860e9d5b41dd9c416a6cadd25b`. P5 upstream ownership is closed:
+EdgarTools remains the filing, fundamentals, XBRL, document, and notes owner,
+and the independently running historical build was not disturbed.
+
+The P6 census audited 23 news, macro, sentiment, text/LLM, earnings-call, and
+multi-agent capabilities across nine current upstream projects/services.
+Official FRED/ALFRED through `fredapi` is the macro PIT owner. OpenBB is the
+news/provider and FRED-calendar gateway, but not universal PIT authority.
+Current Transformers plus the pinned ProsusAI/finbert model is the narrow
+financial-sentiment leaf. GDELT is supplementary historical news/event
+metadata. TradingAgents remains an information-synthesis challenger, while
+FinGPT and general LLM paths remain deferred. Exact universal news
+`first_available_at` and historical PIT social sentiment are the two true
+upstream gaps; neither authorizes a custom AQ engine. See [P6 Information
+Intelligence Upstream Handoff Census 001](p6-information-intelligence-upstream-handoff-census-001.md).
+
+```text
+P5_UPSTREAM_HANDOFF_STATUS = COMPLETE_WITH_POST_BUILD_HYGIENE
+P5_NEW_GENERIC_ENGINE_REQUIRED = NO
+P5_UPSTREAM_HANDOFF_BLOCKER_COUNT = 0
+P6_CAPABILITY_COUNT_AUDITED = 23
+P6_UPSTREAM_PROJECT_COUNT_AUDITED = 9
+MACRO_PIT_OWNER = OFFICIAL_FRED_ALFRED_VIA_FREDAPI
+MACRO_RELEASE_CALENDAR_OWNER = OPENBB_FRED_PROVIDER_SUPPLEMENTARY_CALENDAR
+NEWS_DISCOVERY_OWNER = OPENBB_NEWS_PROVIDER_GATEWAY_PENDING_BOUNDED_PROVIDER_POC
+HISTORICAL_NEWS_OWNER = GDELT_2X_SUPPLEMENTARY_ONLY
+FINANCIAL_SENTIMENT_OWNER = HUGGINGFACE_TRANSFORMERS_PLUS_PINNED_PROSUSAI_FINBERT
+LLM_TEXT_EXTRACTION_OWNER = DEFER_PENDING_POC
+MULTI_AGENT_INFORMATION_OWNER = TRADINGAGENTS_CHALLENGER_PENDING_POC
+P6_TRUE_UPSTREAM_GAP_COUNT = 2
+P6_PAID_REQUIRED_SELECTED_OWNER_COUNT = 0
+P6_DUPLICATE_SEC_STACK = NO
+P6_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P6_NEW_PRODUCTION_LOC = 0
+P6_SEC_DATA_REQUEST_COUNT = 0
+P6_FRED_DATA_REQUEST_COUNT = 0
+P6_NEWS_DATA_REQUEST_COUNT = 0
+P6_LLM_CALL_COUNT = 0
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
+CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
 ```
 
 ---
