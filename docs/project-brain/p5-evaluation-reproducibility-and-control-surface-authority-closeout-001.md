@@ -223,20 +223,24 @@ ShortTermDebt
 LongTermDebt
 ```
 
-The complete surface family is:
+The historical filing-only ablation retained two trials. The final P5 exit
+protocol instead has three unique evaluation surfaces and two directional
+incremental comparisons:
 
 ```text
-BASE = exact 157-column CONTROL
-BASE_PLUS_FUNDAMENTALS = BASE + exact 11 columns above
-BASE_PLUS_FUNDAMENTALS_PLUS_FILING = BASE_PLUS_FUNDAMENTALS + exact 5 frozen filing columns
+HISTORICAL_FILING_ABLATION_TRIAL_COUNT = 2
+P5_EVALUATION_SURFACE_COUNT = 3
+P5_EVALUATION_SURFACE_S0 = BASE
+P5_EVALUATION_SURFACE_S1 = BASE_PLUS_EXACT_11_FUNDAMENTALS
+P5_EVALUATION_SURFACE_S2 = BASE_PLUS_EXACT_11_FUNDAMENTALS_PLUS_EXACT_5_FILING_FEATURES
 ```
 
 Only two directional hypotheses are authorized:
 
 ```text
-H1 = BASE vs BASE_PLUS_FUNDAMENTALS
-H2 = BASE_PLUS_FUNDAMENTALS vs BASE_PLUS_FUNDAMENTALS_PLUS_FILING
 P5_INCREMENTAL_COMPARISON_COUNT = 2
+P5_H1 = S0_VS_S1
+P5_H2 = S1_VS_S2
 ```
 
 H1 and H2 form one fixed, preregistered two-hypothesis family under the

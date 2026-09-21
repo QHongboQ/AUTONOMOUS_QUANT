@@ -219,12 +219,17 @@ frozen model recipe, and the model's response to a preregistered added feature
 set is part of the treatment. The same ordered surface, seed, and recipe apply
 to both sides of each paired comparison.
 
-## Two-trial and split authority
+## Three-surface, two-comparison and split authority
 
 ```text
+HISTORICAL_FILING_ABLATION_TRIAL_COUNT = 2
+P5_EVALUATION_SURFACE_COUNT = 3
+P5_EVALUATION_SURFACE_S0 = BASE
+P5_EVALUATION_SURFACE_S1 = BASE_PLUS_EXACT_11_FUNDAMENTALS
+P5_EVALUATION_SURFACE_S2 = BASE_PLUS_EXACT_11_FUNDAMENTALS_PLUS_EXACT_5_FILING_FEATURES
 P5_INCREMENTAL_COMPARISON_COUNT = 2
-H1 = EXACT_157_COLUMN_P2_RAGGED_ALPHA158_OHLCV_CONTROL vs SAME_PLUS_EXACT_11_FUNDAMENTALS
-H2 = BASE_PLUS_EXACT_11_FUNDAMENTALS vs SAME_PLUS_EXACT_5_FILING_FEATURES
+P5_H1 = S0_VS_S1
+P5_H2 = S1_VS_S2
 TRAIN = 2015-04-01 through 2019-12-31
 VALID = 2020-01-01 through 2021-12-31
 HISTORICAL_RESEARCH_TEST = 2022-01-03 through 2024-12-31
