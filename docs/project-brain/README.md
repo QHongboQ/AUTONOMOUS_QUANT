@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Filing Feature Historical Materialization 001 (waiting for historical fundamentals build terminal closeout)**
+> Active Development: **P5 — Filing Feature Processor Semantics Authority Resolution 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -2199,6 +2199,110 @@ P2_V2_SEALED_OOS_RESULT_USED = NO
 CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
 CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 FUTURE_AFTER_P5_CLOSEOUT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
+```
+
+### P5 post-build readiness and evaluation-authority freeze
+
+The terminal-closeout authority now contains 26 exact gates covering global
+36,206-accession accounting, the 36,204 source-verifiable denominator, the two
+separate source-unavailable records, evidence/PIT integrity, zero-network
+checkpoint replay, cache/storage hygiene, DVC identity, and the full-history
+Qlib handoff. The independently running historical build was not read or
+modified.
+
+Four existing model authorities were audited without performance selection.
+Qlib `LinearModel(estimator=ols)` is the strongest fixed-vehicle candidate on
+ex-ante simplicity and reuse grounds, but its exact current recipe fails the
+P5 processor-semantics gate. `DataHandlerLP` append processing applies
+`RobustZScoreNorm` and then `Fillna(feature, 0)` to both inference and learning
+surfaces, which would erase the frozen distinction between missing sparse
+point events and legitimate zero. Simply removing `Fillna` would let
+`LinearModel.fit().dropna()` change the challenger row population. No model,
+processor, mask, or replacement authority was invented. See [P5 Post-Build
+Readiness and Evaluation Authority Freeze 001](p5-post-build-readiness-and-evaluation-authority-freeze-001.md).
+
+The processor-semantics follow-up preserves that Linear rejection and freezes
+the already-existing Qlib `LGBModel` path as the evaluation vehicle. An
+in-memory upstream-only proof showed that
+`StaticDataLoader -> DataHandlerLP -> DatasetH -> LGBModel` preserves every
+NaN, legitimate zero, and nonzero value when shared/inference processors are
+empty and learning processors are label-only. Native LightGBM dataset
+construction accepted those NaNs without a fit. No AQ processor, missing-value
+engine, model engine, training, prediction, or backtest was introduced. See
+[P5 Filing-Feature Processor-Semantics Authority Resolution 001](p5-filing-feature-processor-semantics-authority-resolution-001.md).
+
+The evaluation-authority closeout makes the remaining boundaries exact.
+LightGBM 4.7.0 now has explicit CPU deterministic mode, forced column-wise
+histograms, all component seeds, eight fixed threads, and fixed row/column
+ordering. Two identical synthetic fits produced the same serialized model
+SHA-256 and byte-identical predictions while preserving the existing
+`colsample_bytree=0.8879` recipe. CONTROL is the ordered 157-column P2
+OHLCV-only `RaggedAlpha158` surface over the authoritative P1/P5
+episode-session universe, not the old static-SP500/VWAP surface. The eleven
+structured fundamentals are not in CONTROL, so P5 exit coverage requires H1
+(BASE versus BASE plus eleven fundamentals) and H2 (that fundamentals surface
+versus the same surface plus five filing features). Neither comparison runs
+here. See [P5 Evaluation Reproducibility and Control-Surface Authority
+Closeout 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md).
+
+```text
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+P5_COMPLETE = NO
+HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
+HISTORICAL_BUILD_INTERFERENCE = NO
+MODEL_AUTHORITIES_AUDITED = 4
+LINEAR_OLS_NULL_PRESERVING_COMPATIBLE = NO
+LIGHTGBM_NULL_PRESERVING_COMPATIBLE = YES
+EVALUATION_MODEL_AUTHORITY = FROZEN
+P5_EVALUATION_MODEL = qlib.contrib.model.gbdt.LGBModel
+P5_EVALUATION_MODEL_ROLE = FIXED_FEATURE_ABLATION_VEHICLE
+P5_DATA_LOADER = qlib.data.dataset.loader.StaticDataLoader
+P5_DATA_HANDLER = qlib.data.dataset.handler.DataHandlerLP
+P5_FEATURE_SHARED_PROCESSORS = []
+P5_FEATURE_INFER_PROCESSORS = []
+P5_LEARN_PROCESSORS = LABEL_ONLY
+PROCESSOR_SEMANTICS_GATE = PASS
+SYNTHETIC_NULL_SEMANTICS_POC = PASS
+REPRODUCIBILITY_GATE = PASS
+CONTROL_SURFACE_GATE = PASS
+P5_EXIT_COVERAGE_GATE = PASS_AUTHORITY_FROZEN_EXECUTION_PENDING
+LIGHTGBM_DETERMINISTIC = true
+LIGHTGBM_FORCE_COL_WISE = true
+LIGHTGBM_FORCE_ROW_WISE = false
+LIGHTGBM_NUM_THREADS = 8
+FEATURE_SUBSAMPLING_ABLATION_COMPATIBILITY = PASS
+CONTROL_FEATURE_FAMILY = P2_RAGGED_ALPHA158_OHLCV_157
+CONTROL_FEATURE_COLUMN_COUNT = 157
+CONTROL_FEATURE_MANIFEST_SHA256 = 7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463
+CONTROL_DATASET_IDENTITY = P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135
+STRUCTURED_FUNDAMENTAL_FEATURE_COUNT = 11
+STRUCTURED_FUNDAMENTALS_INCLUDED_IN_CONTROL = NO
+FILING_FEATURE_COUNT = 5
+HISTORICAL_FILING_ABLATION_TRIAL_COUNT = 2
+P5_EVALUATION_SURFACE_COUNT = 3
+P5_EVALUATION_SURFACE_S0 = BASE
+P5_EVALUATION_SURFACE_S1 = BASE_PLUS_EXACT_11_FUNDAMENTALS
+P5_EVALUATION_SURFACE_S2 = BASE_PLUS_EXACT_11_FUNDAMENTALS_PLUS_EXACT_5_FILING_FEATURES
+P5_INCREMENTAL_COMPARISON_COUNT = 2
+P5_H1 = S0_VS_S1
+P5_H2 = S1_VS_S2
+DOES_CURRENT_TWO_TRIAL_FILING_ABLATION_ALONE_SATISFY_P5_EXIT_CONDITION = NO
+TERMINAL_CLOSEOUT_GATE_COUNT = 26
+GLOBAL_ACCESSION_TARGET = 36206
+SOURCE_VERIFIABLE_TARGET = 36204
+SOURCE_UNAVAILABLE_TARGET = 2
+QLIB_FULL_HISTORICAL_HANDOFF_REQUIRED = YES
+POST_BUILD_HYGIENE_CANDIDATE_COUNT = 2
+NEW_PRODUCTION_LOC = 0
+AQ_MODEL_ENGINE = NO
+AQ_TRAINING_ENGINE = NO
+AQ_BACKTEST_ENGINE = NO
+AQ_TERMINAL_CLOSEOUT_ENGINE = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P6_ACTIVE = NO
+CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 ```
 
 ---
