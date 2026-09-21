@@ -2221,16 +2221,34 @@ point events and legitimate zero. Simply removing `Fillna` would let
 processor, mask, or replacement authority was invented. See [P5 Post-Build
 Readiness and Evaluation Authority Freeze 001](p5-post-build-readiness-and-evaluation-authority-freeze-001.md).
 
+The processor-semantics follow-up preserves that Linear rejection and freezes
+the already-existing Qlib `LGBModel` path as the evaluation vehicle. An
+in-memory upstream-only proof showed that
+`StaticDataLoader -> DataHandlerLP -> DatasetH -> LGBModel` preserves every
+NaN, legitimate zero, and nonzero value when shared/inference processors are
+empty and learning processors are label-only. Native LightGBM dataset
+construction accepted those NaNs without a fit. No AQ processor, missing-value
+engine, model engine, training, prediction, or backtest was introduced. See
+[P5 Filing-Feature Processor-Semantics Authority Resolution 001](p5-filing-feature-processor-semantics-authority-resolution-001.md).
+
 ```text
 CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
 P5_COMPLETE = NO
 HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
 HISTORICAL_BUILD_INTERFERENCE = NO
 MODEL_AUTHORITIES_AUDITED = 4
-EVALUATION_MODEL_AUTHORITY = BLOCKED_PROCESSOR_SEMANTICS
-P5_EVALUATION_MODEL = UNFROZEN_BLOCKED
-P5_EVALUATION_MODEL_CANDIDATE = qlib.contrib.model.linear.LinearModel(estimator=ols)
-PROCESSOR_SEMANTICS_GATE = BLOCKED
+LINEAR_OLS_NULL_PRESERVING_COMPATIBLE = NO
+LIGHTGBM_NULL_PRESERVING_COMPATIBLE = YES
+EVALUATION_MODEL_AUTHORITY = FROZEN
+P5_EVALUATION_MODEL = qlib.contrib.model.gbdt.LGBModel
+P5_EVALUATION_MODEL_ROLE = FIXED_FEATURE_ABLATION_VEHICLE
+P5_DATA_LOADER = qlib.data.dataset.loader.StaticDataLoader
+P5_DATA_HANDLER = qlib.data.dataset.handler.DataHandlerLP
+P5_FEATURE_SHARED_PROCESSORS = []
+P5_FEATURE_INFER_PROCESSORS = []
+P5_LEARN_PROCESSORS = LABEL_ONLY
+PROCESSOR_SEMANTICS_GATE = PASS
+SYNTHETIC_NULL_SEMANTICS_POC = PASS
 TRIAL_COUNT = 2
 TERMINAL_CLOSEOUT_GATE_COUNT = 26
 GLOBAL_ACCESSION_TARGET = 36206
@@ -2246,9 +2264,8 @@ AQ_TERMINAL_CLOSEOUT_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P6_ACTIVE = NO
-CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_PROCESSOR_SEMANTICS_AUTHORITY_RESOLUTION_001
-P5_HISTORICAL_DATA_PATH_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
-P5_HISTORICAL_DATA_PATH_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
+CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 ```
 
 ---

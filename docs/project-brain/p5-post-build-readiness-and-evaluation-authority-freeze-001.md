@@ -121,6 +121,23 @@ DATA_HANDLER_CLASS = UNFROZEN; AUDITED_RECIPE=qlib.contrib.data.handler.Alpha158
 This is a blocker in the evaluation authority, not a failure of Qlib or the
 historical fundamentals build.
 
+### Subsequent processor-semantics resolution
+
+The historical Linear OLS finding above remains unchanged. A subsequent
+bounded upstream-only proof established that the existing Qlib LightGBM path
+can preserve the five sparse P5 columns without feature processors: upstream
+`StaticDataLoader -> DataHandlerLP -> DatasetH -> LGBModel`, with empty shared
+and inference processor lists and label-only learning processors. See
+[P5 Filing-Feature Processor-Semantics Authority Resolution 001](p5-filing-feature-processor-semantics-authority-resolution-001.md).
+
+```text
+LINEAR_OLS_NULL_PRESERVING_COMPATIBLE = NO
+LIGHTGBM_NULL_PRESERVING_COMPATIBLE = YES
+EVALUATION_MODEL_AUTHORITY = FROZEN
+P5_EVALUATION_MODEL = qlib.contrib.model.gbdt.LGBModel
+PROCESSOR_SEMANTICS_GATE = PASS
+```
+
 ## Frozen two-trial boundary
 
 The already-preregistered inventory remains exactly two trials even though
