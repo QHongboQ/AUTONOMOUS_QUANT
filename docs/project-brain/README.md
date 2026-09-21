@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Filing Feature Historical Materialization 001 (waiting for historical fundamentals build terminal closeout)**
+> Active Development: **P5 — Filing Feature Processor Semantics Authority Resolution 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -2199,6 +2199,56 @@ P2_V2_SEALED_OOS_RESULT_USED = NO
 CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
 CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 FUTURE_AFTER_P5_CLOSEOUT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
+```
+
+### P5 post-build readiness and evaluation-authority freeze
+
+The terminal-closeout authority now contains 26 exact gates covering global
+36,206-accession accounting, the 36,204 source-verifiable denominator, the two
+separate source-unavailable records, evidence/PIT integrity, zero-network
+checkpoint replay, cache/storage hygiene, DVC identity, and the full-history
+Qlib handoff. The independently running historical build was not read or
+modified.
+
+Four existing model authorities were audited without performance selection.
+Qlib `LinearModel(estimator=ols)` is the strongest fixed-vehicle candidate on
+ex-ante simplicity and reuse grounds, but its exact current recipe fails the
+P5 processor-semantics gate. `DataHandlerLP` append processing applies
+`RobustZScoreNorm` and then `Fillna(feature, 0)` to both inference and learning
+surfaces, which would erase the frozen distinction between missing sparse
+point events and legitimate zero. Simply removing `Fillna` would let
+`LinearModel.fit().dropna()` change the challenger row population. No model,
+processor, mask, or replacement authority was invented. See [P5 Post-Build
+Readiness and Evaluation Authority Freeze 001](p5-post-build-readiness-and-evaluation-authority-freeze-001.md).
+
+```text
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+P5_COMPLETE = NO
+HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
+HISTORICAL_BUILD_INTERFERENCE = NO
+MODEL_AUTHORITIES_AUDITED = 4
+EVALUATION_MODEL_AUTHORITY = BLOCKED_PROCESSOR_SEMANTICS
+P5_EVALUATION_MODEL = UNFROZEN_BLOCKED
+P5_EVALUATION_MODEL_CANDIDATE = qlib.contrib.model.linear.LinearModel(estimator=ols)
+PROCESSOR_SEMANTICS_GATE = BLOCKED
+TRIAL_COUNT = 2
+TERMINAL_CLOSEOUT_GATE_COUNT = 26
+GLOBAL_ACCESSION_TARGET = 36206
+SOURCE_VERIFIABLE_TARGET = 36204
+SOURCE_UNAVAILABLE_TARGET = 2
+QLIB_FULL_HISTORICAL_HANDOFF_REQUIRED = YES
+POST_BUILD_HYGIENE_CANDIDATE_COUNT = 2
+NEW_PRODUCTION_LOC = 0
+AQ_MODEL_ENGINE = NO
+AQ_TRAINING_ENGINE = NO
+AQ_BACKTEST_ENGINE = NO
+AQ_TERMINAL_CLOSEOUT_ENGINE = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P6_ACTIVE = NO
+CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_PROCESSOR_SEMANTICS_AUTHORITY_RESOLUTION_001
+P5_HISTORICAL_DATA_PATH_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+P5_HISTORICAL_DATA_PATH_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 ```
 
 ---
