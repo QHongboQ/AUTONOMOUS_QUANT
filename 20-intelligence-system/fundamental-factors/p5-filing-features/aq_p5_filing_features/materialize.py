@@ -21,7 +21,7 @@ _NEW_YORK = ZoneInfo("America/New_York")
 _EVENT_FORMS = frozenset({"8-K", "8-K/A", "6-K", "6-K/A"})
 
 
-def _native_identity(value: object | None) -> str | None:
+def _native_type(value: object | None) -> str | None:
     if value is None:
         return None
     cls = type(value)
@@ -66,7 +66,7 @@ def _record(
     form: str,
     acceptance: datetime,
     first_session: date,
-    native_identity: str | None,
+    native_type: str | None,
     value: int | None,
     missingness: str | None,
     source_available: bool,
@@ -79,7 +79,7 @@ def _record(
         form=form,
         sec_acceptance_datetime=acceptance,
         first_available_xnys_session=first_session,
-        native_edgartools_object_identity=native_identity,
+        native_edgartools_object_type=native_type,
         exact_scalar_value=value,
         missingness_status=missingness,
         amendment_status="AMENDMENT" if form.endswith("/A") else "ORIGINAL",
@@ -108,7 +108,7 @@ def materialize_selected_filing_features(
         raise ValueError("native filing lacks an exact form")
     acceptance = _utc(sec_acceptance_datetime)
     first_session = effective_session(acceptance, calendar).date()
-    filing_identity = _native_identity(filing)
+    filing_type = _native_type(filing)
 
     if not source_available:
         return tuple(
@@ -119,7 +119,7 @@ def materialize_selected_filing_features(
                 form=form,
                 acceptance=acceptance,
                 first_session=first_session,
-                native_identity=None,
+                native_type=None,
                 value=None,
                 missingness="SOURCE_UNAVAILABLE",
                 source_available=False,
@@ -142,9 +142,7 @@ def materialize_selected_filing_features(
     after_close: int | None = None
     after_close_missingness: str | None = None
     if not calendar.is_session(local_acceptance_date):
-        # The frozen vocabulary has one not-applicable state. The policy names
-        # it NOT_APPLICABLE_FORM even for this non-session applicability case.
-        after_close_missingness = "NOT_APPLICABLE_FORM"
+        after_close_missingness = "NOT_APPLICABLE_SESSION_DATE"
     else:
         close = pd.Timestamp(calendar.session_close(local_acceptance_date))
         after_close = int(pd.Timestamp(acceptance) > close)
@@ -157,7 +155,7 @@ def materialize_selected_filing_features(
             form=form,
             acceptance=acceptance,
             first_session=first_session,
-            native_identity=filing_identity,
+            native_type=filing_type,
             value=lag,
             missingness=lag_missingness,
             source_available=True,
@@ -169,7 +167,7 @@ def materialize_selected_filing_features(
             form=form,
             acceptance=acceptance,
             first_session=first_session,
-            native_identity=filing_identity,
+            native_type=filing_type,
             value=after_close,
             missingness=after_close_missingness,
             source_available=True,
@@ -181,14 +179,14 @@ def materialize_selected_filing_features(
             form=form,
             acceptance=acceptance,
             first_session=first_session,
-            native_identity=filing_identity,
+            native_type=filing_type,
             value=int(form.endswith("/A")),
             missingness=None,
             source_available=True,
         ),
     ]
 
-    native_identity = _native_identity(native_report)
+    native_type = _native_type(native_report)
     press_value: int | None = None
     press_missingness: str | None = None
     exhibit_value: int | None = None
@@ -198,7 +196,7 @@ def materialize_selected_filing_features(
     elif (form.startswith("8-K") and not isinstance(native_report, CurrentReport)) or (
         form.startswith("6-K") and not isinstance(native_report, SixK)
     ):
-        native_identity = None
+        native_type = None
         press_missingness = exhibit_missingness = "NATIVE_OBJECT_UNAVAILABLE"
     else:
         assert native_report is not None
@@ -223,7 +221,7 @@ def materialize_selected_filing_features(
                 form=form,
                 acceptance=acceptance,
                 first_session=first_session,
-                native_identity=native_identity,
+                native_type=native_type,
                 value=press_value,
                 missingness=press_missingness,
                 source_available=True,
@@ -235,7 +233,7 @@ def materialize_selected_filing_features(
                 form=form,
                 acceptance=acceptance,
                 first_session=first_session,
-                native_identity=native_identity,
+                native_type=native_type,
                 value=exhibit_value,
                 missingness=exhibit_missingness,
                 source_available=True,

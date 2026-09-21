@@ -41,7 +41,9 @@ The POC therefore adds exactly one narrow immutable contract,
 RFC 8785 plus SHA-256 over every validated non-ID field. It is not a feature
 registry, generic event model, transform graph, factor hierarchy, provider
 abstraction, or plugin system. It is deliberately separate from
-`FundamentalEvidenceV1`.
+`FundamentalEvidenceV1`. Before merge, semantic closeout corrected the native
+class field name to `native_edgartools_object_type`; its value is the exact
+installed `module.qualname`, not a specific object identity.
 
 ```text
 FEATURE_CONTRACT_REUSED_EXISTING = NO
@@ -62,13 +64,12 @@ in the frozen order:
 
 Filing lag is the New York acceptance calendar date minus report-period end;
 negative values become `INVALID_VALUE`. After-close uses the official XNYS
-close and a strict greater-than comparison. Because the preregistration froze
-exactly six missingness values and did not add a session-specific state, a
-non-session acceptance uses the frozen not-applicable state
-`NOT_APPLICABLE_FORM` and no scalar. Amendment status uses only the exact `/A`
-form suffix. Event-form features read only native `CurrentReport` or `SixK`
-interfaces; empty loaded inventories are zero-valued `VALIDATED_ABSENCE`,
-whereas an absent native object remains missing.
+close and a strict greater-than comparison. A non-session acceptance uses the
+narrow `NOT_APPLICABLE_SESSION_DATE` state and no scalar; filing-family
+inapplicability remains `NOT_APPLICABLE_FORM`. Amendment status uses only the
+exact `/A` form suffix. Event-form features read only native `CurrentReport`
+or `SixK` interfaces; empty loaded inventories are zero-valued
+`VALIDATED_ABSENCE`, whereas an absent native object remains missing.
 
 Every observation uses the existing first-XNYS-open-strictly-after-acceptance
 policy. Original and amended accessions remain separate immutable
@@ -89,8 +90,8 @@ engine code.
 ```text
 SELECTED_FEATURE_POC_CASE_COUNT = 16
 SELECTED_FEATURE_POC_CASES = PASS
-FOCUSED_TEST_RESULT = 20/20 PASS
-FULL_P5_TEST_RESULT = 150/150 PASS
+FOCUSED_TEST_RESULT = 21/21 PASS
+FULL_P5_TEST_RESULT = 151/151 PASS
 EARLY_VISIBILITY_COUNT = 0
 MATERIALIZED_FEATURE_ID_COUNT = 5
 LLM_CALL_COUNT = 0
@@ -110,8 +111,8 @@ The contract count includes the bounded package export surface.
 
 ```text
 NEW_FEATURE_MATERIALIZATION_PRODUCTION_LOC = 217
-NEW_FEATURE_CONTRACT_PRODUCTION_LOC = 173
-TOTAL_NEW_PRODUCTION_LOC = 390
+NEW_FEATURE_CONTRACT_PRODUCTION_LOC = 174
+TOTAL_NEW_PRODUCTION_LOC = 391
 AQ_FEATURE_ENGINE = NO
 AQ_FACTOR_ENGINE = NO
 AQ_FILING_PARSER = NO
@@ -131,6 +132,8 @@ and manifests were not mutated.
 HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
 HISTORICAL_BUILD_INTERFERENCE = NO
 P5_FILING_FEATURE_THIN_MATERIALIZATION_POC = PASS
+V1_NEVER_MERGED_OR_USED_FOR_PERFORMANCE = YES
+CONTRACT_VERSION_DECISION = V1_CORRECTED_IN_PLACE_BEFORE_FIRST_MERGE
 P2_V2_SEALED_OOS_ACCESSED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_DESIGN_AND_ABLATION_PROTOCOL_001
 ```

@@ -41,6 +41,7 @@ FeatureId = Literal[
 ]
 MissingnessStatus = Literal[
     "NOT_APPLICABLE_FORM",
+    "NOT_APPLICABLE_SESSION_DATE",
     "NATIVE_OBJECT_UNAVAILABLE",
     "SOURCE_UNAVAILABLE",
     "REQUIRED_METADATA_MISSING",
@@ -61,7 +62,7 @@ class _FilingFeatureObservationProjectionV1(_FrozenModel):
     form: NonEmptyString
     sec_acceptance_datetime: datetime
     first_available_xnys_session: date
-    native_edgartools_object_identity: NonEmptyString | None
+    native_edgartools_object_type: NonEmptyString | None
     exact_scalar_value: StrictInt | None
     missingness_status: MissingnessStatus | None
     amendment_status: Literal["ORIGINAL", "AMENDMENT"]
@@ -102,7 +103,7 @@ class _FilingFeatureObservationProjectionV1(_FrozenModel):
                 "p5_authorized_exhibit_count_v1",
             } or self.exact_scalar_value != 0:
                 raise ValueError("validated absence is a zero-valued exhibit observation")
-            if self.native_edgartools_object_identity is None:
+            if self.native_edgartools_object_type is None:
                 raise ValueError("validated absence requires a loaded native object")
         value = self.exact_scalar_value
         if value is not None:
@@ -124,7 +125,7 @@ class _FilingFeatureObservationProjectionV1(_FrozenModel):
             if self.feature_id in {
                 "p5_press_release_exhibit_present_v1",
                 "p5_authorized_exhibit_count_v1",
-            } and self.native_edgartools_object_identity is None:
+            } and self.native_edgartools_object_type is None:
                 raise ValueError("an exhibit scalar requires a loaded native object")
         return self
 

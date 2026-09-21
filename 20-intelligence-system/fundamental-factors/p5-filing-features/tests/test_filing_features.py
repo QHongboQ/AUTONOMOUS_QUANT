@@ -130,7 +130,18 @@ def test_e_non_session_acceptance_is_missing() -> None:
     )
 
     assert item.exact_scalar_value is None
-    assert item.missingness_status == "NOT_APPLICABLE_FORM"
+    assert item.missingness_status == "NOT_APPLICABLE_SESSION_DATE"
+
+
+def test_sunday_acceptance_is_not_an_applicable_session_date() -> None:
+    filing = _filing("10-Q")
+    item = _feature(
+        _materialize(filing, acceptance=datetime(2024, 3, 3, 15, 0, tzinfo=UTC)),
+        "p5_accepted_after_market_close_v1",
+    )
+
+    assert item.exact_scalar_value is None
+    assert item.missingness_status == "NOT_APPLICABLE_SESSION_DATE"
 
 
 def test_f_ordinary_filing_is_not_an_amendment() -> None:
@@ -191,7 +202,7 @@ def test_j_sixk_uses_native_press_release_path() -> None:
     )
 
     assert item.exact_scalar_value == 1
-    assert item.native_edgartools_object_identity == "edgar.company_reports.sixk.SixK"
+    assert item.native_edgartools_object_type == "edgar.company_reports.sixk.SixK"
 
 
 def test_k_authorized_exhibit_count_is_exact_native_count() -> None:
@@ -276,7 +287,7 @@ def test_event_form_without_native_report_is_explicitly_unavailable() -> None:
         item = _feature(observations, feature_id)
         assert item.exact_scalar_value is None
         assert item.missingness_status == "NATIVE_OBJECT_UNAVAILABLE"
-        assert item.native_edgartools_object_identity is None
+        assert item.native_edgartools_object_type is None
 
 
 def test_exact_contract_is_immutable_and_identity_fails_closed() -> None:
@@ -290,7 +301,7 @@ def test_exact_contract_is_immutable_and_identity_fails_closed() -> None:
         "form",
         "sec_acceptance_datetime",
         "first_available_xnys_session",
-        "native_edgartools_object_identity",
+        "native_edgartools_object_type",
         "exact_scalar_value",
         "missingness_status",
         "amendment_status",
