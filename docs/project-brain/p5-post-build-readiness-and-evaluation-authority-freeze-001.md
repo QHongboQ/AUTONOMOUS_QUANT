@@ -138,15 +138,25 @@ P5_EVALUATION_MODEL = qlib.contrib.model.gbdt.LGBModel
 PROCESSOR_SEMANTICS_GATE = PASS
 ```
 
-## Frozen two-trial boundary
+## Frozen incremental-comparison boundary
 
-The already-preregistered inventory remains exactly two trials even though
-execution authority is blocked:
+The reproducibility/control-surface closeout supersedes the previously vague
+baseline wording. The eleven structured fundamentals are not part of the
+157-column P2 ragged OHLCV CONTROL, so the current filing comparison alone
+cannot satisfy P5's measurable-incremental-value exit condition. The minimum
+complete inventory is two fixed directional hypotheses:
 
 ```text
-TRIAL_COUNT = 2
-CONTROL = EXISTING_APPROVED_BASELINE_FEATURE_SURFACE
-CHALLENGER = SAME_EXACT_BASELINE_PLUS_EXACTLY_FIVE_P5_FILING_FEATURE_COLUMNS
+P5_INCREMENTAL_COMPARISON_COUNT = 2
+H1 = BASE vs BASE_PLUS_EXACT_11_FUNDAMENTALS
+H2 = BASE_PLUS_EXACT_11_FUNDAMENTALS vs BASE_PLUS_EXACT_11_FUNDAMENTALS_PLUS_EXACT_5_FILING_FEATURES
+CONTROL_FEATURE_FAMILY = P2_RAGGED_ALPHA158_OHLCV_157
+CONTROL_FEATURE_COLUMN_COUNT = 157
+CONTROL_FEATURE_MANIFEST_SHA256 = 7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463
+CONTROL_DATASET_IDENTITY = P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135
+STRUCTURED_FUNDAMENTAL_FEATURE_COUNT = 11
+FILING_FEATURE_COUNT = 5
+DOES_CURRENT_TWO_TRIAL_FILING_ABLATION_ALONE_SATISFY_P5_EXIT_CONDITION = NO
 ```
 
 The five challenger additions, in frozen order, are:
@@ -158,9 +168,16 @@ The five challenger additions, in frozen order, are:
 5. `p5_authorized_exhibit_count_v1`
 
 Model, label, processors, segments, seed policy, strategy, costs, runtime, row
-population, and prediction semantics must be identical between trials. There
-is no leave-one-out run, model comparison, feature subset search, or
-hyperparameter search.
+population, and prediction semantics must be identical within both paired
+comparisons. `colsample_bytree=0.8879` is preserved, with explicit
+`feature_fraction_seed=2`; adding the preregistered columns is the treatment,
+not a reason to create a new recipe. There is no leave-one-out run, ratio
+search, model comparison, feature subset search, or hyperparameter search.
+
+See [P5 Evaluation Reproducibility and Control-Surface Authority Closeout
+001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md)
+for the exact ordered column manifest, composite dataset identity,
+reproducibility proof, and fixed two-hypothesis family.
 
 The frozen historical research windows remain:
 

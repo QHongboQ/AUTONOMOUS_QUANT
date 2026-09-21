@@ -187,36 +187,44 @@ resolved_internal_verbosity = -1
 `bagging_freq=0` means row bagging remains disabled. Feature subsampling is
 active through `colsample_bytree=0.8879`.
 
-Every relevant native seed is frozen at its existing LightGBM 4.7.0 resolved
-default rather than tuned:
+Every relevant native seed is explicit. A subsequent bounded reproducibility
+closeout also enables LightGBM's CPU deterministic mode and forces column-wise
+histogram construction. These are execution controls, not performance tuning:
 
 ```text
-seed = UNSET; LightGBM default None and lower priority than explicit component seeds
+seed = 20260913; lower priority than explicit component seeds
 data_random_seed = 1
 feature_fraction_seed = 2
 bagging_seed = 3
 drop_seed = 4
 objective_seed = 5
 extra_seed = 6
-deterministic = false; existing upstream default retained
+deterministic = true
+force_col_wise = true
+force_row_wise = false
 device_type = cpu
 boosting = gbdt
 extra_trees = false
 ```
 
 Reproducibility authority is bounded to the pinned Qlib source, LightGBM
-4.7.0 CPU runtime/build, `num_threads=8`, fixed input row/column ordering, and
-the explicit component seeds above. `deterministic=true` is not introduced
-because it is absent from the existing audited recipe and would alter its
-execution behavior. Both frozen trials must use the same exact runtime and
-configuration identity.
+4.7.0 CPU runtime/build, fixed `num_threads=8`, fixed input row/column ordering,
+and the explicit component seeds above. Two identical in-memory synthetic
+fits produced identical serialized model SHA-256 and byte-identical
+predictions. See [P5 Evaluation Reproducibility and Control-Surface Authority
+Closeout 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md).
+
+`colsample_bytree=0.8879` remains unchanged. Feature subsampling is part of the
+frozen model recipe, and the model's response to a preregistered added feature
+set is part of the treatment. The same ordered surface, seed, and recipe apply
+to both sides of each paired comparison.
 
 ## Two-trial and split authority
 
 ```text
-TRIAL_COUNT = 2
-CONTROL = EXISTING_APPROVED_BASELINE_FEATURE_SURFACE
-ALL_FIVE = SAME_EXACT_BASELINE_PLUS_EXACTLY_FIVE_FROZEN_P5_COLUMNS
+P5_INCREMENTAL_COMPARISON_COUNT = 2
+H1 = EXACT_157_COLUMN_P2_RAGGED_ALPHA158_OHLCV_CONTROL vs SAME_PLUS_EXACT_11_FUNDAMENTALS
+H2 = BASE_PLUS_EXACT_11_FUNDAMENTALS vs SAME_PLUS_EXACT_5_FILING_FEATURES
 TRAIN = 2015-04-01 through 2019-12-31
 VALID = 2020-01-01 through 2021-12-31
 HISTORICAL_RESEARCH_TEST = 2022-01-03 through 2024-12-31

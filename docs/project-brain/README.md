@@ -2231,6 +2231,20 @@ construction accepted those NaNs without a fit. No AQ processor, missing-value
 engine, model engine, training, prediction, or backtest was introduced. See
 [P5 Filing-Feature Processor-Semantics Authority Resolution 001](p5-filing-feature-processor-semantics-authority-resolution-001.md).
 
+The evaluation-authority closeout makes the remaining boundaries exact.
+LightGBM 4.7.0 now has explicit CPU deterministic mode, forced column-wise
+histograms, all component seeds, eight fixed threads, and fixed row/column
+ordering. Two identical synthetic fits produced the same serialized model
+SHA-256 and byte-identical predictions while preserving the existing
+`colsample_bytree=0.8879` recipe. CONTROL is the ordered 157-column P2
+OHLCV-only `RaggedAlpha158` surface over the authoritative P1/P5
+episode-session universe, not the old static-SP500/VWAP surface. The eleven
+structured fundamentals are not in CONTROL, so P5 exit coverage requires H1
+(BASE versus BASE plus eleven fundamentals) and H2 (that fundamentals surface
+versus the same surface plus five filing features). Neither comparison runs
+here. See [P5 Evaluation Reproducibility and Control-Surface Authority
+Closeout 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md).
+
 ```text
 CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
 P5_COMPLETE = NO
@@ -2249,7 +2263,24 @@ P5_FEATURE_INFER_PROCESSORS = []
 P5_LEARN_PROCESSORS = LABEL_ONLY
 PROCESSOR_SEMANTICS_GATE = PASS
 SYNTHETIC_NULL_SEMANTICS_POC = PASS
-TRIAL_COUNT = 2
+REPRODUCIBILITY_GATE = PASS
+CONTROL_SURFACE_GATE = PASS
+P5_EXIT_COVERAGE_GATE = PASS_AUTHORITY_FROZEN_EXECUTION_PENDING
+LIGHTGBM_DETERMINISTIC = true
+LIGHTGBM_FORCE_COL_WISE = true
+LIGHTGBM_FORCE_ROW_WISE = false
+LIGHTGBM_NUM_THREADS = 8
+FEATURE_SUBSAMPLING_ABLATION_COMPATIBILITY = PASS
+CONTROL_FEATURE_FAMILY = P2_RAGGED_ALPHA158_OHLCV_157
+CONTROL_FEATURE_COLUMN_COUNT = 157
+CONTROL_FEATURE_MANIFEST_SHA256 = 7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463
+CONTROL_DATASET_IDENTITY = P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135
+STRUCTURED_FUNDAMENTAL_FEATURE_COUNT = 11
+STRUCTURED_FUNDAMENTALS_INCLUDED_IN_CONTROL = NO
+FILING_FEATURE_COUNT = 5
+P5_INCREMENTAL_COMPARISON_COUNT = 2
+P5_INCREMENTAL_COMPARISONS = H1_BASE_VS_BASE_PLUS_11_FUNDAMENTALS; H2_BASE_PLUS_11_FUNDAMENTALS_VS_SAME_PLUS_5_FILING_FEATURES
+DOES_CURRENT_TWO_TRIAL_FILING_ABLATION_ALONE_SATISFY_P5_EXIT_CONDITION = NO
 TERMINAL_CLOSEOUT_GATE_COUNT = 26
 GLOBAL_ACCESSION_TARGET = 36206
 SOURCE_VERIFIABLE_TARGET = 36204
