@@ -10,8 +10,9 @@ remains the primary filing, fundamentals, XBRL, document, and notes owner. The
 historical build remains an independent running process and was not stopped,
 restarted, queried, or given competing SEC work by this census.
 
-This document is a source, documentation, and public-interface audit only. It
-does not install an upstream, download a model, retrieve a news item or macro
+This document is future-phase preaudit evidence: P6 is not the active project
+phase. It is a source, documentation, and public-interface audit only. It does
+not install an upstream, download a model, retrieve a news item or macro
 observation, call an LLM, create a feature, train a model, or run a backtest.
 
 ```text
@@ -24,6 +25,22 @@ P5_XBRL_OWNER = EDGARTOOLS
 P5_DOCUMENT_OWNER = EDGARTOOLS
 P5_NOTES_OWNER = EDGARTOOLS
 P6_DUPLICATE_SEC_STACK = NO
+```
+
+The active project phase remains P5 Fundamental Intelligence. Completing an
+upstream census for a future phase does not satisfy the P5 exit condition or
+authorize P6 deployment.
+
+```text
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+P5_COMPLETE = NO
+P5_UPSTREAM_HANDOFF = COMPLETE_WITH_POST_BUILD_HYGIENE
+P5_HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
+P6_PREAUDIT_COMPLETE = YES
+P6_ACTIVE = NO
+P6_SELECTED_UPSTREAM_DEPLOYMENT_STARTED = NO
+P5_EXIT_CONDITION_SATISFIED = NO
+P6_PHASE_ENTRY_AUTHORIZED = NO
 ```
 
 The historical-build `_NetworkMeter`/HTTPX instrumentation and transient
@@ -299,7 +316,7 @@ AQ_PROVIDER_REGISTRY = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ```
 
-## Future deployment order
+## Future deployment order after P5 closeout
 
 1. Deploy `fredapi` in an isolated P6 runtime and prove a small ALFRED vintage,
    first-release, all-releases, and as-of-date matrix without introducing an AQ
@@ -317,11 +334,25 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 6. Keep FinGPT, generic LLM analysis, earnings calls, and social sentiment
    deferred until a separate access/model/PIT contract is authorized.
 
-The immediate next task is therefore a selected-leaf deployment and bounded
-POC, not an AQ information engine.
+This order is frozen preaudit guidance only. Before any item can start, P5
+must complete all of the following active blockers:
+
+1. historical fundamentals build terminal closeout;
+2. historical filing-feature materialization;
+3. Qlib handoff of the completed P5 dataset;
+4. the frozen two-trial filing-feature ablation;
+5. P5 incremental OOS evidence;
+6. final P5 phase closeout.
+
+The current development next therefore remains the P5 filing-feature
+materialization, gated on the historical fundamentals build's terminal
+closeout. The selected-leaf P6 deployment is only the future task after P5
+closeout.
 
 ```text
-CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
+CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
+FUTURE_AFTER_P5_CLOSEOUT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
 ```
 
 ## Validation and non-actions
@@ -339,5 +370,5 @@ MODEL_WEIGHTS_DOWNLOADED = NO
 TEST_RESULT = PASS
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
-FINAL_CLASSIFICATION = PASS_P6_UPSTREAM_HANDOFF_CENSUS_COMPLETE
+FINAL_CLASSIFICATION = PASS_P6_PREAUDIT_COMPLETE_P5_REMAINS_ACTIVE
 ```

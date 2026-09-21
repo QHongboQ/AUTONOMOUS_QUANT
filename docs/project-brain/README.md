@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P6 — Selected Upstream Leaves Deployment and Bounded POC 001**
+> Active Development: **P5 — Filing Feature Historical Materialization 001 (waiting for historical fundamentals build terminal closeout)**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -2140,7 +2140,7 @@ P2_V2_SEALED_OOS_RESULT_USED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
 ```
 
-### P6 information-intelligence upstream handoff census
+### P6 information-intelligence upstream handoff preaudit census
 
 PR #72 squash-merged the completed P5 filing-feature historical
 materialization and ablation design at
@@ -2148,8 +2148,10 @@ materialization and ablation design at
 EdgarTools remains the filing, fundamentals, XBRL, document, and notes owner,
 and the independently running historical build was not disturbed.
 
-The P6 census audited 23 news, macro, sentiment, text/LLM, earnings-call, and
-multi-agent capabilities across nine current upstream projects/services.
+The future-phase P6 preaudit census audited 23 news, macro, sentiment,
+text/LLM, earnings-call, and multi-agent capabilities across nine current
+upstream projects/services. P6 is not active and no selected upstream
+deployment has started.
 Official FRED/ALFRED through `fredapi` is the macro PIT owner. OpenBB is the
 news/provider and FRED-calendar gateway, but not universal PIT authority.
 Current Transformers plus the pinned ProsusAI/finbert model is the narrow
@@ -2162,8 +2164,17 @@ Intelligence Upstream Handoff Census 001](p6-information-intelligence-upstream-h
 
 ```text
 P5_UPSTREAM_HANDOFF_STATUS = COMPLETE_WITH_POST_BUILD_HYGIENE
+P5_UPSTREAM_HANDOFF = COMPLETE_WITH_POST_BUILD_HYGIENE
 P5_NEW_GENERIC_ENGINE_REQUIRED = NO
 P5_UPSTREAM_HANDOFF_BLOCKER_COUNT = 0
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+P5_COMPLETE = NO
+P5_HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
+P5_EXIT_CONDITION_SATISFIED = NO
+P6_PREAUDIT_COMPLETE = YES
+P6_ACTIVE = NO
+P6_PHASE_ENTRY_AUTHORIZED = NO
+P6_SELECTED_UPSTREAM_DEPLOYMENT_STARTED = NO
 P6_CAPABILITY_COUNT_AUDITED = 23
 P6_UPSTREAM_PROJECT_COUNT_AUDITED = 9
 MACRO_PIT_OWNER = OFFICIAL_FRED_ALFRED_VIA_FREDAPI
@@ -2185,7 +2196,9 @@ P6_LLM_CALL_COUNT = 0
 P5_HISTORICAL_BUILD_INTERFERENCE = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
-CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
+CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
+FUTURE_AFTER_P5_CLOSEOUT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
 ```
 
 ---
