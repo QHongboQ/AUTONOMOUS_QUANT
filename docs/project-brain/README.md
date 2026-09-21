@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Filing Feature Processor Semantics Authority Resolution 001**
+> Active Development: **P5 — Downstream Artifact-Driven Automatic Composition Synthetic E2E 001**
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -2304,6 +2304,33 @@ P6_ACTIVE = NO
 CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
 CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 ```
+
+## P5 downstream artifact-driven automatic composition — synthetic E2E
+
+The thin downstream composition is interface-complete under bounded synthetic
+evidence. One real-mode command accepts a sealed historical-build handoff,
+validates the frozen 26 terminal gates, materializes native EdgarTools filing
+features, composes S0/S1/S2, runs exactly three Qlib/LightGBM/Recorder surfaces,
+forms H1/H2, invokes required skfolio and arch procedures, and seals one evidence
+bundle. Real P5 evidence, SEC, PID 403 outputs, and P2 sealed OOS were not read.
+
+```text
+P5_DOWNSTREAM_AUTOMATIC_COMPOSITION_READY = YES
+ONE_REAL_HANDOFF_ENTRYPOINT = YES
+REAL_HANDOFF_REQUIRES_NEW_CODE = NO
+SYNTHETIC_E2E = PASS
+P5_FINAL_POLICY_INTERFACE_READY = BLOCKED_FINAL_POLICY_SEMANTICS
+P5_COMPLETE = NO
+P6_ACTIVE = NO
+HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
+HISTORICAL_BUILD_INTERFERENCE = NO
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
+```
+
+The final policy remains fail-closed because current authority does not state
+how separately classified H1 and H2 outcomes combine when they disagree.
 
 ---
 

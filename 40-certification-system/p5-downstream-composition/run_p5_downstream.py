@@ -1,0 +1,248 @@
+"""One artifact-driven entrypoint for the frozen P5 downstream composition."""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+LEAKAGE_GATES = tuple("ACCEPTANCE_TIME_LEAKAGE_COUNT REPORT_PERIOD_LEAKAGE_COUNT AMENDMENT_BACKWARD_LEAKAGE_COUNT CROSS_CIK_CONTAMINATION_COUNT EPISODE_MEMBERSHIP_LEAKAGE_COUNT CURRENT_TICKER_LEAKAGE_COUNT SOURCE_UNAVAILABLE_SUBSTITUTION_COUNT FUTURE_FILING_VISIBILITY_COUNT".split())
+MISSING_POLICY_SENTENCE = "The authority must state how individually classified H1 and H2 outcomes combine into one P5 phase result when the two comparisons disagree."
+WSL_P5_PYTHON = "/home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python"
+WSL_QLIB_PYTHON = "/home/zhou/miniforge3/envs/rdagent4qlib/bin/python"
+PANDERA_PYTHON = r"D:\AQ_DATA\P2\free-upstream-identity-binding-poc-001\.venv\Scripts\python.exe"
+def _read(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+def _write(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def _sha(value: object) -> str:
+    return "sha256:" + hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
+def _add_paths(repo: Path) -> None:
+    paths = ("10-data-system/fundamentals/historical-dataset", "20-intelligence-system/fundamental-factors/evidence-contract",
+             "20-intelligence-system/fundamental-factors/p5-filing-features", "30-research-system/qlib/dataset-adapter")
+    for relative in paths:
+        sys.path.insert(0, str(repo / relative))
+def verify_evidence_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
+    surfaces = bundle.get("surfaces", {})
+    runs = bundle.get("qlib_runs", {})
+    if set(surfaces) != {"S0", "S1", "S2"} or set(runs) != {"S0", "S1", "S2"}:
+        raise ValueError("three surface and Qlib run identities are required")
+    for surface_id in surfaces:
+        run = runs[surface_id]
+        if run.get("recorder_status") != "FINISHED" or not run.get("recorder_id"):
+            raise ValueError("missing finished Qlib Recorder artifact")
+        if run.get("surface_artifact_identity") != surfaces[surface_id].get("artifact_identity"):
+            raise ValueError("Qlib run/surface identity mismatch")
+    comparisons = bundle.get("comparisons", {})
+    if comparisons.get("H1", {}).get("control_surface") != "S0" or comparisons.get("H1", {}).get("challenger_surface") != "S1":
+        raise ValueError("H1 contract mismatch")
+    if comparisons.get("H2", {}).get("control_surface") != "S1" or comparisons.get("H2", {}).get("challenger_surface") != "S2":
+        raise ValueError("H2 contract mismatch")
+    s1_ids = {comparisons[name].get("s1_artifact_identity") for name in ("H1", "H2")}
+    if s1_ids != {surfaces["S1"].get("artifact_identity")}:
+        raise ValueError("H1/H2 did not reuse the same frozen S1 artifact")
+    for name in ("H1", "H2"):
+        evidence = comparisons[name]
+        if evidence.get("skfolio_status") != "PASS":
+            raise ValueError(f"{name} required skfolio evidence is missing")
+        arch = evidence.get("arch", {})
+        if arch.get("spa") != "PASS" or arch.get("reality_check") != "PASS":
+            raise ValueError(f"{name} required arch evidence is missing")
+    leakage = bundle.get("leakage_gates", {})
+    if set(leakage) != set(LEAKAGE_GATES) or any(int(leakage[name]) for name in LEAKAGE_GATES):
+        raise ValueError("nonzero or incomplete P5 leakage gates")
+    result = {"schema_version": "P5EvidenceBundleValidationV1", "status": "PASS",
+              "surface_count": 3, "comparison_count": 2, "leakage_gate_count": 8}
+    result["validation_identity"] = _sha(result)
+    return result
+def evaluate_final_policy(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Fail closed because current authority omits cross-H1/H2 composition."""
+    verify_evidence_bundle(bundle)
+    return {"status": "BLOCKED_FINAL_POLICY_SEMANTICS",
+            "missing_policy_sentence": MISSING_POLICY_SENTENCE, "p5_complete": False}
+def _internal(args: argparse.Namespace) -> None:
+    repo = Path(args.repo).resolve()
+    _add_paths(repo)
+    if args.stage == "terminal":
+        from aq_edgartools_full_build import verify_terminal_handoff
+        result = verify_terminal_handoff(_read(Path(args.input)), artifact_root=Path(args.root))
+    elif args.stage == "filing":
+        import exchange_calendars as xcals
+        import pandas as pd
+        from aq_p5_filing_features import discover_native_filing_observations, seal_historical_filing_features
+        spec = _read(Path(args.input))
+        bindings = pd.read_parquet(spec["bindings_path"])
+        sessions = pd.read_parquet(spec["session_grid_path"])
+        observations = discover_native_filing_observations(
+            bindings["cik"].dropna().astype(str),
+            filing_date="1994-01-01:2024-12-31", calendar=xcals.get_calendar("XNYS"))
+        result = seal_historical_filing_features(observations, session_grid=sessions,
+                                                 bindings=bindings, output_root=Path(args.root))
+    elif args.stage == "compose":
+        from aq_qlib_handoff.p5_surfaces import compose_surfaces
+        spec = _read(Path(args.input))
+        result = compose_surfaces(base_path=Path(spec["base_path"]), fundamentals_path=Path(spec["fundamentals_path"]),
+            filing_path=Path(spec["filing_path"]), filing_ledger_path=Path(spec["filing_ledger_path"]),
+            output_root=Path(args.root))
+    elif args.stage == "qlib":
+        from aq_qlib_handoff.p5_surfaces import evaluate_surface
+        config = _read(Path(args.config)) if args.config else {}
+        result = evaluate_surface(Path(args.input), Path(args.root),
+            provider_uri=config.get("provider_uri"), benchmark=config.get("benchmark"))
+    elif args.stage == "compare":
+        import pandas as pd
+        spec = _read(Path(args.input))
+        result = {}
+        for comparison, control, challenger in (("H1", "S0", "S1"), ("H2", "S1", "S2")):
+            if "daily_net_return" in spec["runs"][control]:
+                control_daily = pd.read_parquet(spec["runs"][control]["daily_net_return"])
+                challenger_daily = pd.read_parquet(spec["runs"][challenger]["daily_net_return"])
+                paired_daily = control_daily.merge(challenger_daily, on="date",
+                    suffixes=("_control", "_challenger"), validate="one_to_one")
+                daily = pd.DataFrame({"score": paired_daily["net_return_challenger"],
+                    "label": paired_daily["net_return_control"],
+                    "benchmark_loss": -paired_daily["net_return_control"],
+                    "model_loss": -paired_daily["net_return_challenger"]})
+            else:
+                control_frame = pd.read_parquet(spec["runs"][control]["predictions"])
+                challenger_frame = pd.read_parquet(spec["runs"][challenger]["predictions"])
+                keys = ["datetime", "instrument"]
+                paired = control_frame.merge(challenger_frame, on=keys,
+                    suffixes=("_control", "_challenger"), validate="one_to_one")
+                if not paired["label_control"].equals(paired["label_challenger"]):
+                    raise ValueError("paired Qlib labels differ")
+                paired["benchmark_loss"] = (paired["label_control"] - paired["score_control"]) ** 2
+                paired["model_loss"] = (paired["label_challenger"] - paired["score_challenger"]) ** 2
+                daily = paired.groupby("datetime", sort=True).agg(score=("score_challenger", "mean"),
+                    label=("label_challenger", "mean"), benchmark_loss=("benchmark_loss", "mean"),
+                    model_loss=("model_loss", "mean")).reset_index(drop=True)
+            directory = Path(args.root) / comparison.lower()
+            directory.mkdir(parents=True)
+            path = directory / "upstream-interface-evidence.csv"
+            daily.to_csv(path, index=False, lineterminator="\n")
+            result[comparison] = {
+                "control_surface": control, "challenger_surface": challenger,
+                "s1_artifact_identity": spec["surfaces"]["S1"]["artifact_identity"],
+                "evidence_path": str(path), "evidence_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "semantics": "SYNTHETIC_INTERFACE_ONLY_NOT_SCIENTIFIC_EVIDENCE",
+            }
+    else:
+        raise ValueError(args.stage)
+    _write(Path(args.output), result)
+def _wsl(path: Path) -> str:
+    completed = subprocess.run(["wsl.exe", "-d", "Ubuntu-24.04", "--", "wslpath", "-a", str(path.resolve())],
+                               check=True, capture_output=True, text=True)
+    return completed.stdout.strip()
+def _stage(python: str, script: Path, stage: str, input_path: Path, root: Path,
+           output: Path, repo: Path, config: Path | None = None) -> None:
+    command = [
+        "wsl.exe", "-d", "Ubuntu-24.04", "--", python, _wsl(script), "_stage",
+        "--stage", stage, "--input", _wsl(input_path), "--root", _wsl(root),
+        "--output", _wsl(output), "--repo", _wsl(repo),
+    ]
+    if config is not None:
+        command.extend(["--config", _wsl(config)])
+    subprocess.run(command, check=True)
+def _native_stage(python: str, script: Path, stage: str, input_path: Path, root: Path, output: Path, repo: Path) -> None:
+    subprocess.run([python, str(script), "_stage", "--stage", stage, "--input", str(input_path),
+                    "--root", str(root), "--output", str(output), "--repo", str(repo)], check=True)
+def run_real(handoff_path: Path, output_root: Path) -> dict[str, Any]:
+    """Run from one sealed handoff; all failures stop at their stage boundary."""
+    if not handoff_path.is_file():
+        return {"status": "WAITING_FOR_INPUT"}
+    if output_root.exists():
+        raise FileExistsError(output_root)
+    output_root.mkdir(parents=True)
+    repo = Path(__file__).resolve().parents[2]
+    handoff = _read(handoff_path)
+    artifact_root = handoff_path.parent
+    try:
+        _stage(WSL_P5_PYTHON, Path(__file__), "terminal", handoff_path, artifact_root, output_root / "terminal-closeout.json", repo)
+    except subprocess.CalledProcessError:
+        return {"status": "BLOCKED_HISTORICAL_CLOSEOUT"}
+    paths = handoff.get("downstream_paths")
+    if not isinstance(paths, dict):
+        return {"status": "BLOCKED_INPUT_IDENTITY"}
+    filing_root = output_root / "filing-history"
+    filing_spec = {"bindings_path": str(artifact_root / str(paths["bindings"])),
+                   "session_grid_path": str(artifact_root / str(paths["session_grid"]))}
+    _write(output_root / "filing-spec.json", filing_spec)
+    try:
+        _stage(WSL_P5_PYTHON, Path(__file__), "filing", output_root / "filing-spec.json", filing_root, output_root / "filing-stage.json", repo)
+    except subprocess.CalledProcessError:
+        return {"status": "BLOCKED_FILING_MATERIALIZATION"}
+    spec = {"base_path": str(artifact_root / str(paths["base_surface"])),
+        "fundamentals_path": str(artifact_root / str(paths["fundamentals_projection"])),
+        "filing_path": str(filing_root / "filing-session-projection.parquet"),
+        "filing_ledger_path": str(filing_root / "filing-provenance-ledger.parquet")}
+    _write(output_root / "composition-spec.json", spec)
+    evaluation_config = handoff.get("evaluation_config")
+    if not isinstance(evaluation_config, dict):
+        return {"status": "BLOCKED_INPUT_IDENTITY"}
+    _write(output_root / "evaluation-config.json", evaluation_config)
+    try:
+        _native_stage(PANDERA_PYTHON, Path(__file__), "compose", output_root / "composition-spec.json", output_root / "surfaces", output_root / "surfaces.json", repo)
+        for surface in ("s0", "s1", "s2"):
+            _stage(WSL_QLIB_PYTHON, Path(__file__), "qlib", output_root / "surfaces" / surface, output_root / "qlib" / surface, output_root / "qlib" / surface / "stage-result.json", repo, output_root / "evaluation-config.json")
+    except subprocess.CalledProcessError:
+        return {"status": "BLOCKED_QLIB_EVALUATION"}
+    surfaces = _read(output_root / "surfaces.json")
+    runs = {name: _read(output_root / "qlib" / name.lower() / "run.json") for name in ("S0", "S1", "S2")}
+    comparison_spec = {"surfaces": surfaces, "runs": {name: {
+                "predictions": str(output_root / "qlib" / name.lower() / "predictions.parquet"),
+                "daily_net_return": str(output_root / "qlib" / name.lower() / "daily-net-return.parquet")}
+            for name in runs}}
+    _write(output_root / "comparison-spec.json", comparison_spec)
+    try:
+        _stage(WSL_P5_PYTHON, Path(__file__), "compare", output_root / "comparison-spec.json", output_root / "comparisons", output_root / "comparisons.json", repo)
+    except subprocess.CalledProcessError:
+        return {"status": "BLOCKED_QLIB_EVALUATION"}
+    comparisons = _read(output_root / "comparisons.json")
+    for name in ("H1", "H2"):
+        evidence = output_root / "comparisons" / name.lower() / "upstream-interface-evidence.csv"
+        skfolio_root = output_root / "robustness" / name.lower() / "skfolio"
+        arch_root = output_root / "robustness" / name.lower() / "arch"
+        try:
+            subprocess.run([r"D:\AQ_ENVS\skfolio\Scripts\python.exe", str(repo / "40-certification-system/upstream-stack-integration/skfolio_probe.py"), "--input", str(evidence), "--output", str(skfolio_root)], check=True)
+            subprocess.run([r"D:\AQ_ENVS\arch\Scripts\python.exe", str(repo / "40-certification-system/upstream-stack-integration/arch_probe.py"), "--input", str(evidence), "--output", str(arch_root), "--spa-reality-only"], check=True)
+        except subprocess.CalledProcessError:
+            return {"status": "INCONCLUSIVE", "reason": "REQUIRED_UPSTREAM_STATISTICAL_EVIDENCE_FAILED"}
+        comparisons[name]["skfolio_status"] = "PASS"
+        comparisons[name]["skfolio"] = _read(skfolio_root / "skfolio-report.json")
+        comparisons[name]["arch"] = _read(arch_root / "arch-report.json")
+    bundle: dict[str, Any] = {"schema_version": "P5EvidenceBundleV1",
+        "terminal_closeout": _read(output_root / "terminal-closeout.json"),
+        "surfaces": surfaces, "qlib_runs": runs, "comparisons": comparisons,
+        "leakage_gates": handoff.get("leakage_gates", {}),
+        "source_identities": handoff.get("identities", {})}
+    bundle["bundle_identity"] = _sha(bundle)
+    try:
+        bundle["validation"] = verify_evidence_bundle(bundle)
+    except ValueError as exc:
+        return {"status": "INCONCLUSIVE", "reason": str(exc)}
+    _write(output_root / "p5-evidence-bundle.json", bundle)
+    policy = evaluate_final_policy(bundle)
+    _write(output_root / "p5-final-policy.json", policy)
+    return policy
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command", required=True)
+    real = sub.add_parser("real")
+    real.add_argument("--handoff", required=True, type=Path)
+    real.add_argument("--output", required=True, type=Path)
+    internal = sub.add_parser("_stage", help=argparse.SUPPRESS)
+    internal.add_argument("--stage", required=True, choices=("terminal", "filing", "compose", "qlib", "compare"))
+    internal.add_argument("--input", required=True)
+    internal.add_argument("--root", required=True)
+    internal.add_argument("--output", required=True)
+    internal.add_argument("--repo", required=True)
+    internal.add_argument("--config")
+    args = parser.parse_args()
+    if args.command == "_stage":
+        _internal(args)
+    else:
+        print(json.dumps(run_real(args.handoff, args.output), sort_keys=True))
+if __name__ == "__main__":
+    main()

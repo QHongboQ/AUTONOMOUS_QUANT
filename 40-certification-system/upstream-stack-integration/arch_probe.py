@@ -25,7 +25,7 @@ def json_value(value):
     return value
 
 
-def run_interfaces(frame: pd.DataFrame) -> dict[str, object]:
+def run_interfaces(frame: pd.DataFrame, *, spa_reality_only: bool = False) -> dict[str, object]:
     benchmark = frame["benchmark_loss"].to_numpy(dtype=float)
     model = frame[["model_loss"]].to_numpy(dtype=float)
     loss_matrix = np.column_stack((benchmark, model[:, 0]))
@@ -34,23 +34,29 @@ def run_interfaces(frame: pd.DataFrame) -> dict[str, object]:
     spa.compute()
     reality = RealityCheck(benchmark, model, block_size=4, reps=99, seed=5102)
     reality.compute()
+    result = {
+        "reality_check_pvalues": json_value(reality.pvalues),
+        "spa_pvalues": json_value(spa.pvalues),
+    }
+    if spa_reality_only:
+        return result
     stepm = StepM(benchmark, model, block_size=4, reps=99, seed=5103)
     stepm.compute()
     mcs = MCS(loss_matrix, size=0.10, block_size=4, reps=99, seed=5104)
     mcs.compute()
-    return {
+    result.update({
         "mcs_excluded": json_value(mcs.excluded),
         "mcs_included": json_value(mcs.included),
-        "reality_check_pvalues": json_value(reality.pvalues),
-        "spa_pvalues": json_value(spa.pvalues),
         "stepm_superior_models": json_value(stepm.superior_models),
-    }
+    })
+    return result
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--spa-reality-only", action="store_true")
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -60,8 +66,8 @@ def main() -> None:
     columns = ["benchmark_loss", "model_loss"]
     if len(frame) < 50 or not np.isfinite(frame[columns].to_numpy(dtype=float)).all():
         raise RuntimeError("Qlib-derived loss evidence is not finite")
-    first = run_interfaces(frame)
-    second = run_interfaces(frame)
+    first = run_interfaces(frame, spa_reality_only=args.spa_reality_only)
+    second = run_interfaces(frame, spa_reality_only=args.spa_reality_only)
     if first != second:
         raise RuntimeError("seeded arch results are not reproducible")
 
@@ -69,13 +75,13 @@ def main() -> None:
         "arch_version": arch.__version__,
         "input_rows": len(frame),
         "input_sha256": sha256(args.input),
-        "mcs": "PASS",
         "reality_check": "PASS",
         "reproducibility": "PASS",
         "results": first,
         "spa": "PASS",
-        "stepm": "PASS",
     }
+    if not args.spa_reality_only:
+        report.update({"mcs": "PASS", "stepm": "PASS"})
     path = args.output / "arch-report.json"
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report, sort_keys=True))
