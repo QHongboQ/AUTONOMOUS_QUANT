@@ -155,6 +155,12 @@ def evaluate_surface(surface_root: Path, output_root: Path, *, provider_uri: str
                 raise RuntimeError("Qlib prediction evidence is empty or non-finite")
             SignalRecord(model, dataset, recorder).generate()
             SigAnaRecord(recorder, ana_long_short=False, ann_scaler=252).generate()
+            rank_ic = recorder.load_object("sig_analysis/ric.pkl").rename("rank_ic")
+            if rank_ic.empty:
+                raise RuntimeError("Qlib native Rank IC evidence is empty")
+            finite_rank_ic = rank_ic[np.isfinite(rank_ic)]
+            rank_ic_frame = rank_ic.rename_axis("datetime").reset_index()
+            rank_ic_frame.to_parquet(output_root / "native-rank-ic.parquet", index=False)
             portana = "READY_NOT_EXECUTED_SYNTHETIC"
             if provider_uri:
                 if not benchmark:
@@ -182,7 +188,16 @@ def evaluate_surface(surface_root: Path, output_root: Path, *, provider_uri: str
             "experiment_id": str(R.get_exp(experiment_name=experiment).id), "recorder_id": recorder_id,
             "mlflow_run_id": recorder_id, "recorder_status": recorded.status,
             "prediction_path": "predictions.parquet", "prediction_sha256": _digest(output_root / "predictions.parquet"),
-            "signal_record": "PASS", "sigana_record": "PASS", "portana_record_interface": portana}
+            "signal_record": "PASS", "sigana_record": "PASS", "portana_record_interface": portana,
+            "native_rank_ic": {
+                "producer": "qlib.workflow.record_temp.SigAnaRecord",
+                "recorder_artifact_path": "sig_analysis/ric.pkl",
+                "portable_evidence_path": "native-rank-ic.parquet",
+                "portable_evidence_sha256": _digest(output_root / "native-rank-ic.parquet"),
+                "observation_count": len(rank_ic),
+                "finite_observation_count": len(finite_rank_ic),
+                "mean": float(finite_rank_ic.mean()) if len(finite_rank_ic) else None,
+            }}
         if provider_uri:
             report.update({"daily_net_return_path": "daily-net-return.parquet",
                            "daily_net_return_sha256": _digest(output_root / "daily-net-return.parquet")})

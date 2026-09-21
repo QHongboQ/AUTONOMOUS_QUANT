@@ -3,9 +3,11 @@
 ## Result
 
 `P5_DOWNSTREAM_AUTOMATIC_COMPOSITION_READY = YES` under synthetic-only
-interface evidence. This is plumbing proof, not scientific evidence and not a
-P5 phase closeout. PID 403 and its worktree, checkpoints, cache, evidence,
-manifests, and SEC lane were untouched.
+interface evidence. The real path now consumes the exact frozen P5 temporal-CV,
+confirmatory-statistics, native Rank IC, and four-state policy authorities.
+This remains plumbing/policy proof, not real scientific evidence. PID 403 and
+its worktree, checkpoints, cache, evidence, manifests, and SEC lane were
+untouched.
 
 ## Ownership and contracts
 
@@ -18,9 +20,18 @@ manifests, and SEC lane were untouched.
   structured fundamentals, and S2 adds the exact five filing features.
 - Microsoft Qlib owns `StaticDataLoader`, `DataHandlerLP`, `DatasetH`,
   `LGBModel`, Recorder/MLflow, signal analysis, and real-mode portfolio analysis.
-- skfolio owns WalkForward/CPCV; arch owns required SPA/RealityCheck.
-- AQ only validates artifact identities, the eight leakage gates, and the thin
-  final policy boundary.
+- skfolio owns `WalkForward(test_size=63, train_size=504, purged_size=2,
+  expand_train=False, reduce_test=False)` and `CombinatorialPurgedCV(n_folds=10,
+  n_test_folds=2, purged_size=2, embargo_size=2)`.
+- arch owns forward and reversed SPA/RealityCheck with stationary bootstrap,
+  block size 10, 5,000 replications, seed 20260913, and alpha 0.05 on negative
+  native Qlib net daily return.
+- Qlib `SigAnaRecord` owns per-surface Rank IC. AQ reads its `ric.pkl` artifact,
+  pairs exact dates, and applies the frozen threshold policy; it does not
+  implement Rank IC or statistical algorithms.
+- AQ only validates artifact identities and the eight leakage gates, separates
+  interface status from statistical results, and applies the thin four-state
+  H1/H2 and phase-completion policy.
 
 ## Single real entrypoint
 
@@ -45,17 +56,30 @@ Recorder, S1 reuse, leakage, and arch failures.
 
 Existing P5 tests passed (`151/151`). Qlib adapter tests passed (`18`, with
 seven DVC-snapshot tests skipped because that optional output was not checked
-out). The focused downstream suite passed (`5/5`).
+out). The focused downstream suite passed (`12/12`).
 
-## Remaining authority blocker
+## Frozen final policy
 
-`P5_FINAL_POLICY_INTERFACE_READY = BLOCKED_FINAL_POLICY_SEMANTICS`. The missing
-authority sentence is: how individually classified H1 and H2 outcomes combine
-into one P5 phase result when the two comparisons disagree. No rule was inferred
-from synthetic outcomes.
+H1 and H2 independently retain exactly one of
+`INCREMENTAL_VALUE_SUPPORTED`, `NO_MEASURABLE_INCREMENTAL_VALUE`, `DEGRADED`,
+or `INCONCLUSIVE`. The phase is complete exactly when neither result is
+`INCONCLUSIVE`; completion records that both preregistered questions were
+answered and is not production certification. Fundamentals and filing features
+are eligible for later research composition only when their corresponding H1
+or H2 result is `INCREMENTAL_VALUE_SUPPORTED`. No synthetic winner score is
+created.
+
+Ten synthetic policy cases cover all requested disagreement/completion states,
+non-significant SPA and RealityCheck, missing p-values, and non-positive Rank IC
+delta. Interface execution alone cannot satisfy statistical support.
 
 ```text
 CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+P5_FINAL_POLICY_INTERFACE_READY = YES
+P5_PHASE_COMPLETION_RULE_FROZEN = YES
+FEATURE_RETENTION_POLICY_FROZEN = YES
+QLIB_NATIVE_RANK_IC_EVIDENCE_USED = YES
+AQ_RANK_IC_ENGINE = NO
 P5_COMPLETE = NO
 P6_ACTIVE = NO
 HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION

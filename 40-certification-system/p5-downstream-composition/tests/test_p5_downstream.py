@@ -39,6 +39,9 @@ from aq_qlib_handoff.p5_surfaces import (  # noqa: E402
 )
 from run_p5_downstream import (  # noqa: E402
     LEAKAGE_GATES,
+    P5_ARCH,
+    P5_SKFOLIO,
+    classify_comparison,
     evaluate_final_policy,
     verify_evidence_bundle,
 )
@@ -144,10 +147,11 @@ def _fixture(root: Path) -> dict[str, Path]:
                 "episode_id": episode,
                 "cik": ciks[episode],
                 "identity_exclusion": episode == "EP-X",
-                "label": fundamental_signal + 2.0 * filing_signal,
+                "label": 0.0,
             }
             for feature in CONTROL_FEATURES:
                 row[feature] = float(rng.normal())
+            row["label"] = 100.0 * row[CONTROL_FEATURES[0]] + fundamental_signal + 2.0 * filing_signal
             rows.append(row)
     base = pd.DataFrame(rows).sort_values(["datetime", "episode_id"]).reset_index(drop=True)
     fundamentals = base.loc[~base["identity_exclusion"], ["datetime", "episode_id", "cik"]].copy()
@@ -221,19 +225,45 @@ def _bundle(surfaces: dict[str, dict[str, object]]) -> dict[str, object]:
             "recorder_status": "FINISHED",
             "recorder_id": f"run-{name}",
             "surface_artifact_identity": surfaces[name]["artifact_identity"],
+            "native_rank_ic": {
+                "producer": "qlib.workflow.record_temp.SigAnaRecord",
+                "recorder_artifact_path": "sig_analysis/ric.pkl",
+                "portable_evidence_sha256": f"rank-{name}",
+            },
         }
         for name in surfaces
+    }
+    arch = {
+        "interface_status": "PASS", "policy": P5_ARCH,
+        "results": {
+            "forward": {"spa_consistent_pvalue": 0.01,
+                        "reality_check_consistent_pvalue": 0.01},
+            "reverse": {"spa_consistent_pvalue": 0.8,
+                        "reality_check_consistent_pvalue": 0.8},
+        },
     }
     comparisons = {
         "H1": {
             "control_surface": "S0", "challenger_surface": "S1",
             "s1_artifact_identity": surfaces["S1"]["artifact_identity"],
-            "skfolio_status": "PASS", "arch": {"spa": "PASS", "reality_check": "PASS"},
+            "skfolio_status": "PASS", "skfolio": P5_SKFOLIO, "arch": copy.deepcopy(arch),
+            "native_rank_ic_evidence": {"producer": "qlib.workflow.record_temp.SigAnaRecord",
+                                        "challenger_minus_control_mean": 0.01},
+            "required_robustness_evidence": {"hard_gate_status": "NOT_REQUIRED"},
+            "required_cost_evidence": {"hard_gate_status": "NOT_REQUIRED"},
+            "arch_statistic_identity": "NEGATIVE_NATIVE_QLIB_NET_DAILY_RETURN",
+            "evidence_complete": True, "comparable": True,
         },
         "H2": {
             "control_surface": "S1", "challenger_surface": "S2",
             "s1_artifact_identity": surfaces["S1"]["artifact_identity"],
-            "skfolio_status": "PASS", "arch": {"spa": "PASS", "reality_check": "PASS"},
+            "skfolio_status": "PASS", "skfolio": P5_SKFOLIO, "arch": copy.deepcopy(arch),
+            "native_rank_ic_evidence": {"producer": "qlib.workflow.record_temp.SigAnaRecord",
+                                        "challenger_minus_control_mean": 0.01},
+            "required_robustness_evidence": {"hard_gate_status": "NOT_REQUIRED"},
+            "required_cost_evidence": {"hard_gate_status": "NOT_REQUIRED"},
+            "arch_statistic_identity": "NEGATIVE_NATIVE_QLIB_NET_DAILY_RETURN",
+            "evidence_complete": True, "comparable": True,
         },
     }
     return {
@@ -242,6 +272,11 @@ def _bundle(surfaces: dict[str, dict[str, object]]) -> dict[str, object]:
         "comparisons": comparisons,
         "leakage_gates": {name: 0 for name in LEAKAGE_GATES},
     }
+
+
+def _policy_bundle() -> dict[str, object]:
+    return _bundle({name: {"artifact_identity": f"artifact-{name}"}
+                    for name in ("S0", "S1", "S2")})
 
 
 def test_native_discovery_uses_injected_edgartools_surface() -> None:
@@ -363,7 +398,8 @@ def test_bundle_four_negative_contracts_and_final_policy(tmp_path: Path) -> None
     bundle = _bundle(surfaces)
     assert verify_evidence_bundle(bundle)["status"] == "PASS"
     policy = evaluate_final_policy(bundle)
-    assert policy["status"] == "BLOCKED_FINAL_POLICY_SEMANTICS"
+    assert policy["status"] == "COMPLETE"
+    assert policy["p5_h1_result"] == policy["p5_h2_result"] == "INCREMENTAL_VALUE_SUPPORTED"
 
     changed = copy.deepcopy(bundle)
     changed["qlib_runs"]["S0"].pop("recorder_id")
@@ -381,6 +417,59 @@ def test_bundle_four_negative_contracts_and_final_policy(tmp_path: Path) -> None
     changed["comparisons"]["H1"]["arch"] = {}
     with pytest.raises(ValueError, match="arch"):
         verify_evidence_bundle(changed)
+
+
+@pytest.mark.parametrize(
+    ("h1", "h2", "complete"),
+    (
+        ("supported", "supported", True),
+        ("supported", "none", True),
+        ("none", "degraded", True),
+        ("degraded", "supported", True),
+        ("inconclusive", "supported", False),
+        ("supported", "inconclusive", False),
+    ),
+)
+def test_final_phase_policy_matrix(
+    tmp_path: Path, h1: str, h2: str, complete: bool,
+) -> None:
+    del tmp_path
+    bundle = _policy_bundle()
+
+    def set_case(name: str, case: str) -> None:
+        evidence = bundle["comparisons"][name]
+        if case == "none":
+            evidence["arch"]["results"]["forward"] = {
+                "spa_consistent_pvalue": 0.2, "reality_check_consistent_pvalue": 0.2}
+        elif case == "degraded":
+            evidence["native_rank_ic_evidence"]["challenger_minus_control_mean"] = -0.01
+            evidence["arch"]["results"]["forward"] = {
+                "spa_consistent_pvalue": 0.8, "reality_check_consistent_pvalue": 0.8}
+            evidence["arch"]["results"]["reverse"] = {
+                "spa_consistent_pvalue": 0.01, "reality_check_consistent_pvalue": 0.01}
+        elif case == "inconclusive":
+            evidence["evidence_complete"] = False
+
+    set_case("H1", h1)
+    set_case("H2", h2)
+    result = evaluate_final_policy(bundle)
+    assert result["p5_phase_complete"] is complete
+    assert result["p5_exit_condition_satisfied"] is complete
+
+
+def test_statistical_policy_failure_modes(tmp_path: Path) -> None:
+    del tmp_path
+    base = _policy_bundle()["comparisons"]["H1"]
+    for key in ("spa_consistent_pvalue", "reality_check_consistent_pvalue"):
+        case = copy.deepcopy(base)
+        case["arch"]["results"]["forward"][key] = 0.051
+        assert classify_comparison(case) == "NO_MEASURABLE_INCREMENTAL_VALUE"
+    case = copy.deepcopy(base)
+    case["arch"]["results"]["forward"].pop("spa_consistent_pvalue")
+    assert classify_comparison(case) == "INCONCLUSIVE"
+    case = copy.deepcopy(base)
+    case["native_rank_ic_evidence"]["challenger_minus_control_mean"] = 0.0
+    assert classify_comparison(case) == "NO_MEASURABLE_INCREMENTAL_VALUE"
 
 
 def test_native_qlib_three_surface_interface(tmp_path: Path) -> None:
@@ -401,7 +490,13 @@ def test_native_qlib_three_surface_interface(tmp_path: Path) -> None:
     comparison_spec = {
         "surfaces": surface_manifests,
         "runs": {
-            name.upper(): {"predictions": str(tmp_path / "qlib" / name / "predictions.parquet")}
+            name.upper(): {
+                "predictions": str(tmp_path / "qlib" / name / "predictions.parquet"),
+                "native_rank_ic_path": str(tmp_path / "qlib" / name / "native-rank-ic.parquet"),
+                "native_rank_ic": _read(tmp_path / "qlib" / name / "run.json")["native_rank_ic"],
+                "recorder_id": _read(tmp_path / "qlib" / name / "run.json")["recorder_id"],
+                "portana_record_interface": "READY_NOT_EXECUTED_SYNTHETIC",
+            }
             for name in ("s0", "s1", "s2")
         },
     }
@@ -418,13 +513,16 @@ def test_native_qlib_three_surface_interface(tmp_path: Path) -> None:
     comparisons = _read(tmp_path / "comparisons.json")
     for name in ("H1", "H2"):
         evidence = tmp_path / "comparisons" / name.lower() / "upstream-interface-evidence.csv"
+        frame = pd.read_csv(evidence)
+        pd.concat([frame] * 10, ignore_index=True).to_csv(evidence, index=False, lineterminator="\n")
+        comparisons[name]["evidence_sha256"] = hashlib.sha256(evidence.read_bytes()).hexdigest()
         skfolio = tmp_path / "robustness" / name.lower() / "skfolio"
         arch = tmp_path / "robustness" / name.lower() / "arch"
         subprocess.run(
             [
                 "/mnt/d/AQ_ENVS/skfolio/Scripts/python.exe",
                 _win(REPO / "40-certification-system/upstream-stack-integration/skfolio_probe.py"),
-                "--input", _win(evidence), "--output", _win(skfolio),
+                "--input", _win(evidence), "--output", _win(skfolio), "--p5-authority",
             ],
             check=True,
         )
@@ -433,11 +531,14 @@ def test_native_qlib_three_surface_interface(tmp_path: Path) -> None:
                 "/mnt/d/AQ_ENVS/arch/Scripts/python.exe",
                 _win(REPO / "40-certification-system/upstream-stack-integration/arch_probe.py"),
                 "--input", _win(evidence), "--output", _win(arch), "--spa-reality-only",
+                "--p5-confirmatory",
             ],
             check=True,
         )
         comparisons[name]["skfolio_status"] = "PASS"
         comparisons[name]["skfolio"] = _read(skfolio / "skfolio-report.json")
+        comparisons[name]["required_robustness_evidence"] = {
+            "hard_gate_status": "NOT_REQUIRED"}
         comparisons[name]["arch"] = _read(arch / "arch-report.json")
     bundle = {
         "surfaces": surface_manifests,
@@ -449,4 +550,4 @@ def test_native_qlib_three_surface_interface(tmp_path: Path) -> None:
         "leakage_gates": {name: 0 for name in LEAKAGE_GATES},
     }
     assert verify_evidence_bundle(bundle)["status"] == "PASS"
-    assert evaluate_final_policy(bundle)["status"] == "BLOCKED_FINAL_POLICY_SEMANTICS"
+    assert evaluate_final_policy(bundle)["status"] == "INCONCLUSIVE"
