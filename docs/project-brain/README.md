@@ -2063,6 +2063,46 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_FILING_INTELLIGENCE_SELECTED_FEATURE_THIN_MATERIALIZATION_POC_001
 ```
 
+### P5 filing-feature policy merge and thin materialization POC
+
+PR #70 squash-merged the five-feature preregistration at
+`f2b2c20977f607062f0d334f79441ccfa899502f`. An isolated, zero-network POC then
+materialized exactly those five accession-bound features from native
+EdgarTools objects, the existing XNYS effective-session policy, and one narrow
+immutable `FilingFeatureObservationV1` contract.
+
+All 16 required A-P cases pass, along with immutable-identity, exact-inventory,
+native-object-unavailable, Sunday applicability, early-visibility, and
+no-network/parser checks. Semantic closeout uses
+`NOT_APPLICABLE_SESSION_DATE` for non-XNYS acceptance dates and correctly names
+the native class field `native_edgartools_object_type`. The full P5 regression
+set is 151/151 PASS. No registry, transform graph, parser,
+market-hours engine, factor engine, generic ETL, LLM/NLP path, SEC request,
+historical feature build, training, or backtest was introduced. The concurrent
+historical build remains untouched. See [P5 Filing Feature Policy Merge and
+Thin Materialization POC 001](p5-filing-feature-policy-merge-and-thin-materialization-poc-001.md).
+
+```text
+P5_FILING_FEATURE_POLICY_MERGE_PR = 70
+P5_FILING_FEATURE_POLICY_MERGE_SHA = f2b2c20977f607062f0d334f79441ccfa899502f
+P5_FILING_FEATURE_THIN_MATERIALIZATION_POC = PASS
+P5_MATERIALIZED_FEATURE_ID_COUNT = 5
+P5_SELECTED_FEATURE_POC_CASE_COUNT = 16
+P5_SELECTED_FEATURE_POC_CASES = PASS
+P5_EARLY_VISIBILITY_COUNT = 0
+P5_WEEKEND_ACCEPTANCE_MISSINGNESS = NOT_APPLICABLE_SESSION_DATE
+P5_NON_EVENT_FORM_EXHIBIT_MISSINGNESS = NOT_APPLICABLE_FORM
+P5_NATIVE_OBJECT_FIELD_NAME = native_edgartools_object_type
+P5_NATIVE_OBJECT_FIELD_SEMANTICS = EXACT_CLASS_TYPE
+P5_CONTRACT_VERSION_DECISION = V1_CORRECTED_IN_PLACE_BEFORE_FIRST_MERGE
+P5_V1_NEVER_MERGED_OR_USED_FOR_PERFORMANCE = YES
+P5_SEC_DATA_REQUEST_COUNT = 0
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PARALLEL_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_DESIGN_AND_ABLATION_PROTOCOL_001
+```
+
 ---
 
 ## 27. First Principle

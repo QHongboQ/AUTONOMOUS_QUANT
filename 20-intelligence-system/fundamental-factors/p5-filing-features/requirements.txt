@@ -1,0 +1,5 @@
+edgartools==5.58.0
+exchange_calendars==4.13.2
+pandas==2.3.3
+pydantic==2.13.5
+rfc8785==0.1.4
