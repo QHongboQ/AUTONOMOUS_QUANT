@@ -2103,6 +2103,43 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 PARALLEL_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_DESIGN_AND_ABLATION_PROTOCOL_001
 ```
 
+### P5 filing-feature historical materialization design and ablation protocol
+
+The historical design keeps the five merged filing features as immutable,
+accession-bound sparse point events. The 36,204-accession structured-fundamental
+inventory is not incorrectly reused as the complete filing-feature population:
+the future EdgarTools-native population covers all date-valid filings for the
+three metadata features and exactly 8-K/8-K/A/6-K/6-K/A for the two exhibit
+features. No SEC census or materialization ran in this task.
+
+The future Qlib handoff uses `(datetime, instrument=episode_id)`, exact five
+numeric columns, null-preserving missingness, and no forward fill. The primary
+ablation is frozen to two trials—control versus the identical Qlib baseline
+plus all five features—with eight zero-tolerance leakage gates. A single P5
+model/workflow is not yet authorized, so model authority remains pending
+rather than being inferred from P1 exploratory or P2 certification choices.
+See [P5 Filing Feature Historical Materialization Design and Ablation Protocol
+001](p5-filing-feature-historical-materialization-design-and-ablation-protocol-001.md).
+
+```text
+P5_FILING_FEATURE_PRIMARY_STORAGE_SHAPE = SPARSE_ACCESSION_BOUND_OBSERVATIONS
+P5_FILING_FEATURE_TEMPORAL_SEMANTICS = ALL_FIVE_POINT_EVENT
+P5_FILING_FEATURE_STRUCTURED_FUNDAMENTAL_INVENTORY_REUSABLE_FOR_ALL = NO
+P5_FILING_FEATURE_QLIB_HANDOFF_OWNER = MICROSOFT_QLIB
+P5_FILING_FEATURE_EVALUATION_MODEL_AUTHORITY = EVALUATION_MODEL_AUTHORITY_PENDING
+P5_FILING_FEATURE_PREREGISTERED_TRIAL_COUNT = 2
+P5_FILING_FEATURE_MULTIPLE_TESTING_OWNER = ARCH_8.0.0
+P5_FILING_FEATURE_LEAKAGE_GATE_COUNT = 8
+P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_DESIGN = DESIGN_READY_WAITING_FOR_HISTORICAL_BUILD
+P5_FILING_FEATURE_ABLATION_PROTOCOL = PREREGISTERED_WAITING_FOR_DATA_AND_MODEL_AUTHORITY
+P5_SEC_DATA_REQUEST_COUNT = 0
+P5_HISTORICAL_BUILD_INTERFERENCE = NO
+P5_AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
+PARALLEL_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+```
+
 ---
 
 ## 27. First Principle
