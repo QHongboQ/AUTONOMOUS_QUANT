@@ -4,7 +4,9 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Downstream Artifact-Driven Automatic Composition Synthetic E2E 001**
+> Active Development: **P5 — Clean-Slate Upstream Substitution Audit; replacement implementation not yet authorized**
+>
+> Audit pointer: [P5 PR #75 rollback and retirement plan](p5-clean-slate-upstream-substitution-rollback-and-retirement-audit-001.md). Historical P5 task reports remain evidence, not current implementation authority.
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
@@ -2304,51 +2306,6 @@ P6_ACTIVE = NO
 CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
 CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
 ```
-
-## P5 downstream artifact-driven automatic composition — synthetic E2E
-
-The thin downstream composition is interface-complete under bounded synthetic
-evidence. One real-mode command accepts a future producer-sealed historical-build handoff
-under `terminal-finalization/handoff/`, resolves its explicit relative artifact
-root, and requires an independently supplied Pandera runtime configuration. It
-validates the frozen 26 terminal gates, materializes native EdgarTools filing
-features, composes S0/S1/S2, runs exactly three Qlib/LightGBM/Recorder surfaces,
-forms H1/H2, invokes the exact frozen P5 skfolio and arch procedures, consumes
-native Qlib `SigAnaRecord` Rank IC, and seals one evidence bundle. Real P5
-evidence, SEC, PID 403 outputs, and P2 sealed OOS were not read.
-
-```text
-P5_DOWNSTREAM_AUTOMATIC_COMPOSITION_READY = YES
-ONE_REAL_HANDOFF_ENTRYPOINT = YES
-REAL_HANDOFF_REQUIRES_NEW_CONSUMER_CODE = NO
-HISTORICAL_HANDOFF_PRODUCER = PENDING_SEPARATE_TASK
-EXPLICIT_ARTIFACT_ROOT_CONTRACT = YES
-HANDOFF_PARENT_ASSUMED_AS_ARTIFACT_ROOT = NO
-EXPLICIT_PANDERA_RUNTIME = YES
-P2_POC_PRIVATE_RUNTIME_DEPENDENCY = NO
-SYNTHETIC_E2E = PASS
-P5_REAL_WALKFORWARD_PARAMETERS_MATCH = YES
-P5_REAL_CPCV_PARAMETERS_MATCH = YES
-P5_REAL_ARCH_PARAMETERS_MATCH = YES
-QLIB_NATIVE_RANK_IC_EVIDENCE_USED = YES
-AQ_RANK_IC_ENGINE = NO
-P5_FINAL_POLICY_INTERFACE_READY = YES
-P5_PHASE_COMPLETION_RULE_FROZEN = YES
-FEATURE_RETENTION_POLICY_FROZEN = YES
-P5_COMPLETE = NO
-P6_ACTIVE = NO
-HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
-HISTORICAL_BUILD_INTERFERENCE = NO
-CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
-CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
-CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
-```
-
-H1 and H2 each retain one frozen four-state result. P5 phase completion means
-both questions produced admissible, non-`INCONCLUSIVE` evidence; it does not
-require both feature additions to be supported and does not authorize
-production. Later research eligibility is granted separately only to a feature
-family whose own comparison is `INCREMENTAL_VALUE_SUPPORTED`.
 
 ---
 

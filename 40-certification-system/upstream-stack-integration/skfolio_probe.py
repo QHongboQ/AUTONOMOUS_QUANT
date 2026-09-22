@@ -21,7 +21,6 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--p5-authority", action="store_true")
     args = parser.parse_args()
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -32,20 +31,14 @@ def main() -> None:
     if len(values) < 50 or not np.isfinite(values).all():
         raise RuntimeError("Qlib-derived evidence is not a finite bounded matrix")
 
-    walk_kwargs = (
-        {"test_size": 63, "train_size": 504, "purged_size": 2,
-         "expand_train": False, "reduce_test": False}
-        if args.p5_authority else
-        {"test_size": 10, "train_size": 30, "purged_size": 2}
-    )
-    walk_forward = WalkForward(**walk_kwargs)
+    walk_forward = WalkForward(test_size=10, train_size=30, purged_size=2)
     walk_splits = list(walk_forward.split(values))
     if not walk_splits or any(set(train) & set(test) for train, test in walk_splits):
         raise RuntimeError("WalkForward did not return disjoint train/test indices")
 
-    cpcv_kwargs = {"n_folds": 10 if args.p5_authority else 5,
-                   "n_test_folds": 2, "purged_size": 2, "embargo_size": 2}
-    cpcv = CombinatorialPurgedCV(**cpcv_kwargs)
+    cpcv = CombinatorialPurgedCV(
+        n_folds=5, n_test_folds=2, purged_size=2, embargo_size=2,
+    )
     cpcv_splits = list(cpcv.split(values))
     if not cpcv_splits:
         raise RuntimeError("CombinatorialPurgedCV returned no splits")
@@ -57,7 +50,7 @@ def main() -> None:
     evidence = {
         "cpcv": "PASS",
         "cpcv_embargo_size": 2,
-        "cpcv_n_folds": cpcv_kwargs["n_folds"],
+        "cpcv_n_folds": 5,
         "cpcv_n_test_folds": 2,
         "cpcv_purged_size": 2,
         "cpcv_split_count": len(cpcv_splits),
@@ -68,10 +61,8 @@ def main() -> None:
         "walkforward": "PASS",
         "walkforward_purged_size": 2,
         "walkforward_split_count": len(walk_splits),
-        "walkforward_test_size": walk_kwargs["test_size"],
-        "walkforward_train_size": walk_kwargs["train_size"],
-        "walkforward_expand_train": walk_kwargs.get("expand_train", True),
-        "walkforward_reduce_test": walk_kwargs.get("reduce_test", True),
+        "walkforward_test_size": 10,
+        "walkforward_train_size": 30,
     }
     path = args.output / "skfolio-report.json"
     path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -10,7 +10,6 @@ resume/seal accounting.
 from __future__ import annotations
 
 import hashlib
-import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -53,8 +52,6 @@ TERMINAL_STATES = frozenset(
         "FAILED_DETERMINISTIC",
     }
 )
-GLOBAL_ACCESSION_TARGET, SOURCE_VERIFIABLE_TARGET = 36_206, 36_204
-SOURCE_UNAVAILABLE_TARGET, TERMINAL_CLOSEOUT_GATE_COUNT = 2, 26
 REUSABLE_TERMINAL_STATES = TERMINAL_STATES - {
     "FAILED_TRANSIENT",
     "FAILED_DETERMINISTIC",
@@ -73,10 +70,6 @@ LIVE_SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE_FOR_FINAL_PROVENANCE"
 
 class SourceHashMismatchError(ValueError):
     """Reacquired native SEC assets differ from their sealed manifest."""
-
-
-class TerminalCloseoutError(ValueError):
-    """The sealed historical-build handoff failed a frozen closeout gate."""
 
 
 def sha256_bytes(payload: bytes) -> str:
@@ -438,87 +431,11 @@ def source_cache_evictable(
     )
 
 
-def verify_terminal_handoff(
-    handoff: Mapping[str, object], *, artifact_root: Path
-) -> dict[str, object]:
-    """Verify the frozen 26-gate projection of the sealed build manifest."""
-    if handoff.get("schema_version") != "P5HistoricalBuildHandoffV1":
-        raise TerminalCloseoutError("unsupported historical-build handoff schema")
-    root = artifact_root.resolve(strict=True)
-    names = "terminal_state_counts artifacts identities quality replay storage".split()
-    sections = {name: handoff.get(name) for name in names}
-    if not all(isinstance(value, Mapping) for value in sections.values()):
-        raise TerminalCloseoutError("handoff sections are missing or malformed")
-    terminal, artifacts = sections["terminal_state_counts"], sections["artifacts"]
-    identities, quality = sections["identities"], sections["quality"]
-    replay, storage = sections["replay"], sections["storage"]
-    assert all(isinstance(value, Mapping) for value in sections.values())
-    source_verifiable = int(handoff.get("source_verifiable_accession_count", -1))
-    source_unavailable = int(handoff.get("source_unavailable_accession_count", -1))
-    global_count = int(handoff.get("global_accession_count", -1))
-    integrity_names = "duplicate_evidence_id_count early_visibility_count cross_cik_contamination_count period_class_mixing_failure_count source_hash_mismatch_count fake_source_hash_count source_unavailable_fake_evidence_count".split()
-    completed = sum(int(terminal.get(name, 0)) for name in (
-        "COMPLETE_WITH_EVIDENCE", "COMPLETE_NO_AUTHORIZED_FACTS",
-        "COMPLETE_NO_STRUCTURED_FINANCIALS", "SKIPPED_OUTSIDE_AUTHORIZED_HISTORY",
-    ))
-    actual_hashes: dict[str, str] = {}
-    for name, raw in artifacts.items():
-        if not isinstance(raw, Mapping):
-            raise TerminalCloseoutError(f"artifact {name!r} is malformed")
-        relative = Path(str(raw.get("path") or ""))
-        path = (root / relative).resolve(strict=True)
-        if relative.is_absolute() or ".." in relative.parts or root not in path.parents:
-            raise TerminalCloseoutError(f"artifact {name!r} leaves the sealed root")
-        actual_hashes[str(name)] = sha256_file(path)
-        if actual_hashes[str(name)] != raw.get("sha256"):
-            raise TerminalCloseoutError(f"artifact {name!r} SHA-256 mismatch")
-    checks = [
-        source_verifiable + source_unavailable == global_count == GLOBAL_ACCESSION_TARGET,
-        source_verifiable == SOURCE_VERIFIABLE_TARGET and source_unavailable == SOURCE_UNAVAILABLE_TARGET and sum(map(int, terminal.values())) == source_verifiable,
-        int(handoff.get("unaccounted_global_accession_count", -1)) == 0,
-        int(terminal.get("FAILED_REQUIRED_ACCESSION", -1)) == 0,
-        int(handoff.get("duplicate_global_accounting_count", -1)) == 0,
-    ]
-    checks += [int(quality.get(name, -1)) == 0 for name in integrity_names]
-    checks += [
-        int(replay.get("reusable_accession_count", -1)) == completed,
-        int(replay.get("reprocessed_accession_count", -1)) == 0,
-        int(replay.get("network_bytes", -1)) == 0, replay.get("status") == "PASS",
-        int(storage.get("cache_ceiling_breach_count", -1)) == 0,
-        storage.get("transient_assets_evicted") is True,
-        storage.get("persistent_storage_budget_status") == "PASS",
-        storage.get("full_sec_submission_mirror_retained") is False,
-        handoff.get("dvc_seal_status") == "PASS",
-        handoff.get("output_hash_match") == "YES" and bool(actual_hashes),
-        identities.get("build_spec_identity_match") == "YES",
-        identities.get("execution_inventory_identity_match") == "YES",
-        identities.get("source_unavailable_ledger_identity_match") == "YES",
-        handoff.get("qlib_full_historical_handoff") == "PASS",
-    ]
-    for gate, condition in enumerate(checks, 1):
-        if not condition:
-            raise TerminalCloseoutError(f"terminal closeout gate {gate} failed")
-    projection: dict[str, object] = {
-        "schema_version": "P5HistoricalBuildCloseoutV1",
-        "build_identity": handoff.get("build_identity"),
-        "manifest_identity": handoff.get("manifest_identity"),
-        "dvc_identity": handoff.get("dvc_identity"),
-        "gate_count": TERMINAL_CLOSEOUT_GATE_COUNT,
-        "status": "PASS",
-        "artifact_hashes": dict(sorted(actual_hashes.items())),
-    }
-    projection["closeout_identity"] = "sha256:" + sha256_bytes(
-        json.dumps(projection, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    )
-    return projection
-
-
 __all__ = [
     "BUILD_SPEC_VERSION",
     "EDGARTOOLS_STANDARD_CONCEPT_PROJECTION",
     "EDGARTOOLS_VERSION",
     "ENTITYFACTS_DISCOVERY_ROLE",
-    "GLOBAL_ACCESSION_TARGET",
     "MAX_ACTIVE_BATCH_SOURCE_BYTES",
     "MAX_EXTRACTION_ACCESSIONS",
     "NIL_FACT_NOT_ELIGIBLE",
@@ -532,11 +449,7 @@ __all__ = [
     "REACQUIRABLE_SOURCE_CACHE",
     "SELECTIVE_POLICY_IDENTITY",
     "SELECTIVE_REQUIRED_ACCESSION_COUNT",
-    "SOURCE_UNAVAILABLE_TARGET",
-    "SOURCE_VERIFIABLE_TARGET",
     "SourceHashMismatchError",
-    "TERMINAL_CLOSEOUT_GATE_COUNT",
-    "TerminalCloseoutError",
     "TRANSITION_FINANCIAL_FORMS",
     "bounded_batches",
     "checkpoint_identity",
@@ -552,5 +465,4 @@ __all__ = [
     "sha256_file",
     "source_cache_evictable",
     "verify_native_xbrl_source_manifest",
-    "verify_terminal_handoff",
 ]

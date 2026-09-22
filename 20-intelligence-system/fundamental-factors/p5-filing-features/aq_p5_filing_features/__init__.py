@@ -7,12 +7,7 @@ from .contract import (
     SCHEMA_VERSION,
     evidence_id_for,
 )
-from .materialize import (
-    discover_native_filing_observations,
-    materialize_selected_filing_features,
-    project_historical_filing_features,
-    seal_historical_filing_features,
-)
+from .materialize import materialize_selected_filing_features
 
 __all__ = [
     "EDGARTOOLS_RUNTIME_IDENTITY",
@@ -20,8 +15,5 @@ __all__ = [
     "FilingFeatureObservationV1",
     "SCHEMA_VERSION",
     "evidence_id_for",
-    "discover_native_filing_observations",
     "materialize_selected_filing_features",
-    "project_historical_filing_features",
-    "seal_historical_filing_features",
 ]
