@@ -2308,7 +2308,9 @@ CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TER
 ## P5 downstream artifact-driven automatic composition — synthetic E2E
 
 The thin downstream composition is interface-complete under bounded synthetic
-evidence. One real-mode command accepts a sealed historical-build handoff,
+evidence. One real-mode command accepts a future producer-sealed historical-build handoff
+under `terminal-finalization/handoff/`, resolves its explicit relative artifact
+root, and requires an independently supplied Pandera runtime configuration. It
 validates the frozen 26 terminal gates, materializes native EdgarTools filing
 features, composes S0/S1/S2, runs exactly three Qlib/LightGBM/Recorder surfaces,
 forms H1/H2, invokes the exact frozen P5 skfolio and arch procedures, consumes
@@ -2318,7 +2320,12 @@ evidence, SEC, PID 403 outputs, and P2 sealed OOS were not read.
 ```text
 P5_DOWNSTREAM_AUTOMATIC_COMPOSITION_READY = YES
 ONE_REAL_HANDOFF_ENTRYPOINT = YES
-REAL_HANDOFF_REQUIRES_NEW_CODE = NO
+REAL_HANDOFF_REQUIRES_NEW_CONSUMER_CODE = NO
+HISTORICAL_HANDOFF_PRODUCER = PENDING_SEPARATE_TASK
+EXPLICIT_ARTIFACT_ROOT_CONTRACT = YES
+HANDOFF_PARENT_ASSUMED_AS_ARTIFACT_ROOT = NO
+EXPLICIT_PANDERA_RUNTIME = YES
+P2_POC_PRIVATE_RUNTIME_DEPENDENCY = NO
 SYNTHETIC_E2E = PASS
 P5_REAL_WALKFORWARD_PARAMETERS_MATCH = YES
 P5_REAL_CPCV_PARAMETERS_MATCH = YES

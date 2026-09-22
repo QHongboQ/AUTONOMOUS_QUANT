@@ -14,7 +14,6 @@ P5_SKFOLIO = {"walkforward_test_size": 63, "walkforward_train_size": 504, "walkf
 P5_ARCH = {"alpha": 0.05, "bootstrap": "stationary", "block_size": 10, "reps": 5000, "seed": 20260913}
 WSL_P5_PYTHON = "/home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python"
 WSL_QLIB_PYTHON = "/home/zhou/miniforge3/envs/rdagent4qlib/bin/python"
-PANDERA_PYTHON = r"D:\AQ_DATA\P2\free-upstream-identity-binding-poc-001\.venv\Scripts\python.exe"
 def _read(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 def _write(path: Path, value: object) -> None:
@@ -108,10 +107,7 @@ def evaluate_final_policy(bundle: dict[str, Any]) -> dict[str, Any]:
 def _internal(args: argparse.Namespace) -> None:
     repo = Path(args.repo).resolve()
     _add_paths(repo)
-    if args.stage == "terminal":
-        from aq_edgartools_full_build import verify_terminal_handoff
-        result = verify_terminal_handoff(_read(Path(args.input)), artifact_root=Path(args.root))
-    elif args.stage == "filing":
+    if args.stage == "filing":
         import exchange_calendars as xcals
         import pandas as pd
         from aq_p5_filing_features import discover_native_filing_observations, seal_historical_filing_features
@@ -198,30 +194,82 @@ def _stage(python: str, script: Path, stage: str, input_path: Path, root: Path,
 def _native_stage(python: str, script: Path, stage: str, input_path: Path, root: Path, output: Path, repo: Path) -> None:
     subprocess.run([python, str(script), "_stage", "--stage", stage, "--input", str(input_path),
                     "--root", str(root), "--output", str(output), "--repo", str(repo)], check=True)
-def run_real(handoff_path: Path, output_root: Path) -> dict[str, Any]:
+
+
+def resolve_handoff_artifact_root(handoff_path: Path, handoff: dict[str, Any]) -> Path:
+    """Resolve only the frozen nested handoff-to-build-root relationship."""
+    relation = handoff.get("artifact_root_relative_to_handoff")
+    if not isinstance(relation, str) or not relation or Path(relation).is_absolute():
+        raise ValueError("handoff artifact-root relationship is absent or absolute")
+    parent = handoff_path.parent
+    if parent.name != "handoff" or parent.parent.name != "terminal-finalization":
+        raise ValueError("handoff is outside the frozen terminal-finalization layout")
+    expected = parent.parent.parent.resolve(strict=True)
+    root = (parent / relation).resolve(strict=True)
+    if root != expected or not root.is_dir() or not handoff_path.resolve(strict=True).is_relative_to(root):
+        raise ValueError("declared artifact root escapes the build hierarchy")
+    return root
+
+
+def verify_runtime_config(path: Path) -> dict[str, str]:
+    """Validate the explicit operational Pandera interpreter, not data identity."""
+    config = _read(path)
+    raw = config.get("pandera_python") if isinstance(config, dict) else None
+    if not isinstance(raw, str) or not raw:
+        raise ValueError("pandera_python must be explicit")
+    executable = Path(raw)
+    if not executable.is_absolute() or not executable.is_file():
+        raise ValueError("configured Pandera executable is absent")
+    probe = (
+        "import importlib.metadata as m,json,sys; import pandera.pandas; "
+        "print(json.dumps({'executable':sys.executable,'pandera':m.version('pandera'),"
+        "'pandas':m.version('pandas'),'pyarrow':m.version('pyarrow')}))"
+    )
+    completed = subprocess.run([str(executable), "-c", probe], check=True, capture_output=True, text=True)
+    versions = json.loads(completed.stdout.strip())
+    if not isinstance(versions, dict) or versions.get("pandera") != "0.33.1" or not all(versions.get(name) for name in ("executable", "pandas", "pyarrow")):
+        raise ValueError("Pandera runtime version or dependency identity mismatch")
+    return {"configured_executable": str(executable.resolve()), **versions}
+
+
+def run_real(handoff_path: Path, runtime_config_path: Path, output_root: Path) -> dict[str, Any]:
     """Run from one sealed handoff; all failures stop at their stage boundary."""
     if not handoff_path.is_file(): return {"status": "WAITING_FOR_INPUT"}
     if output_root.exists(): raise FileExistsError(output_root)
-    output_root.mkdir(parents=True)
     repo = Path(__file__).resolve().parents[2]
-    handoff = _read(handoff_path)
-    artifact_root = handoff_path.parent
+    _add_paths(repo)
+    from aq_edgartools_full_build import TerminalCloseoutError, verify_terminal_handoff
     try:
-        _stage(WSL_P5_PYTHON, Path(__file__), "terminal", handoff_path, artifact_root, output_root / "terminal-closeout.json", repo)
-    except subprocess.CalledProcessError:
-        return {"status": "BLOCKED_HISTORICAL_CLOSEOUT"}
-    paths = handoff.get("downstream_paths")
-    if not isinstance(paths, dict): return {"status": "BLOCKED_INPUT_IDENTITY"}
+        handoff = _read(handoff_path)
+        artifact_root = resolve_handoff_artifact_root(handoff_path, handoff)
+        terminal = verify_terminal_handoff(handoff, artifact_root=artifact_root)
+        paths = handoff.get("downstream_paths")
+        artifacts = handoff.get("artifacts")
+        if not isinstance(paths, dict) or not isinstance(artifacts, dict): raise ValueError("downstream artifact identities are absent")
+        resolved = {}
+        for name in ("bindings", "session_grid", "base_surface", "fundamentals_projection"):
+            raw = paths.get(name)
+            if not isinstance(artifacts.get(name), dict) or artifacts[name].get("path") != raw:
+                raise ValueError(f"{name} is not bound to a verified artifact")
+            resolved[name] = artifact_root / raw
+    except (FileNotFoundError, KeyError, TypeError, ValueError, AttributeError, TerminalCloseoutError) as exc:
+        return {"status": "BLOCKED_INPUT_IDENTITY", "reason": str(exc)}
+    try:
+        runtime = verify_runtime_config(runtime_config_path)
+    except (OSError, ValueError, KeyError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
+        return {"status": "BLOCKED_RUNTIME_AUTHORITY", "reason": str(exc)}
+    output_root.mkdir(parents=True)
+    _write(output_root / "terminal-closeout.json", terminal)
     filing_root = output_root / "filing-history"
-    filing_spec = {"bindings_path": str(artifact_root / str(paths["bindings"])),
-                   "session_grid_path": str(artifact_root / str(paths["session_grid"]))}
+    filing_spec = {"bindings_path": str(resolved["bindings"]),
+                   "session_grid_path": str(resolved["session_grid"])}
     _write(output_root / "filing-spec.json", filing_spec)
     try:
         _stage(WSL_P5_PYTHON, Path(__file__), "filing", output_root / "filing-spec.json", filing_root, output_root / "filing-stage.json", repo)
     except subprocess.CalledProcessError:
         return {"status": "BLOCKED_FILING_MATERIALIZATION"}
-    spec = {"base_path": str(artifact_root / str(paths["base_surface"])),
-        "fundamentals_path": str(artifact_root / str(paths["fundamentals_projection"])),
+    spec = {"base_path": str(resolved["base_surface"]),
+        "fundamentals_path": str(resolved["fundamentals_projection"]),
         "filing_path": str(filing_root / "filing-session-projection.parquet"),
         "filing_ledger_path": str(filing_root / "filing-provenance-ledger.parquet")}
     _write(output_root / "composition-spec.json", spec)
@@ -229,7 +277,7 @@ def run_real(handoff_path: Path, output_root: Path) -> dict[str, Any]:
     if not isinstance(evaluation_config, dict): return {"status": "BLOCKED_INPUT_IDENTITY"}
     _write(output_root / "evaluation-config.json", evaluation_config)
     try:
-        _native_stage(PANDERA_PYTHON, Path(__file__), "compose", output_root / "composition-spec.json", output_root / "surfaces", output_root / "surfaces.json", repo)
+        _native_stage(runtime["configured_executable"], Path(__file__), "compose", output_root / "composition-spec.json", output_root / "surfaces", output_root / "surfaces.json", repo)
         for surface in ("s0", "s1", "s2"):
             _stage(WSL_QLIB_PYTHON, Path(__file__), "qlib", output_root / "surfaces" / surface, output_root / "qlib" / surface, output_root / "qlib" / surface / "stage-result.json", repo, output_root / "evaluation-config.json")
     except subprocess.CalledProcessError:
@@ -267,7 +315,8 @@ def run_real(handoff_path: Path, output_root: Path) -> dict[str, Any]:
         "terminal_closeout": _read(output_root / "terminal-closeout.json"),
         "surfaces": surfaces, "qlib_runs": runs, "comparisons": comparisons,
         "leakage_gates": handoff.get("leakage_gates", {}),
-        "source_identities": handoff.get("identities", {})}
+        "source_identities": handoff.get("identities", {}),
+        "execution_runtime": runtime}
     try:
         bundle["validation"] = verify_evidence_bundle(bundle)
     except ValueError as exc:
@@ -285,9 +334,10 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     real = sub.add_parser("real")
     real.add_argument("--handoff", required=True, type=Path)
+    real.add_argument("--runtime-config", required=True, type=Path)
     real.add_argument("--output", required=True, type=Path)
     internal = sub.add_parser("_stage", help=argparse.SUPPRESS)
-    internal.add_argument("--stage", required=True, choices=("terminal", "filing", "compose", "qlib", "compare"))
+    internal.add_argument("--stage", required=True, choices=("filing", "compose", "qlib", "compare"))
     internal.add_argument("--input", required=True)
     internal.add_argument("--root", required=True)
     internal.add_argument("--output", required=True)
@@ -297,6 +347,6 @@ def main() -> None:
     if args.command == "_stage":
         _internal(args)
     else:
-        print(json.dumps(run_real(args.handoff, args.output), sort_keys=True))
+        print(json.dumps(run_real(args.handoff, args.runtime_config, args.output), sort_keys=True))
 if __name__ == "__main__":
     main()

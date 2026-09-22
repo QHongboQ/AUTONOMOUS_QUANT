@@ -36,13 +36,23 @@ untouched.
 ## Single real entrypoint
 
 ```powershell
-python 40-certification-system/p5-downstream-composition/run_p5_downstream.py real --handoff <sealed-handoff.json> --output <new-output-root>
+python 40-certification-system/p5-downstream-composition/run_p5_downstream.py real --handoff <build-root>/terminal-finalization/handoff/p5-historical-build-handoff-v1.json --runtime-config <authorized-runtime-config.json> --output <new-output-root>
 ```
 
-The handoff must contain sealed downstream paths, evaluation config, identities,
-and all frozen terminal/leakage facts. Real execution requires path/identity
-substitution only, not new code. Missing inputs and failures map to explicit
-fail-closed states.
+The future producer-created handoff declares
+`artifact_root_relative_to_handoff = "../.."`. The consumer resolves that
+relationship to the canonical build root, requires the handoff to be nested
+under `terminal-finalization/handoff/`, and verifies that every hashed artifact
+stays inside the root. The four downstream paths must name those same verified
+artifacts. No dataset copy into `handoff/` is needed. The producer-side terminal
+finalizer is still pending; this PR only closes the consumer contract.
+
+`runtime-config.json` is operational configuration, not historical dataset
+identity. Its explicit `pandera_python` must exist and expose Pandera 0.33.1;
+the selected executable plus actual Pandera, pandas, and PyArrow versions are
+recorded in the evidence bundle. The old P2 POC-private virtualenv is not a
+production dependency. A missing or drifted runtime returns
+`BLOCKED_RUNTIME_AUTHORITY` before downstream execution.
 
 ## Synthetic proof
 
@@ -56,7 +66,10 @@ Recorder, S1 reuse, leakage, and arch failures.
 
 Existing P5 tests passed (`151/151`). Qlib adapter tests passed (`18`, with
 seven DVC-snapshot tests skipped because that optional output was not checked
-out). The focused downstream suite passed (`12/12`).
+out). The focused downstream suite passed (`21/21`), including a nested handoff
+across build-root subdirectories, six path/hash escape cases, and explicit
+Pandera runtime selection and version rejection. No real historical build
+artifact was read.
 
 ## Frozen final policy
 
@@ -76,6 +89,11 @@ delta. Interface execution alone cannot satisfy statistical support.
 ```text
 CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
 P5_FINAL_POLICY_INTERFACE_READY = YES
+EXPLICIT_ARTIFACT_ROOT_CONTRACT = YES
+HANDOFF_PARENT_ASSUMED_AS_ARTIFACT_ROOT = NO
+EXPLICIT_PANDERA_RUNTIME = YES
+P2_POC_PRIVATE_RUNTIME_DEPENDENCY = NO
+HISTORICAL_HANDOFF_PRODUCER = PENDING_SEPARATE_TASK
 P5_PHASE_COMPLETION_RULE_FROZEN = YES
 FEATURE_RETENTION_POLICY_FROZEN = YES
 QLIB_NATIVE_RANK_IC_EVIDENCE_USED = YES

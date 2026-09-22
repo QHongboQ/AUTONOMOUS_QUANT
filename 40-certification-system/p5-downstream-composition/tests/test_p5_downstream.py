@@ -43,10 +43,13 @@ from run_p5_downstream import (  # noqa: E402
     P5_SKFOLIO,
     classify_comparison,
     evaluate_final_policy,
+    resolve_handoff_artifact_root,
+    run_real,
+    verify_runtime_config,
     verify_evidence_bundle,
 )
 
-PANDERA_PYTHON = "/mnt/d/AQ_DATA/P2/free-upstream-identity-binding-poc-001/.venv/Scripts/python.exe"
+PANDERA_PYTHON = sys.executable
 QLIB_PYTHON = "/home/zhou/miniforge3/envs/rdagent4qlib/bin/python"
 SCRIPT = REPO / "40-certification-system/p5-downstream-composition/run_p5_downstream.py"
 
@@ -120,6 +123,104 @@ def _terminal(root: Path) -> dict[str, object]:
             }
         },
     }
+
+
+def _nested_handoff(tmp_path: Path) -> tuple[Path, Path, dict[str, object]]:
+    root = tmp_path / "synthetic-build-root"
+    root.mkdir()
+    handoff = _terminal(root)
+    locations = {
+        "bindings": "selective/bindings.parquet",
+        "session_grid": "terminal-finalization/projection/episode-session-grid.parquet",
+        "base_surface": "evidence/base-surface.parquet",
+        "fundamentals_projection": "terminal-finalization/projection/fundamentals-wide.parquet",
+    }
+    handoff["artifact_root_relative_to_handoff"] = "../.."
+    handoff["downstream_paths"] = locations
+    handoff["evaluation_config"] = {}
+    for name, relative in locations.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(f"synthetic-{name}".encode())
+        handoff["artifacts"][name] = {
+            "path": relative, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+    for relative in ("standardized-events/events.jsonl", "source-manifests/source.json"):
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+    location = root / "terminal-finalization/handoff/p5-historical-build-handoff-v1.json"
+    _write(location, handoff)
+    return root, location, handoff
+
+
+def test_nested_handoff_resolves_verified_cross_subdirectory_artifacts(tmp_path: Path) -> None:
+    root, location, handoff = _nested_handoff(tmp_path)
+    assert resolve_handoff_artifact_root(location, handoff) == root.resolve()
+    assert verify_terminal_handoff(handoff, artifact_root=root)["gate_count"] == 26
+    assert {Path(row["path"]).parts[0] for row in handoff["artifacts"].values()} >= {
+        "evidence", "selective", "terminal-finalization",
+    }
+
+
+@pytest.mark.parametrize("case", ("artifact_escape", "root_escape", "symlink_escape", "missing_root", "hash", "absolute"))
+def test_nested_handoff_paths_fail_closed(tmp_path: Path, case: str) -> None:
+    root, location, handoff = _nested_handoff(tmp_path)
+    outside = tmp_path / "outside.parquet"
+    outside.write_bytes(b"external")
+    if case == "artifact_escape":
+        handoff["artifacts"]["base_surface"]["path"] = "../outside.parquet"
+    elif case == "root_escape":
+        handoff["artifact_root_relative_to_handoff"] = "../../.."
+    elif case == "symlink_escape":
+        link = root / "evidence/escaped.parquet"
+        try:
+            link.symlink_to(outside)
+        except OSError:
+            pytest.skip("symlink creation is unavailable")
+        handoff["artifacts"]["base_surface"]["path"] = "evidence/escaped.parquet"
+    elif case == "missing_root":
+        handoff["artifact_root_relative_to_handoff"] = "../missing"
+    elif case == "hash":
+        (root / handoff["downstream_paths"]["base_surface"]).write_bytes(b"corrupt")
+    else:
+        handoff["artifacts"]["base_surface"]["path"] = str(outside)
+    with pytest.raises((ValueError, FileNotFoundError, TerminalCloseoutError)):
+        verified_root = resolve_handoff_artifact_root(location, handoff)
+        verify_terminal_handoff(handoff, artifact_root=verified_root)
+
+
+def test_explicit_pandera_runtime_is_probed_and_launched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import run_p5_downstream as consumer
+
+    root, location, _handoff = _nested_handoff(tmp_path)
+    config = tmp_path / "runtime.json"
+    _write(config, {"pandera_python": sys.executable})
+    identity = verify_runtime_config(config)
+    assert identity["pandera"] == "0.33.1"
+    assert all(identity[key] for key in ("configured_executable", "executable", "pandas", "pyarrow"))
+    selected = []
+    monkeypatch.setattr(consumer, "_stage", lambda *_args, **_kwargs: None)
+    def stop_after_compose(python: str, *_args: object) -> None:
+        selected.append(python)
+        raise subprocess.CalledProcessError(1, python)
+    monkeypatch.setattr(consumer, "_native_stage", stop_after_compose)
+    result = run_real(location, config, tmp_path / "downstream")
+    assert result["status"] == "BLOCKED_QLIB_EVALUATION"
+    assert selected == [str(Path(sys.executable).resolve())]
+    assert root.exists()
+
+
+def test_pandera_runtime_absent_or_version_drift_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config = tmp_path / "runtime.json"
+    _write(config, {"pandera_python": str(tmp_path / "missing-python")})
+    with pytest.raises(ValueError, match="absent"):
+        verify_runtime_config(config)
+    _write(config, {"pandera_python": sys.executable})
+    monkeypatch.setattr(subprocess, "run", lambda *_a, **_k: subprocess.CompletedProcess(
+        [], 0, '{"executable":"python","pandera":"0.32.0","pandas":"2.3.3","pyarrow":"25.0.1"}', ""))
+    with pytest.raises(ValueError, match="version"):
+        verify_runtime_config(config)
 
 
 def _dates() -> pd.DatetimeIndex:
@@ -201,7 +302,7 @@ def _fixture(root: Path) -> dict[str, Path]:
 
 
 def _compose(root: Path, paths: dict[str, Path], *, expect_pass: bool) -> Path:
-    spec = {f"{name}_path": _win(path) for name, path in paths.items()}
+    spec = {f"{name}_path": str(path) for name, path in paths.items()}
     spec["filing_ledger_path"] = spec.pop("ledger_path")
     spec["fundamentals_path"] = spec.pop("fundamentals_path")
     spec["base_path"] = spec.pop("base_path")
@@ -210,9 +311,9 @@ def _compose(root: Path, paths: dict[str, Path], *, expect_pass: bool) -> Path:
     _write(spec_path, spec)
     output = root / "surfaces"
     command = [
-        PANDERA_PYTHON, _win(SCRIPT), "_stage", "--stage", "compose",
-        "--input", _win(spec_path), "--root", _win(output),
-        "--output", _win(root / "surfaces.json"), "--repo", _win(REPO),
+        PANDERA_PYTHON, str(SCRIPT), "_stage", "--stage", "compose",
+        "--input", str(spec_path), "--root", str(output),
+        "--output", str(root / "surfaces.json"), "--repo", str(REPO),
     ]
     completed = subprocess.run(command, capture_output=True, text=True)
     assert (completed.returncode == 0) is expect_pass, completed.stderr
