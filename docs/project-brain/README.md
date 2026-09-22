@@ -8,7 +8,7 @@
 >
 > Audit pointer: [P5 PR #75 rollback and retirement plan](p5-clean-slate-upstream-substitution-rollback-and-retirement-audit-001.md). Historical P5 task reports remain evidence, not current implementation authority.
 >
-> [P5 SEC bulk/period parity POC](p5-sec-bulk-acceptance-and-upstream-period-parity-poc-001.md): partial fail-closed; no production migration authorized.
+> [P5 SEC bulk/period parity POC](p5-sec-bulk-acceptance-and-upstream-period-parity-poc-001.md): gap closeout fail-closed (five relevant acceptance gaps and native debt-label divergence); no production migration authorized.
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
