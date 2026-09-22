@@ -4,7 +4,9 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Filing Feature Processor Semantics Authority Resolution 001**
+> Active Development: **P5 — Clean-Slate Upstream Substitution Audit; replacement implementation not yet authorized**
+>
+> Audit pointer: [P5 PR #75 rollback and retirement plan](p5-clean-slate-upstream-substitution-rollback-and-retirement-audit-001.md). Historical P5 task reports remain evidence, not current implementation authority.
 >
 > Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
 
