@@ -9,6 +9,35 @@ historical materialization and evaluation boundary for the five already-merged
 feature row, retrieve a filing, train a model, produce a prediction, run a
 backtest, inspect performance, or access P2 V2 sealed OOS.
 
+## Current authority supersession
+
+This document remains the historical design and contract evidence for five
+valid filing-derived research ideas. The final P5 V1 scope authority now
+classifies their mass historical materialization and ablation as a
+`DEFERRED_OPTIONAL_P5_EXTENSION`, not a P5 V1 completion requirement. The
+proven EdgarTools filing/document/exhibit interfaces remain available upstream;
+no interface or feature contract is invalidated.
+
+The safely stopped all-form attempt is retained without promotion or deletion:
+
+```text
+ALL_FORM_POPULATION_CENSUS = DIAGNOSTIC_SUPERSEDED_PRE_EVALUATION
+ALL_FORM_POPULATION_CENSUS_STATUS = DIAGNOSTIC_SUPERSEDED_PRE_EVALUATION
+TOTAL_ADMITTED_FILING_ACCESSIONS = 826859
+EVENT_FORM_ACCESSION_COUNT = 62371
+PARTIAL_COMPLETED_ACCESSION_COUNT = 20000
+PARTIAL_COMPLETED_OBSERVATION_COUNT = 100000
+PARTIAL_OUTPUT_CLASSIFICATION = PARTIAL_ABORTED_SUPERSEDED_SCOPE
+P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION = DEFERRED_OPTIONAL_P5_EXTENSION
+FILING_FEATURE_HISTORICAL_MATERIALIZATION_STATUS = DEFERRED_OPTIONAL_P5_EXTENSION
+P5_V1_REQUIRED_FILING_DERIVED_FEATURE_COUNT = 0
+```
+
+The remaining sections preserve the historical optional-extension design.
+They do not authorize resumption, promotion into P5 V1 DVC authority, S2/H2
+execution, or a P5 V1 completion blocker. Separate future authorization would
+be required to activate them.
+
 ```text
 CAPABILITY = historical materialization and later evaluation of five deterministic P5 filing features
 EDGARTOOLS = UPSTREAM_WHOLE
@@ -211,10 +240,11 @@ backtest. AQ owns only this column/index mapping and the hard admission checks.
 QLIB_HANDOFF_OWNER = MICROSOFT_QLIB
 ```
 
-## Preregistered two-trial ablation
+## Historical preregistered two-trial ablation (deferred)
 
-The only initial hypothesis is whether the five frozen features add value as
-one preregistered family. The trial inventory is exactly:
+The historical optional-extension hypothesis asks whether the five frozen
+features add value as one preregistered family. It is not a current P5 V1
+required hypothesis. Its retained trial inventory is:
 
 | Trial | Dataset inputs | Model/workflow |
 |---|---|---|
@@ -232,15 +262,16 @@ comparisons, normalization variants, or threshold searches. A failed family
 is rejected as a family. Any later single-feature analysis requires a new
 preregistration and new multiple-testing family.
 
-## Model authority
+## Historical optional-extension model authority
 
-The current Brain contains a P1 exploratory LightGBM reference and P2-specific
-frozen candidates, but it does not authorize one fixed P5 evaluation vehicle.
-Reusing one by implication would turn this feature ablation into an
-unregistered model choice.
+At design time, the Brain contained a P1 exploratory LightGBM reference and
+P2-specific frozen candidates but did not authorize one fixed filing-feature
+evaluation vehicle. The current required P5 V1 H1 separately uses the frozen
+`qlib.contrib.model.gbdt.LGBModel`; this optional extension remains deferred
+and receives no execution authority from that decision.
 
 ```text
-EVALUATION_MODEL_AUTHORITY = EVALUATION_MODEL_AUTHORITY_PENDING
+HISTORICAL_FILING_ABLATION_EVALUATION_MODEL_AUTHORITY = DEFERRED_WITH_OPTIONAL_EXTENSION
 ```
 
 Before either trial runs, a separate authority action must select one already
@@ -342,9 +373,10 @@ LEAKAGE_GATE_COUNT = 8
 Any nonzero value makes performance evidence inadmissible and the result
 `INCONCLUSIVE`; it does not authorize a repair based on observed performance.
 
-## Future execution gate
+## Historical execution gate (not active for P5 V1)
 
-Historical filing-feature materialization may begin only after:
+If the optional extension is separately reauthorized, its historical
+materialization may begin only after:
 
 1. this design is merged and frozen;
 2. the independent historical fundamentals build reaches terminal closeout,
@@ -355,22 +387,23 @@ Historical filing-feature materialization may begin only after:
 5. the P5 evaluation model authority is frozen before evaluation (not required
    merely to construct the sparse dataset).
 
-The current design itself is complete; execution is waiting on those external
-gates rather than an AQ engine.
+The design itself remains complete historical evidence. Execution is deferred,
+not waiting as a current P5 V1 gate, and the stopped all-form crawl must not be
+resumed under this document.
 
 ```text
-P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_DESIGN = DESIGN_READY_WAITING_FOR_HISTORICAL_BUILD
-P5_FILING_FEATURE_ABLATION_PROTOCOL = PREREGISTERED_WAITING_FOR_DATA_AND_MODEL_AUTHORITY
-HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
+P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_DESIGN = HISTORICAL_OPTIONAL_EXTENSION_DESIGN
+P5_FILING_FEATURE_ABLATION_PROTOCOL = DEFERRED_OPTIONAL_EXTENSION
+HISTORICAL_BUILD_STATUS = MINIMAL_UPSTREAM_V1_BUILD_COMPLETE
 HISTORICAL_BUILD_INTERFERENCE = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
-CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
+CURRENT_DEVELOPMENT_NEXT = P5_H1_INCREMENTAL_FUNDAMENTAL_EVALUATION_AND_CLOSEOUT_001
 ```
 
-The independent fundamentals build remains PID 403 at design time. This task
-does not inspect or mutate its private worktree, AQ_DATA root, checkpoints,
-cache, evidence, events, manifests, or output.
+The historical design referred to the independent fundamentals build as PID
+403. It is now `HISTORICAL_REFERENCE_ONLY`; its 392 failures require no repair
+and are not inspected or retried by this scope freeze.
 
 ## Validation and closeout
 
