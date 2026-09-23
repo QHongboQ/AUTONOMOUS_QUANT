@@ -1,0 +1,30 @@
+{
+  "schema": "AQ_P5_V1_QLIB_PERIOD_SELECTION",
+  "ordered_features": [
+    "Revenue",
+    "NetIncome",
+    "Assets",
+    "Liabilities",
+    "CommonEquity",
+    "NetCashFromOperatingActivities",
+    "CashAndCashEquivalents",
+    "CurrentAssetsTotal",
+    "CurrentLiabilitiesTotal",
+    "LongTermDebt"
+  ],
+  "period_class_by_feature": {
+    "Revenue": "DURATION_ANNUAL",
+    "NetIncome": "DURATION_ANNUAL",
+    "Assets": "INSTANT",
+    "Liabilities": "INSTANT",
+    "CommonEquity": "INSTANT",
+    "NetCashFromOperatingActivities": "DURATION_ANNUAL",
+    "CashAndCashEquivalents": "INSTANT",
+    "CurrentAssetsTotal": "INSTANT",
+    "CurrentLiabilitiesTotal": "INSTANT",
+    "LongTermDebt": "INSTANT"
+  },
+  "period_class_fallback": "NONE",
+  "flow_derivation_count": 0,
+  "non_selected_period_streams": "PRESERVED_IN_EVIDENCE_AND_EVENT_LAYER_EXCLUDED_FROM_P5_V1_EVALUATION_VIEW"
+}

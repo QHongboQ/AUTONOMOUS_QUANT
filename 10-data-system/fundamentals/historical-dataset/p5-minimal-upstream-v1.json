@@ -1,0 +1,89 @@
+{
+  "schema": "AQ_P5_MINIMAL_UPSTREAM_V1",
+  "scientific_authority_change": "YES_PRE_EVALUATION_SCOPE_CONTRACTION",
+  "historical_end": "2024-12-31",
+  "bound_cik_count": 711,
+  "structured_fundamentals": [
+    "Revenue",
+    "NetIncome",
+    "Assets",
+    "Liabilities",
+    "CommonEquity",
+    "NetCashFromOperatingActivities",
+    "CashAndCashEquivalents",
+    "CurrentAssetsTotal",
+    "CurrentLiabilitiesTotal",
+    "LongTermDebt"
+  ],
+  "retired_v1_feature": "ShortTermDebt",
+  "evaluation_period_authority": {
+    "flow_features": [
+      "Revenue",
+      "NetIncome",
+      "NetCashFromOperatingActivities"
+    ],
+    "flow_period_class": "DURATION_ANNUAL",
+    "stock_features": [
+      "Assets",
+      "Liabilities",
+      "CommonEquity",
+      "CashAndCashEquivalents",
+      "CurrentAssetsTotal",
+      "CurrentLiabilitiesTotal",
+      "LongTermDebt"
+    ],
+    "stock_period_class": "INSTANT",
+    "fallback": "NONE",
+    "derived_quarterization": "PROHIBITED",
+    "ttm_derivation": "PROHIBITED",
+    "ytd_differencing": "PROHIBITED",
+    "annual_from_quarters_derivation": "PROHIBITED",
+    "quarterly_from_annual_or_ytd_derivation": "PROHIBITED",
+    "flow_derivation_count": 0
+  },
+  "accession_admission": "EXACT_ACCEPTANCE_REQUIRED_ELSE_EXCLUDE",
+  "canonical_form_authority": "SEC_SUBMISSIONS_BULK",
+  "known_exact_authority_exclusions": [
+    ["0001100682", "0001100682-20-000033"],
+    ["0001108524", "0001108524-21-000014"],
+    ["0001297996", "0001297996-16-000260"],
+    ["0001326160", "0001326160-18-000036"],
+    ["0001336920", "0001336920-15-000046"]
+  ],
+  "exclusion_evidence_sha256": "161ca6171bde89e61fe9e28ea6a30f259db4230a419df90d9ac4f917ddf98039",
+  "bound_episode_ledger_sha256": "51f61a3bce916e29a300b075d19b6ffe8de371701c836201621b6a740cbbfee2",
+  "companyfacts": {
+    "path": "D:/AQ_DATA/P5/upstream-parity-poc-001/companyfacts.zip",
+    "bytes": 1409212553,
+    "sha256": "ee099c7394a357f1996c728b7362f25158613b34f2ab1ad270cffc1befb917b6",
+    "source_url": "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip"
+  },
+  "submissions": {
+    "path": "D:/AQ_DATA/P5/upstream-parity-poc-001/submissions.zip",
+    "bytes": 1564656199,
+    "sha256": "702fbcd8b4335bc649e9e4eab3a202f3effc314b43421664bfecb59365767165",
+    "source_url": "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip"
+  },
+  "owners": {
+    "raw_financial_fact": "SEC_COMPANYFACTS_BULK",
+    "historical_filing_metadata": "SEC_SUBMISSIONS_BULK",
+    "standard_concept": "EDGARTOOLS_5_58",
+    "period_semantics": "EDGARTOOLS_5_58",
+    "restatement_vintage": "EDGARTOOLS_ACCESSION_BOUND_ENTITYFACTS",
+    "xnys": "EXCHANGE_CALENDARS",
+    "table_parquet": "PANDAS_PYARROW",
+    "schema_validation": "PANDERA",
+    "workflow_repro": "DVC",
+    "research_execution": "QLIB",
+    "temporal_cv": "SKFOLIO",
+    "multiple_testing": "ARCH",
+    "secfsdstools_production_role": "REFERENCE_PARITY_ONLY"
+  },
+  "evaluation_surfaces": {
+    "S0": 157,
+    "S1": 167,
+    "S2": 172,
+    "H1": "S0_VS_S1",
+    "H2": "S1_VS_S2"
+  }
+}

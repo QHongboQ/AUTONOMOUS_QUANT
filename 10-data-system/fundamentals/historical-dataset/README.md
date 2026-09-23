@@ -1,58 +1,63 @@
-# P5 Hybrid Historical Fundamental Dataset
+# P5 minimal upstream historical fundamentals
 
-This leaf owns only the thin AQ policy needed to project already-admitted,
-accession-bound fundamental evidence onto date-valid PIT sessions.
+This leaf reads the externally supplied, hash-frozen SEC `companyfacts.zip` and
+`submissions.zip` without a network fallback. `p5-minimal-upstream-v1.json`
+freezes their identities, the 711 bound CIKs, five exact-acceptance exclusions,
+and the ordered ten-concept P5 V1 inventory. `ShortTermDebt` is retired from V1;
+its raw SEC source is not rewritten.
 
-Upstream ownership remains fixed:
+The `p5_bulk_fundamentals` DVC stage uses EdgarTools 5.58.0's EntityFacts parser,
+native synonym groups, and duration classifier. SEC Submissions is canonical
+for `(CIK, accession, form, acceptanceDateTime)`. A fact without exact acceptance
+is excluded, never assigned a filed-date proxy. The existing
+`FundamentalEvidenceV1` contract retains raw fact and source identity. AQ keeps
+only exact admission, provenance, XNYS effective-session, membership/CIK
+containment, consolidated-only, and missingness policy.
 
-- SEC FSDS and secfsdstools own the bulk candidate catalog;
-- EdgarTools owns exact filing/XBRL admission and standardization semantics;
-- exchange_calendars owns XNYS sessions;
-- pandas owns the as-of join primitive;
-- PyArrow owns Parquet storage;
-- DVC owns artifact reproducibility;
-- Qlib owns research dataset consumption.
+`p5_pit_projection` retains native period streams separately, chooses the most
+recent economic period visible in each stream, and applies the existing
+`pandas.merge_asof` PIT join. Older comparative facts and amendments remain in
+bulk evidence; a late amendment to an obsolete period does not regress the
+current feature. No quarterization, TTM, currency conversion, or inferred
+acceptance is performed. Identity-excluded sessions remain present with missing
+fundamentals.
 
-The module does not implement SEC transport, parse XBRL, standardize statements,
-resolve securities, index FSDS, or implement a generic ETL/as-of framework.
+The Qlib handoff uses `StaticDataLoader` → `DataHandlerLP` → `DatasetH` and does
+not fit a model, predict, or backtest. `p5-v1-qlib-period-selection.json`
+freezes `DURATION_ANNUAL` for Revenue, NetIncome, and
+NetCashFromOperatingActivities, and `INSTANT` for the seven stock features.
+There is no fallback or derivation: an unavailable selected stream remains
+null. Non-selected native period streams remain in the evidence/projection
+layer and are excluded only from this ten-column evaluation view.
 
-`run_full_universe_preflight.py` is the bounded orchestration entry point for
-the frozen EdgarTools-native full-universe build. Its selected production shape
-starts from EdgarTools CompanyFacts/EntityFacts, applies only the frozen
-StandardConcept surface, and derives the exact accession inventory before any
-filing-source acquisition. EntityFacts is discovery evidence; acceptance time,
-source identity/hash, and final fact admission still require accession-bound
-EdgarTools filing/XBRL validation. Accession is the deduplication and recovery
-unit.
+DVC owns the bulk, projection, and Qlib handoff stages. PyArrow/Parquet stores
+tables, Pandera validates the bounded schemas, and Qlib owns dataset reading.
+No AQ SEC client, retry/checkpoint engine, XBRL parser, statement engine,
+workflow runner, source mirror, or SQLite state is active here. The former
+36,206-accession selective implementation remains historical evidence only;
+its executable runner and pilot sealer are retired from production.
 
-The older 36,582-accession native filing inventory remains a diagnostic
-superset, not an instruction to persist every numeric XBRL fact. The frozen
-32-accession sample and completed metadata-only 711-CIK EntityFacts pass define
-the selective 36,206-accession population. They are audit evidence and are not
-reimplemented by the production entry point.
+## Production LOC contraction
 
-The corrected execution authority preserves all 36,206 discovered accessions
-as 36,204 source-verifiable required accessions plus two immutable
-`SOURCE_UNAVAILABLE_FOR_FINAL_PROVENANCE` accounting records. The latter cannot
-become `FundamentalEvidenceV1`, receive a source hash, or name a replacement
-accession. Four SEC transition forms (`10-KT`, `10-KT/A`, `10-QT`, and
-`10-QT/A`) have one narrow admission leaf into the unchanged EdgarTools native
-XBRL path. Their filed form is preserved, while fact period classes continue to
-come only from native XBRL instant/duration semantics.
+The repository-wide P5 production inventory uses the established physical-line
+counting rule. It contracts from 2,849 to 2,053 lines (796 retired), but does
+not reach the aspirational 1,600-line target. The surviving lines are not a
+hidden replacement engine:
 
-Source storage is remote-first. EdgarTools' native `XBRLAttachments` selection
-defines the required instance/schema/linkbase asset set; the complete SGML
-submission is not acquired merely to support numeric XBRL facts. AQ seals a
-deterministic manifest of each native asset's SEC-relative identity, URL,
-byte count, role, and SHA-256. Re-extraction must reacquire through
-SEC/EdgarTools and match every asset and the manifest hash exactly. The
-ordinary cache becomes evictable only after all derived output hashes seal.
-DVC owns the structured evidence and build authority, not a SEC source mirror.
+| Module | LOC | Surviving responsibility |
+| --- | ---: | --- |
+| Episode-to-CIK binding | 312 | Existing immutable episode/CIK contract and validation |
+| Valuein identity leaf | 181 | Existing exact-only external identity evidence leaf |
+| FundamentalEvidenceV1 contract | 164 | Existing immutable evidence schema and identities |
+| Fundamental evidence materializer | 204 | Existing EdgarTools projection plus bounded bulk-fact projection |
+| Filing-feature package surface | 17 | Existing public exports |
+| Filing-feature contract | 157 | Existing five-feature immutable observation contract |
+| Filing-feature materializer | 217 | Existing exact five-feature policy projection |
+| Frozen SEC bulk reader | 279 | Hash/source validation, native EdgarTools parsing, exact Submissions join |
+| Historical thin policy | 213 | Ten concepts, XNYS visibility, containment, consolidated admission |
+| PIT projection | 170 | P1 session grid, non-regressing vintage selection, `merge_asof` glue |
+| Qlib handoff | 139 | Fixed ten-column selection and public Qlib dataset validation |
 
-The companion `aq_edgartools_full_build` module contains only finite selection,
-bounded batches, native-source manifest projection, minimal checkpoint/hash
-validation, and failure accounting. Decimal admission and the concept
-vocabulary remain in the existing evidence and hybrid-dataset authorities.
-It does not contain a SEC client, form router, XBRL/statement parser, identity
-engine, generic checkpoint framework, ETL framework, warehouse, or as-of
-implementation.
+Further contraction would require removing an existing public contract or
+combining distinct evidence, identity, filing-feature, PIT, and Qlib ownership
+boundaries. No generic abstraction was introduced to conceal those lines.

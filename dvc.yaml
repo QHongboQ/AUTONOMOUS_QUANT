@@ -305,22 +305,62 @@ stages:
       - 30-research-system/qlib/strategy-comparison/strategy_candidates_Alpha158_US.yaml
     outs:
       - 40-certification-system/protocol/.private/formulaic-v2-protocol-freeze-seal.json
-  p5_hybrid_historical_dataset_pilot_seal:
+  p5_bulk_fundamentals:
     cmd: >-
-      /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 10-data-system/fundamentals/historical-dataset/seal_pilot.py
-      --manifest ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json
-      --events ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted
-      --projection ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet
-      --provenance ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet
-      --quality ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json
-      --output ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json
+      env PYTHONPATH=10-data-system/fundamentals/historical-dataset:20-intelligence-system/fundamental-factors/evidence-contract
+      /home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python -B
+      -m aq_edgartools_full_build bulk
+      --binding ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json
+      --exclusion ../AQ_DATA/P5/upstream-parity-poc-001/owner-closeout.json
+      --output ../AQ_DATA/P5/minimal-upstream-v1-001/bulk
     deps:
-      - 10-data-system/fundamentals/historical-dataset/seal_pilot.py
-      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json
-      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted
-      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet
-      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet
-      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json
+      - 10-data-system/fundamentals/historical-dataset/aq_edgartools_full_build/__init__.py
+      - 10-data-system/fundamentals/historical-dataset/aq_edgartools_full_build/__main__.py
+      - 10-data-system/fundamentals/historical-dataset/aq_edgartools_full_build/bulk.py
+      - 10-data-system/fundamentals/historical-dataset/aq_hybrid_fundamentals/__init__.py
+      - 10-data-system/fundamentals/historical-dataset/requirements.txt
+      - 10-data-system/fundamentals/historical-dataset/p5-minimal-upstream-v1.json
+      - 20-intelligence-system/fundamental-factors/evidence-contract/aq_fundamental_evidence/__init__.py
+      - 20-intelligence-system/fundamental-factors/evidence-contract/aq_fundamental_evidence/materialize.py
+      - ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json
+      - ../AQ_DATA/P5/upstream-parity-poc-001/owner-closeout.json
+      - ../AQ_DATA/P5/upstream-parity-poc-001/companyfacts.zip
+      - ../AQ_DATA/P5/upstream-parity-poc-001/submissions.zip
     outs:
-      - ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json:
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/bulk:
+          cache: false
+  p5_pit_projection:
+    cmd: >-
+      env PYTHONPATH=10-data-system/fundamentals/historical-dataset
+      /home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python -B
+      -m aq_p5_projection
+      --bulk ../AQ_DATA/P5/minimal-upstream-v1-001/bulk
+      --episodes ../AQ_DATA/P1/pit/reconciled/v1/instrument_episodes.jsonl
+      --bindings ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json
+      --output ../AQ_DATA/P5/minimal-upstream-v1-001/projection
+    deps:
+      - 10-data-system/fundamentals/historical-dataset/aq_p5_projection/__init__.py
+      - 10-data-system/fundamentals/historical-dataset/aq_p5_projection/__main__.py
+      - 10-data-system/fundamentals/historical-dataset/aq_hybrid_fundamentals/__init__.py
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/bulk
+      - ../AQ_DATA/P1/pit/reconciled/v1/instrument_episodes.jsonl
+      - ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json
+    outs:
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/projection:
+          cache: false
+  p5_qlib_handoff:
+    cmd: >-
+      env PYTHONPATH=10-data-system/fundamentals/historical-dataset
+      /home/zhou/miniforge3/envs/rdagent4qlib/bin/python -B
+      -m aq_p5_qlib_handoff
+      --projection ../AQ_DATA/P5/minimal-upstream-v1-001/projection
+      --selection 10-data-system/fundamentals/historical-dataset/p5-v1-qlib-period-selection.json
+      --output ../AQ_DATA/P5/minimal-upstream-v1-001/qlib
+    deps:
+      - 10-data-system/fundamentals/historical-dataset/aq_p5_qlib_handoff/__init__.py
+      - 10-data-system/fundamentals/historical-dataset/aq_p5_qlib_handoff/__main__.py
+      - 10-data-system/fundamentals/historical-dataset/p5-v1-qlib-period-selection.json
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/projection
+    outs:
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/qlib:
           cache: false

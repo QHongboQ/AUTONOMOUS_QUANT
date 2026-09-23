@@ -18,7 +18,6 @@ FROZEN_STANDARD_CONCEPTS = (
     "CashAndCashEquivalents",
     "CurrentAssetsTotal",
     "CurrentLiabilitiesTotal",
-    "ShortTermDebt",
     "LongTermDebt",
 )
 # Direct projection from EdgarTools' public StandardConcept enum values into
@@ -34,8 +33,8 @@ EDGARTOOLS_STANDARD_CONCEPT_PROJECTION = {
     "Cash and Cash Equivalents": "CashAndCashEquivalents",
     "Total Current Assets": "CurrentAssetsTotal",
     "Total Current Liabilities": "CurrentLiabilitiesTotal",
-    "Short Term Debt": "ShortTermDebt",
     "Long Term Debt": "LongTermDebt",
+    "Long-Term Debt": "LongTermDebt",
 }
 PERIOD_CLASSES = frozenset(
     {
