@@ -19,6 +19,120 @@ reimplemented to mirror AQ's logical tree. A naturally monolithic upstream is
 used as a whole and AQ exposes only the necessary interfaces and policy
 boundaries.
 
+## Four operating rules
+
+These are the four root operating rules. They are one consolidated authority,
+not a stack of independent governance frameworks.
+
+### 1. `UPSTREAM_FIRST`
+
+Use a mature upstream capability directly. AQ does not reimplement a
+capability already owned by a mature selected upstream.
+
+From AQ's perspective, selected upstream implementation code is read-only. AQ
+production must not:
+
+- modify installed `site-packages`;
+- monkeypatch upstream methods or classes;
+- vendor and modify upstream source;
+- retain an AQ fork as a hidden production dependency;
+- override upstream parser, accounting, period, or statement algorithms;
+- introduce issuer-specific patches to repair upstream output; or
+- reproduce an upstream internal algorithm to fix edge cases.
+
+AQ may pin an official release/SHA, configure it, call public APIs, validate
+and adopt a later official release, replace it with another mature upstream,
+or exclude/defer unsupported cases.
+
+The existing hard rule remains:
+
+```text
+NO AQ ENGINE WITHOUT UPSTREAM REJECTION EVIDENCE
+```
+
+It is a necessary condition, not a sufficient one:
+
+```text
+UPSTREAM_REJECTION_EVIDENCE != CUSTOM_ENGINE_AUTHORIZATION
+```
+
+The default decision order is:
+
+1. use the current mature upstream as-is;
+2. when necessary, evaluate an official newer version;
+3. evaluate another mature upstream;
+4. exclude, mark missing, defer, or narrow scientific scope; and
+5. consider custom AQ implementation only for a genuinely AQ-specific
+   capability with no reasonable upstream owner, or, after determining no
+   mature upstream is reasonable, with separate explicit human authorization.
+
+An upstream edge case or incomplete coverage alone does not authorize custom
+AQ repair code.
+
+### 2. `THIN_INTERFACE_ONLY`
+
+AQ may connect upstreams through the smallest required project-specific
+boundary. Allowed scope includes configuration, input/output shape conversion,
+column/name projection, AQ episode/CIK identity, AQ PIT admission, AQ
+calendar/session visibility policy, AQ feature inventory, AQ
+certification/risk policy, and narrow provenance contracts.
+
+A thin interface may apply AQ-owned project semantics. It must not alter or
+"correct" semantics owned by an upstream project.
+
+- Allowed: upstream `Total Assets` to AQ column `Assets`.
+- Allowed: SEC acceptance datetime to AQ's first XNYS-visible session.
+- Not allowed: a custom AQ semantic correction table that overrides an
+  upstream accounting classification.
+
+### 3. `FAIL_CLOSED_NOT_FIX_EVERYTHING`
+
+Unsupported, ambiguous, unavailable, or unverifiable upstream cases default
+to `MISSING`, `EXCLUDED`, `DEFERRED`, or `UPSTREAM_REPLACEMENT`. They do not
+automatically authorize custom AQ repair code.
+
+### 4. `ONE_PRODUCTION_OWNER_PER_CAPABILITY`
+
+One capability has one production owner. A pipeline may compose multiple
+upstreams only when each owns a distinct capability. AQ must not retain a
+second production implementation of an upstream-owned capability.
+
+## Correctness and coverage
+
+```text
+ADMITTED_DATA_INTEGRITY = STRICT
+SOURCE_COVERAGE_TARGET = NOT_UNIVERSALLY_100_PERCENT
+UNVERIFIABLE_SOURCE_ROWS = MISSING_OR_EXCLUDED
+HEURISTIC_REPAIR = PROHIBITED
+```
+
+AQ requires complete correctness and provenance for admitted records, not
+universal source coverage by default. For example, 53,213 authoritative
+records plus five unverifiable records is valid as 53,213 admitted, five
+excluded, and zero guessed. Five exclusions do not by themselves require a
+resolver, patch, new engine, or phase blocker.
+
+## Phase-specific completeness
+
+A frozen scientific or certification contract may genuinely require complete
+coverage of its defined population. Unresolved coverage may then block that
+specific experiment. Permitted responses are to narrow and re-freeze scope
+before evaluation, replace the upstream, defer the capability, or classify the
+experiment incomplete. This does not authorize patching upstream semantics or
+creating another generic AQ implementation.
+
+## Anti-bloat interpretation
+
+A governance rule should normally reduce implementation surface. If satisfying
+a rule appears to require a new `Engine`, `Framework`, `Registry`, `Store`,
+`Runner`, `Coordinator`, `Resolver`, `Finalizer`, or `Manager`, re-examine the
+rule and design before implementation. Governance must not create machinery
+solely to prove compliance with governance.
+
+Prefer updating existing authority, reusing upstream evidence, simple tests,
+and explicit missing/exclusion states over permanent verifier stacks, artifact
+registries, orchestration layers, or documentation cascades.
+
 ## Implementation ownership modes
 
 Every implementation task must select exactly one of these three modes.
@@ -26,20 +140,10 @@ Every implementation task must select exactly one of these three modes.
 ### 1. `UPSTREAM_WHOLE`
 
 A complete upstream project owns the capability. AQ may contain only the
-minimum necessary:
-
-- version/SHA authority;
-- configuration;
-- adapter;
-- public contract;
-- health check;
-- upgrade notes;
-- orchestration entry;
-- policy boundary.
-
-AQ must not duplicate the upstream engine. Current examples are Qlib and
-RD-Agent. LEAN uses this mode if it is adopted. FinRL-X uses this mode if a
-future audit selects it.
+minimum necessary configuration, adapter, public contract, project policy,
+version/SHA authority, and health or upgrade evidence. AQ must not duplicate
+the upstream engine. Current examples are Qlib and RD-Agent. LEAN uses this
+mode if it is adopted. FinRL-X uses this mode if a future audit selects it.
 
 ### 2. `UPSTREAM_LEAF`
 
@@ -50,77 +154,45 @@ wrapper or configuration only when necessary. Current examples are
 ### 3. `AQ_OWNED`
 
 Custom implementation is permitted only for project-specific behavior that
-cannot reasonably be delegated upstream. Examples include:
-
-- human-owned capital limits and production permission;
-- risk ceilings;
-- promotion and certification policy/thresholds;
-- AQ-specific accepted PIT facts;
-- necessary cross-upstream contracts and thin adapters;
-- audit semantics and project-specific routing decisions.
+cannot reasonably be delegated upstream. Examples include human-owned capital
+limits and production permission, risk ceilings, promotion/certification
+policy, AQ-specific accepted PIT facts, necessary cross-upstream contracts,
+thin adapters, and project-specific audit semantics.
 
 `AQ_OWNED` does not authorize a generic engine by default.
 
-## Root hard rule
-
-```text
-NO AQ ENGINE WITHOUT UPSTREAM REJECTION EVIDENCE
-```
-
-Before implementing any new capability:
-
-1. Inspect already selected and deployed upstream projects.
-2. Inspect other mature upstream projects when necessary.
-3. Identify the upstream capability owner.
-4. Select one ownership mode.
-5. If a mature upstream already owns the capability, limit AQ implementation
-   to configuration, adapter, contract, policy, orchestration, or
-   project-specific facts.
-6. Allow a custom AQ engine only when no suitable upstream exists or the
-   behavior is genuinely AQ-specific.
-7. Document the reason before implementation.
-
-Any task that skips this ownership check is architecturally invalid.
-
 ## Mandatory implementation-task preamble
 
-Every future implementation task must begin with this completed preamble:
+The preamble is a human-readable design checkpoint. Do not build tooling to
+enforce it.
 
 ```text
 CAPABILITY:
 <name>
 
-UPSTREAM_OWNER:
-<project/library/NONE>
+PRODUCTION_OWNER:
+<upstream project/library/AQ>
 
 OWNERSHIP_MODE:
 UPSTREAM_WHOLE
 UPSTREAM_LEAF
-or AQ_OWNED
-
-UPSTREAM_ALREADY_DEPLOYED:
-YES/NO
-
-AQ_IMPLEMENTATION_ALLOWED:
-YES/NO
+AQ_OWNED
 
 AQ_ALLOWED_SCOPE:
-config
-adapter
-contract
-policy
-orchestration
-domain-facts
-<subset>
+<none/config/adapter/contract/policy/domain-facts>
 
 CUSTOM_ENGINE_REQUIRED:
 YES/NO
-
-CUSTOM_ENGINE_JUSTIFICATION:
-<required only if YES>
 ```
 
-When `UPSTREAM_OWNER != NONE`, the default is
+If `CUSTOM_ENGINE_REQUIRED = YES`, also provide:
+
+```text
+CUSTOM_ENGINE_JUSTIFICATION:
+<why this is genuinely AQ-specific and why mature upstreams cannot own it>
+```
+
+When `PRODUCTION_OWNER` is an upstream, the default is
 `CUSTOM_ENGINE_REQUIRED = NO`.
 
 ## Authoritative capability ownership
@@ -199,7 +271,7 @@ The authoritative capability split is recorded in
 - Pandera, `exchange_calendars`, DVC, and Qlib retain validation, session,
   reproducibility, and downstream research ownership respectively.
 - AQ retains only thin `InstrumentEpisodeV1` facts, provenance contracts,
-  certification/terminal policy, adapters, configuration, and orchestration.
+  certification/terminal policy, adapters, and configuration.
 
 ```text
 DATA_GENERIC_ENGINE_POLICY = UPSTREAM_FIRST_NO_CUSTOM_ENGINE_WITHOUT_REJECTION_EVIDENCE
@@ -316,6 +388,18 @@ boundaries. These Qlib-owned capabilities are not AQ engines to implement.
   appropriate; the tree does not mandate a custom AQ scheduler, dashboard,
   or health platform.
 
-Historical Project Brain documents remain evidence of their time. If their
-wording implies that every logical node requires custom AQ implementation,
-that interpretation is superseded by this decision.
+## Historical authority and P5 example
+
+Historical Project Brain documents remain evidence of decisions at their
+time. Where historical wording implies that every source row must be repaired
+or admitted, every upstream gap requires AQ remediation, every logical tree
+node requires AQ implementation, every failure blocks the whole phase, or
+upstream-owned semantics should be corrected in AQ, that interpretation is
+superseded by this consolidated Upstream Ownership Model. Historical documents
+do not need to be mass-edited.
+
+For P5, five unverifiable accession cases may remain excluded; old PID403
+failures do not require AQ repair; ambiguity in the upstream semantics of
+`ShortTermDebt` does not authorize AQ accounting patches; a selected upstream
+remains untouched; and unsupported optional capabilities may be deferred.
+These examples do not change P5 implementation or scientific scope.
