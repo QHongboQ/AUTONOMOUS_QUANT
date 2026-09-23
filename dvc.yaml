@@ -364,3 +364,46 @@ stages:
     outs:
       - ../AQ_DATA/P5/minimal-upstream-v1-001/qlib:
           cache: false
+  p5_h1_incremental_fundamental_evaluation:
+    cmd: >-
+      bash -lc '
+      set -euo pipefail;
+      ROOT="$PWD";
+      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001;
+      PYTHONDONTWRITEBYTECODE=1
+      /home/zhou/miniforge3/envs/rdagent4qlib/bin/python -B
+      "$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py" qlib
+      --repo "$ROOT"
+      --provider /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      --provider-report /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --future-calendar /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      --episode-map /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
+      --projection-grid /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
+      --fundamentals /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
+      --p5-manifest /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
+      --qlib-source /home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src
+      --output "$OUT";
+      powershell.exe -NoProfile -Command
+      "& \"D:\AQ_ENVS\skfolio\Scripts\python.exe\" -B
+      (Join-Path (Get-Location) \"30-research-system\qlib\p5-h1-evaluation\evaluate_h1.py\") skfolio
+      --daily D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\daily-net-returns.csv
+      --output D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001";
+      powershell.exe -NoProfile -Command
+      "& \"D:\AQ_ENVS\arch\Scripts\python.exe\" -B
+      (Join-Path (Get-Location) \"30-research-system\qlib\p5-h1-evaluation\evaluate_h1.py\") arch
+      --daily D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\daily-net-returns.csv
+      --output D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001"'
+    deps:
+      - 30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py
+      - 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      - ../AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
+      - ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
+    outs:
+      - ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001:
+          cache: false
+          persist: true

@@ -809,3 +809,90 @@ stages:
       md5: cc956bcfbadcdeb7d51a8e836eb0a02e.dir
       size: 6741337
       nfiles: 2
+  p5_h1_incremental_fundamental_evaluation:
+    cmd: bash -lc ' set -euo pipefail; ROOT="$PWD";
+      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001;
+      PYTHONDONTWRITEBYTECODE=1
+      /home/zhou/miniforge3/envs/rdagent4qlib/bin/python -B
+      "$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py" qlib
+      --repo "$ROOT" --provider
+      /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data --provider-report
+      /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --future-calendar
+      /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      --episode-map
+      /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
+      --projection-grid
+      /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
+      --fundamentals
+      /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
+      --p5-manifest /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
+      --qlib-source /home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src --output "$OUT";
+      powershell.exe -NoProfile -Command "&
+      \"D:\AQ_ENVS\skfolio\Scripts\python.exe\" -B (Join-Path (Get-Location)
+      \"30-research-system\qlib\p5-h1-evaluation\evaluate_h1.py\") skfolio
+      --daily
+      D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\daily-net-returns.csv
+      --output
+      D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001";
+      powershell.exe -NoProfile -Command "&
+      \"D:\AQ_ENVS\arch\Scripts\python.exe\" -B (Join-Path (Get-Location)
+      \"30-research-system\qlib\p5-h1-evaluation\evaluate_h1.py\") arch --daily
+      D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\daily-net-returns.csv
+      --output
+      D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001"'
+    deps:
+    - path:
+        ../AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime/calendars/day_future.txt
+      hash: md5
+      md5: 8799a64722f7c4214a145f5cc705f171
+      size: 27687
+      isexec: true
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      hash: md5
+      md5: fcd742578d6d89a5673bc1a618fc676b.dir
+      size: 25537236
+      nfiles: 3653
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+      isexec: true
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
+      hash: md5
+      md5: 44a1b95424421c86d85f9c03ec82c637
+      size: 184903
+      isexec: true
+    - path:
+        ../AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
+      hash: md5
+      md5: a3754c0395c16a08d538a55607f7ffe7
+      size: 1806396
+      isexec: true
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
+      hash: md5
+      md5: 52e41f76aad863ac237577cb555712b4
+      size: 6739977
+      isexec: true
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
+      hash: md5
+      md5: c36421eb0e988d8f086456a8bd0af6fa
+      size: 1360
+      isexec: true
+    - path:
+        30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
+      hash: md5
+      md5: 24cb38d962d6e04b3155875813d1f7c5
+      size: 782
+      isexec: true
+    - path: 30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py
+      hash: md5
+      md5: 3adcb594e7aa874962d6515138ebd389
+      size: 28341
+      isexec: true
+    outs:
+    - path: ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001
+      hash: md5
+      md5: 540528a0ae3debca098183f61971b916.dir
+      size: 670014577
+      nfiles: 27

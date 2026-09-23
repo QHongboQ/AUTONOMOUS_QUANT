@@ -342,28 +342,101 @@ AQ_PATCH_REQUIRED = NO
 UPSTREAM_PATCH_ALLOWED = NO
 ```
 
+## Executed H1 result and P5 closeout
+
+The single required H1 comparison was executed through the frozen Qlib,
+skfolio, arch, MLflow, and DVC owners. The one task-specific AQ entry point
+only validates identities, composes the two fixed surfaces, invokes public
+upstream interfaces, and records the frozen classification policy. It does
+not implement a model, CV procedure, bootstrap procedure, or generic
+evaluation engine.
+
+```text
+DVC_H1_STAGE = p5_h1_incremental_fundamental_evaluation
+DVC_H1_REPRO_STATUS = PASS
+DVC_OUTPUT_MD5 = 540528a0ae3debca098183f61971b916.dir
+S0_ROW_COUNT = 1196594
+S1_ROW_COUNT = 1196594
+S0_S1_ROW_IDENTITY_MATCH = YES
+S0_COLUMN_COUNT = 157
+S1_COLUMN_COUNT = 167
+S0_MODEL_FIT_COUNT = 1
+S1_MODEL_FIT_COUNT = 1
+S0_TEST_RANK_IC = UNDEFINED_CONSTANT_PREDICTION
+S1_TEST_RANK_IC = UNDEFINED_CONSTANT_PREDICTION
+H1_TEST_RANK_IC_DELTA = UNDEFINED
+S0_S1_PREDICTION_BYTES_MATCH = YES
+S0_S1_NET_RETURN_BYTES_MATCH = YES
+```
+
+The completed S0 recorder was preserved after a process loss that occurred
+before the S1 fit began. Its normalized predictions and Rank-IC series were
+verified semantically against the finished MLflow recorder; the abandoned S1
+recorder had no metrics or artifacts and was marked failed. The resumed DVC
+run reused S0 and performed the one authorized S1 fit. No performance-bearing
+input or policy changed.
+
+The fixed high-regularization LightGBM recipe produced constant predictions
+on both surfaces. Qlib therefore correctly reports Rank IC as undefined.
+Nevertheless, the paired result remains complete for the frozen incremental
+question: S0 and S1 prediction bytes, portfolio bytes, and every daily net
+return are identical. All WalkForward and CPCV active returns are exactly
+zero. arch SPA and RealityCheck executed on the frozen loss inputs, but their
+bidirectional 0.0 p-values are a degenerate identical-input result and are not
+interpreted as support for either direction.
+
+```text
+WALKFORWARD_STATUS = PASS_EXECUTED_GATE_FALSE_ZERO_ACTIVE_RETURN
+CPCV_STATUS = PASS_EXECUTED_GATE_FALSE_ZERO_ACTIVE_RETURN
+SPA_STATUS = PASS_EXECUTED_DEGENERATE_IDENTICAL_INPUT_NOT_SUPPORTING
+SPA_PVALUE = 0.0
+REALITYCHECK_STATUS = PASS_EXECUTED_DEGENERATE_IDENTICAL_INPUT_NOT_SUPPORTING
+REALITYCHECK_PVALUE = 0.0
+H1_RESULT_CLASSIFICATION = NO_MEASURABLE_INCREMENTAL_VALUE
+```
+
+The frozen projection authority, exact date-valid episode crosswalk, and
+unchanged missingness policy establish the required leakage gates:
+
+```text
+ACCEPTANCE_TIME_LEAKAGE_COUNT = 0
+REPORT_PERIOD_LEAKAGE_COUNT = 0
+AMENDMENT_BACKWARD_LEAKAGE_COUNT = 0
+CROSS_CIK_CONTAMINATION_COUNT = 0
+EPISODE_MEMBERSHIP_LEAKAGE_COUNT = 0
+CURRENT_TICKER_LEAKAGE_COUNT = 0
+SOURCE_UNAVAILABLE_SUBSTITUTION_COUNT = 0
+FUTURE_FILING_VISIBILITY_COUNT = 0
+```
+
+No bulk stage, SEC path, filing-feature materialization, H2/S2 path, PID403
+path, or P2 V2 sealed OOS surface was accessed. The scientifically valid
+negative result closes the preregistered P5 question without reopening feature
+engineering.
+
 ## Ownership and next authority
 
 ```text
 P5_MINIMAL_UPSTREAM_DATA_LAYER = COMPLETE
-P5_COMPLETE = NO
+P5_COMPLETE = YES
 
 AQ_FEATURE_ENGINE = NO
 AQ_MODEL_ENGINE = NO
 AQ_ABLATION_ENGINE = NO
 AQ_STATISTICS_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-NEW_PRODUCTION_LOC = 0
+NEW_PRODUCTION_LOC = 567
 
-PROJECT_MODEL_TRAINING_COUNT = 0
-PROJECT_PREDICTION_COUNT = 0
-PROJECT_BACKTEST_COUNT = 0
-H1_EXECUTED = NO
+PROJECT_MODEL_TRAINING_COUNT = 2
+PROJECT_PREDICTION_COUNT = 2
+PROJECT_BACKTEST_COUNT = 2
+H1_EXECUTED = YES
 H2_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-P6_ACTIVE = NO
+P6_ACTIVE = YES
 
-CURRENT_DEVELOPMENT_NEXT = P5_H1_INCREMENTAL_FUNDAMENTAL_EVALUATION_AND_CLOSEOUT_001
-CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_FINAL_V1_SCOPE_FREEZE_MERGE
-FINAL_CLASSIFICATION = PASS_FINAL_P5_V1_H1_AUTHORITY_FROZEN_PRE_EVALUATION
+CURRENT_PHASE = P6_NEWS_MACRO_SKILLS
+CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_MINIMAL_DEPLOYMENT_AND_BOUNDED_POC_001
+CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_P5_H1_CLOSEOUT_MERGE
+FINAL_CLASSIFICATION = PASS_P5_COMPLETE_NO_MEASURABLE_INCREMENTAL_VALUE_P6_READY
 ```
