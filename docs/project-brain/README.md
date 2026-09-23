@@ -10,7 +10,7 @@
 >
 > [P5 SEC bulk/period parity POC](p5-sec-bulk-acceptance-and-upstream-period-parity-poc-001.md): gap closeout fail-closed (five relevant acceptance gaps and native debt-label divergence); no production migration authorized.
 >
-> Core Principle: **Upstream-first, tree-structured, modular, replaceable, test-before-trust.**
+> Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
 ## 1. Mission
 
@@ -190,13 +190,14 @@ AUTONOMOUS_QUANT
 1. Parent modules compose; child modules own only their own responsibility.
 2. Siblings do not reach into each other's private internals.
 3. Cross-module integration happens through explicit public contracts.
-4. Mature upstream software is preferred over self-written infrastructure.
+4. Governance is upstream-first: use thin interfaces, fail closed on gaps,
+   and keep one production owner per capability.
 5. A leaf can be replaced without forcing unrelated siblings to change.
 6. Research code and production trading code must remain separated.
 7. Production may consume only **certified artifacts**, never raw experimental output.
-8. **No AQ engine without upstream rejection evidence.** Every implementation
-   task must identify the upstream owner and ownership mode before code is
-   authorized.
+8. **No AQ engine without upstream rejection evidence.** That evidence is
+   necessary, not sufficient: custom code still requires genuinely AQ-specific
+   scope or separate explicit authorization.
 
 `10-data-system/trading-calendar/xnys` owns XNYS session semantics through
 pinned `exchange_calendars`. It does not own membership, identity, market data,
@@ -253,7 +254,7 @@ Implementation uses exactly three ownership modes:
 
 - `UPSTREAM_WHOLE`: a complete upstream project owns the capability; AQ is
   limited to configuration, adapter, contract, health/upgrade evidence,
-  orchestration, and policy boundaries.
+  and policy boundaries.
 - `UPSTREAM_LEAF`: a focused upstream library owns one bounded leaf; AQ may
   add only a necessary thin wrapper/configuration.
 - `AQ_OWNED`: project-specific policy, facts, contracts, and routing that
@@ -290,9 +291,9 @@ Current ownership is:
 - **FinRL-X — challenger/fallback only:** `UPSTREAM_WHOLE` if a future audit
   selects it; AQ must not mimic it.
 
-The root hard rule and required future-task ownership preamble are defined in
-[Upstream Ownership Model](upstream-ownership-model.md). A task that skips
-that ownership check is architecturally invalid.
+The four operating rules and simplified future-task ownership preamble are
+defined in [Upstream Ownership Model](upstream-ownership-model.md). A task that
+skips that ownership check is architecturally invalid.
 
 ### Information intelligence candidates
 - TradingAgents
