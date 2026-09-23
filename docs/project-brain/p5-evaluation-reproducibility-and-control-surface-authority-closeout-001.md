@@ -197,17 +197,17 @@ CONTROL_DATASET_IDENTITY = P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092
 ```
 
 Future materialization must additionally seal the produced dataset bytes in
-DVC before either hypothesis may execute. This authority freezes the exact
+DVC before H1 may execute. This authority freezes the exact
 inputs and projection semantics; it does not claim that the not-yet-built P5
 evaluation surface already has a final artifact hash.
 
-## Eleven fundamentals and P5 phase-exit coverage
+## Final P5 V1 scope and phase-exit coverage
 
-No prior authority placed the eleven frozen structured fundamentals in
-CONTROL. Option B is therefore rejected. Option A is frozen without adding
-ratios, derived factors, subsets, or model search.
+The prior eleven-feature and mandatory filing-ablation authority is
+`SUPERSEDED_PRE_EVALUATION`. No project model training, prediction, backtest,
+H1/H2 execution, or performance inspection occurred before this contraction.
 
-The ordered fundamental increment is exactly:
+The exact ordered P5 V1 fundamental increment is:
 
 ```text
 Revenue
@@ -219,46 +219,135 @@ NetCashFromOperatingActivities
 CashAndCashEquivalents
 CurrentAssetsTotal
 CurrentLiabilitiesTotal
-ShortTermDebt
 LongTermDebt
 ```
 
-The historical filing-only ablation retained two trials. The final P5 exit
-protocol instead has three unique evaluation surfaces and two directional
-incremental comparisons:
-
 ```text
-HISTORICAL_FILING_ABLATION_TRIAL_COUNT = 2
-P5_EVALUATION_SURFACE_COUNT = 3
-P5_EVALUATION_SURFACE_S0 = BASE
-P5_EVALUATION_SURFACE_S1 = BASE_PLUS_EXACT_11_FUNDAMENTALS
-P5_EVALUATION_SURFACE_S2 = BASE_PLUS_EXACT_11_FUNDAMENTALS_PLUS_EXACT_5_FILING_FEATURES
-```
-
-Only two directional hypotheses are authorized:
-
-```text
-P5_INCREMENTAL_COMPARISON_COUNT = 2
-P5_H1 = S0_VS_S1
-P5_H2 = S1_VS_S2
-```
-
-H1 and H2 form one fixed, preregistered two-hypothesis family under the
-existing `arch 8.0.0` multiple-testing authority. No subset, leave-one-out,
-ratio, model, or hyperparameter search is permitted. The existing frozen
-stationary-bootstrap and SPA/RealityCheck policy applies when the trials are
-later authorized; this task executes neither comparison.
-
-```text
-STRUCTURED_FUNDAMENTAL_FEATURE_COUNT = 11
+P5_V1_REQUIRED_FUNDAMENTAL_FEATURE_COUNT = 10
+P5_V1_REQUIRED_FILING_DERIVED_FEATURE_COUNT = 0
 STRUCTURED_FUNDAMENTALS_INCLUDED_IN_CONTROL = NO
-FILING_FEATURE_COUNT = 5
-DOES_CURRENT_TWO_TRIAL_FILING_ABLATION_ALONE_SATISFY_P5_EXIT_CONDITION = NO
+P5_FILING_INTERFACE_CAPABILITY = PROVEN_UPSTREAM_AVAILABLE
+SCIENTIFIC_SCOPE_CHANGE = PRE_EVALUATION_SCOPE_CONTRACTION
+```
+
+The final P5 V1 evaluation has exactly two surfaces and one required
+directional hypothesis:
+
+```text
+P5_V1_EVALUATION_SURFACE_COUNT = 2
+P5_EVALUATION_SURFACE_S0 = BASE_157
+P5_EVALUATION_SURFACE_S1 = BASE_157_PLUS_EXACT_10_FUNDAMENTALS
+S0_COLUMN_COUNT = 157
+S1_COLUMN_COUNT = 167
+
+P5_V1_REQUIRED_HYPOTHESIS_COUNT = 1
+P5_H1 = S0_VS_S1
+MULTIPLE_TESTING_FAMILY_SIZE = 1
+```
+
+`S2` and `H2` are `DEFERRED_OPTIONAL_EXTENSION`. The five filing-derived
+features remain valid historical research ideas/contracts, but their mass
+historical materialization and ablation are not P5 V1 completion blockers.
+The historical S2/H2 preregistration remains traceable evidence and is not
+silently executed.
+
+```text
+P5_H2_STATUS = DEFERRED_OPTIONAL_EXTENSION
+```
+
+The existing model and processor authority remains unchanged:
+
+```text
+EVALUATION_MODEL = qlib.contrib.model.gbdt.LGBModel
+FEATURE_SHARED_PROCESSORS = []
+FEATURE_INFER_PROCESSORS = []
+FEATURE_LEARN_PROCESSORS = LABEL_ONLY
+PRIMARY_PREDICTION_METRIC = QLIB_RANK_IC
+H1_DIRECTION = S1_MINUS_S0
+```
+
+The historical research split remains:
+
+```text
+TRAIN = 2015-04-01 through 2019-12-31
+VALIDATION = 2020-01-01 through 2021-12-31
+P5_HISTORICAL_RESEARCH_TEST = 2022-01-03 through 2024-12-31
+```
+
+Qlib owns DatasetH, model fit, prediction, Recorder, signal analysis, and its
+native research/backtest surfaces. skfolio and arch retain their previously
+frozen temporal-robustness and confirmatory-statistics roles. AQ does not own
+a training, evaluation, or multiple-testing engine, and no extra challenger
+is added merely to make multiple testing nontrivial.
+
+P5 V1 exits after one valid, leakage-free, reproducible H1 comparison using
+the frozen Qlib vehicle and historical split. A complete admissible result is
+classified as `INCREMENTAL_VALUE_SUPPORTED`,
+`NO_MEASURABLE_INCREMENTAL_VALUE`, or `DEGRADED`; all three allow phase
+completion. `INCONCLUSIVE` allows completion only for an explicitly accepted
+upstream/data limitation that cannot reasonably be repaired under current
+governance; otherwise it remains an execution blocker.
+
+`P5_COMPLETE` means the preregistered question was answered with admissible
+evidence, not that fundamentals outperformed. A negative result does not
+authorize ratios, restored `ShortTermDebt`, restored filing features,
+quarterly variants, model/hyperparameter changes, or another P5 dataset.
+
+The structured-fundamental H1 evidence must report zero for:
+
+```text
+ACCEPTANCE_TIME_LEAKAGE_COUNT
+REPORT_PERIOD_LEAKAGE_COUNT
+AMENDMENT_BACKWARD_LEAKAGE_COUNT
+CROSS_CIK_CONTAMINATION_COUNT
+EPISODE_MEMBERSHIP_LEAKAGE_COUNT
+CURRENT_TICKER_LEAKAGE_COUNT
+SOURCE_UNAVAILABLE_SUBSTITUTION_COUNT
+FUTURE_FILING_VISIBILITY_COUNT
+```
+
+Filing-feature-only gates are `NOT_APPLICABLE_TO_P5_V1_H1`; checks are not
+manufactured for absent features.
+
+The stopped filing-feature materialization remains diagnostic evidence only:
+
+```text
+ALL_FORM_POPULATION_CENSUS = DIAGNOSTIC_SUPERSEDED_PRE_EVALUATION
+ALL_FORM_POPULATION_CENSUS_STATUS = DIAGNOSTIC_SUPERSEDED_PRE_EVALUATION
+TOTAL_ADMITTED_FILING_ACCESSIONS = 826859
+EVENT_FORM_ACCESSION_COUNT = 62371
+PARTIAL_COMPLETED_ACCESSION_COUNT = 20000
+PARTIAL_COMPLETED_OBSERVATION_COUNT = 100000
+PARTIAL_OUTPUT_CLASSIFICATION = PARTIAL_ABORTED_SUPERSEDED_SCOPE
+P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION = DEFERRED_OPTIONAL_P5_EXTENSION
+FILING_FEATURE_HISTORICAL_MATERIALIZATION_STATUS = DEFERRED_OPTIONAL_P5_EXTENSION
+```
+
+It is not resumed, promoted, deleted, or added to P5 V1 DVC authority by this
+scope freeze.
+
+```text
+PID403_ROLE = HISTORICAL_REFERENCE_ONLY
+PID403_FAILURE_COUNT = 392
+PID403_FAILURES_REQUIRE_REPAIR = NO
+
+P5_V1_UNVERIFIABLE_ACCESSION_COUNT = 5
+P5_V1_UNVERIFIABLE_ACCESSION_POLICY = EXCLUDED
+REPAIR_REQUIRED = NO
+HEURISTIC_SUBSTITUTION = NO
+
+ShortTermDebt = RETIRED_FROM_P5_V1
+SHORTTERMDEBT_RETIREMENT_REASON = UPSTREAM_SEMANTIC_AMBIGUITY
+AQ_PATCH_REQUIRED = NO
+UPSTREAM_PATCH_ALLOWED = NO
 ```
 
 ## Ownership and next authority
 
 ```text
+P5_MINIMAL_UPSTREAM_DATA_LAYER = COMPLETE
+P5_COMPLETE = NO
+
 AQ_FEATURE_ENGINE = NO
 AQ_MODEL_ENGINE = NO
 AQ_ABLATION_ENGINE = NO
@@ -266,15 +355,15 @@ AQ_STATISTICS_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 NEW_PRODUCTION_LOC = 0
 
-HISTORICAL_BUILD_STATUS = RUNNING_WAITING_FOR_COMPLETION
-HISTORICAL_BUILD_INTERFERENCE = NO
+PROJECT_MODEL_TRAINING_COUNT = 0
+PROJECT_PREDICTION_COUNT = 0
+PROJECT_BACKTEST_COUNT = 0
+H1_EXECUTED = NO
+H2_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
 P6_ACTIVE = NO
 
-TEST_RESULT = 18/18 PASS; 17 focused Qlib-adapter unit tests plus 1 pinned-runtime public-API probe
-DIFF_CHECK = PASS
-
-CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
-CURRENT_DEVELOPMENT_NEXT_GATE = WAITING_FOR_P5_HISTORICAL_FUNDAMENTALS_BUILD_TERMINAL_CLOSEOUT
-FINAL_CLASSIFICATION = PASS_EVALUATION_REPRODUCIBILITY_CONTROL_SURFACE_AND_EXIT_COVERAGE_AUTHORITY_FROZEN
+CURRENT_DEVELOPMENT_NEXT = P5_H1_INCREMENTAL_FUNDAMENTAL_EVALUATION_AND_CLOSEOUT_001
+CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_FINAL_V1_SCOPE_FREEZE_MERGE
+FINAL_CLASSIFICATION = PASS_FINAL_P5_V1_H1_AUTHORITY_FROZEN_PRE_EVALUATION
 ```

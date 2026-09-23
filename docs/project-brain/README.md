@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Clean-Slate Upstream Substitution Audit; replacement implementation not yet authorized**
+> Active Development: **P5 — Minimal upstream data layer complete; H1 (S0 vs S1) is the only required P5 V1 evaluation**
 >
-> Audit pointer: [P5 PR #75 rollback and retirement plan](p5-clean-slate-upstream-substitution-rollback-and-retirement-audit-001.md). Historical P5 task reports remain evidence, not current implementation authority.
+> P5 V1 scope: **exact ten PIT fundamentals required; filing-feature historical materialization deferred as an optional extension; P5 is not yet complete.**
 >
-> [P5 SEC bulk/period parity POC](p5-sec-bulk-acceptance-and-upstream-period-parity-poc-001.md): gap closeout fail-closed (five relevant acceptance gaps and native debt-label divergence); no production migration authorized.
+> Development Next: **P5 — H1 Incremental Fundamental Evaluation and Closeout 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -2237,27 +2237,28 @@ engine, model engine, training, prediction, or backtest was introduced. See
 [P5 Filing-Feature Processor-Semantics Authority Resolution 001](p5-filing-feature-processor-semantics-authority-resolution-001.md).
 
 The evaluation-authority closeout makes the remaining boundaries exact.
-LightGBM 4.7.0 now has explicit CPU deterministic mode, forced column-wise
-histograms, all component seeds, eight fixed threads, and fixed row/column
-ordering. Two identical synthetic fits produced the same serialized model
-SHA-256 and byte-identical predictions while preserving the existing
-`colsample_bytree=0.8879` recipe. CONTROL is the ordered 157-column P2
-OHLCV-only `RaggedAlpha158` surface over the authoritative P1/P5
-episode-session universe, not the old static-SP500/VWAP surface. The eleven
-structured fundamentals are not in CONTROL. The earlier eleven-feature scope
-is **SUPERSEDED_PRE_EVALUATION** by the ten-feature P5 V1 scope contraction:
-H1 compares BASE with BASE plus exactly ten fundamentals; H2 adds exactly five
-filing features. S0/S1/S2 have 157/167/172 columns. Neither comparison has
-run. The model, splits, seeds and statistics authorities remain unchanged.
-See [P5 Evaluation Reproducibility and Control-Surface Authority Closeout
+LightGBM 4.7.0 retains explicit CPU deterministic mode, forced column-wise
+histograms, all component seeds, eight fixed threads, fixed row/column order,
+and the existing `colsample_bytree=0.8879` recipe. CONTROL is the ordered
+157-column P2 OHLCV-only `RaggedAlpha158` surface over the authoritative P1/P5
+episode-session universe. The earlier eleven-feature and mandatory S2/H2
+scope is **SUPERSEDED_PRE_EVALUATION**. Final P5 V1 has two surfaces: S0 is
+BASE_157 and S1 is BASE_157 plus exactly ten PIT fundamentals, for the single
+required H1 comparison. The five filing-derived features remain valid
+historical research ideas, but their stopped mass materialization and S2/H2
+are deferred optional extensions rather than P5 V1 completion blockers. No
+project model training, prediction, backtest, H1/H2 execution, or performance
+inspection preceded this contraction. See [P5 Evaluation Reproducibility and
+Control-Surface Authority Closeout
 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md)
-for the unchanged controls and `p5-minimal-upstream-v1.json` for the new scope.
+for the final authority and `p5-minimal-upstream-v1.json` for the data scope.
 
 ```text
 CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
 P5_COMPLETE = NO
 HISTORICAL_BUILD_STATUS = MINIMAL_UPSTREAM_V1_BUILD_COMPLETE
 HISTORICAL_BUILD_INTERFERENCE = NO
+P5_MINIMAL_UPSTREAM_DATA_LAYER = COMPLETE
 MODEL_AUTHORITIES_AUDITED = 4
 LINEAR_OLS_NULL_PRESERVING_COMPATIBLE = NO
 LIGHTGBM_NULL_PRESERVING_COMPATIBLE = YES
@@ -2283,25 +2284,43 @@ CONTROL_FEATURE_FAMILY = P2_RAGGED_ALPHA158_OHLCV_157
 CONTROL_FEATURE_COLUMN_COUNT = 157
 CONTROL_FEATURE_MANIFEST_SHA256 = 7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463
 CONTROL_DATASET_IDENTITY = P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135
-SCIENTIFIC_AUTHORITY_CHANGED = YES_PRE_EVALUATION_SCOPE_CONTRACTION
+SCIENTIFIC_SCOPE_CHANGE = PRE_EVALUATION_SCOPE_CONTRACTION
 PRIOR_11_FEATURE_AUTHORITY = SUPERSEDED_PRE_EVALUATION
 STRUCTURED_FUNDAMENTAL_FEATURE_COUNT = 10
+P5_V1_REQUIRED_FUNDAMENTAL_FEATURE_COUNT = 10
+P5_V1_FEATURES = Revenue; NetIncome; Assets; Liabilities; CommonEquity; NetCashFromOperatingActivities; CashAndCashEquivalents; CurrentAssetsTotal; CurrentLiabilitiesTotal; LongTermDebt
 P5_V1_RETIRED_FEATURE = ShortTermDebt
+SHORTTERMDEBT_STATUS = RETIRED_FROM_P5_V1
+SHORTTERMDEBT_RETIREMENT_REASON = UPSTREAM_SEMANTIC_AMBIGUITY
+UPSTREAM_PATCH_ALLOWED = NO
 STRUCTURED_FUNDAMENTALS_INCLUDED_IN_CONTROL = NO
-FILING_FEATURE_COUNT = 5
+P5_FILING_INTERFACE_CAPABILITY = PROVEN_UPSTREAM_AVAILABLE
+HISTORICAL_FILING_FEATURE_IDEA_COUNT = 5
+P5_V1_REQUIRED_FILING_DERIVED_FEATURE_COUNT = 0
+P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION = DEFERRED_OPTIONAL_P5_EXTENSION
+FILING_FEATURE_HISTORICAL_MATERIALIZATION_STATUS = DEFERRED_OPTIONAL_P5_EXTENSION
 HISTORICAL_FILING_ABLATION_TRIAL_COUNT = 2
-P5_EVALUATION_SURFACE_COUNT = 3
-P5_EVALUATION_SURFACE_S0 = BASE
-P5_EVALUATION_SURFACE_S1 = BASE_PLUS_EXACT_10_FUNDAMENTALS
-P5_EVALUATION_SURFACE_S2 = BASE_PLUS_EXACT_10_FUNDAMENTALS_PLUS_EXACT_5_FILING_FEATURES
-P5_INCREMENTAL_COMPARISON_COUNT = 2
+P5_V1_EVALUATION_SURFACE_COUNT = 2
+P5_EVALUATION_SURFACE_S0 = BASE_157
+P5_EVALUATION_SURFACE_S1 = BASE_157_PLUS_EXACT_10_FUNDAMENTALS
+S0_COLUMN_COUNT = 157
+S1_COLUMN_COUNT = 167
+P5_EVALUATION_SURFACE_S2 = DEFERRED_OPTIONAL_EXTENSION
+P5_V1_REQUIRED_HYPOTHESIS_COUNT = 1
 P5_H1 = S0_VS_S1
-P5_H2 = S1_VS_S2
-DOES_CURRENT_TWO_TRIAL_FILING_ABLATION_ALONE_SATISFY_P5_EXIT_CONDITION = NO
+P5_H2 = DEFERRED_OPTIONAL_EXTENSION
+P5_H2_STATUS = DEFERRED_OPTIONAL_EXTENSION
+H2_EXECUTION_REQUIRED_FOR_P5_V1_EXIT = NO
+MULTIPLE_TESTING_FAMILY_SIZE = 1
+P5_REQUIRED_EVALUATION = H1_S0_VS_S1
 PRIOR_SELECTIVE_ACCESSION_CENSUS = HISTORICAL_SUPERSEDED_PRE_EVALUATION
 P5_V1_ACCESSION_ADMISSION = EXACT_ACCEPTANCE_REQUIRED_ELSE_EXCLUDE
 P5_V1_FROZEN_UNRESOLVED_ACCEPTANCE_EXCLUSIONS = 5
 P5_V1_UNRESOLVED_ACCEPTANCE_ADMITTED = 0
+P5_V1_UNVERIFIABLE_ACCESSION_COUNT = 5
+P5_V1_UNVERIFIABLE_ACCESSION_POLICY = EXCLUDED
+REPAIR_REQUIRED = NO
+HEURISTIC_SUBSTITUTION = NO
 P5_V1_RAW_FINANCIAL_FACT_OWNER = SEC_COMPANYFACTS_BULK
 P5_V1_HISTORICAL_FILING_METADATA_OWNER = SEC_SUBMISSIONS_BULK
 P5_V1_STANDARD_CONCEPT_AND_PERIOD_OWNER = EDGARTOOLS_5_58
@@ -2320,6 +2339,16 @@ P5_V1_EARLY_VISIBILITY_COUNT = 0
 P5_V1_CROSS_CIK_CONTAMINATION_COUNT = 0
 P5_V1_DUPLICATE_FINAL_EVENT_ID_COUNT = 0
 QLIB_FULL_HISTORICAL_HANDOFF_REQUIRED = SATISFIED
+ALL_FORM_POPULATION_CENSUS = DIAGNOSTIC_SUPERSEDED_PRE_EVALUATION
+ALL_FORM_POPULATION_CENSUS_STATUS = DIAGNOSTIC_SUPERSEDED_PRE_EVALUATION
+TOTAL_ADMITTED_FILING_ACCESSIONS = 826859
+EVENT_FORM_ACCESSION_COUNT = 62371
+PARTIAL_COMPLETED_ACCESSION_COUNT = 20000
+PARTIAL_COMPLETED_OBSERVATION_COUNT = 100000
+PARTIAL_OUTPUT_CLASSIFICATION = PARTIAL_ABORTED_SUPERSEDED_SCOPE
+PID403_ROLE = HISTORICAL_REFERENCE_ONLY
+PID403_FAILURE_COUNT = 392
+PID403_FAILURES_REQUIRE_REPAIR = NO
 P5_PRODUCTION_LOC_BASELINE = 2849
 P5_PRODUCTION_LOC_FINAL = 2053
 P5_PRODUCTION_LOC_RETIRED = 796
@@ -2331,10 +2360,16 @@ AQ_TRAINING_ENGINE = NO
 AQ_BACKTEST_ENGINE = NO
 AQ_TERMINAL_CLOSEOUT_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
+PROJECT_MODEL_TRAINING_COUNT = 0
+PROJECT_PREDICTION_COUNT = 0
+PROJECT_BACKTEST_COUNT = 0
+H1_EXECUTED = NO
+H2_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
 P6_ACTIVE = NO
-CURRENT_DEVELOPMENT_NEXT = P5_FILING_FEATURE_HISTORICAL_MATERIALIZATION_001
-CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_MINIMAL_UPSTREAM_MIGRATION_MERGE
+CURRENT_DEVELOPMENT_NEXT = P5_H1_INCREMENTAL_FUNDAMENTAL_EVALUATION_AND_CLOSEOUT_001
+CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_FINAL_V1_SCOPE_FREEZE_MERGE
 ```
 
 ---
