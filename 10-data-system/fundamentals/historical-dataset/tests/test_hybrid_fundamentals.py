@@ -71,12 +71,13 @@ def _event(**overrides: object) -> dict[str, object]:
 
 
 def test_upstream_machine_concept_identity_is_frozen_not_display_label() -> None:
-    assert len(FROZEN_STANDARD_CONCEPTS) == 11
-    assert {"ShortTermDebt", "LongTermDebt"} <= set(FROZEN_STANDARD_CONCEPTS)
+    assert len(FROZEN_STANDARD_CONCEPTS) == 10
+    assert "ShortTermDebt" not in FROZEN_STANDARD_CONCEPTS
+    assert "LongTermDebt" in FROZEN_STANDARD_CONCEPTS
     assert "Short-Term Debt" not in FROZEN_STANDARD_CONCEPTS
-    assert feature_identity("ShortTermDebt", "INSTANT") == "ShortTermDebt__INSTANT"
+    assert feature_identity("LongTermDebt", "INSTANT") == "LongTermDebt__INSTANT"
     with pytest.raises(ValueError, match="unfrozen"):
-        feature_identity("Short-Term Debt", "INSTANT")
+        feature_identity("ShortTermDebt", "INSTANT")
 
 
 def test_upstream_period_result_admission_covers_frozen_classes() -> None:

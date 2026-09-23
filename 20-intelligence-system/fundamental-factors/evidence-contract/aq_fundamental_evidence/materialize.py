@@ -144,4 +144,86 @@ def materialize_edgartools_fact(
     )
 
 
-__all__ = ["materialize_edgartools_fact"]
+def materialize_bulk_entityfact(
+    fact: object,
+    *,
+    cik: str,
+    issuer_name: str,
+    canonical_form: str,
+    canonical_filing_date: str,
+    canonical_report_date: str | None,
+    acceptance_datetime: datetime,
+    source_member: str,
+    source_member_sha256: str,
+    source_zip_sha256: str,
+    edgartools_version: str = "5.58.0",
+) -> FundamentalEvidenceV1:
+    """Project one native EntityFacts observation into the existing PIT contract.
+
+    Submissions supplies exact filing metadata. The CompanyFacts member supplies
+    the raw fact and its immutable source hash; no network or ticker lookup runs.
+    """
+
+    accession = str(_required_attr(fact, "accession"))
+    concept = str(_required_attr(fact, "concept"))
+    if ":" not in concept:
+        raise ValueError("native EntityFacts concept lacks taxonomy namespace")
+    namespace, tag = concept.split(":", 1)
+    period_type = str(_required_attr(fact, "period_type"))
+    period_end = _iso_date(_required_attr(fact, "period_end"), "period_end")
+    period_start = (
+        _iso_date(_required_attr(fact, "period_start"), "period_start")
+        if period_type == "duration" else None
+    )
+    if period_type not in {"instant", "duration"}:
+        raise ValueError("unsupported native EntityFacts period type")
+    report_date = canonical_report_date or period_end
+    dimensions = getattr(fact, "dimensions", None) or None
+    if dimensions is not None and not isinstance(dimensions, dict):
+        raise ValueError("native EntityFacts dimensions are not a mapping")
+    unit = str(_required_attr(fact, "unit"))
+    value = _exact_value(_required_attr(fact, "value"))
+    return FundamentalEvidenceV1.admit(
+        schema_version="FundamentalEvidenceV1",
+        entity={"cik": cik, "issuer_name": issuer_name or None},
+        filing={
+            "accession": accession,
+            "form": canonical_form,
+            "filing_date": canonical_filing_date,
+            "report_period_end": report_date,
+            "acceptance_datetime": acceptance_datetime,
+            "amendment_status": "AMENDMENT" if canonical_form.endswith("/A") else "ORIGINAL",
+            "filing_vintage_role": "AMENDED_FILING" if canonical_form.endswith("/A") else "ORIGINAL_FILING",
+        },
+        availability={"first_available_at": acceptance_datetime},
+        source={
+            "authoritative_source": "SEC_EDGAR",
+            "source_document_identity": f"SEC_COMPANYFACTS_BULK:{source_zip_sha256}:{source_member}",
+            "source_document_url": (
+                "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip#"
+                + source_member
+            ),
+            "source_document_sha256": source_member_sha256,
+        },
+        fact={
+            "taxonomy_namespace": namespace,
+            "concept": tag,
+            "value": value,
+            "unit": unit,
+            "currency": unit if unit in {"USD", "EUR", "GBP", "CAD", "JPY"} else None,
+            "period_start": period_start,
+            "period_end": period_end if period_type == "duration" else None,
+            "instant": period_end if period_type == "instant" else None,
+            "context_identity": getattr(fact, "frame", None),
+            "dimensions": dimensions,
+            "statement_classification": None,
+        },
+        upstream={
+            "parser_provider": "EDGARTOOLS",
+            "edgartools_version": edgartools_version,
+            "upstream_identity": "EDGARTOOLS_5_58_ENTITYFACTS_PARSER",
+        },
+    )
+
+
+__all__ = ["materialize_edgartools_fact", "materialize_bulk_entityfact"]

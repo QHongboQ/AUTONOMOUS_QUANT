@@ -1,6 +1,7 @@
 exchange_calendars==4.13.2
-pandas==2.3.3
-pyarrow==21.0.0
+pandas==3.0.6
+pyarrow==25.0.1
 edgartools==5.58.0
 pydantic==2.13.5
 rfc8785==0.1.4
+pandera==0.22.1

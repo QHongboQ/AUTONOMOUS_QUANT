@@ -672,42 +672,140 @@ stages:
       md5: 9568a446316a91deed7b961bd5d3d628
       size: 1909
       isexec: true
-  p5_hybrid_historical_dataset_pilot_seal:
-    cmd: /home/zhou/AQ_ENVS/dvc-p3/bin/python -B 10-data-system/fundamentals/historical-dataset/seal_pilot.py --manifest ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json --events ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted --projection ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet --provenance ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet --quality ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json --output ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json
+  p5_bulk_fundamentals:
+    cmd: env PYTHONPATH=10-data-system/fundamentals/historical-dataset:20-intelligence-system/fundamental-factors/evidence-contract /home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python -B -m aq_edgartools_full_build bulk --binding ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json --exclusion ../AQ_DATA/P5/upstream-parity-poc-001/owner-closeout.json --output ../AQ_DATA/P5/minimal-upstream-v1-001/bulk
     deps:
-    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/manifests/pilot_manifest.json
+    - path: ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json
       hash: md5
-      md5: 9c5dd6b01f18487cb0c78afa80798ff5
-      size: 1886
+      md5: 47fed0fedb5c24633608273d81e2d811
+      size: 623314
       isexec: true
-    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/reports/quality_report.json
+    - path: ../AQ_DATA/P5/upstream-parity-poc-001/companyfacts.zip
       hash: md5
-      md5: f866ed483a1fd8c305e91b08b61700db
-      size: 2643
+      md5: 45d0b610ecb169b3cef895f833d1abfd
+      size: 1409212553
       isexec: true
-    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/projected_long.parquet
+    - path: ../AQ_DATA/P5/upstream-parity-poc-001/owner-closeout.json
       hash: md5
-      md5: 2dc3db84b1951a49ca5d7600d897ad0e
-      size: 51780
+      md5: c12e5fba76150659cca326857c2865d2
+      size: 3743
       isexec: true
-    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/session-projection/provenance.parquet
+    - path: ../AQ_DATA/P5/upstream-parity-poc-001/submissions.zip
       hash: md5
-      md5: 4535a3fa7ce6e258db064b4679ea23b1
-      size: 42466
+      md5: 1d6be3c376aaccdaebe65b184e6838e6
+      size: 1564656199
       isexec: true
-    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/standardized-events/admitted
+    - path: 10-data-system/fundamentals/historical-dataset/aq_edgartools_full_build/__init__.py
       hash: md5
-      md5: 8265262453f6ee1d05e555cee548602d.dir
-      size: 50144
-      nfiles: 8
-    - path: 10-data-system/fundamentals/historical-dataset/seal_pilot.py
+      md5: fd917361661640058b8db3115d4dc083
+      size: 85
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/aq_edgartools_full_build/__main__.py
       hash: md5
-      md5: b8dea56c7fe81596d85bda9fa58b1d5e
-      size: 2154
+      md5: 9c7fb3d3305493fbd4dabaf896e75cb7
+      size: 707
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/aq_edgartools_full_build/bulk.py
+      hash: md5
+      md5: 3b470d0ec8b033d7152b6a6a9c164319
+      size: 13525
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/aq_hybrid_fundamentals/__init__.py
+      hash: md5
+      md5: 204f60d342e9b865b28ecf31cacc5344
+      size: 10063
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/p5-minimal-upstream-v1.json
+      hash: md5
+      md5: db766c67143176800207c3fe0febb3c9
+      size: 3065
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/requirements.txt
+      hash: md5
+      md5: 266361be668e2d9f73cdde9e9c23cbd2
+      size: 127
+      isexec: true
+    - path: 20-intelligence-system/fundamental-factors/evidence-contract/aq_fundamental_evidence/__init__.py
+      hash: md5
+      md5: b1c0a5a8be5c79cdbdf8291d62e85ecb
+      size: 7470
+      isexec: true
+    - path: 20-intelligence-system/fundamental-factors/evidence-contract/aq_fundamental_evidence/materialize.py
+      hash: md5
+      md5: 6614cb4e12755ce079fc124bddf5cc02
+      size: 9560
       isexec: true
     outs:
-    - path: ../AQ_DATA/P5/hybrid-dataset-pilot-semantic-policy-correction-001/dvc/pilot-seal.json
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/bulk
       hash: md5
-      md5: c03279d603e8a173a673750080ca0339
-      size: 3412
+      md5: 9cfbbd704e994129fc37cb3d70675e19.dir
+      size: 119221923
+      nfiles: 705
+  p5_pit_projection:
+    cmd: env PYTHONPATH=10-data-system/fundamentals/historical-dataset /home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python -B -m aq_p5_projection --bulk ../AQ_DATA/P5/minimal-upstream-v1-001/bulk --episodes ../AQ_DATA/P1/pit/reconciled/v1/instrument_episodes.jsonl --bindings ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json --output ../AQ_DATA/P5/minimal-upstream-v1-001/projection
+    deps:
+    - path: ../AQ_DATA/P1/pit/reconciled/v1/instrument_episodes.jsonl
+      hash: md5
+      md5: 027b60cefa6df00650739580ac103a2c
+      size: 615283
       isexec: true
+    - path: ../AQ_DATA/P5/identity-accounting-final-closeout-001/final_binding_ledger.json
+      hash: md5
+      md5: 47fed0fedb5c24633608273d81e2d811
+      size: 623314
+      isexec: true
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/bulk
+      hash: md5
+      md5: 9cfbbd704e994129fc37cb3d70675e19.dir
+      size: 119221923
+      nfiles: 705
+    - path: 10-data-system/fundamentals/historical-dataset/aq_hybrid_fundamentals/__init__.py
+      hash: md5
+      md5: 204f60d342e9b865b28ecf31cacc5344
+      size: 10063
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/aq_p5_projection/__init__.py
+      hash: md5
+      md5: b0d6ceb46082778966985a38aad0b4ca
+      size: 8661
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/aq_p5_projection/__main__.py
+      hash: md5
+      md5: b20d0b2c6bdeae27e20e5a1ef2958c5a
+      size: 793
+      isexec: true
+    outs:
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/projection
+      hash: md5
+      md5: 57fb0bbbca15a4e0a51f13aaca84a36f.dir
+      size: 47160481
+      nfiles: 706
+  p5_qlib_handoff:
+    cmd: env PYTHONPATH=10-data-system/fundamentals/historical-dataset /home/zhou/miniforge3/envs/rdagent4qlib/bin/python -B -m aq_p5_qlib_handoff --projection ../AQ_DATA/P5/minimal-upstream-v1-001/projection --selection 10-data-system/fundamentals/historical-dataset/p5-v1-qlib-period-selection.json --output ../AQ_DATA/P5/minimal-upstream-v1-001/qlib
+    deps:
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/projection
+      hash: md5
+      md5: 57fb0bbbca15a4e0a51f13aaca84a36f.dir
+      size: 47160481
+      nfiles: 706
+    - path: 10-data-system/fundamentals/historical-dataset/aq_p5_qlib_handoff/__init__.py
+      hash: md5
+      md5: 97b7c26098008358afbca33a62b7dabf
+      size: 5893
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/aq_p5_qlib_handoff/__main__.py
+      hash: md5
+      md5: e7063316cd8da71527cd7940d05e0ee1
+      size: 687
+      isexec: true
+    - path: 10-data-system/fundamentals/historical-dataset/p5-v1-qlib-period-selection.json
+      hash: md5
+      md5: c73c612705bd61a2f75bebff8cfe142b
+      size: 881
+      isexec: true
+    outs:
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/qlib
+      hash: md5
+      md5: cc956bcfbadcdeb7d51a8e836eb0a02e.dir
+      size: 6741337
+      nfiles: 2
