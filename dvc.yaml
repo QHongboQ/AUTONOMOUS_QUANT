@@ -369,11 +369,12 @@ stages:
       bash -lc '
       set -euo pipefail;
       ROOT="$PWD";
-      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-002-authority-corrected;
-      PYTHONDONTWRITEBYTECODE=1
-      /home/zhou/miniforge3/envs/rdagent4qlib/bin/python -B
-      "$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py" qlib
-      --repo "$ROOT"
+      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-003-process-isolated;
+      PY=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python;
+      SCRIPT="$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py";
+      SCRIPT_WIN="$(wslpath -w "$SCRIPT")";
+      REPO_WIN="$(wslpath -w "$ROOT")";
+      COMMON_ARGS="--repo $ROOT
       --provider /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
       --provider-report /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
       --calendar-runtime /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
@@ -381,19 +382,18 @@ stages:
       --projection-grid /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
       --fundamentals /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
       --p5-manifest /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
-      --qlib-source /home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src
-      --output "$OUT";
-      powershell.exe -NoProfile -Command
-      "& \"D:\AQ_ENVS\skfolio\Scripts\python.exe\" -B
-      (Join-Path (Get-Location) \"30-research-system\qlib\p5-h1-evaluation\evaluate_h1.py\") skfolio
-      --repo (Get-Location)
-      --daily D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\attempt-002-authority-corrected\daily-net-returns.csv
-      --output D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\attempt-002-authority-corrected";
-      powershell.exe -NoProfile -Command
-      "& \"D:\AQ_ENVS\arch\Scripts\python.exe\" -B
-      (Join-Path (Get-Location) \"30-research-system\qlib\p5-h1-evaluation\evaluate_h1.py\") arch
-      --daily D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\attempt-002-authority-corrected\daily-net-returns.csv
-      --output D:\AQ_DATA\P5\h1-incremental-fundamental-evaluation-and-closeout-001\attempt-002-authority-corrected"'
+      --qlib-source /home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src";
+      PYTHONDONTWRITEBYTECODE=1 "$PY" -B "$SCRIPT" preflight $COMMON_ARGS --output "$OUT";
+      /usr/bin/time -v -o "$OUT/s0-resource.txt" "$PY" -B "$SCRIPT" fit $COMMON_ARGS --surface-id S0 --output "$OUT";
+      /usr/bin/time -v -o "$OUT/s1-resource.txt" "$PY" -B "$SCRIPT" fit $COMMON_ARGS --surface-id S1 --output "$OUT";
+      "$PY" -B "$SCRIPT" compose $COMMON_ARGS --output "$OUT";
+      /mnt/d/AQ_ENVS/skfolio/Scripts/python.exe -B "$SCRIPT_WIN" skfolio
+      --repo "$REPO_WIN"
+      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-003-process-isolated/daily-net-returns.csv
+      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-003-process-isolated;
+      /mnt/d/AQ_ENVS/arch/Scripts/python.exe -B "$SCRIPT_WIN" arch
+      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-003-process-isolated/daily-net-returns.csv
+      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-003-process-isolated'
     deps:
       - 30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py
       - 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py

@@ -227,12 +227,12 @@ def train_surface(surface_id: str, surface_path: Path, columns: list[str], outpu
 
     dataset = make_dataset(surface_path, columns)
     model = LGBModel(**MODEL_CONFIG)
-    with R.start(experiment_name="p5_h1_incremental_fundamentals_attempt_002",
+    with R.start(experiment_name="p5_h1_incremental_fundamentals_attempt_003",
                  recorder_name=surface_id):
         recorder = R.get_recorder()
         recorder.log_params(
-            task="AUTONOMOUS_QUANT_P5_H1_PR82_AUTHORITY_COMPLIANCE_CORRECTION_AND_VALID_RERUN_001",
-            attempt="ATTEMPT_002_AUTHORITY_CORRECTED", surface=surface_id,
+            task="AUTONOMOUS_QUANT_P5_H1_PR82_RESOURCE_SAFE_PROCESS_ISOLATED_ATTEMPT_003_001",
+            attempt="ATTEMPT_003_PROCESS_ISOLATED_AUTHORITY_CORRECTED", surface=surface_id,
             processor_chain="DropnaLabel(label)->CSZScoreNorm(label)",
             model_config_sha256=canonical_sha256(MODEL_CONFIG), column_count=len(columns),
             train_range="/".join(TRAIN), valid_range="/".join(VALID), test_range="/".join(TEST),
@@ -242,7 +242,7 @@ def train_surface(surface_id: str, surface_path: Path, columns: list[str], outpu
         SigAnaRecord(recorder=recorder, ana_long_short=False, ann_scaler=252).generate()
         recorder_id = recorder.id
     recorded = R.get_recorder(recorder_id=recorder_id,
-                              experiment_name="p5_h1_incremental_fundamentals_attempt_002")
+                              experiment_name="p5_h1_incremental_fundamentals_attempt_003")
     prediction = recorded.load_object("pred.pkl")
     rank_ic = recorded.load_object("sig_analysis/ric.pkl")
     prediction = prediction.iloc[:, 0] if isinstance(prediction, pd.DataFrame) else prediction
@@ -273,8 +273,8 @@ def p2_prediction(prediction: pd.Series, crosswalk: pd.DataFrame) -> pd.Series:
 
 def classify_h1(attempt: str, s0_rank_ic: float, s1_rank_ic: float,
                 skfolio: dict | None = None, arch: dict | None = None) -> str:
-    if attempt != "ATTEMPT_002_AUTHORITY_CORRECTED":
-        raise ValueError("attempt-001 is not eligible for final H1 classification")
+    if attempt != "ATTEMPT_003_PROCESS_ISOLATED_AUTHORITY_CORRECTED":
+        raise ValueError("attempt-001/002 is not eligible for final H1 classification")
     if not np.isfinite([s0_rank_ic, s1_rank_ic]).all():
         return "INCONCLUSIVE"
     if skfolio is None or arch is None:
@@ -294,19 +294,11 @@ def classify_h1(attempt: str, s0_rank_ic: float, s1_rank_ic: float,
         else "NO_MEASURABLE_INCREMENTAL_VALUE"
 
 
-def qlib_mode(args: argparse.Namespace) -> None:
-    output: Path = args.output
-    if output.exists():
-        raise FileExistsError(output)
-    output.mkdir(parents=True)
-    os.chdir(output)
+def init_runtime(args: argparse.Namespace, output: Path):
     sys.path.insert(0, str(args.repo / "30-research-system" / "qlib" / "dataset-adapter"))
-
     import lightgbm
-    import mlflow
     import qlib
     from aq_qlib_handoff.qlib_config import RaggedAlpha158, current_close_filter
-    from qlib.data.dataset.handler import DataHandlerLP
 
     if qlib.__version__ != QLIB_VERSION or lightgbm.__version__ != LIGHTGBM_VERSION:
         raise RuntimeError("Qlib/LightGBM runtime identity mismatch")
@@ -315,6 +307,34 @@ def qlib_mode(args: argparse.Namespace) -> None:
     ).strip()
     if source_sha != QLIB_SOURCE_SHA or sha256(args.provider_report) != P2_REPORT_SHA256:
         raise RuntimeError("Qlib/P2 authority mismatch")
+    current = (args.calendar_runtime / "calendars" / "day.txt").read_text().splitlines()
+    future = (args.calendar_runtime / "calendars" / "day_future.txt").read_text().splitlines()
+    if future[:-1] != current or len(future) != len(current) + 1:
+        raise RuntimeError("frozen P2 calendar runtime identity mismatch")
+    qlib.init(
+        provider_uri=str(args.provider), region="us",
+        calendar_provider={"class": "LocalCalendarProvider", "module_path": "qlib.data.data",
+                           "kwargs": {"backend": {"class": "FileCalendarStorage",
+                                                   "module_path": "qlib.data.storage.file_storage",
+                                                   "kwargs": {"provider_uri": str(args.calendar_runtime)}}}},
+        expression_cache=None, dataset_cache=None,
+        exp_manager={"class": "MLflowExpManager", "module_path": "qlib.workflow.expm",
+                     "kwargs": {"uri": "sqlite:///" + str(output / "mlflow.db"),
+                                "default_exp_name": "Experiment"}},
+    )
+    return qlib, lightgbm, RaggedAlpha158, current_close_filter, source_sha, current, future
+
+
+def preflight_mode(args: argparse.Namespace) -> None:
+    output: Path = args.output
+    if output.exists():
+        raise FileExistsError(output)
+    output.mkdir(parents=True)
+    os.chdir(output)
+    qlib, lightgbm, RaggedAlpha158, current_close_filter, source_sha, current, future = \
+        init_runtime(args, output)
+    from qlib.data.dataset.handler import DataHandlerLP
+
     p5_manifest = json.loads(args.p5_manifest.read_text(encoding="utf-8"))
     if (tuple(p5_manifest["features"]) != P5_FEATURES
             or p5_manifest["session_rows"] != 1_893_759
@@ -329,24 +349,6 @@ def qlib_mode(args: argparse.Namespace) -> None:
         raise RuntimeError("P5 projection accounting mismatch")
     crosswalk = build_crosswalk(projection, args.episode_map)
     crosswalk.to_parquet(output / "episode-crosswalk.parquet", index=False)
-
-    calendar_day = args.calendar_runtime / "calendars" / "day.txt"
-    calendar_future = args.calendar_runtime / "calendars" / "day_future.txt"
-    current_sessions = calendar_day.read_text(encoding="utf-8").splitlines()
-    future_sessions = calendar_future.read_text(encoding="utf-8").splitlines()
-    if future_sessions[:-1] != current_sessions or len(future_sessions) != len(current_sessions) + 1:
-        raise RuntimeError("frozen P2 calendar runtime identity mismatch")
-    qlib.init(
-        provider_uri=str(args.provider), region="us",
-        calendar_provider={"class": "LocalCalendarProvider", "module_path": "qlib.data.data",
-                           "kwargs": {"backend": {"class": "FileCalendarStorage",
-                                                   "module_path": "qlib.data.storage.file_storage",
-                                                   "kwargs": {"provider_uri": str(args.calendar_runtime)}}}},
-        expression_cache=None, dataset_cache=None,
-        exp_manager={"class": "MLflowExpManager", "module_path": "qlib.workflow.expm",
-                     "kwargs": {"uri": "sqlite:///" + str(output / "mlflow.db"),
-                                "default_exp_name": "Experiment"}},
-    )
     handler = RaggedAlpha158(
         instruments="p2_pit", start_time=TRAIN[0], end_time=TEST[1],
         fit_start_time=TRAIN[0], fit_end_time=TRAIN[1], infer_processors=[],
@@ -355,19 +357,15 @@ def qlib_mode(args: argparse.Namespace) -> None:
     raw = handler.fetch(slice(TRAIN[0], TEST[1]), col_set=["feature", "label"],
                         data_key=DataHandlerLP.DK_I)
     raw, mapped_rows = project_index(raw, crosswalk)
-    features = raw["feature"]
-    label = raw["label"].iloc[:, 0].rename("__label__")
+    features, label = raw["feature"], raw["label"].iloc[:, 0].rename("__label__")
     if list(features.columns) != control_columns or len(features) != 1_196_594:
         raise RuntimeError("materialized CONTROL feature/row authority mismatch")
     fundamentals_source = pd.read_parquet(args.fundamentals)
-    intersection = features.index.intersection(fundamentals_source.index)
-    if len(intersection) != len(features):
+    if len(features.index.intersection(fundamentals_source.index)) != len(features):
         raise RuntimeError("CONTROL/fundamental index intersection is incomplete")
     fundamentals = fundamentals_source.reindex(features.index)
-    if list(fundamentals.columns) != list(P5_FEATURES):
-        raise RuntimeError("P5 fundamentals cannot be aligned to CONTROL rows")
     non_null_cells = int(fundamentals.notna().sum().sum())
-    if non_null_cells != 10_130_596:
+    if list(fundamentals.columns) != list(P5_FEATURES) or non_null_cells != 10_130_596:
         raise RuntimeError("P5 fundamental content authority mismatch")
     surface = pd.concat((features, fundamentals, label), axis=1)
     if surface.index.has_duplicates or not surface.index.is_monotonic_increasing:
@@ -377,52 +375,88 @@ def qlib_mode(args: argparse.Namespace) -> None:
     mapped_rows.to_parquet(output / "row-identity.parquet", index=False, compression="zstd")
     del raw, features, fundamentals, fundamentals_source, surface
     gc.collect()
+    write_json(output / "prefit-processor-gate.json",
+               learning_surface_gate(surface_path, control_columns))
+    write_json(output / "preflight-report.json", {
+        "schema": "AQ_P5_H1_PREFLIGHT_V3", "attempt": "ATTEMPT_003_PROCESS_ISOLATED",
+        "qlib_version": qlib.__version__, "lightgbm_version": lightgbm.__version__,
+        "qlib_source_sha": source_sha, "control_feature_manifest_sha256": control_hash,
+        "surface_sha256": sha256(surface_path), "row_count": 1_196_594,
+        "s0_column_count": 157, "s1_column_count": 167,
+        "fundamental_non_null_cell_count": non_null_cells,
+        "control_fundamental_index_intersection_fraction": 1.0,
+        "calendar": {"last_data_session": current[-1], "future_session": future[-1]},
+    })
 
-    prefit = learning_surface_gate(surface_path, control_columns)
-    write_json(output / "prefit-processor-gate.json", prefit)
-    s0 = train_surface("S0", surface_path, control_columns, output)
-    s1 = train_surface("S1", surface_path, control_columns + list(P5_FEATURES), output)
+
+def fit_mode(args: argparse.Namespace) -> None:
+    output: Path = args.output
+    if args.surface_id is None:
+        raise RuntimeError("fit mode requires one frozen surface ID")
+    if not (output / "preflight-report.json").is_file():
+        raise RuntimeError("attempt-003 preflight is incomplete")
+    os.chdir(output)
+    _, _, RaggedAlpha158, _, _, _, _ = init_runtime(args, output)
+    control_columns, control_hash = control_manifest(RaggedAlpha158)
+    preflight = json.loads((output / "preflight-report.json").read_text(encoding="utf-8"))
+    if control_hash != preflight["control_feature_manifest_sha256"]:
+        raise RuntimeError("attempt-003 preflight identity mismatch")
+    columns = control_columns if args.surface_id == "S0" else control_columns + list(P5_FEATURES)
+    result = train_surface(args.surface_id, output / "h1-surfaces.parquet", columns, output)
+    write_json(output / f"{args.surface_id.lower()}-fit-report.json",
+               {key: value for key, value in result.items() if key != "prediction"})
+
+
+def compose_mode(args: argparse.Namespace) -> None:
+    import mlflow
+
+    output: Path = args.output
+    os.chdir(output)
+    qlib, lightgbm, RaggedAlpha158, _, source_sha, _, _ = init_runtime(args, output)
+    control_columns, control_hash = control_manifest(RaggedAlpha158)
+    preflight = json.loads((output / "preflight-report.json").read_text(encoding="utf-8"))
+    if control_hash != preflight["control_feature_manifest_sha256"]:
+        raise RuntimeError("attempt-003 preflight identity mismatch")
+    results = {surface: json.loads((output / f"{surface.lower()}-fit-report.json").read_text())
+               for surface in ("S0", "S1")}
     report = {
-        "schema": "AQ_P5_H1_QLIB_EVIDENCE_V2", "attempt": "ATTEMPT_002_AUTHORITY_CORRECTED",
+        "schema": "AQ_P5_H1_QLIB_EVIDENCE_V3", "attempt": "ATTEMPT_003_PROCESS_ISOLATED",
         "attempt_001_classification": "INVALID_IMPLEMENTATION_DEVIATION",
-        "rerun_reason": "RESTORE_PREEXISTING_FROZEN_PROCESSOR_AUTHORITY",
+        "attempt_002_classification": "AUTHORITY_CORRECTED_RESOURCE_OOM",
         "qlib_version": qlib.__version__, "qlib_source_sha": source_sha,
         "lightgbm_version": lightgbm.__version__, "mlflow_version": mlflow.__version__,
         "model": "qlib.contrib.model.gbdt.LGBModel", "model_config": MODEL_CONFIG,
         "model_config_sha256": canonical_sha256(MODEL_CONFIG), "train_range": TRAIN,
-        "valid_range": VALID, "test_range": TEST,
-        "calendar": {"last_data_session": current_sessions[-1],
-                     "future_session": future_sessions[-1]},
+        "valid_range": VALID, "test_range": TEST, "calendar": preflight["calendar"],
         "processor_gate_sha256": sha256(output / "prefit-processor-gate.json"),
-        "fundamental_non_null_cell_count": non_null_cells,
+        "fundamental_non_null_cell_count": preflight["fundamental_non_null_cell_count"],
         "control_fundamental_index_intersection_fraction": 1.0,
-        "s0": {key: value for key, value in s0.items() if key != "prediction"},
-        "s1": {key: value for key, value in s1.items() if key != "prediction"},
-        "rank_ic_delta": s1["rank_ic"] - s0["rank_ic"],
+        "s0": results["S0"], "s1": results["S1"],
+        "rank_ic_delta": results["S1"]["rank_ic"] - results["S0"]["rank_ic"],
         "p2_v2_sealed_oos_accessed": False, "sec_network_request_count": 0,
         "h2_executed": H2_EXECUTED,
     }
-    if not np.isfinite([s0["rank_ic"], s1["rank_ic"]]).all():
+    if not np.isfinite([results["S0"]["rank_ic"], results["S1"]["rank_ic"]]).all():
         report["status"] = "INCONCLUSIVE_UNDEFINED_PRIMARY_METRIC"
         write_json(output / "qlib-report.json", report)
         write_json(output / "classification-report.json", {
-            "attempt_001": "INVALID_IMPLEMENTATION_DEVIATION",
-            "attempt_002": classify_h1("ATTEMPT_002_AUTHORITY_CORRECTED",
-                                       s0["rank_ic"], s1["rank_ic"]),
+            "attempt_003": classify_h1("ATTEMPT_003_PROCESS_ISOLATED_AUTHORITY_CORRECTED",
+                                       results["S0"]["rank_ic"], results["S1"]["rank_ic"]),
         })
-        raise RuntimeError("attempt-002 primary QLIB_RANK_IC is undefined")
-
+        raise RuntimeError("attempt-003 primary QLIB_RANK_IC is undefined")
+    crosswalk = pd.read_parquet(output / "episode-crosswalk.parquet")
     reference = load_reference(
         args.repo / "40-certification-system" / "historical-rehearsal" / "qlib_rehearsal.py",
         "aq_existing_qlib_rehearsal",
     )
     (output / "portfolio").mkdir()
-    portfolio = {}
-    returns = []
-    for surface_id, result in (("S0", s0), ("S1", s1)):
-        execution = p2_prediction(result.pop("prediction"), crosswalk)
-        evidence = reference.run_backtest(surface_id, execution, 30, 3, "BASE",
-                                          (0.0005, 0.0015), output)
+    portfolio, returns = {}, []
+    for surface_id in ("S0", "S1"):
+        prediction = pd.read_pickle(output / f"{surface_id.lower()}-prediction.pkl")
+        evidence = reference.run_backtest(
+            surface_id, p2_prediction(prediction, crosswalk), 30, 3, "BASE",
+            (0.0005, 0.0015), output,
+        )
         returns.append(evidence.pop("net").rename(surface_id))
         portfolio[surface_id] = evidence
     daily = pd.concat(returns, axis=1).sort_index()
@@ -432,9 +466,10 @@ def qlib_mode(args: argparse.Namespace) -> None:
     daily_path = output / "daily-net-returns.csv"
     daily.to_csv(daily_path, lineterminator="\n")
     write_json(output / "surface-manifest.json", {
-        "schema": "AQ_P5_H1_SURFACES_V2", "attempt": "ATTEMPT_002_AUTHORITY_CORRECTED",
+        "schema": "AQ_P5_H1_SURFACES_V3", "attempt": "ATTEMPT_003_PROCESS_ISOLATED",
         "control_dataset_identity": CONTROL_DATASET_IDENTITY,
-        "control_feature_manifest_sha256": control_hash, "surface_sha256": sha256(surface_path),
+        "control_feature_manifest_sha256": control_hash,
+        "surface_sha256": preflight["surface_sha256"],
         "row_identity_sha256": sha256(output / "row-identity.parquet"),
         "crosswalk_sha256": sha256(output / "episode-crosswalk.parquet"),
         "row_count": 1_196_594, "s0_column_count": 157, "s1_column_count": 167,
@@ -518,19 +553,21 @@ def arch_mode(args: argparse.Namespace) -> None:
     qlib_report = json.loads((args.output / "qlib-report.json").read_text(encoding="utf-8"))
     skfolio_report = json.loads((args.output / "skfolio-report.json").read_text(encoding="utf-8"))
     classification = classify_h1(
-        "ATTEMPT_002_AUTHORITY_CORRECTED", qlib_report["s0"]["rank_ic"],
+        "ATTEMPT_003_PROCESS_ISOLATED_AUTHORITY_CORRECTED", qlib_report["s0"]["rank_ic"],
         qlib_report["s1"]["rank_ic"], skfolio_report, report,
     )
     write_json(args.output / "classification-report.json", {
         "attempt_001": "INVALID_IMPLEMENTATION_DEVIATION",
-        "attempt_002": "AUTHORITY_CORRECTED_RERUN", "h1_result_classification": classification,
+        "attempt_002": "AUTHORITY_CORRECTED_RESOURCE_OOM",
+        "attempt_003": "PROCESS_ISOLATED_AUTHORITY_CORRECTED",
+        "h1_result_classification": classification,
         "p5_complete": classification != "INCONCLUSIVE",
     })
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser()
-    result.add_argument("mode", choices=("qlib", "skfolio", "arch"))
+    result.add_argument("mode", choices=("preflight", "fit", "compose", "skfolio", "arch"))
     result.add_argument("--output", required=True, type=Path)
     result.add_argument("--daily", type=Path)
     result.add_argument("--repo", type=Path)
@@ -542,13 +579,18 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--fundamentals", type=Path)
     result.add_argument("--p5-manifest", type=Path)
     result.add_argument("--qlib-source", type=Path)
+    result.add_argument("--surface-id", choices=("S0", "S1"))
     return result
 
 
 def main() -> None:
     args = parser().parse_args()
-    if args.mode == "qlib":
-        qlib_mode(args)
+    if args.mode == "preflight":
+        preflight_mode(args)
+    elif args.mode == "fit":
+        fit_mode(args)
+    elif args.mode == "compose":
+        compose_mode(args)
     elif args.mode == "skfolio":
         skfolio_mode(args)
     else:
