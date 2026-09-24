@@ -371,9 +371,8 @@ stages:
       ROOT="$PWD";
       OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end;
       PY=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python;
+      STATS_PY=/home/zhou/AQ_ENVS/p5-h1-statistics/bin/python;
       SCRIPT="$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py";
-      SCRIPT_WIN="$(wslpath -w "$SCRIPT")";
-      REPO_WIN="$(wslpath -w "$ROOT")";
       COMMON_ARGS="--repo $ROOT
       --provider /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
       --provider-report /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
@@ -387,13 +386,10 @@ stages:
       /usr/bin/time -v -o "$OUT/s0-resource.txt" "$PY" -B "$SCRIPT" fit $COMMON_ARGS --surface-id S0 --output "$OUT";
       /usr/bin/time -v -o "$OUT/s1-resource.txt" "$PY" -B "$SCRIPT" fit $COMMON_ARGS --surface-id S1 --output "$OUT";
       "$PY" -B "$SCRIPT" compose $COMMON_ARGS --output "$OUT";
-      /mnt/d/AQ_ENVS/skfolio/Scripts/python.exe -B "$SCRIPT_WIN" skfolio
-      --repo "$REPO_WIN"
-      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end/daily-net-returns.csv
-      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end;
-      /mnt/d/AQ_ENVS/arch/Scripts/python.exe -B "$SCRIPT_WIN" arch
-      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end/daily-net-returns.csv
-      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end'
+      "$STATS_PY" -B "$SCRIPT" skfolio
+      --repo "$ROOT" --daily "$OUT/daily-net-returns.csv" --output "$OUT";
+      "$STATS_PY" -B "$SCRIPT" arch
+      --daily "$OUT/daily-net-returns.csv" --output "$OUT"'
     deps:
       - 30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py
       - 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
