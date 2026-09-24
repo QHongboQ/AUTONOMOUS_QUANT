@@ -342,28 +342,285 @@ AQ_PATCH_REQUIRED = NO
 UPSTREAM_PATCH_ALLOWED = NO
 ```
 
+## H1 authority correction and attempt-002 boundary
+
+Attempt-001 did not match the processor contract frozen before execution. It
+used `DropnaLabel` but omitted `CSZScoreNorm(fields_group=label)`. Its outputs
+remain immutable diagnostic evidence, but its undefined Rank IC and identical
+return paths are ineligible for scientific classification.
+
+```text
+ATTEMPT_001_CLASSIFICATION = INVALID_IMPLEMENTATION_DEVIATION
+ATTEMPT_001_PROCESSOR_AUTHORITY_MATCH = NO
+ATTEMPT_001_MISSING_FROZEN_PROCESSOR = CSZScoreNorm(fields_group=label)
+RERUN_REASON = RESTORE_PREEXISTING_FROZEN_PROCESSOR_AUTHORITY
+RERUN_IS_PROTOCOL_CHANGE = NO
+```
+
+The corrected implementation uses `StaticDataLoader` and `DataHandlerLP` with
+empty shared/infer processors and the exact label-only chain
+`DropnaLabel -> CSZScoreNorm(label)`. Before either fit, Qlib public `DK_L` and
+`DK_R` surfaces proved identical transformed labels, non-degenerate train and
+validation labels, unchanged feature-NaN locations, and preserved valid zero
+values for both S0 and S1.
+
+```text
+DVC_H1_STAGE = p5_h1_incremental_fundamental_evaluation
+DVC_H1_REPRO_STATUS = FAIL_RESOURCE_OOM
+S0_ROW_COUNT = 1196594
+S1_ROW_COUNT = 1196594
+S0_S1_ROW_IDENTITY_MATCH = YES
+S0_COLUMN_COUNT = 157
+S1_COLUMN_COUNT = 167
+S0_LEARN_PROCESSOR_IDENTITY = DropnaLabel->CSZScoreNorm(label)
+S1_LEARN_PROCESSOR_IDENTITY = DropnaLabel->CSZScoreNorm(label)
+TRAIN_TRANSFORMED_LABEL_NON_NULL_COUNT = 572819
+TRAIN_TRANSFORMED_LABEL_UNIQUE_COUNT = 567440
+VALID_TRANSFORMED_LABEL_NON_NULL_COUNT = 247795
+VALID_TRANSFORMED_LABEL_UNIQUE_COUNT = 246739
+FEATURE_NAN_POSITIONS_PRESERVED = YES
+VALID_FEATURE_ZERO_PRESERVED = YES
+```
+
+Attempt-002 ran from a clean separate output child. S0 fit exactly once and
+completed with finite Rank IC. The S1 recorder then started and S1 fit was
+invoked, but before completion the WSL kernel killed the Python process for global OOM
+(`anon-rss=7,543,644 KiB`, `total-vm=16,287,820 KiB`). DVC surfaced exit code
+15. No traceback, S1 prediction, S1 Rank IC, backtest, WalkForward, CPCV, SPA,
+or RealityCheck output exists. Per the frozen no-retry rule, S0 is not reused
+and no checkpoint/resume framework is introduced.
+
+```text
+ATTEMPT_002_CLASSIFICATION = INCONCLUSIVE_RESOURCE_OOM
+S0_MODEL_FIT_COUNT = 1
+S1_MODEL_FIT_COUNT = 1_INCOMPLETE_RESOURCE_OOM
+S0_TEST_RANK_IC = 0.0021911029598144574
+S1_TEST_RANK_IC = NOT_AVAILABLE_RESOURCE_OOM_BEFORE_FIT_COMPLETION
+H1_TEST_RANK_IC_DELTA = NOT_AVAILABLE
+WALKFORWARD_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+CPCV_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+SPA_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+SPA_PVALUE = NOT_AVAILABLE
+REALITYCHECK_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+REALITYCHECK_PVALUE = NOT_AVAILABLE
+H1_RESULT_CLASSIFICATION = INCONCLUSIVE
+```
+
+## Attempt-003 process-isolated boundary
+
+After an owner-authorized WSL allocation increase, the resource gate passed
+with approximately 10 GiB RAM and 4 GiB swap. Attempt-003 used independent
+preflight, S0-fit, S1-fit, and composition processes under the one existing H1
+DVC stage. Both fresh fits exited successfully, stayed below the new memory
+boundary, and produced the complete finite primary metric pair. The two Qlib
+backtests also completed.
+
+The same single DVC execution then failed before the skfolio process began. The
+WSL-to-Windows PowerShell invocation preserved escaped quote characters around
+the virtual environment's base-interpreter path, so the Windows launcher
+reported that the quoted Python path did not exist. This is a bounded runtime
+entrypoint/orchestration failure, not a model, data, upstream semantics, or
+resource failure. Per the frozen rule, no partial continuation or retry was
+performed. The DVC command now uses the virtual-environment executables
+directly through WSL interoperability; both direct entrypoints passed static
+`--help` validation, but no further scientific execution is authorized here.
+
+```text
+RESOURCE_HEADROOM_STATUS = SUFFICIENT_FOR_PROCESS_ISOLATED_ATTEMPT
+PROCESS_ISOLATION_IS_PROTOCOL_CHANGE = NO
+ATTEMPT_003_AUTHORITY = PROCESS_ISOLATED_AUTHORITY_CORRECTED
+ATTEMPT_003_EXECUTION_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+ATTEMPT_003_S0_MAX_RSS_KIB = 6180492
+ATTEMPT_003_S1_MAX_RSS_KIB = 7509472
+ATTEMPT_003_S0_MODEL_FIT_COUNT = 1
+ATTEMPT_003_S1_MODEL_FIT_COUNT = 1
+ATTEMPT_003_S0_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_003_S1_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_003_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_003_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_003_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_003_QLIB_BACKTEST_STATUS = PASS
+WALKFORWARD_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+CPCV_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+SPA_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+REALITYCHECK_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+H1_RESULT_CLASSIFICATION = INCONCLUSIVE
+DVC_H1_REPRO_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+```
+
+## Attempt-004 final clean boundary
+
+Attempt-004 was the one owner-authorized final clean execution. It used a new
+root and regenerated the preflight surface; no prediction, return, cross-
+validation result, or statistical evidence from attempts 001-003 was used.
+The approximately 10 GiB WSL RAM and 4 GiB swap resource gate passed. Both
+fresh fits and both frozen Qlib backtests completed, with the two fit processes
+exiting normally below the available memory boundary.
+
+The pre-execution Windows-environment version/help probes passed outside the
+real stage invocation, but did not reproduce its WSL interoperability boundary.
+In the actual DVC stage, the skfolio virtual-environment launcher again received
+a quoted base-interpreter path and exited before importing the H1 script.
+Process 5 therefore failed and process 6 was not started. Under the explicit
+fail-closed rule, the completed primary pair and backtests remain diagnostic
+only: no partial continuation or retry occurred, and attempt-004 is not eligible
+for scientific classification.
+
+```text
+ATTEMPT_004_IS_PROTOCOL_CHANGE = NO
+RESOURCE_GATE = PASS
+SKFOLIO_ENTRYPOINT_GATE = FAIL_RUNTIME_EQUIVALENCE
+ARCH_ENTRYPOINT_GATE = NOT_REACHED_AFTER_SKFOLIO_FAILURE
+ATTEMPT_004_AUTHORITY = FINAL_CLEAN
+ATTEMPT_004_EXECUTION_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+ATTEMPT_004_FINAL_CLASSIFICATION_ELIGIBLE = NO
+ATTEMPT_004_S0_MAX_RSS_KIB = 6168912
+ATTEMPT_004_S1_MAX_RSS_KIB = 7514992
+ATTEMPT_004_S0_MODEL_FIT_COUNT = 1
+ATTEMPT_004_S1_MODEL_FIT_COUNT = 1
+ATTEMPT_004_S0_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_004_S1_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_004_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_004_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_004_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_004_QLIB_BACKTEST_STATUS = PASS
+WALKFORWARD_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+CPCV_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+SPA_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+REALITYCHECK_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+H1_RESULT_CLASSIFICATION = INCONCLUSIVE
+DVC_H1_REPRO_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+```
+
+## Attempt-005 runtime-boundary closeout
+
+Before attempt-005, the existing skfolio and arch environments were inspected
+without modifying `pyvenv.cfg`, launchers, installed source, or the Qlib
+environment. Both venvs pointed to the same existing CPython 3.12.14 base
+interpreter. Native Windows and WSL-interoperability import probes succeeded
+for `skfolio==1.0.6`, `WalkForward`, `CombinatorialPurgedCV`, `arch==8.0.0`,
+`SPA`, and `RealityCheck`. No runtime recreation or package mutation was
+required.
+
+Attempt-005 therefore began from a new root with the unchanged scientific
+protocol. Both fresh fits and both frozen Qlib backtests completed. The initial
+DVC process then failed only at the cross-OS Windows statistics launcher, after
+the immutable Qlib report, predictions, backtests, and daily-return evidence
+had been completed. Authoritative pre-H1 policy requires one complete,
+reproducible, leakage-free evidence bundle; it does not require one operating-
+system process or a common model/statistics interpreter. The missing frozen
+skfolio and arch procedures were therefore completed against the unchanged
+Attempt-005 daily-return file in a pinned WSL-native runtime. No Attempt-006,
+model fit, prediction, or backtest was created.
+
+```text
+STATISTICS_RUNTIME_REPAIR_PERFORMED = WSL_NATIVE_UPSTREAM_DEPLOYMENT_ONLY
+STATISTICS_RUNTIME_REPAIR_IS_PROTOCOL_CHANGE = NO
+SKFOLIO_NATIVE_WINDOWS_PROBE = PASS
+SKFOLIO_WSL_INTEROP_PROBE = PASS
+ARCH_NATIVE_WINDOWS_PROBE = PASS
+ARCH_WSL_INTEROP_PROBE = PASS
+ATOMIC_SINGLE_PROCESS_H1_REQUIRED = NO
+MODEL_AND_STATISTICS_SAME_RUNTIME_REQUIRED = NO
+ATTEMPT_005_STATISTICS_CONTINUATION_IS_PROTOCOL_CHANGE = NO
+WSL_STATISTICS_RUNTIME = /home/zhou/AQ_ENVS/p5-h1-statistics
+WSL_STATISTICS_PYTHON_VERSION = 3.10.21
+WSL_STATISTICS_SKFOLIO_VERSION = 1.0.6
+WSL_STATISTICS_ARCH_VERSION = 8.0.0
+WSL_STATISTICS_NUMPY_VERSION = 2.2.6
+WSL_STATISTICS_PANDAS_VERSION = 2.3.3
+WSL_STATISTICS_PIP_CHECK = PASS
+SKFOLIO_WSL_NATIVE_PROBE = PASS
+ARCH_WSL_NATIVE_PROBE = PASS
+CROSS_OS_STATISTICS_RUNTIME_DEPENDENCY = NO
+ATTEMPT_005_AUTHORITY = FINAL_END_TO_END
+ATTEMPT_005_EXECUTION_STATUS = FINAL_END_TO_END_MODEL_EVIDENCE_COMPLETE_STATISTICS_COMPLETED_SEPARATELY
+ATTEMPT_005_FINAL_CLASSIFICATION_ELIGIBLE = YES
+ATTEMPT_005_S0_MAX_RSS_KIB = 6162212
+ATTEMPT_005_S1_MAX_RSS_KIB = 7507124
+ATTEMPT_005_S0_MODEL_FIT_COUNT = 1
+ATTEMPT_005_S1_MODEL_FIT_COUNT = 1
+ATTEMPT_005_S0_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_005_S1_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_005_QLIB_REPORT_SHA256 = ad0ae88ab2d19229352f3b8d89eaca096df516320e5781c64ed97375a902cb58
+ATTEMPT_005_DAILY_RETURNS_SHA256 = 74f4628f8ef2e2dcd51cbad575074f23748f632deac77b96068dc3ef1d97709a
+ATTEMPT_005_S0_PREDICTION_SHA256 = 52d7f8bbf56ff565f5b77584786f59c3279e31895d54e42bbf0183246a950df6
+ATTEMPT_005_S1_PREDICTION_SHA256 = dcc6e984189fc6068b20d84d79e2465bd479db6fa66399b2e9553d57abc53bd9
+ATTEMPT_005_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_005_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_005_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_005_QLIB_BACKTEST_STATUS = PASS
+WALKFORWARD_STATUS = PASS_EXECUTED_GATE_FALSE
+WALKFORWARD_POSITIVE_ACTIVE_RETURN_FRACTION = 0.3333333333333333
+WALKFORWARD_MEDIAN_ACTIVE_RETURN = -0.008056716227315519
+CPCV_STATUS = PASS_EXECUTED_GATE_TRUE
+CPCV_POSITIVE_ACTIVE_RETURN_FRACTION = 0.7555555555555555
+CPCV_MEDIAN_ACTIVE_RETURN = 0.03305404742863449
+SPA_STATUS = PASS_EXECUTED
+SPA_PVALUE = 0.077
+REALITYCHECK_STATUS = PASS_EXECUTED
+REALITYCHECK_PVALUE = 0.077
+H1_RESULT_CLASSIFICATION = NO_MEASURABLE_INCREMENTAL_VALUE
+DVC_SEAL_METHOD = DVC_COMMIT_FORCE_EXISTING_OUTPUT
+DVC_H1_REPRO_STATUS = SEALED_COMPLETE_EXISTING_ATTEMPT_005_OUTPUT
+ATTEMPT_006_CREATED = NO
+```
+
+The frozen projection authority, exact date-valid episode crosswalk, and
+unchanged missingness policy establish the required leakage gates:
+
+```text
+ACCEPTANCE_TIME_LEAKAGE_COUNT = 0
+REPORT_PERIOD_LEAKAGE_COUNT = 0
+AMENDMENT_BACKWARD_LEAKAGE_COUNT = 0
+CROSS_CIK_CONTAMINATION_COUNT = 0
+EPISODE_MEMBERSHIP_LEAKAGE_COUNT = 0
+CURRENT_TICKER_LEAKAGE_COUNT = 0
+SOURCE_UNAVAILABLE_SUBSTITUTION_COUNT = 0
+FUTURE_FILING_VISIBILITY_COUNT = 0
+```
+
+No bulk stage, SEC path, filing-feature materialization, H2/S2 path, PID403
+path, or P2 V2 sealed OOS surface was accessed. Attempt-005 now contains the
+complete frozen evidence family. The preregistered H1 question is admissibly
+closed as `NO_MEASURABLE_INCREMENTAL_VALUE`, which completes P5 and authorizes
+P6 phase entry without changing the scientific protocol.
+
+The retained 605 physical lines remain above the approximate 405-line guide
+because they contain H1-specific episode crosswalk validation, frozen input and
+processor gates, exact S0/S1 surface composition, Qlib/MLflow evidence capture,
+and result classification. Calendar construction, Qlib backtest mechanics, and
+temporal split/reduction logic now call the already-proven historical-rehearsal
+implementation; the former task-specific resume framework is gone. The only
+remaining duplicated repository utility surface is 14 lines of local hashing
+and immutable JSON output.
+
 ## Ownership and next authority
 
 ```text
 P5_MINIMAL_UPSTREAM_DATA_LAYER = COMPLETE
-P5_COMPLETE = NO
+P5_COMPLETE = YES
 
 AQ_FEATURE_ENGINE = NO
 AQ_MODEL_ENGINE = NO
 AQ_ABLATION_ENGINE = NO
 AQ_STATISTICS_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-NEW_PRODUCTION_LOC = 0
+NEW_PRODUCTION_LOC = 605
+LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_BEFORE = 162
+LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_AFTER = 14
+RESUME_FRAMEWORK_RETIRED = YES
 
-PROJECT_MODEL_TRAINING_COUNT = 0
-PROJECT_PREDICTION_COUNT = 0
-PROJECT_BACKTEST_COUNT = 0
-H1_EXECUTED = NO
+PROJECT_MODEL_TRAINING_COUNT = 10
+PROJECT_PREDICTION_COUNT = 9
+PROJECT_BACKTEST_COUNT = 8
+H1_EXECUTED = COMPLETE_ATTEMPT_005
 H2_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-P6_ACTIVE = NO
+P6_ACTIVE = YES
 
-CURRENT_DEVELOPMENT_NEXT = P5_H1_INCREMENTAL_FUNDAMENTAL_EVALUATION_AND_CLOSEOUT_001
-CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_FINAL_V1_SCOPE_FREEZE_MERGE
-FINAL_CLASSIFICATION = PASS_FINAL_P5_V1_H1_AUTHORITY_FROZEN_PRE_EVALUATION
+CURRENT_PHASE = P6_NEWS_MACRO_SKILLS
+CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
+CURRENT_DEVELOPMENT_NEXT_GATE = P5_H1_ADMISSIBLE_CLOSEOUT_COMPLETE
+FINAL_CLASSIFICATION = PASS_ATTEMPT_005_NO_MEASURABLE_INCREMENTAL_VALUE_P5_COMPLETE
 ```

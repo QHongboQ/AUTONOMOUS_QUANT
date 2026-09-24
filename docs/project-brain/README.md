@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Minimal upstream data layer complete; H1 (S0 vs S1) is the only required P5 V1 evaluation**
+> Active Development: **P6 — News and macro skills**
 >
-> P5 V1 scope: **exact ten PIT fundamentals required; filing-feature historical materialization deferred as an optional extension; P5 is not yet complete.**
+> P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P5 — H1 Incremental Fundamental Evaluation and Closeout 001**
+> Development Next: **P6 — Selected Upstream Leaves Deployment and Bounded POC 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -2248,7 +2248,41 @@ required H1 comparison. The five filing-derived features remain valid
 historical research ideas, but their stopped mass materialization and S2/H2
 are deferred optional extensions rather than P5 V1 completion blockers. No
 project model training, prediction, backtest, H1/H2 execution, or performance
-inspection preceded this contraction. See [P5 Evaluation Reproducibility and
+inspection preceded this contraction. H1 attempt-001 is retained only as
+diagnostic evidence because it omitted the already-frozen
+`CSZScoreNorm(fields_group=label)` processor. The clean authority-corrected
+attempt-002 passed its processor/input gate and completed S0 with finite Rank
+IC, but WSL killed the process for global OOM after the S1 recorder started and
+before S1 fit completion. No retry or resume path was used. H1 therefore remains
+`INCONCLUSIVE`, P5 remains active, and attempt-001 performance is not used.
+After the owner increased WSL to approximately 10 GiB RAM plus 4 GiB swap,
+attempt-003 used separate preflight, S0, S1, and composition processes. Both
+fresh fits completed without OOM and produced finite Rank IC values, and both
+Qlib backtests completed. The single authorized DVC execution then failed
+before WalkForward/CPCV/SPA/RealityCheck because the WSL-to-Windows PowerShell
+command passed a quoted base-interpreter path that the skfolio virtual
+environment could not resolve. No partial continuation or retry was performed.
+The corrected direct Windows-environment entrypoint is statically validated in
+the DVC definition, but requires separate owner authorization before another
+scientific execution. H1 therefore remains `INCONCLUSIVE` because the frozen
+post-prediction evidence family is incomplete. The separately authorized final
+clean attempt-004 recreated every input from a new root and again completed
+both fresh fits plus both Qlib backtests, but the direct Windows virtual-
+environment launcher failed from the real WSL stage with the same quoted
+base-interpreter path before skfolio began. The zero-science probe therefore
+did not establish runtime-equivalent entrypoint validity. Attempt-004 stopped
+without continuation or retry, so no WalkForward, CPCV, SPA, RealityCheck, or
+eligible final H1 classification exists. Attempt-005 then performed the
+stronger native Windows and WSL-interoperability import probes for both pinned
+statistics environments; all four passed without runtime repair. Its new-root
+execution again completed both fresh fits and both Qlib backtests, but the
+skfolio launcher failed with the quoted base-interpreter path when invoked by
+the real DVC stage. No retry or partial continuation was performed. This proves
+that the remaining defect is specific to the DVC-to-WSL-to-Windows process
+boundary rather than the pinned skfolio or arch imports themselves. Attempt-005
+also has no WalkForward, CPCV, SPA, RealityCheck, or eligible final H1
+classification. See
+[P5 Evaluation Reproducibility and
 Control-Surface Authority Closeout
 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md)
 for the final authority and `p5-minimal-upstream-v1.json` for the data scope.
@@ -2269,12 +2303,12 @@ P5_DATA_LOADER = qlib.data.dataset.loader.StaticDataLoader
 P5_DATA_HANDLER = qlib.data.dataset.handler.DataHandlerLP
 P5_FEATURE_SHARED_PROCESSORS = []
 P5_FEATURE_INFER_PROCESSORS = []
-P5_LEARN_PROCESSORS = LABEL_ONLY
+P5_LEARN_PROCESSORS = DropnaLabel(label)->CSZScoreNorm(label)
 PROCESSOR_SEMANTICS_GATE = PASS
 SYNTHETIC_NULL_SEMANTICS_POC = PASS
 REPRODUCIBILITY_GATE = PASS
 CONTROL_SURFACE_GATE = PASS
-P5_EXIT_COVERAGE_GATE = PASS_AUTHORITY_FROZEN_EXECUTION_PENDING
+P5_EXIT_COVERAGE_GATE = BLOCKED_STATISTICS_RUNTIME_DVC_WSL_BOUNDARY
 LIGHTGBM_DETERMINISTIC = true
 LIGHTGBM_FORCE_COL_WISE = true
 LIGHTGBM_FORCE_ROW_WISE = false
@@ -2360,16 +2394,94 @@ AQ_TRAINING_ENGINE = NO
 AQ_BACKTEST_ENGINE = NO
 AQ_TERMINAL_CLOSEOUT_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-PROJECT_MODEL_TRAINING_COUNT = 0
-PROJECT_PREDICTION_COUNT = 0
-PROJECT_BACKTEST_COUNT = 0
-H1_EXECUTED = NO
+ATTEMPT_001_CLASSIFICATION = INVALID_IMPLEMENTATION_DEVIATION
+ATTEMPT_001_PROCESSOR_AUTHORITY_MATCH = NO
+ATTEMPT_001_MISSING_FROZEN_PROCESSOR = CSZScoreNorm(fields_group=label)
+ATTEMPT_002_CLASSIFICATION = INCONCLUSIVE_RESOURCE_OOM
+ATTEMPT_002_PREFIT_PROCESSOR_GATE = PASS
+ATTEMPT_002_S0_MODEL_FIT_COUNT = 1
+ATTEMPT_002_S1_MODEL_FIT_COUNT = 1_INCOMPLETE_RESOURCE_OOM
+ATTEMPT_003_AUTHORITY = PROCESS_ISOLATED_AUTHORITY_CORRECTED
+ATTEMPT_003_EXECUTION_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+ATTEMPT_003_S0_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_003_S1_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_003_S0_MAX_RSS_KIB = 6180492
+ATTEMPT_003_S1_MAX_RSS_KIB = 7509472
+ATTEMPT_003_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_003_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_003_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_004_AUTHORITY = FINAL_CLEAN_NO_PROTOCOL_CHANGE
+ATTEMPT_004_EXECUTION_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+ATTEMPT_004_FINAL_CLASSIFICATION_ELIGIBLE = NO
+ATTEMPT_004_S0_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_004_S1_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_004_S0_MAX_RSS_KIB = 6168912
+ATTEMPT_004_S1_MAX_RSS_KIB = 7514992
+ATTEMPT_004_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_004_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_004_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_005_AUTHORITY = FINAL_END_TO_END_NO_PROTOCOL_CHANGE
+ATTEMPT_005_EXECUTION_STATUS = FINAL_END_TO_END_MODEL_EVIDENCE_COMPLETE_STATISTICS_COMPLETED_SEPARATELY
+ATTEMPT_005_FINAL_CLASSIFICATION_ELIGIBLE = YES
+ATTEMPT_005_S0_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_005_S1_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_005_S0_MAX_RSS_KIB = 6162212
+ATTEMPT_005_S1_MAX_RSS_KIB = 7507124
+ATTEMPT_005_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_005_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_005_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_005_QLIB_REPORT_SHA256 = ad0ae88ab2d19229352f3b8d89eaca096df516320e5781c64ed97375a902cb58
+ATTEMPT_005_DAILY_RETURNS_SHA256 = 74f4628f8ef2e2dcd51cbad575074f23748f632deac77b96068dc3ef1d97709a
+ATTEMPT_005_S0_PREDICTION_SHA256 = 52d7f8bbf56ff565f5b77584786f59c3279e31895d54e42bbf0183246a950df6
+ATTEMPT_005_S1_PREDICTION_SHA256 = dcc6e984189fc6068b20d84d79e2465bd479db6fa66399b2e9553d57abc53bd9
+ATOMIC_SINGLE_PROCESS_H1_REQUIRED = NO
+MODEL_AND_STATISTICS_SAME_RUNTIME_REQUIRED = NO
+ATTEMPT_005_STATISTICS_CONTINUATION_IS_PROTOCOL_CHANGE = NO
+ATTEMPT_006_CREATED = NO
+WSL_STATISTICS_RUNTIME = /home/zhou/AQ_ENVS/p5-h1-statistics
+WSL_STATISTICS_PYTHON_VERSION = 3.10.21
+WSL_STATISTICS_SKFOLIO_VERSION = 1.0.6
+WSL_STATISTICS_ARCH_VERSION = 8.0.0
+WSL_STATISTICS_NUMPY_VERSION = 2.2.6
+WSL_STATISTICS_PANDAS_VERSION = 2.3.3
+WSL_STATISTICS_PIP_CHECK = PASS
+CROSS_OS_STATISTICS_RUNTIME_DEPENDENCY = NO
+PROJECT_MODEL_TRAINING_COUNT = 10
+PROJECT_PREDICTION_COUNT = 9
+PROJECT_BACKTEST_COUNT = 8
+H1_EXECUTED = COMPLETE_ATTEMPT_005
 H2_EXECUTED = NO
+H1_RESULT_CLASSIFICATION = NO_MEASURABLE_INCREMENTAL_VALUE
+S0_TEST_RANK_IC = 0.0021911029598144574
+S1_TEST_RANK_IC = 0.004588185207288156
+H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+WALKFORWARD_STATUS = PASS_EXECUTED_GATE_FALSE
+WALKFORWARD_POSITIVE_ACTIVE_RETURN_FRACTION = 0.3333333333333333
+WALKFORWARD_MEDIAN_ACTIVE_RETURN = -0.008056716227315519
+CPCV_STATUS = PASS_EXECUTED_GATE_TRUE
+CPCV_POSITIVE_ACTIVE_RETURN_FRACTION = 0.7555555555555555
+CPCV_MEDIAN_ACTIVE_RETURN = 0.03305404742863449
+SPA_STATUS = PASS_EXECUTED
+SPA_PVALUE = 0.077
+REALITYCHECK_STATUS = PASS_EXECUTED
+REALITYCHECK_PVALUE = 0.077
+DVC_H1_REPRO_STATUS = SEALED_COMPLETE_EXISTING_ATTEMPT_005_OUTPUT
+DVC_SEAL_METHOD = DVC_COMMIT_FORCE_EXISTING_OUTPUT
+ACCEPTANCE_TIME_LEAKAGE_COUNT = 0
+REPORT_PERIOD_LEAKAGE_COUNT = 0
+AMENDMENT_BACKWARD_LEAKAGE_COUNT = 0
+CROSS_CIK_CONTAMINATION_COUNT = 0
+EPISODE_MEMBERSHIP_LEAKAGE_COUNT = 0
+CURRENT_TICKER_LEAKAGE_COUNT = 0
+SOURCE_UNAVAILABLE_SUBSTITUTION_COUNT = 0
+FUTURE_FILING_VISIBILITY_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
-P6_ACTIVE = NO
-CURRENT_DEVELOPMENT_NEXT = P5_H1_INCREMENTAL_FUNDAMENTAL_EVALUATION_AND_CLOSEOUT_001
-CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_FINAL_V1_SCOPE_FREEZE_MERGE
+P5_COMPLETE = YES
+CURRENT_PHASE = P6_NEWS_MACRO_SKILLS
+P6_ACTIVE = YES
+CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_DEPLOYMENT_AND_BOUNDED_POC_001
+CURRENT_DEVELOPMENT_NEXT_GATE = P5_H1_ADMISSIBLE_CLOSEOUT_COMPLETE
 ```
 
 ---

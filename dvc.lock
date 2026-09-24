@@ -299,7 +299,6 @@ stages:
       hash: md5
       md5: 496827bfb0837d820cbfe62c0c150491
       size: 735
-      isexec: true
     - path: ../AQ_DATA/P3/alphagen-us-pit-factor-discovery-lstsq-run-001
       hash: md5
       md5: d5c68e2938f22a88ed5ee5d8a30f0472.dir
@@ -809,3 +808,88 @@ stages:
       md5: cc956bcfbadcdeb7d51a8e836eb0a02e.dir
       size: 6741337
       nfiles: 2
+  p5_h1_incremental_fundamental_evaluation:
+    cmd: bash -lc ' set -euo pipefail; ROOT="$PWD";
+      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end;
+      PY=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python;
+      STATS_PY=/home/zhou/AQ_ENVS/p5-h1-statistics/bin/python;
+      SCRIPT="$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py";
+      COMMON_ARGS="--repo $ROOT --provider
+      /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data --provider-report
+      /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      --calendar-runtime
+      /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
+      --episode-map
+      /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
+      --projection-grid
+      /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
+      --fundamentals
+      /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
+      --p5-manifest /mnt/d/AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
+      --qlib-source /home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src";
+      PYTHONDONTWRITEBYTECODE=1 "$PY" -B "$SCRIPT" preflight $COMMON_ARGS
+      --output "$OUT"; /usr/bin/time -v -o "$OUT/s0-resource.txt" "$PY" -B
+      "$SCRIPT" fit $COMMON_ARGS --surface-id S0 --output "$OUT"; /usr/bin/time
+      -v -o "$OUT/s1-resource.txt" "$PY" -B "$SCRIPT" fit $COMMON_ARGS
+      --surface-id S1 --output "$OUT"; "$PY" -B "$SCRIPT" compose $COMMON_ARGS
+      --output "$OUT"; "$STATS_PY" -B "$SCRIPT" skfolio --repo "$ROOT" --daily
+      "$OUT/daily-net-returns.csv" --output "$OUT"; "$STATS_PY" -B "$SCRIPT"
+      arch --daily "$OUT/daily-net-returns.csv" --output "$OUT"'
+    deps:
+    - path:
+        ../AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
+      hash: md5
+      md5: 69a2d51dbf1762ea6d99beccd56253db.dir
+      size: 55363
+      nfiles: 2
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      hash: md5
+      md5: fcd742578d6d89a5673bc1a618fc676b.dir
+      size: 25537236
+      nfiles: 3653
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/reports/build-report.json
+      hash: md5
+      md5: 496827bfb0837d820cbfe62c0c150491
+      size: 735
+      isexec: true
+    - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
+      hash: md5
+      md5: 44a1b95424421c86d85f9c03ec82c637
+      size: 184903
+    - path:
+        ../AQ_DATA/P5/minimal-upstream-v1-001/projection/episode_sessions.parquet
+      hash: md5
+      md5: a3754c0395c16a08d538a55607f7ffe7
+      size: 1806396
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
+      hash: md5
+      md5: 52e41f76aad863ac237577cb555712b4
+      size: 6739977
+    - path: ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
+      hash: md5
+      md5: c36421eb0e988d8f086456a8bd0af6fa
+      size: 1360
+    - path:
+        30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py
+      hash: md5
+      md5: 24cb38d962d6e04b3155875813d1f7c5
+      size: 782
+    - path: 30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py
+      hash: md5
+      md5: 91b7aca056b2af310b823679f1a222c3
+      size: 31370
+    - path: 40-certification-system/historical-rehearsal/evaluate_rehearsal.py
+      hash: md5
+      md5: ad0b089a9e3fe882df0562f2a6beea5e
+      size: 12370
+    - path: 40-certification-system/historical-rehearsal/qlib_rehearsal.py
+      hash: md5
+      md5: 2fda6cc90f2b385856f11e427fcbdd29
+      size: 24655
+    outs:
+    - path:
+        ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end
+      hash: md5
+      md5: d2223c9de4963e6f655eeedcb4c411bc.dir
+      size: 670111097
+      nfiles: 32
