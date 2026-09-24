@@ -299,7 +299,6 @@ stages:
       hash: md5
       md5: 496827bfb0837d820cbfe62c0c150491
       size: 735
-      isexec: true
     - path: ../AQ_DATA/P3/alphagen-us-pit-factor-discovery-lstsq-run-001
       hash: md5
       md5: d5c68e2938f22a88ed5ee5d8a30f0472.dir
@@ -852,6 +851,7 @@ stages:
       hash: md5
       md5: 496827bfb0837d820cbfe62c0c150491
       size: 735
+      isexec: true
     - path: ../AQ_DATA/P2/qlib-native-ragged-panel-001/staging/episode-map.jsonl
       hash: md5
       md5: 44a1b95424421c86d85f9c03ec82c637
@@ -887,8 +887,9 @@ stages:
       md5: 2fda6cc90f2b385856f11e427fcbdd29
       size: 24655
     outs:
-    - path: ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001
+    - path:
+        ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end
       hash: md5
-      md5: 55eae096cff28199f7a69a5135d577b2.dir
-      size: 3332421047
-      nfiles: 129
+      md5: d2223c9de4963e6f655eeedcb4c411bc.dir
+      size: 670111097
+      nfiles: 32

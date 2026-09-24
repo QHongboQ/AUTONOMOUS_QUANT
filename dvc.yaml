@@ -403,6 +403,5 @@ stages:
       - ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/fundamentals.parquet
       - ../AQ_DATA/P5/minimal-upstream-v1-001/qlib/manifest.json
     outs:
-      - ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001:
+      - ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end:
           cache: false
-          persist: true
