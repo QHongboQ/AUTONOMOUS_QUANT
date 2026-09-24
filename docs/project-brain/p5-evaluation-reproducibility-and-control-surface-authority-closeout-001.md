@@ -448,6 +448,50 @@ H1_RESULT_CLASSIFICATION = INCONCLUSIVE
 DVC_H1_REPRO_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
 ```
 
+## Attempt-004 final clean boundary
+
+Attempt-004 was the one owner-authorized final clean execution. It used a new
+root and regenerated the preflight surface; no prediction, return, cross-
+validation result, or statistical evidence from attempts 001-003 was used.
+The approximately 10 GiB WSL RAM and 4 GiB swap resource gate passed. Both
+fresh fits and both frozen Qlib backtests completed, with the two fit processes
+exiting normally below the available memory boundary.
+
+The pre-execution Windows-environment version/help probes passed outside the
+real stage invocation, but did not reproduce its WSL interoperability boundary.
+In the actual DVC stage, the skfolio virtual-environment launcher again received
+a quoted base-interpreter path and exited before importing the H1 script.
+Process 5 therefore failed and process 6 was not started. Under the explicit
+fail-closed rule, the completed primary pair and backtests remain diagnostic
+only: no partial continuation or retry occurred, and attempt-004 is not eligible
+for scientific classification.
+
+```text
+ATTEMPT_004_IS_PROTOCOL_CHANGE = NO
+RESOURCE_GATE = PASS
+SKFOLIO_ENTRYPOINT_GATE = FAIL_RUNTIME_EQUIVALENCE
+ARCH_ENTRYPOINT_GATE = NOT_REACHED_AFTER_SKFOLIO_FAILURE
+ATTEMPT_004_AUTHORITY = FINAL_CLEAN
+ATTEMPT_004_EXECUTION_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+ATTEMPT_004_FINAL_CLASSIFICATION_ELIGIBLE = NO
+ATTEMPT_004_S0_MAX_RSS_KIB = 6168912
+ATTEMPT_004_S1_MAX_RSS_KIB = 7514992
+ATTEMPT_004_S0_MODEL_FIT_COUNT = 1
+ATTEMPT_004_S1_MODEL_FIT_COUNT = 1
+ATTEMPT_004_S0_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_004_S1_MODEL_FIT_COMPLETION_COUNT = 1
+ATTEMPT_004_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_004_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_004_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+ATTEMPT_004_QLIB_BACKTEST_STATUS = PASS
+WALKFORWARD_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+CPCV_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+SPA_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+REALITYCHECK_STATUS = NOT_RUN_POST_PREDICTION_ENTRYPOINT_FAILURE
+H1_RESULT_CLASSIFICATION = INCONCLUSIVE
+DVC_H1_REPRO_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+```
+
 The frozen projection authority, exact date-valid episode crosswalk, and
 unchanged missingness policy establish the required leakage gates:
 
@@ -463,10 +507,11 @@ FUTURE_FILING_VISIBILITY_COUNT = 0
 ```
 
 No bulk stage, SEC path, filing-feature materialization, H2/S2 path, PID403
-path, or P2 V2 sealed OOS surface was accessed. Attempt-002 does not answer the
-preregistered H1 question and does not authorize P6 entry.
+path, or P2 V2 sealed OOS surface was accessed. None of attempts 001-004
+completed the frozen evidence family, so the preregistered H1 question remains
+inconclusive and P6 entry is not authorized.
 
-The retained 559 physical lines remain above the approximate 405-line guide
+The retained 603 physical lines remain above the approximate 405-line guide
 because they contain H1-specific episode crosswalk validation, frozen input and
 processor gates, exact S0/S1 surface composition, Qlib/MLflow evidence capture,
 and result classification. Calendar construction, Qlib backtest mechanics, and
@@ -486,21 +531,21 @@ AQ_MODEL_ENGINE = NO
 AQ_ABLATION_ENGINE = NO
 AQ_STATISTICS_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-NEW_PRODUCTION_LOC = 559
+NEW_PRODUCTION_LOC = 603
 LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_BEFORE = 162
 LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_AFTER = 14
 RESUME_FRAMEWORK_RETIRED = YES
 
-PROJECT_MODEL_TRAINING_COUNT = 6
-PROJECT_PREDICTION_COUNT = 5
-PROJECT_BACKTEST_COUNT = 4
-H1_EXECUTED = INCOMPLETE_ATTEMPT_003
+PROJECT_MODEL_TRAINING_COUNT = 8
+PROJECT_PREDICTION_COUNT = 7
+PROJECT_BACKTEST_COUNT = 6
+H1_EXECUTED = INCOMPLETE_ATTEMPT_004
 H2_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
 P6_ACTIVE = NO
 
 CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
-CURRENT_DEVELOPMENT_NEXT = P5_H1_ATTEMPT_003_POST_PREDICTION_FAILURE_CLOSEOUT_001
-CURRENT_DEVELOPMENT_NEXT_GATE = H1_INCONCLUSIVE_NEW_EXECUTION_AUTHORIZATION_REQUIRED
-FINAL_CLASSIFICATION = INCONCLUSIVE_ATTEMPT_003_POST_PREDICTION_ENTRYPOINT_FAILURE
+CURRENT_DEVELOPMENT_NEXT = P5_H1_FINAL_ATTEMPT_RUNTIME_BOUNDARY_CLOSEOUT_001
+CURRENT_DEVELOPMENT_NEXT_GATE = H1_INCONCLUSIVE_FINAL_ATTEMPT_FAILED_CLOSED
+FINAL_CLASSIFICATION = INCONCLUSIVE_ATTEMPT_004_POST_PREDICTION_ENTRYPOINT_FAILURE
 ```
