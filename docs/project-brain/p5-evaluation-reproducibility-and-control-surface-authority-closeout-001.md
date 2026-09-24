@@ -342,57 +342,68 @@ AQ_PATCH_REQUIRED = NO
 UPSTREAM_PATCH_ALLOWED = NO
 ```
 
-## Executed H1 result and P5 closeout
+## H1 authority correction and attempt-002 boundary
 
-The single required H1 comparison was executed through the frozen Qlib,
-skfolio, arch, MLflow, and DVC owners. The one task-specific AQ entry point
-only validates identities, composes the two fixed surfaces, invokes public
-upstream interfaces, and records the frozen classification policy. It does
-not implement a model, CV procedure, bootstrap procedure, or generic
-evaluation engine.
+Attempt-001 did not match the processor contract frozen before execution. It
+used `DropnaLabel` but omitted `CSZScoreNorm(fields_group=label)`. Its outputs
+remain immutable diagnostic evidence, but its undefined Rank IC and identical
+return paths are ineligible for scientific classification.
+
+```text
+ATTEMPT_001_CLASSIFICATION = INVALID_IMPLEMENTATION_DEVIATION
+ATTEMPT_001_PROCESSOR_AUTHORITY_MATCH = NO
+ATTEMPT_001_MISSING_FROZEN_PROCESSOR = CSZScoreNorm(fields_group=label)
+RERUN_REASON = RESTORE_PREEXISTING_FROZEN_PROCESSOR_AUTHORITY
+RERUN_IS_PROTOCOL_CHANGE = NO
+```
+
+The corrected implementation uses `StaticDataLoader` and `DataHandlerLP` with
+empty shared/infer processors and the exact label-only chain
+`DropnaLabel -> CSZScoreNorm(label)`. Before either fit, Qlib public `DK_L` and
+`DK_R` surfaces proved identical transformed labels, non-degenerate train and
+validation labels, unchanged feature-NaN locations, and preserved valid zero
+values for both S0 and S1.
 
 ```text
 DVC_H1_STAGE = p5_h1_incremental_fundamental_evaluation
-DVC_H1_REPRO_STATUS = PASS
-DVC_OUTPUT_MD5 = 540528a0ae3debca098183f61971b916.dir
+DVC_H1_REPRO_STATUS = FAIL_RESOURCE_OOM
 S0_ROW_COUNT = 1196594
 S1_ROW_COUNT = 1196594
 S0_S1_ROW_IDENTITY_MATCH = YES
 S0_COLUMN_COUNT = 157
 S1_COLUMN_COUNT = 167
-S0_MODEL_FIT_COUNT = 1
-S1_MODEL_FIT_COUNT = 1
-S0_TEST_RANK_IC = UNDEFINED_CONSTANT_PREDICTION
-S1_TEST_RANK_IC = UNDEFINED_CONSTANT_PREDICTION
-H1_TEST_RANK_IC_DELTA = UNDEFINED
-S0_S1_PREDICTION_BYTES_MATCH = YES
-S0_S1_NET_RETURN_BYTES_MATCH = YES
+S0_LEARN_PROCESSOR_IDENTITY = DropnaLabel->CSZScoreNorm(label)
+S1_LEARN_PROCESSOR_IDENTITY = DropnaLabel->CSZScoreNorm(label)
+TRAIN_TRANSFORMED_LABEL_NON_NULL_COUNT = 572819
+TRAIN_TRANSFORMED_LABEL_UNIQUE_COUNT = 567440
+VALID_TRANSFORMED_LABEL_NON_NULL_COUNT = 247795
+VALID_TRANSFORMED_LABEL_UNIQUE_COUNT = 246739
+FEATURE_NAN_POSITIONS_PRESERVED = YES
+VALID_FEATURE_ZERO_PRESERVED = YES
 ```
 
-The completed S0 recorder was preserved after a process loss that occurred
-before the S1 fit began. Its normalized predictions and Rank-IC series were
-verified semantically against the finished MLflow recorder; the abandoned S1
-recorder had no metrics or artifacts and was marked failed. The resumed DVC
-run reused S0 and performed the one authorized S1 fit. No performance-bearing
-input or policy changed.
-
-The fixed high-regularization LightGBM recipe produced constant predictions
-on both surfaces. Qlib therefore correctly reports Rank IC as undefined.
-Nevertheless, the paired result remains complete for the frozen incremental
-question: S0 and S1 prediction bytes, portfolio bytes, and every daily net
-return are identical. All WalkForward and CPCV active returns are exactly
-zero. arch SPA and RealityCheck executed on the frozen loss inputs, but their
-bidirectional 0.0 p-values are a degenerate identical-input result and are not
-interpreted as support for either direction.
+Attempt-002 ran from a clean separate output child. S0 fit exactly once and
+completed with finite Rank IC. The S1 recorder then started, but before S1 fit
+completion the WSL kernel killed the Python process for global OOM
+(`anon-rss=7,543,644 KiB`, `total-vm=16,287,820 KiB`). DVC surfaced exit code
+15. No traceback, S1 prediction, S1 Rank IC, backtest, WalkForward, CPCV, SPA,
+or RealityCheck output exists. Per the frozen no-retry rule, S0 is not reused
+and no checkpoint/resume framework is introduced.
 
 ```text
-WALKFORWARD_STATUS = PASS_EXECUTED_GATE_FALSE_ZERO_ACTIVE_RETURN
-CPCV_STATUS = PASS_EXECUTED_GATE_FALSE_ZERO_ACTIVE_RETURN
-SPA_STATUS = PASS_EXECUTED_DEGENERATE_IDENTICAL_INPUT_NOT_SUPPORTING
-SPA_PVALUE = 0.0
-REALITYCHECK_STATUS = PASS_EXECUTED_DEGENERATE_IDENTICAL_INPUT_NOT_SUPPORTING
-REALITYCHECK_PVALUE = 0.0
-H1_RESULT_CLASSIFICATION = NO_MEASURABLE_INCREMENTAL_VALUE
+ATTEMPT_002_CLASSIFICATION = INCONCLUSIVE_RESOURCE_OOM
+S0_MODEL_FIT_COUNT = 1
+S1_MODEL_FIT_COUNT = 0
+S0_TEST_RANK_IC = 0.0021911029598144574
+S1_TEST_RANK_IC = NOT_AVAILABLE_RESOURCE_OOM_BEFORE_FIT_COMPLETION
+H1_TEST_RANK_IC_DELTA = NOT_AVAILABLE
+WALKFORWARD_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+CPCV_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+SPA_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+SPA_PVALUE = NOT_AVAILABLE
+REALITYCHECK_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+REALITYCHECK_PVALUE = NOT_AVAILABLE
+H1_RESULT_CLASSIFICATION = INCONCLUSIVE
 ```
 
 The frozen projection authority, exact date-valid episode crosswalk, and
@@ -410,33 +421,44 @@ FUTURE_FILING_VISIBILITY_COUNT = 0
 ```
 
 No bulk stage, SEC path, filing-feature materialization, H2/S2 path, PID403
-path, or P2 V2 sealed OOS surface was accessed. The scientifically valid
-negative result closes the preregistered P5 question without reopening feature
-engineering.
+path, or P2 V2 sealed OOS surface was accessed. Attempt-002 does not answer the
+preregistered H1 question and does not authorize P6 entry.
+
+The retained 559 physical lines remain above the approximate 405-line guide
+because they contain H1-specific episode crosswalk validation, frozen input and
+processor gates, exact S0/S1 surface composition, Qlib/MLflow evidence capture,
+and result classification. Calendar construction, Qlib backtest mechanics, and
+temporal split/reduction logic now call the already-proven historical-rehearsal
+implementation; the former task-specific resume framework is gone. The only
+remaining duplicated repository utility surface is 14 lines of local hashing
+and immutable JSON output.
 
 ## Ownership and next authority
 
 ```text
 P5_MINIMAL_UPSTREAM_DATA_LAYER = COMPLETE
-P5_COMPLETE = YES
+P5_COMPLETE = NO
 
 AQ_FEATURE_ENGINE = NO
 AQ_MODEL_ENGINE = NO
 AQ_ABLATION_ENGINE = NO
 AQ_STATISTICS_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-NEW_PRODUCTION_LOC = 567
+NEW_PRODUCTION_LOC = 559
+LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_BEFORE = 162
+LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_AFTER = 14
+RESUME_FRAMEWORK_RETIRED = YES
 
-PROJECT_MODEL_TRAINING_COUNT = 2
-PROJECT_PREDICTION_COUNT = 2
+PROJECT_MODEL_TRAINING_COUNT = 3
+PROJECT_PREDICTION_COUNT = 3
 PROJECT_BACKTEST_COUNT = 2
-H1_EXECUTED = YES
+H1_EXECUTED = INCOMPLETE_ATTEMPT_002
 H2_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-P6_ACTIVE = YES
+P6_ACTIVE = NO
 
-CURRENT_PHASE = P6_NEWS_MACRO_SKILLS
-CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_MINIMAL_DEPLOYMENT_AND_BOUNDED_POC_001
-CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_P5_H1_CLOSEOUT_MERGE
-FINAL_CLASSIFICATION = PASS_P5_COMPLETE_NO_MEASURABLE_INCREMENTAL_VALUE_P6_READY
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+CURRENT_DEVELOPMENT_NEXT = P5_H1_ATTEMPT_002_RESOURCE_FAILURE_CLOSEOUT_001
+CURRENT_DEVELOPMENT_NEXT_GATE = H1_INCONCLUSIVE_NO_RETRY_AUTHORIZED
+FINAL_CLASSIFICATION = INCONCLUSIVE_ATTEMPT_002_RESOURCE_OOM
 ```

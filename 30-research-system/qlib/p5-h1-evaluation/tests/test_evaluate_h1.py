@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 MODULE = Path(__file__).parents[1] / "evaluate_h1.py"
@@ -41,6 +42,46 @@ class H1ThinAdapterTests(unittest.TestCase):
         self.assertEqual(h1.MODEL_CONFIG["num_threads"], 8)
         self.assertTrue(h1.MODEL_CONFIG["deterministic"])
         self.assertFalse(h1.MODEL_CONFIG["zero_as_missing"])
+
+    def test_frozen_processor_chain_is_label_only(self) -> None:
+        self.assertEqual(
+            h1.LEARN_PROCESSORS,
+            (
+                {"class": "DropnaLabel", "kwargs": {"fields_group": "label"}},
+                {"class": "CSZScoreNorm", "kwargs": {"fields_group": "label"}},
+            ),
+        )
+        self.assertFalse(any(
+            processor.get("kwargs", {}).get("fields_group") == "feature"
+            for processor in h1.LEARN_PROCESSORS
+        ))
+
+    def test_attempt_001_is_never_finally_classified(self) -> None:
+        with self.assertRaisesRegex(ValueError, "attempt-001"):
+            h1.classify_h1("ATTEMPT_001", 0.01, 0.02)
+
+    def test_undefined_primary_metric_is_inconclusive(self) -> None:
+        self.assertEqual(
+            h1.classify_h1("ATTEMPT_002_AUTHORITY_CORRECTED", np.nan, 0.02),
+            "INCONCLUSIVE",
+        )
+
+    def test_projected_s0_s1_row_identity_is_exact(self) -> None:
+        index = pd.MultiIndex.from_tuples(
+            [(pd.Timestamp("2020-01-02"), "P2A"), (pd.Timestamp("2020-01-03"), "P2A")],
+            names=["datetime", "instrument"],
+        )
+        frame = pd.DataFrame({"x": [1.0, 2.0]}, index=index)
+        crosswalk = pd.DataFrame({
+            "p2_instrument": ["P2A"], "p2_start": [pd.Timestamp("2020-01-02")],
+            "p2_end": [pd.Timestamp("2020-01-03")], "p5_episode_id": ["P1A"],
+        })
+        s0, _ = h1.project_index(frame, crosswalk)
+        s1, _ = h1.project_index(frame.assign(fundamental=[3.0, 4.0]), crosswalk)
+        self.assertTrue(s0.index.equals(s1.index))
+
+    def test_h2_remains_unexecuted(self) -> None:
+        self.assertFalse(h1.H2_EXECUTED)
 
 
 if __name__ == "__main__":

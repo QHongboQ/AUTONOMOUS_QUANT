@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P5 — Minimal upstream data layer complete; H1 (S0 vs S1) is the only required P5 V1 evaluation**
+> Active Development: **P5 — H1 remains inconclusive after the authority-corrected attempt-002 hit the WSL resource boundary**
 >
 > P5 V1 scope: **exact ten PIT fundamentals required; filing-feature historical materialization deferred as an optional extension; P5 is not yet complete.**
 >
-> Development Next: **P5 — H1 Incremental Fundamental Evaluation and Closeout 001**
+> Development Next: **P5 — H1 Attempt-002 Resource Failure Closeout 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -2248,17 +2248,21 @@ required H1 comparison. The five filing-derived features remain valid
 historical research ideas, but their stopped mass materialization and S2/H2
 are deferred optional extensions rather than P5 V1 completion blockers. No
 project model training, prediction, backtest, H1/H2 execution, or performance
-inspection preceded this contraction. The subsequently authorized H1 has now
-completed: the frozen S0 and S1 produced byte-identical predictions and net
-return paths, so P5 closes as `NO_MEASURABLE_INCREMENTAL_VALUE` and does not
-reopen feature engineering. See [P5 Evaluation Reproducibility and
+inspection preceded this contraction. H1 attempt-001 is retained only as
+diagnostic evidence because it omitted the already-frozen
+`CSZScoreNorm(fields_group=label)` processor. The clean authority-corrected
+attempt-002 passed its processor/input gate and completed S0 with finite Rank
+IC, but WSL killed the process for global OOM after the S1 recorder started and
+before S1 fit completion. No retry or resume path was used. H1 therefore remains
+`INCONCLUSIVE`, P5 remains active, and attempt-001 performance is not used. See
+[P5 Evaluation Reproducibility and
 Control-Surface Authority Closeout
 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md)
 for the final authority and `p5-minimal-upstream-v1.json` for the data scope.
 
 ```text
-CURRENT_PHASE = P6_NEWS_MACRO_SKILLS
-P5_COMPLETE = YES
+CURRENT_PHASE = P5_FUNDAMENTAL_INTELLIGENCE
+P5_COMPLETE = NO
 HISTORICAL_BUILD_STATUS = MINIMAL_UPSTREAM_V1_BUILD_COMPLETE
 HISTORICAL_BUILD_INTERFERENCE = NO
 P5_MINIMAL_UPSTREAM_DATA_LAYER = COMPLETE
@@ -2272,12 +2276,12 @@ P5_DATA_LOADER = qlib.data.dataset.loader.StaticDataLoader
 P5_DATA_HANDLER = qlib.data.dataset.handler.DataHandlerLP
 P5_FEATURE_SHARED_PROCESSORS = []
 P5_FEATURE_INFER_PROCESSORS = []
-P5_LEARN_PROCESSORS = LABEL_ONLY
+P5_LEARN_PROCESSORS = DropnaLabel(label)->CSZScoreNorm(label)
 PROCESSOR_SEMANTICS_GATE = PASS
 SYNTHETIC_NULL_SEMANTICS_POC = PASS
 REPRODUCIBILITY_GATE = PASS
 CONTROL_SURFACE_GATE = PASS
-P5_EXIT_COVERAGE_GATE = PASS_EXECUTED_AND_CLOSED
+P5_EXIT_COVERAGE_GATE = BLOCKED_VALID_H1_INCOMPLETE_AFTER_RESOURCE_OOM
 LIGHTGBM_DETERMINISTIC = true
 LIGHTGBM_FORCE_COL_WISE = true
 LIGHTGBM_FORCE_ROW_WISE = false
@@ -2363,20 +2367,26 @@ AQ_TRAINING_ENGINE = NO
 AQ_BACKTEST_ENGINE = NO
 AQ_TERMINAL_CLOSEOUT_ENGINE = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-PROJECT_MODEL_TRAINING_COUNT = 2
-PROJECT_PREDICTION_COUNT = 2
+ATTEMPT_001_CLASSIFICATION = INVALID_IMPLEMENTATION_DEVIATION
+ATTEMPT_001_PROCESSOR_AUTHORITY_MATCH = NO
+ATTEMPT_001_MISSING_FROZEN_PROCESSOR = CSZScoreNorm(fields_group=label)
+ATTEMPT_002_CLASSIFICATION = INCONCLUSIVE_RESOURCE_OOM
+ATTEMPT_002_PREFIT_PROCESSOR_GATE = PASS
+ATTEMPT_002_S0_MODEL_FIT_COUNT = 1
+ATTEMPT_002_S1_MODEL_FIT_COUNT = 0
+PROJECT_MODEL_TRAINING_COUNT = 3
+PROJECT_PREDICTION_COUNT = 3
 PROJECT_BACKTEST_COUNT = 2
-H1_EXECUTED = YES
+H1_EXECUTED = INCOMPLETE_ATTEMPT_002
 H2_EXECUTED = NO
-H1_RESULT_CLASSIFICATION = NO_MEASURABLE_INCREMENTAL_VALUE
-S0_S1_PREDICTION_BYTES_MATCH = YES
-S0_S1_NET_RETURN_BYTES_MATCH = YES
-S0_TEST_RANK_IC = UNDEFINED_CONSTANT_PREDICTION
-S1_TEST_RANK_IC = UNDEFINED_CONSTANT_PREDICTION
-WALKFORWARD_STATUS = PASS_EXECUTED_GATE_FALSE_ZERO_ACTIVE_RETURN
-CPCV_STATUS = PASS_EXECUTED_GATE_FALSE_ZERO_ACTIVE_RETURN
-SPA_STATUS = PASS_EXECUTED_DEGENERATE_IDENTICAL_INPUT_NOT_SUPPORTING
-REALITYCHECK_STATUS = PASS_EXECUTED_DEGENERATE_IDENTICAL_INPUT_NOT_SUPPORTING
+H1_RESULT_CLASSIFICATION = INCONCLUSIVE
+S0_TEST_RANK_IC = 0.0021911029598144574
+S1_TEST_RANK_IC = NOT_AVAILABLE_RESOURCE_OOM_BEFORE_FIT_COMPLETION
+H1_TEST_RANK_IC_DELTA = NOT_AVAILABLE
+WALKFORWARD_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+CPCV_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+SPA_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
+REALITYCHECK_STATUS = NOT_RUN_PRIMARY_METRIC_PAIR_INCOMPLETE
 ACCEPTANCE_TIME_LEAKAGE_COUNT = 0
 REPORT_PERIOD_LEAKAGE_COUNT = 0
 AMENDMENT_BACKWARD_LEAKAGE_COUNT = 0
@@ -2387,9 +2397,9 @@ SOURCE_UNAVAILABLE_SUBSTITUTION_COUNT = 0
 FUTURE_FILING_VISIBILITY_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
-P6_ACTIVE = YES
-CURRENT_DEVELOPMENT_NEXT = P6_SELECTED_UPSTREAM_LEAVES_MINIMAL_DEPLOYMENT_AND_BOUNDED_POC_001
-CURRENT_DEVELOPMENT_NEXT_GATE = OPEN_AFTER_P5_H1_CLOSEOUT_MERGE
+P6_ACTIVE = NO
+CURRENT_DEVELOPMENT_NEXT = P5_H1_ATTEMPT_002_RESOURCE_FAILURE_CLOSEOUT_001
+CURRENT_DEVELOPMENT_NEXT_GATE = H1_INCONCLUSIVE_NO_RETRY_AUTHORIZED
 ```
 
 ---
