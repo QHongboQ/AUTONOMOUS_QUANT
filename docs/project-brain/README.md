@@ -2272,7 +2272,16 @@ environment launcher failed from the real WSL stage with the same quoted
 base-interpreter path before skfolio began. The zero-science probe therefore
 did not establish runtime-equivalent entrypoint validity. Attempt-004 stopped
 without continuation or retry, so no WalkForward, CPCV, SPA, RealityCheck, or
-eligible final H1 classification exists. See
+eligible final H1 classification exists. Attempt-005 then performed the
+stronger native Windows and WSL-interoperability import probes for both pinned
+statistics environments; all four passed without runtime repair. Its new-root
+execution again completed both fresh fits and both Qlib backtests, but the
+skfolio launcher failed with the quoted base-interpreter path when invoked by
+the real DVC stage. No retry or partial continuation was performed. This proves
+that the remaining defect is specific to the DVC-to-WSL-to-Windows process
+boundary rather than the pinned skfolio or arch imports themselves. Attempt-005
+also has no WalkForward, CPCV, SPA, RealityCheck, or eligible final H1
+classification. See
 [P5 Evaluation Reproducibility and
 Control-Surface Authority Closeout
 001](p5-evaluation-reproducibility-and-control-surface-authority-closeout-001.md)
@@ -2299,7 +2308,7 @@ PROCESSOR_SEMANTICS_GATE = PASS
 SYNTHETIC_NULL_SEMANTICS_POC = PASS
 REPRODUCIBILITY_GATE = PASS
 CONTROL_SURFACE_GATE = PASS
-P5_EXIT_COVERAGE_GATE = BLOCKED_FINAL_ATTEMPT_INCOMPLETE_AFTER_POST_PREDICTION_ENTRYPOINT_FAILURE
+P5_EXIT_COVERAGE_GATE = BLOCKED_STATISTICS_RUNTIME_DVC_WSL_BOUNDARY
 LIGHTGBM_DETERMINISTIC = true
 LIGHTGBM_FORCE_COL_WISE = true
 LIGHTGBM_FORCE_ROW_WISE = false
@@ -2411,10 +2420,20 @@ ATTEMPT_004_S1_MAX_RSS_KIB = 7514992
 ATTEMPT_004_S0_TEST_RANK_IC = 0.0021911029598144574
 ATTEMPT_004_S1_TEST_RANK_IC = 0.004588185207288156
 ATTEMPT_004_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
-PROJECT_MODEL_TRAINING_COUNT = 8
-PROJECT_PREDICTION_COUNT = 7
-PROJECT_BACKTEST_COUNT = 6
-H1_EXECUTED = INCOMPLETE_ATTEMPT_004
+ATTEMPT_005_AUTHORITY = FINAL_END_TO_END_NO_PROTOCOL_CHANGE
+ATTEMPT_005_EXECUTION_STATUS = FAIL_POST_PREDICTION_STATISTICS_ENTRYPOINT
+ATTEMPT_005_FINAL_CLASSIFICATION_ELIGIBLE = NO
+ATTEMPT_005_S0_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_005_S1_MODEL_FIT_COUNT = 1_COMPLETE
+ATTEMPT_005_S0_MAX_RSS_KIB = 6162212
+ATTEMPT_005_S1_MAX_RSS_KIB = 7507124
+ATTEMPT_005_S0_TEST_RANK_IC = 0.0021911029598144574
+ATTEMPT_005_S1_TEST_RANK_IC = 0.004588185207288156
+ATTEMPT_005_H1_TEST_RANK_IC_DELTA = 0.0023970822474736987
+PROJECT_MODEL_TRAINING_COUNT = 10
+PROJECT_PREDICTION_COUNT = 9
+PROJECT_BACKTEST_COUNT = 8
+H1_EXECUTED = INCOMPLETE_ATTEMPT_005
 H2_EXECUTED = NO
 H1_RESULT_CLASSIFICATION = INCONCLUSIVE
 S0_TEST_RANK_IC = 0.0021911029598144574
@@ -2435,8 +2454,8 @@ FUTURE_FILING_VISIBILITY_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
 P6_ACTIVE = NO
-CURRENT_DEVELOPMENT_NEXT = P5_H1_FINAL_ATTEMPT_RUNTIME_BOUNDARY_CLOSEOUT_001
-CURRENT_DEVELOPMENT_NEXT_GATE = H1_INCONCLUSIVE_FINAL_ATTEMPT_FAILED_CLOSED
+CURRENT_DEVELOPMENT_NEXT = P5_H1_DVC_WSL_STATISTICS_RUNTIME_BOUNDARY_RESOLUTION_001
+CURRENT_DEVELOPMENT_NEXT_GATE = H1_INCONCLUSIVE_ATTEMPT_005_FAILED_CLOSED
 ```
 
 ---

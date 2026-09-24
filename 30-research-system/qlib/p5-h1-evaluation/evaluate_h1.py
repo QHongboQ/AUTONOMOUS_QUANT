@@ -227,12 +227,12 @@ def train_surface(surface_id: str, surface_path: Path, columns: list[str], outpu
 
     dataset = make_dataset(surface_path, columns)
     model = LGBModel(**MODEL_CONFIG)
-    with R.start(experiment_name="p5_h1_incremental_fundamentals_attempt_004",
+    with R.start(experiment_name="p5_h1_incremental_fundamentals_attempt_005",
                  recorder_name=surface_id):
         recorder = R.get_recorder()
         recorder.log_params(
-            task="AUTONOMOUS_QUANT_P5_H1_PR82_FINAL_CLEAN_ATTEMPT_004_001",
-            attempt="ATTEMPT_004_FINAL_CLEAN", surface=surface_id,
+            task="AUTONOMOUS_QUANT_P5_H1_FINAL_ATTEMPT_RUNTIME_BOUNDARY_CLOSEOUT_001",
+            attempt="ATTEMPT_005_FINAL_END_TO_END", surface=surface_id,
             processor_chain="DropnaLabel(label)->CSZScoreNorm(label)",
             model_config_sha256=canonical_sha256(MODEL_CONFIG), column_count=len(columns),
             train_range="/".join(TRAIN), valid_range="/".join(VALID), test_range="/".join(TEST),
@@ -242,7 +242,7 @@ def train_surface(surface_id: str, surface_path: Path, columns: list[str], outpu
         SigAnaRecord(recorder=recorder, ana_long_short=False, ann_scaler=252).generate()
         recorder_id = recorder.id
     recorded = R.get_recorder(recorder_id=recorder_id,
-                              experiment_name="p5_h1_incremental_fundamentals_attempt_004")
+                              experiment_name="p5_h1_incremental_fundamentals_attempt_005")
     prediction = recorded.load_object("pred.pkl")
     rank_ic = recorded.load_object("sig_analysis/ric.pkl")
     prediction = prediction.iloc[:, 0] if isinstance(prediction, pd.DataFrame) else prediction
@@ -273,8 +273,8 @@ def p2_prediction(prediction: pd.Series, crosswalk: pd.DataFrame) -> pd.Series:
 
 def classify_h1(attempt: str, s0_rank_ic: float, s1_rank_ic: float,
                 skfolio: dict | None = None, arch: dict | None = None) -> str:
-    if attempt != "ATTEMPT_004_FINAL_CLEAN":
-        raise ValueError("attempt-001/002/003 is not eligible for final H1 classification")
+    if attempt != "ATTEMPT_005_FINAL_END_TO_END":
+        raise ValueError("attempt-001/002/003/004 is not eligible for final H1 classification")
     if not np.isfinite([s0_rank_ic, s1_rank_ic]).all():
         return "INCONCLUSIVE"
     if skfolio is None or arch is None:
@@ -378,7 +378,7 @@ def preflight_mode(args: argparse.Namespace) -> None:
     write_json(output / "prefit-processor-gate.json",
                learning_surface_gate(surface_path, control_columns))
     write_json(output / "preflight-report.json", {
-        "schema": "AQ_P5_H1_PREFLIGHT_V4", "attempt": "ATTEMPT_004_FINAL_CLEAN",
+        "schema": "AQ_P5_H1_PREFLIGHT_V5", "attempt": "ATTEMPT_005_FINAL_END_TO_END",
         "qlib_version": qlib.__version__, "lightgbm_version": lightgbm.__version__,
         "qlib_source_sha": source_sha, "control_feature_manifest_sha256": control_hash,
         "surface_sha256": sha256(surface_path), "row_count": 1_196_594,
@@ -394,13 +394,13 @@ def fit_mode(args: argparse.Namespace) -> None:
     if args.surface_id is None:
         raise RuntimeError("fit mode requires one frozen surface ID")
     if not (output / "preflight-report.json").is_file():
-        raise RuntimeError("attempt-004 preflight is incomplete")
+        raise RuntimeError("attempt-005 preflight is incomplete")
     os.chdir(output)
     _, _, RaggedAlpha158, _, _, _, _ = init_runtime(args, output)
     control_columns, control_hash = control_manifest(RaggedAlpha158)
     preflight = json.loads((output / "preflight-report.json").read_text(encoding="utf-8"))
     if control_hash != preflight["control_feature_manifest_sha256"]:
-        raise RuntimeError("attempt-004 preflight identity mismatch")
+        raise RuntimeError("attempt-005 preflight identity mismatch")
     columns = control_columns if args.surface_id == "S0" else control_columns + list(P5_FEATURES)
     result = train_surface(args.surface_id, output / "h1-surfaces.parquet", columns, output)
     write_json(output / f"{args.surface_id.lower()}-fit-report.json",
@@ -416,14 +416,15 @@ def compose_mode(args: argparse.Namespace) -> None:
     control_columns, control_hash = control_manifest(RaggedAlpha158)
     preflight = json.loads((output / "preflight-report.json").read_text(encoding="utf-8"))
     if control_hash != preflight["control_feature_manifest_sha256"]:
-        raise RuntimeError("attempt-004 preflight identity mismatch")
+        raise RuntimeError("attempt-005 preflight identity mismatch")
     results = {surface: json.loads((output / f"{surface.lower()}-fit-report.json").read_text())
                for surface in ("S0", "S1")}
     report = {
-        "schema": "AQ_P5_H1_QLIB_EVIDENCE_V4", "attempt": "ATTEMPT_004_FINAL_CLEAN",
+        "schema": "AQ_P5_H1_QLIB_EVIDENCE_V5", "attempt": "ATTEMPT_005_FINAL_END_TO_END",
         "attempt_001_classification": "INVALID_IMPLEMENTATION_DEVIATION",
         "attempt_002_classification": "AUTHORITY_CORRECTED_RESOURCE_OOM",
         "attempt_003_classification": "POST_PREDICTION_ENTRYPOINT_FAILURE",
+        "attempt_004_classification": "FINAL_CLEAN_POST_PREDICTION_ENTRYPOINT_FAILURE",
         "qlib_version": qlib.__version__, "qlib_source_sha": source_sha,
         "lightgbm_version": lightgbm.__version__, "mlflow_version": mlflow.__version__,
         "model": "qlib.contrib.model.gbdt.LGBModel", "model_config": MODEL_CONFIG,
@@ -441,10 +442,10 @@ def compose_mode(args: argparse.Namespace) -> None:
         report["status"] = "INCONCLUSIVE_UNDEFINED_PRIMARY_METRIC"
         write_json(output / "qlib-report.json", report)
         write_json(output / "classification-report.json", {
-            "attempt_004": classify_h1("ATTEMPT_004_FINAL_CLEAN",
+            "attempt_005": classify_h1("ATTEMPT_005_FINAL_END_TO_END",
                                        results["S0"]["rank_ic"], results["S1"]["rank_ic"]),
         })
-        raise RuntimeError("attempt-004 primary QLIB_RANK_IC is undefined")
+        raise RuntimeError("attempt-005 primary QLIB_RANK_IC is undefined")
     crosswalk = pd.read_parquet(output / "episode-crosswalk.parquet")
     reference = load_reference(
         args.repo / "40-certification-system" / "historical-rehearsal" / "qlib_rehearsal.py",
@@ -467,7 +468,7 @@ def compose_mode(args: argparse.Namespace) -> None:
     daily_path = output / "daily-net-returns.csv"
     daily.to_csv(daily_path, lineterminator="\n")
     write_json(output / "surface-manifest.json", {
-        "schema": "AQ_P5_H1_SURFACES_V4", "attempt": "ATTEMPT_004_FINAL_CLEAN",
+        "schema": "AQ_P5_H1_SURFACES_V5", "attempt": "ATTEMPT_005_FINAL_END_TO_END",
         "control_dataset_identity": CONTROL_DATASET_IDENTITY,
         "control_feature_manifest_sha256": control_hash,
         "surface_sha256": preflight["surface_sha256"],
@@ -554,7 +555,7 @@ def arch_mode(args: argparse.Namespace) -> None:
     qlib_report = json.loads((args.output / "qlib-report.json").read_text(encoding="utf-8"))
     skfolio_report = json.loads((args.output / "skfolio-report.json").read_text(encoding="utf-8"))
     classification = classify_h1(
-        "ATTEMPT_004_FINAL_CLEAN", qlib_report["s0"]["rank_ic"],
+        "ATTEMPT_005_FINAL_END_TO_END", qlib_report["s0"]["rank_ic"],
         qlib_report["s1"]["rank_ic"], skfolio_report, report,
     )
     write_json(args.output / "classification-report.json", {
@@ -562,6 +563,7 @@ def arch_mode(args: argparse.Namespace) -> None:
         "attempt_002": "AUTHORITY_CORRECTED_RESOURCE_OOM",
         "attempt_003": "PROCESS_ISOLATED_POST_PREDICTION_ENTRYPOINT_FAILURE",
         "attempt_004": "FINAL_CLEAN",
+        "attempt_005": "FINAL_END_TO_END",
         "h1_result_classification": classification,
         "p5_complete": classification != "INCONCLUSIVE",
     })

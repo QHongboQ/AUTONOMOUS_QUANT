@@ -369,7 +369,7 @@ stages:
       bash -lc '
       set -euo pipefail;
       ROOT="$PWD";
-      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-004-final-clean;
+      OUT=/mnt/d/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end;
       PY=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python;
       SCRIPT="$ROOT/30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py";
       SCRIPT_WIN="$(wslpath -w "$SCRIPT")";
@@ -389,11 +389,11 @@ stages:
       "$PY" -B "$SCRIPT" compose $COMMON_ARGS --output "$OUT";
       /mnt/d/AQ_ENVS/skfolio/Scripts/python.exe -B "$SCRIPT_WIN" skfolio
       --repo "$REPO_WIN"
-      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-004-final-clean/daily-net-returns.csv
-      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-004-final-clean;
+      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end/daily-net-returns.csv
+      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end;
       /mnt/d/AQ_ENVS/arch/Scripts/python.exe -B "$SCRIPT_WIN" arch
-      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-004-final-clean/daily-net-returns.csv
-      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-004-final-clean'
+      --daily D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end/daily-net-returns.csv
+      --output D:/AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end'
     deps:
       - 30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py
       - 30-research-system/qlib/dataset-adapter/aq_qlib_handoff/qlib_config.py

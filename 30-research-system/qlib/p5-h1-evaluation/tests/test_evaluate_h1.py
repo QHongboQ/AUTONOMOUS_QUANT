@@ -63,10 +63,12 @@ class H1ThinAdapterTests(unittest.TestCase):
             h1.classify_h1("ATTEMPT_002_AUTHORITY_CORRECTED", 0.01, 0.02)
         with self.assertRaisesRegex(ValueError, "attempt-001/002/003"):
             h1.classify_h1("ATTEMPT_003_PROCESS_ISOLATED_AUTHORITY_CORRECTED", 0.01, 0.02)
+        with self.assertRaisesRegex(ValueError, "attempt-001/002/003/004"):
+            h1.classify_h1("ATTEMPT_004_FINAL_CLEAN", 0.01, 0.02)
 
     def test_undefined_primary_metric_is_inconclusive(self) -> None:
         self.assertEqual(
-            h1.classify_h1("ATTEMPT_004_FINAL_CLEAN", np.nan, 0.02),
+            h1.classify_h1("ATTEMPT_005_FINAL_END_TO_END", np.nan, 0.02),
             "INCONCLUSIVE",
         )
 
