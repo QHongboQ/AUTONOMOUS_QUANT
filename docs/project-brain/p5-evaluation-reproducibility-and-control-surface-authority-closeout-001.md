@@ -383,8 +383,8 @@ VALID_FEATURE_ZERO_PRESERVED = YES
 ```
 
 Attempt-002 ran from a clean separate output child. S0 fit exactly once and
-completed with finite Rank IC. The S1 recorder then started, but before S1 fit
-completion the WSL kernel killed the Python process for global OOM
+completed with finite Rank IC. The S1 recorder then started and S1 fit was
+invoked, but before completion the WSL kernel killed the Python process for global OOM
 (`anon-rss=7,543,644 KiB`, `total-vm=16,287,820 KiB`). DVC surfaced exit code
 15. No traceback, S1 prediction, S1 Rank IC, backtest, WalkForward, CPCV, SPA,
 or RealityCheck output exists. Per the frozen no-retry rule, S0 is not reused
@@ -393,7 +393,7 @@ and no checkpoint/resume framework is introduced.
 ```text
 ATTEMPT_002_CLASSIFICATION = INCONCLUSIVE_RESOURCE_OOM
 S0_MODEL_FIT_COUNT = 1
-S1_MODEL_FIT_COUNT = 0
+S1_MODEL_FIT_COUNT = 1_INCOMPLETE_RESOURCE_OOM
 S0_TEST_RANK_IC = 0.0021911029598144574
 S1_TEST_RANK_IC = NOT_AVAILABLE_RESOURCE_OOM_BEFORE_FIT_COMPLETION
 H1_TEST_RANK_IC_DELTA = NOT_AVAILABLE
@@ -449,7 +449,7 @@ LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_BEFORE = 162
 LOC_DUPLICATING_EXISTING_REPO_CAPABILITY_AFTER = 14
 RESUME_FRAMEWORK_RETIRED = YES
 
-PROJECT_MODEL_TRAINING_COUNT = 3
+PROJECT_MODEL_TRAINING_COUNT = 4
 PROJECT_PREDICTION_COUNT = 3
 PROJECT_BACKTEST_COUNT = 2
 H1_EXECUTED = INCOMPLETE_ATTEMPT_002
