@@ -787,3 +787,143 @@ BACKTEST_COUNT = 0
 CURRENT_DEVELOPMENT_NEXT = P6_MACRO_FEATURE_OBSERVED_AT_POLICY_FREEZE_001
 FINAL_CLASSIFICATION = PASS_UPSTREAM_NATIVE_MACRO_SESSION_COMPOSITION_POC
 ```
+
+## Residual upstream and Skills substitution audit (2026-09-25)
+
+This bounded audit ran after PR #86 was squash-merged at main
+`1c6eba0cfa99cccfc27e6ac5042f4607892cee8b`. It did not add production code,
+create features, train a model, predict, or backtest. Official FRED/ALFRED,
+Vintage 0.9.0, `exchange_calendars`, and DuckDB retain their previously frozen
+macro ownership; no candidate below displaced them.
+
+### Candidate identity and runtime matrix
+
+| Candidate | Source identity | Version or SHA | License / use boundary | Runtime fit and public interface | Skill available | Cost |
+|---|---|---|---|---|---|---|
+| FRED-MD / FRED-QD | Official St. Louis Fed 2026-08 CSVs | MD `412b5451...ac0a4`; QD `7471dd58...1b303` (SHA-256) | official public research dataset; citation required | `PASS`; versioned CSVs are directly usable by pandas/DuckDB | no | free |
+| Google LangExtract | `google/langextract` release | `1.7.0`, `70cfb988cc25f15d8b04a1e57bd52a777207c0c6` | Apache-2.0 | `PASS` structural POC through public `lx.extract()` | official `langextract-usage` | library free; model/provider cost varies |
+| Anthropic financial-services Skills | `anthropics/financial-services` | `574ed3624aebd0418c7e96cd101262f30210ab26` | Apache-2.0 | Markdown/JSON workflow assets; connector and model runtimes remain separate | yes | Skills free; named data connectors may cost |
+| Alpha Vantage transcripts | official `EARNINGS_CALL_TRANSCRIPT` API | unversioned service interface audited 2026-09-25 | default terms permit personal non-commercial use; other use needs separate agreement | documented API; no authorized credential was found, so no live call was made | no | standard limit 25 calls/day; paid tier for scale |
+| Media Cloud | `mediacloud/api-client` | `5.1.0`, `d36ca5d653aa94739e51dc7b52f08fe89b819550` | Apache-2.0 client; extracted article text is not downloadable for copyright reasons | Python Search API; token required; default client throttle is 2 requests/minute | no | account/API token required |
+| Common Crawl | `commoncrawl/cc-index-table` | `595493ff3a87295f99ce2951133288dbc1e5ad11` | Apache-2.0 index code; corpus terms apply | CDXJ and Parquet Columnar Index; direct DuckDB compatibility | no | index is public; compute/egress may apply |
+| Arctic Shift | `ArthurHeitmann/arctic_shift` release `2026_08` | `1565f3456488a99c212166e5779dc0b87f622ad3` | **no repository license or dataset-use grant identified**; Reddit terms remain unresolved | monthly RC/RS dumps plus bounded search API; no dump downloaded | no | service free; material storage burden |
+| MLflow Dataset Tracking + DVC | installed MLflow public API plus existing DVC owner | MLflow `3.16.0` | Apache-2.0 | `PASS` SQLite POC using `mlflow.data.from_pandas()` and `mlflow.log_input()` | no | already installed |
+
+### Candidate fit and production decisions
+
+| Candidate | PIT fit | Provenance fit | Coverage | Duplicates an owner? | AQ implementation removable? | Production decision |
+|---|---|---|---|---|---|---|
+| FRED-MD / FRED-QD | historical reference vintages, not the selected PIT-normalization owner | file/vintage name plus content hash | broad monthly/quarterly macro inventories | partially overlaps FRED/ALFRED and Vintage without replacing either | benchmark inventory/transformation reference only; final scientific choice remains AQ policy | `SELECTED_UPSTREAM_LEAF` as `PRIMARY_MACRO_FEATURE_TRANSFORMATION_REFERENCE` |
+| LangExtract | not a time authority | precise source-span alignment; ungrounded output remains explicitly ungrounded | structured extraction, schema shaping, chunking and multiple passes | supersedes FinGPT as the preferred mechanics challenger, not as model-quality authority | yes, for extraction mechanics if textual features are later authorized | `VALID_BUT_CHALLENGER`; `LANGEXTRACT_VALID_BUT_MODEL_DEPENDENT` |
+| Financial Skills | no source/PIT authority | workflows require citations, source checks and human review | earnings, guidance, beat/miss, management Q&A, company/market research and synthesis | workflow-only; SEC/FRED/Vintage/OpenBB/GDELT remain data owners | yes, for workflow guidance only | `SELECTED_UPSTREAM_SKILL_WORKFLOW_ONLY` |
+| Alpha Vantage | quarter-addressed history since 2010Q1; exact safe-availability fields not proven | turn-by-turn sentiment is documented, but immutable transcript identity/completeness was not live-validated | over 15 years documented | challenger to deferred OpenBB/FMP transcript access | no, pending credential, scale and terms validation | `BLOCKED_CREDENTIAL_OR_COST` |
+| Media Cloud | `indexed_date` is capture/processing time and therefore a conservative upper bound, **not** exact first publication | normalized-URL hash ID, final URL and indexed timestamp | 200M+ stories; collection/source dependent | supplements provider publication fields and GDELT | yes when credentialed, for safe availability only; not a text archive | `BLOCKED_CREDENTIAL_OR_COST` |
+| Common Crawl | capture timestamp is a conservative upper bound, not publication time | URL, response status, content digest and WARC filename/offset/length | archive since 2007; individual URL coverage is not guaranteed | supplementary archive fallback | yes, for capture/digest/WARC provenance; no AQ crawler | `SELECTED_UPSTREAM_LEAF` |
+| Arctic Shift | strong `created_utc`, `retrieved_on`, second-retrieval and delay evidence | monthly SHA-256, edit/deletion fields and retrieval timestamps | current 2026 submissions/comments dumps; Reddit subset only | would fill the Reddit part of social sentiment | technically yes, but legally not authorized | `BLOCKED_LICENSE_OR_TERMS` |
+| MLflow + DVC | mechanical lineage only, not domain availability semantics | dataset name, digest, source, schema, profile, context and run linkage | experiment input datasets | extends existing owners; no new registry | yes, for mechanical dataset registry/lineage | `SELECTED_UPSTREAM_LEAF` (existing owner) |
+
+The current FRED-MD file assigns benchmark transformation code `6` to
+`CPIAUCSL` and `2` to `UNRATE`. The current FRED-QD file assigns `5` to
+`GDPC1`, `6` to `CPIAUCSL`, and `2` to `UNRATE`. Exact `GDP` is absent from
+both current inventories, so `GDPC1` must not be silently substituted. These
+codes materially reduce the macro transformation-policy search space, but the
+FRED-QD research explicitly says benchmark choices may need reconsideration
+and can change forecast accuracy. Applying any code, including choosing real
+GDP `GDPC1` instead of nominal `GDP`, remains a preregistered AQ scientific
+decision. Vintage 0.9.0 remains the PIT evidence-normalization owner.
+
+The LangExtract POC used a fixed private test model, no network and no external
+LLM. It round-tripped one verbatim extraction to character interval `[13,39)`,
+retained an invented extraction with `char_interval = null`, and exercised
+100-character chunking with two passes across 60 prompts. The upstream owns
+source-span resolution, chunk scheduling, repeated extraction and structured
+output mechanics, but it cannot certify the selected model's semantic quality.
+OpenAI has structured-output support; Ollama has JSON-format support but does
+not support a user-supplied `output_schema` in LangExtract 1.7.0. FinGPT is
+therefore downgraded to reference/challenger status for structured extraction.
+
+The official `langextract-usage` Skill is adopted as private usage guidance,
+not as source or model authority. The financial-services `earnings-analysis`
+and `earnings-reviewer` workflows are `ADOPT_WORKFLOW_ONLY` for earnings-call
+reading, guidance, beat/miss, management commentary and Q&A themes. The
+`market-researcher`, competitive-analysis and equity-research workflows are
+also `ADOPT_WORKFLOW_ONLY` for company research, cross-source verification and
+news/event synthesis. Their investment opinions, proprietary connector
+assumptions and publishing decisions are not AQ authority; no external Skill
+copy is committed.
+
+Media Cloud documents `indexed_date` as the time content was captured and
+processed. It is a safe non-optimistic admission bound but is never renamed
+`first_available_at`; its heuristic `publish_date` is also not exact first
+availability. Common Crawl supplies the free supplementary equivalent through
+capture time plus digest and WARC identity. Consequently the former generic
+`NEWS_FIRST_AVAILABLE_AT` gap is narrowed to a fail-closed project predicate:
+use a provider timestamp only when its semantics are authoritative, otherwise
+use an available archive capture upper bound, and emit no observation if
+neither exists. Exact universal first publication remains unproved, but is not
+required for conservative admission.
+
+Arctic Shift is a serious technical Reddit candidate. The 2026-08 schemas
+include `created_utc`, `retrieved_on`, `_meta.retrieved_2nd_on`, edit and
+deletion status; documentation describes a second retrieval after roughly 36
+hours, and monthly releases include SHA-256 hashes. However the source has no
+recognized license file or repository license declaration, and neither the
+archive's dataset-use grant nor compatibility with Reddit terms was proven.
+Public access is not a use license. It is blocked and the true Reddit sentiment
+gap remains.
+
+The MLflow 3.16.0 POC recorded a synthetic pandas dataset through a native
+SQLite tracking backend and recovered its name, digest, local source, schema,
+profile and `audit` context from the run input. DVC continues to own artifact
+content/dependency identity. AQ retains only domain facts such as safe
+availability, conflict/admission meaning and source-specific evidence IDs; no
+AQ evidence registry is justified.
+
+### Residual reclassification
+
+The seven prior residuals were mechanical source/evidence identity,
+first-available-at admission, source precedence/conflict, upstream-to-AQ
+evidence shape, episode/session/Qlib mapping, scientific feature eligibility,
+and ablation/certification. MLflow+DVC now clearly own mechanical dataset
+identity/lineage; LangExtract/Vintage own their applicable evidence-shaping
+mechanics; and existing DuckDB/Pandera/`exchange_calendars`/Qlib composition
+owns generic tabular/session/handoff mechanics. Four AQ-owned project decisions
+remain:
+
+1. PIT admission policy;
+2. source precedence and conflict policy;
+3. scientific feature eligibility;
+4. certification and promotion policy.
+
+```text
+P6_RESIDUAL_UPSTREAM_SKILLS_SUBSTITUTION_AUDIT = PASS
+FRED_MD_QD_STATUS = PRIMARY_MACRO_FEATURE_TRANSFORMATION_REFERENCE
+MACRO_TRANSFORMATION_POLICY_UPSTREAM_REDUCTION = BENCHMARK_CODES_REUSED_AS_PRIMARY_REFERENCE_FINAL_SELECTION_REMAINS_AQ_SCIENTIFIC_POLICY
+LANGEXTRACT_VERSION = 1.7.0
+LANGEXTRACT_SOURCE_IDENTITY = 70cfb988cc25f15d8b04a1e57bd52a777207c0c6
+LANGEXTRACT_STATUS = LANGEXTRACT_VALID_BUT_MODEL_DEPENDENT
+LANGEXTRACT_AGENT_SKILL_STATUS = ADOPT_AS_IS_PRIVATE_USAGE_GUIDANCE
+FINGPT_STRUCTURED_EXTRACTION_ROLE = REFERENCE_OR_CHALLENGER_ONLY
+FINANCIAL_SKILLS_STATUS = PASS_OFFICIAL_WORKFLOWS_AUDITED
+FINANCIAL_SKILLS_ADOPTION_MODE = SELECTED_UPSTREAM_SKILL_WORKFLOW_ONLY
+ALPHA_VANTAGE_TRANSCRIPT_STATUS = BLOCKED_CREDENTIAL_COST_AND_TERMS_VALIDATION
+MEDIA_CLOUD_SAFE_AVAILABILITY_STATUS = VALID_CONSERVATIVE_UPPER_BOUND_CREDENTIAL_REQUIRED
+COMMON_CRAWL_CAPTURE_STATUS = SELECTED_SUPPLEMENTARY_CAPTURE_PROVENANCE_LEAF
+ARCTIC_SHIFT_STATUS = SERIOUS_TECHNICAL_CANDIDATE_BLOCKED_LICENSE_OR_TERMS
+ARCTIC_SHIFT_LICENSE_TERMS_STATUS = BLOCKED_NO_LICENSE_OR_DATA_USE_GRANT_PROVEN
+SOCIAL_SENTIMENT_CLASSIFICATION_AFTER_AUDIT = TRUE_GAP_RETAINED_REDDIT_LICENSE_AND_TERMS
+MLFLOW_DATASET_LINEAGE_STATUS = SELECTED_EXISTING_OWNER_WITH_DVC
+OLD_P6_RESIDUAL_CUSTOM_CAPABILITY_COUNT = 7
+NEW_P6_RESIDUAL_CUSTOM_CAPABILITY_COUNT = 4
+TRUE_UNSOLVED_UPSTREAM_GAP_COUNT = 1
+TRUE_UNSOLVED_UPSTREAM_GAPS = REDDIT_SENTIMENT_LICENSE_AND_REDDIT_TERMS_AUTHORITY
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/residual-upstream-skills-substitution-audit-001
+CURRENT_DEVELOPMENT_NEXT = P6_MACRO_FEATURE_OBSERVED_AT_POLICY_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P6_RESIDUAL_UPSTREAM_SKILLS_SUBSTITUTION_AUDIT
+```
