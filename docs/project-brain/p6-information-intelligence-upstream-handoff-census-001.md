@@ -927,3 +927,117 @@ PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/residual-upstream-skills-substitution-audi
 CURRENT_DEVELOPMENT_NEXT = P6_MACRO_FEATURE_OBSERVED_AT_POLICY_FREEZE_001
 FINAL_CLASSIFICATION = PASS_P6_RESIDUAL_UPSTREAM_SKILLS_SUBSTITUTION_AUDIT
 ```
+
+## Macro feature observed-at policy freeze (2026-09-25)
+
+This authority decision was made before any P6 macro feature was built or any
+model, prediction, ablation, or backtest was run. It consumes the already
+proven session-visible revision relation and does not alter its upstream
+owners: official FRED/ALFRED remains source authority, Vintage 0.9.0 remains
+PIT evidence-normalization owner, `exchange_calendars` plus DuckDB remain the
+session/relational composition owners, and FRED-MD/QD is only the primary
+benchmark transformation reference.
+
+### Series identity and transformation decision
+
+`GDP` and `GDPC1` are different economic quantities. `GDP` is nominal gross
+domestic product; `GDPC1` is real gross domestic product in chained dollars.
+The current bounded FRED-MD/QD inventories do not assign an official benchmark
+code to exact `GDP`. FRED-QD assigns code `5` to `GDPC1`, but selecting it would
+be a feature-inventory change, not a transformation of `GDP`. Macro V1 therefore
+defers `GDP`, rejects `GDPC1` for V1, and performs no silent substitution.
+
+| SERIES_ID | ECONOMIC_MEANING | FREQUENCY | PIT_OWNER | BENCHMARK_REFERENCE | BENCHMARK_TRANSFORM_CODE | SELECTED_TRANSFORMATION | OBSERVED_AT_SELECTION_RULE | SESSION_STATE_RULE | MISSINGNESS_RULE | PROVENANCE_RULE | FINAL_V1_STATUS |
+|---|---|---|---|---|---:|---|---|---|---|---|---|
+| `GDP` | nominal gross domestic product, SAAR | quarterly | Vintage 0.9.0 | current FRED-MD/QD | none for exact series | none | not active | not projected | remain missing | preserve source evidence; do not substitute `GDPC1` | `DEFERRED` |
+| `GDPC1` | real gross domestic product, chained dollars, SAAR | quarterly | Vintage 0.9.0 | FRED-QD | `5` | not adopted; benchmark means `ln(x_t)-ln(x_{t-1})` | not active | not projected | remain missing | retain distinct series identity | `REJECTED` |
+| `CPIAUCSL` | seasonally adjusted consumer price index | monthly | Vintage 0.9.0 | FRED-MD/QD | `6` | `ln(x_t)-2ln(x_{t-1})+ln(x_{t-2})` | latest monthly `observed_at` whose three-period dependency window is visible and valid | carry the latest legitimate transformed state until a release or constituent revision changes it | emit no new state when any required period is absent or non-positive | retain all three source `observed_at`, selected revisions, `known_at`, effective sessions and evidence IDs | `SELECTED` |
+| `UNRATE` | seasonally adjusted civilian unemployment rate | monthly | Vintage 0.9.0 | FRED-MD/QD | `2` | `x_t-x_{t-1}` in percentage points | latest monthly `observed_at` whose two-period dependency window is visible and valid | carry the latest legitimate transformed state until a release or constituent revision changes it | emit no new state when either required period is absent | retain both source `observed_at`, selected revisions, `known_at`, effective sessions and evidence IDs | `SELECTED` |
+
+The official code definitions are used literally: code `2` is the first
+difference in levels, code `5` is the first difference of logs, and code `6`
+is the second difference of logs. They are selected ex ante for `UNRATE` and
+`CPIAUCSL`; no model-performance evidence was inspected. FRED-QD's research
+notes that benchmark transformations can be reconsidered, so these codes
+constrain rather than eliminate AQ scientific responsibility.
+
+### Revision, economic-period, and session-state policy
+
+For each selected series and target XNYS session `T`:
+
+1. retain only evidence with `effective_session <= T`;
+2. independently select the latest visible revision within each exact
+   `(entity, field, observed_at)` group;
+3. select the latest frequency-valid `observed_at` whose complete frozen
+   transformation dependency window is available;
+4. compute only the frozen transformation from those visible revisions; and
+5. carry that legitimate state across later XNYS sessions until a new release
+   or a newly visible constituent revision creates a new state.
+
+Revision selection and economic-period selection are therefore separate.
+When any constituent period is revised, the recomputed transformed state is
+available only from that revision's own effective session forward; it is never
+projected backward. A transformed state's `known_at` and `effective_session`
+are the maxima across its selected constituents, while its provenance retains
+the full constituent revision vector.
+
+State carry-forward is not missing-value imputation. It means that the last
+legitimately known macro state remains the state known to the market between
+releases. It never manufactures an absent upstream observation, interpolates
+between observations, backfills a value before availability, or bridges a
+missing transform dependency. Monthly and any later-authorized quarterly
+series advance independently on their native observed-period grids and may be
+carried independently onto the daily XNYS session grid. Macro V1 itself has no
+active quarterly feature because both GDP-family candidates are not selected.
+
+### Minimal future Qlib feature contract
+
+| feature_id | source_series_id | transformation | source_frequency | value_semantics | availability_semantics | provenance requirements |
+|---|---|---|---|---|---|---|
+| `macro_v1_cpiaucsl_d2_log` | `CPIAUCSL` | FRED-MD/QD code `6` | monthly | change in continuously compounded monthly CPI growth | first XNYS session strictly after the maximum date-only `known_at` of the three selected visible revisions; then state carry-forward | series ID, all dependency `observed_at`/`known_at`/effective sessions, values, evidence IDs, transformation code and lineage identity |
+| `macro_v1_unrate_d1` | `UNRATE` | FRED-MD/QD code `2` | monthly | monthly percentage-point change in unemployment rate | first XNYS session strictly after the maximum date-only `known_at` of the two selected visible revisions; then state carry-forward | series ID, both dependency `observed_at`/`known_at`/effective sessions, values, evidence IDs, transformation code and lineage identity |
+
+This contract freezes names and semantics only. Its intended future proof path
+is Vintage + DuckDB + `exchange_calendars` + Pandera + MLflow/DVC + Qlib
+`StaticDataLoader`; it does not authorize a macro feature, transformation,
+state, resampling, registry, panel, or feature-store engine.
+
+```text
+MACRO_FEATURE_OBSERVED_AT_POLICY_FREEZE = PASS
+MACRO_SOURCE_AUTHORITY = OFFICIAL_FRED_ALFRED
+MACRO_PIT_OWNER = VINTAGE_0_9_0
+MACRO_SESSION_OWNER = EXCHANGE_CALENDARS_PLUS_DUCKDB_COMPOSITION
+MACRO_TRANSFORMATION_REFERENCE = FRED_MD_QD
+GDP_STATUS = DEFERRED
+GDP_STATUS_REASON = NO_EXACT_CURRENT_BENCHMARK_TRANSFORMATION
+GDPC1_STATUS = REJECTED
+GDPC1_STATUS_REASON = DISTINCT_REAL_GDP_IDENTITY_NOT_SELECTED_FOR_V1
+GDP_TO_GDPC1_SILENT_SUBSTITUTION = NO
+CPIAUCSL_STATUS = SELECTED
+CPIAUCSL_TRANSFORMATION = CODE_6_SECOND_LOG_DIFFERENCE
+UNRATE_STATUS = SELECTED
+UNRATE_TRANSFORMATION = CODE_2_FIRST_LEVEL_DIFFERENCE
+MACRO_V1_SELECTED_SERIES_COUNT = 2
+MACRO_V1_SELECTED_SERIES = CPIAUCSL,UNRATE
+BENCHMARK_TRANSFORMATION_POLICY = ADOPT_EXACT_FRED_MD_QD_CODES_FOR_SELECTED_EXACT_SERIES_ONLY
+LATEST_VISIBLE_REVISION_RULE = INDEPENDENT_PER_ENTITY_FIELD_OBSERVED_AT_AS_OF_TARGET_SESSION
+OBSERVED_AT_SELECTION_RULE = LATEST_FREQUENCY_VALID_OBSERVED_AT_WITH_COMPLETE_VISIBLE_TRANSFORMATION_WINDOW
+MACRO_SESSION_STATE_CARRY_FORWARD = YES
+UPSTREAM_MISSING_OBSERVATION_IMPUTATION = NO
+INTERPOLATION = NO
+BACKFILL = NO
+MONTHLY_QUARTERLY_INDEPENDENT_STATE = YES
+MACRO_V1_QUARTERLY_SERIES_ACTIVE = NO
+PROVENANCE_PRESERVED_THROUGH_SESSION_STATE = YES
+QLIB_FEATURE_CONTRACT_FROZEN = YES
+AQ_MACRO_FEATURE_ENGINE_CREATED = NO
+AQ_MACRO_TRANSFORMATION_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+CURRENT_DEVELOPMENT_NEXT = P6_MACRO_V1_UPSTREAM_NATIVE_COMPOSITION_POC_001
+FINAL_CLASSIFICATION = PASS_P6_MACRO_FEATURE_OBSERVED_AT_POLICY_FROZEN
+```
