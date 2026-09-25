@@ -372,3 +372,138 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_SEALED_OOS_RESULT_USED = NO
 FINAL_CLASSIFICATION = PASS_P6_PREAUDIT_COMPLETE_P5_REMAINS_ACTIVE
 ```
+
+## Post-P5 deployment and substitution audit (2026-09-25)
+
+This section records actual isolated-runtime evidence after P5 closeout. It
+does not revise the historical preaudit above. All six viable audited upstream
+groups were deployed without adding AQ production code:
+
+| Deployment | Frozen runtime identity | Bounded native-interface result |
+|---|---|---|
+| Official FRED/ALFRED + fredapi | `/home/zhou/AQ_ENVS/p6-data-gateways`; Python 3.11.16; fredapi 0.5.2; freeze `d75b5380efc2b0dc4629565daf6cb11909d501b8629b8ccc137d345f56a6fcdf` | ALFRED first-release, all-releases, as-of-date, and vintage methods exist. No FRED key was available, so live retrieval is `DEFERRED_CREDENTIAL_REQUIRED`; no AQ HTTP client was created. |
+| GDELT + gdeltdoc | Same isolated gateway runtime; gdeltdoc 1.12.0 | Bounded article search returned 5 rows. After one bounded rate-limit retry, timeline search returned 83 rows. GDELT remains supplementary metadata/event-volume authority, not complete article or first-availability authority. |
+| OpenBB | `/home/zhou/AQ_ENVS/p6-openbb`; Python 3.11.16; OpenBB 4.7.3 from commit `3e071fcc2cd9f891cac6040ae60296dba76dab46`; freeze `cc70cf31802c8c86b95e8bedcdaac70fdb6c5d93421d26735344161c0f0347a3` | 17 providers registered. Five news providers were present; only yfinance was free/no-key and its bounded AAPL news call passed. The FRED calendar interface exists but the bounded live call timed out. FMP transcript access correctly failed for missing credentials. |
+| Transformers + pinned ProsusAI/finbert | `/home/zhou/AQ_ENVS/p6-finbert`; Python 3.11.16; Transformers 5.17.0; model revision `4556d13015211d73dccd3fdd39d39232506f3e43`; freeze `6272d29eabada2446624ce9b400296299f99be4281b4ddbc2637af5d1680c278` | `BertTokenizer` + `BertForSequenceClassification` classified frozen positive/negative/neutral fixtures correctly. A second run produced byte-for-byte identical scores. The obsolete ProsusAI repository runtime was not deployed. |
+| TradingAgents | `/home/zhou/AQ_ENVS/p6-tradingagents`; version 0.5.0; commit `2d17df8da1536c121e4d7395ac5a5dcec9e96d6f`; freeze `8251436ffc7a035e96a2dcac641332a84d052ccad92c05df466919f7b4925ee6` | Source/public-interface inspection passed, but its initial-state API does not accept externally pre-sealed macro/news/fundamental reports and its analyst graph binds duplicate retrieval tool paths. `DEFERRED_INTERFACE_MISMATCH`; no fork or unrestricted execution. |
+| FinGPT | `/home/zhou/AQ_ENVS/p6-fingpt`; package metadata 0.0.1; commit `cefb3a26b84a3a4c57868f1ca48fb0d9723fd28e`; freeze `d2c2f09f65f61cf040b355be436d7a88ccc8c0823d85453f798554bbc93751dc` | Root and RAG imports passed. Benchmark/report/forecast capability is distributed across optional notebooks and subprojects rather than one stable public runtime API. One extraction capability remains useful as a challenger; five overlaps are deferred to existing owners. |
+
+Every isolated runtime passed `uv pip check`. The FinBERT snapshot occupies
+1,314,371,575 bytes and has content-tree SHA-256
+`180d70d121ec254e60ab946d1d1d2efc64e0185177536d3945edbb9feffac334`.
+The frozen synthetic fixture SHA-256 is
+`377d6e07894de73651a384296208f528d72c9fcc33040155a5a1c98a000c1473`.
+No credential value was recorded.
+
+### Deployed provider and overlap decisions
+
+OpenBB registered these 17 providers: benzinga, bls, cftc, congress_gov,
+econdb, eia, federal_reserve, fmp, fred, government_us, imf, intrinio, oecd,
+sec, tiingo, tradingeconomics, and yfinance. The deployed news surface exposed
+benzinga (`FREEMIUM_OR_KEY_REQUIRED`), fmp (`FREEMIUM_OR_KEY_REQUIRED`),
+intrinio (`PAID_REQUIRED`), tiingo (`FREE_API_KEY_OR_PAID_TIER`), and yfinance
+(`FREE_NO_KEY`). No subscription was purchased.
+
+FinGPT overlap is frozen as follows:
+
+| FinGPT capability | Decision |
+|---|---|
+| financial sentiment | `USE_FINBERT` |
+| structured text extraction | `FINGPT_UNIQUE_USEFUL_LEAF` as challenger only |
+| report analysis | `FINGPT_DUPLICATIVE_DEFER` |
+| RAG | `FINGPT_DUPLICATIVE_DEFER` |
+| forecasting | `FINGPT_DUPLICATIVE_DEFER` |
+| LLM finance research | `FINGPT_DUPLICATIVE_DEFER`; TradingAgents remains the synthesis challenger |
+
+### Final 23-capability deployed coverage matrix
+
+The following classifications are conservative runtime-admission results. A
+client interface without the credential needed to exercise its authoritative
+service is access-deferred rather than falsely called live-deployed.
+
+| # | Capability | Final coverage class | Deployed owner / evidence |
+|---:|---|---|---|
+| 1 | `NEWS_DISCOVERY` | `UPSTREAM_WHOLE_DEPLOYED` | OpenBB news gateway; yfinance bounded POC passed. |
+| 2 | `HISTORICAL_NEWS_DISCOVERY` | `UPSTREAM_LEAF_DEPLOYED` | GDELT 2.x via gdeltdoc, supplementary only. |
+| 3 | `NEWS_PUBLISHED_AT` | `UPSTREAM_LEAF_DEPLOYED` | OpenBB provider publication timestamp. |
+| 4 | `NEWS_FIRST_AVAILABLE_AT` | `DEFER_NO_MATURE_UPSTREAM` | No deployed path proves universal first availability. |
+| 5 | `NEWS_CONTENT_ACCESS` | `UPSTREAM_LEAF_DEPLOYED` | OpenBB provider content where returned. |
+| 6 | `NEWS_METADATA_HASHING_INPUT` | `UPSTREAM_LEAF_DEPLOYED` | OpenBB normalized source, URL, title, and date fields. |
+| 7 | `NEWS_EVENT_VOLUME` | `UPSTREAM_LEAF_DEPLOYED` | GDELT timeline interface. |
+| 8 | `MACRO_SERIES_ACCESS` | `DEFER_ACCESS_OR_CREDENTIAL` | Official FRED/ALFRED + deployed fredapi; live key absent. |
+| 9 | `MACRO_RELEASE_CALENDAR` | `UPSTREAM_LEAF_DEPLOYED` | OpenBB FRED calendar interface, supplementary; bounded live call timed out. |
+| 10 | `MACRO_FIRST_RELEASE` | `DEFER_ACCESS_OR_CREDENTIAL` | Official ALFRED method proven; live key absent. |
+| 11 | `MACRO_REVISION_HISTORY` | `DEFER_ACCESS_OR_CREDENTIAL` | Official ALFRED method proven; live key absent. |
+| 12 | `MACRO_AS_OF_DATE_QUERY` | `DEFER_ACCESS_OR_CREDENTIAL` | Official ALFRED method proven; live key absent. |
+| 13 | `MACRO_VINTAGE_IDENTITY` | `DEFER_ACCESS_OR_CREDENTIAL` | Official ALFRED vintage method proven; live key absent. |
+| 14 | `FINANCIAL_SENTIMENT` | `UPSTREAM_LEAF_DEPLOYED` | Transformers + pinned ProsusAI/finbert. |
+| 15 | `NEWS_SENTIMENT` | `UPSTREAM_LEAF_DEPLOYED` | Same deterministic model leaf on admitted news text. |
+| 16 | `FILING_SENTIMENT` | `UPSTREAM_LEAF_DEPLOYED` | Same model leaf on EdgarTools-authoritative text. |
+| 17 | `TEXT_CLASSIFICATION` | `UPSTREAM_LEAF_DEPLOYED` | Transformers public inference runtime. |
+| 18 | `STRUCTURED_TEXT_EXTRACTION` | `UPSTREAM_CHALLENGER_DEPLOYED` | FinGPT research collection; no production admission. |
+| 19 | `LLM_DOCUMENT_ANALYSIS` | `DEFER_NO_MATURE_UPSTREAM` | Model, prompt, schema, and evidence contract remain unfrozen. |
+| 20 | `MULTI_AGENT_INFORMATION_SYNTHESIS` | `UPSTREAM_CHALLENGER_DEPLOYED` | TradingAgents; interface mismatch prevents production ownership. |
+| 21 | `EARNINGS_CALL_ACCESS` | `DEFER_ACCESS_OR_CREDENTIAL` | OpenBB FMP transcript interface; credential absent. |
+| 22 | `EARNINGS_CALL_TEXT_INTELLIGENCE` | `DEFER_ACCESS_OR_CREDENTIAL` | Transcript access and model contract are both prerequisites. |
+| 23 | `SOCIAL_SENTIMENT` | `DEFER_NO_MATURE_UPSTREAM` | No deployed historical PIT social archive. |
+
+```text
+P6_CAPABILITY_COUNT = 23
+UPSTREAM_WHOLE_DEPLOYED_COUNT = 1
+UPSTREAM_LEAF_DEPLOYED_COUNT = 10
+UPSTREAM_CHALLENGER_DEPLOYED_COUNT = 2
+DEFER_NO_MATURE_UPSTREAM_COUNT = 3
+DEFER_ACCESS_OR_CREDENTIAL_COUNT = 7
+GENUINE_AQ_SPECIFIC_THIN_LOGIC_COUNT = 0
+```
+
+### Residual-custom audit: no implementation authorization
+
+These seven cross-cutting residuals are outside the 23 generic upstream
+capabilities. They are retained only because they express AQ's existing PIT,
+episode, evidence, and certification semantics. None requires a generic
+engine, and none is implemented by this task.
+
+| Residual | Class | Why deployed upstreams cannot own it | Why scope contraction cannot remove it | Why defer is not acceptable once consumed | Minimum eventual AQ behavior | Est. production LOC | Engine |
+|---|---|---|---|---|---|---:|---|
+| source/evidence identity | `PROJECT_POLICY_ONLY` | It binds project-selected source/model/config identities, not a provider operation. | Removing identity would make outputs non-reproducible. | A governed dataset cannot admit unidentified inputs. | Persist immutable upstream identities and hashes. | 25 | `NO` |
+| first-available-at admission | `PROJECT_POLICY_ONLY` | Providers expose varying timestamps but cannot choose AQ's PIT admissibility claim. | Removing availability control would permit look-ahead. | Any time-sensitive feature needs an admission decision or fail-closed null. | Admit only proven timestamps and fail closed otherwise. | 20 | `NO` |
+| source precedence/conflict | `PROJECT_POLICY_ONLY` | The one-owner decision and conflict consequence are repository governance. | Removing it would permit contradictory owners. | A conflict cannot be silently carried into an authoritative feature. | Apply frozen precedence and reject conflicts. | 25 | `NO` |
+| upstream-to-AQ evidence shape | `THIN_SHAPE_ADAPTER_ONLY` | Upstreams do not emit AQ's bounded evidence contract. | Without projection, upstream records cannot enter the existing contract. | A selected upstream is unusable until its native fields are losslessly shaped. | Project selected fields without reinterpretation. | 35 | `NO` |
+| episode/session/Qlib mapping | `THIN_SHAPE_ADAPTER_ONLY` | AQ's P1 membership episodes and Qlib dataset shape are project-specific. | Removing it breaks the existing research-universe and runtime boundary. | An admitted feature must be aligned before Qlib can consume it. | Map admitted evidence onto existing episodes/sessions and Qlib input. | 45 | `NO` |
+| factor eligibility | `PROJECT_POLICY_ONLY` | Upstreams cannot define AQ research eligibility. | Removing it would admit sources outside the frozen scientific claim. | Evaluation cannot start without an exact eligible surface. | Apply source-availability and PIT eligibility. | 20 | `NO` |
+| ablation/certification policy | `PROJECT_POLICY_ONLY` | It governs existing Qlib/MLflow/DVC/arch/skfolio owners rather than replacing them. | Removing it erases the project's preregistered decision rule. | Results cannot be promoted without a frozen acceptance rule. | Bind frozen comparisons and gates; build no evaluation engine. | 20 | `NO` |
+
+Each item remains design evidence until a separately authorized P6 handoff
+actually consumes it; “not acceptable to defer” is not implementation
+authorization in this task.
+The exact true upstream gaps remain `NEWS_FIRST_AVAILABLE_AT` and
+`SOCIAL_SENTIMENT`; neither authorizes a crawler or archive. LLM document
+analysis is deferred because its scientific contract is unfrozen, not because
+AQ should build an LLM framework.
+
+```text
+DEPLOYED_UPSTREAM_COUNT = 6
+RESIDUAL_CUSTOM_CAPABILITY_COUNT = 7
+TRUE_UNSOLVED_UPSTREAM_GAP_COUNT = 2
+TRUE_UNSOLVED_UPSTREAM_GAPS = NEWS_FIRST_AVAILABLE_AT,SOCIAL_SENTIMENT
+CUSTOM_ENGINE_REQUIRED_COUNT = 0
+OLD_FINBERT_REPOSITORY_RUNTIME = REJECTED_SUPERSEDED_BY_TRANSFORMERS_MODEL_LEAF
+NEW_AQ_P6_PRODUCTION_CAPABILITY_IMPLEMENTATION = NO
+NEW_PRODUCTION_LOC = 0
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_MACRO_CLIENT_CREATED = NO
+AQ_MACRO_REVISION_ENGINE_CREATED = NO
+AQ_SENTIMENT_ENGINE_CREATED = NO
+AQ_LLM_FRAMEWORK_CREATED = NO
+AQ_MULTI_AGENT_FRAMEWORK_CREATED = NO
+AQ_RAG_ENGINE_CREATED = NO
+AQ_VECTOR_DB_CREATED = NO
+AQ_PROVIDER_REGISTRY_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+MODEL_TRAINING_COUNT = 0
+BACKTEST_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P6_FRED_API_CREDENTIAL_ACTIVATION_AND_MACRO_PIT_POC_001
+FINAL_CLASSIFICATION = PASS_P6_UPSTREAMS_DEPLOYED_RESIDUAL_CUSTOM_AUDIT_COMPLETE
+```
