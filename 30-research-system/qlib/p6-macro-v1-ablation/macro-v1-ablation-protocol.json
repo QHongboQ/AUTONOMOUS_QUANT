@@ -1,0 +1,257 @@
+{
+  "schema": "AQ_P6_MACRO_V1_ABLATION_PROTOCOL_V1",
+  "status": "FROZEN_PRE_EXECUTION",
+  "scientific_inventory": {
+    "hypothesis_count": 1,
+    "primary_surface_comparison_count": 1,
+    "planned_model_fit_count": 2,
+    "hypothesis_id": "H_MACRO_V1",
+    "hypothesis": "Adding the exact frozen two-feature Macro V1 family to BASE_157 produces measurable incremental value under the unchanged historical research vehicle.",
+    "primary_direction": "M1_MINUS_M0",
+    "protocol_changing_rerun_authorized": false
+  },
+  "control": {
+    "surface": "BASE_157",
+    "feature_family": "P2_RAGGED_ALPHA158_OHLCV_157",
+    "feature_column_count": 157,
+    "feature_manifest_sha256": "7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463",
+    "dataset_identity": "P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135",
+    "p5_fundamentals_included": false
+  },
+  "surfaces": [
+    {
+      "id": "M0",
+      "identity": "BASE_157",
+      "base_feature_count": 157,
+      "increment_features": []
+    },
+    {
+      "id": "M1",
+      "identity": "BASE_157_PLUS_EXACT_MACRO_V1_2",
+      "base_feature_count": 157,
+      "increment_features": [
+        "macro_v1_cpiaucsl_d2_log",
+        "macro_v1_unrate_d1"
+      ]
+    }
+  ],
+  "excluded_feature_families": {
+    "GDP": true,
+    "GDPC1": true,
+    "p5_fundamentals": true,
+    "filing_features": true,
+    "news_features": true,
+    "sentiment_features": true,
+    "individual_macro_feature_trials": true,
+    "alternate_macro_transformations_or_lags": true
+  },
+  "macro_input_authority": {
+    "root": "D:/AQ_DATA/P6/macro-v1-001",
+    "manifest_sha256": "23dee6c4430d68e26068305f3e929a3c2cba59d30dd38d5ba97fd1fe6e39e44c",
+    "evidence_logical_sha256": "281ca7ff1a18700ad1453d62d4a2f239690cedb97c413ee4639acd4766899866",
+    "macro_state_logical_sha256": "3dbb88c1529d259b6447fc3f2e6e2d9124efa2bce8466b12b43f631a849d20fc",
+    "provenance_logical_sha256": "4974edca45e48e67e61446341ba1cf3fdb037e41b5878c95ea13e9321512e55a",
+    "feature_count": 2,
+    "feature_ids": [
+      "macro_v1_cpiaucsl_d2_log",
+      "macro_v1_unrate_d1"
+    ],
+    "broadcast_mechanism": "DUCKDB_MECHANICAL_BROADCAST",
+    "rematerialize_alternative_semantics": false
+  },
+  "row_identity_policy": {
+    "m0_m1_datetime_rows_equal": true,
+    "m0_m1_instruments_equal": true,
+    "m0_m1_membership_episode_identity_equal": true,
+    "m0_m1_labels_equal": true,
+    "m0_m1_splits_equal": true,
+    "row_population_difference_classification": "IMPLEMENTATION_FAILURE",
+    "instrument_dependent_macro_value_count_required": 0,
+    "manufactured_instrument_session_row_count_required": 0,
+    "permanent_broadcast_artifact": false
+  },
+  "splits": {
+    "train": ["2015-04-01", "2019-12-31"],
+    "validation": ["2020-01-01", "2021-12-31"],
+    "historical_research_test": ["2022-01-03", "2024-12-31"]
+  },
+  "upstream_identities": {
+    "qlib_version": "0.9.8.dev26",
+    "qlib_source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8",
+    "lightgbm_version": "4.7.0",
+    "skfolio_version": "1.0.6",
+    "arch_version": "8.0.0"
+  },
+  "model": {
+    "owner": "MICROSOFT_QLIB",
+    "class": "qlib.contrib.model.gbdt.LGBModel",
+    "config_source": "30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py::MODEL_CONFIG",
+    "config_sha256": "f75355629e7ad6b85f100627dbc055712d7f72d1e1e31783736f1ce4cc10a61a",
+    "config": {
+      "bagging_freq": 0,
+      "bagging_seed": 3,
+      "colsample_bytree": 0.8879,
+      "data_random_seed": 1,
+      "deterministic": true,
+      "device_type": "cpu",
+      "drop_seed": 4,
+      "early_stopping_rounds": 50,
+      "extra_seed": 6,
+      "feature_fraction_seed": 2,
+      "force_col_wise": true,
+      "force_row_wise": false,
+      "lambda_l1": 205.6999,
+      "lambda_l2": 580.9768,
+      "learning_rate": 0.2,
+      "loss": "mse",
+      "max_depth": 8,
+      "num_boost_round": 1000,
+      "num_leaves": 210,
+      "num_threads": 8,
+      "objective_seed": 5,
+      "seed": 20260913,
+      "subsample": 0.8789,
+      "use_missing": true,
+      "zero_as_missing": false
+    },
+    "config_changed": false,
+    "hyperparameter_search": false
+  },
+  "label_and_processors": {
+    "label": "Ref($close, -2)/Ref($close, -1) - 1",
+    "shared_processors": [],
+    "infer_processors": [],
+    "learn_processors": [
+      {"class": "DropnaLabel", "kwargs": {"fields_group": "label"}},
+      {"class": "CSZScoreNorm", "kwargs": {"fields_group": "label"}}
+    ],
+    "feature_fillna_used": false,
+    "macro_extra_normalization": false,
+    "macro_clipping_or_winsorization": false
+  },
+  "prediction_metric": {
+    "primary": "QLIB_RANK_IC",
+    "delta": "M1_TEST_RANK_IC - M0_TEST_RANK_IC",
+    "positive_support_direction": "DELTA_GT_0",
+    "secondary_metrics_may_not_change_classification": true
+  },
+  "portfolio": {
+    "strategy": "TopkDropoutStrategy",
+    "topk": 30,
+    "n_drop": 3,
+    "open_cost": 0.0005,
+    "close_cost": 0.0015,
+    "deal_price": "close",
+    "m0_m1_assumptions_equal": true
+  },
+  "walkforward": {
+    "owner": "skfolio",
+    "test_size": 63,
+    "train_size": 504,
+    "purged_size": 2,
+    "expand_train": false,
+    "reduce_test": false,
+    "forward_gate": {
+      "positive_active_return_fraction_gte": 0.6,
+      "median_active_return_gt": 0.0
+    },
+    "reverse_direction_role": "DEGRADED_CLASSIFICATION_ONLY"
+  },
+  "cpcv": {
+    "owner": "skfolio",
+    "n_folds": 10,
+    "n_test_folds": 2,
+    "purged_size": 2,
+    "embargo_size": 2,
+    "forward_gate": {
+      "positive_active_return_fraction_gte": 0.6,
+      "median_active_return_gt": 0.0
+    },
+    "reverse_direction_role": "DEGRADED_CLASSIFICATION_ONLY"
+  },
+  "arch_tests": {
+    "owner": "arch",
+    "bootstrap": "stationary",
+    "block_size": 10,
+    "reps": 5000,
+    "seed": 20260913,
+    "alpha": 0.05,
+    "loss": "negative net daily return",
+    "directions": ["M1_MINUS_M0", "M0_MINUS_M1"],
+    "positive_support_gate": {
+      "spa_consistent_pvalue_lte": 0.05,
+      "reality_check_consistent_pvalue_lte": 0.05
+    }
+  },
+  "classifications": {
+    "INCREMENTAL_VALUE_SUPPORTED": {
+      "all_required": [
+        "M1_TEST_RANK_IC - M0_TEST_RANK_IC > 0",
+        "M1_MINUS_M0 WalkForward gate = TRUE",
+        "M1_MINUS_M0 CPCV gate = TRUE",
+        "M1_MINUS_M0 SPA consistent p-value <= 0.05",
+        "M1_MINUS_M0 RealityCheck consistent p-value <= 0.05"
+      ],
+      "retention": "ELIGIBLE_FOR_LATER_P6_INTEGRATION_OR_PROMOTION"
+    },
+    "DEGRADED": {
+      "all_required": [
+        "M1_TEST_RANK_IC - M0_TEST_RANK_IC < 0",
+        "M0_MINUS_M1 WalkForward gate = TRUE",
+        "M0_MINUS_M1 CPCV gate = TRUE",
+        "M0_MINUS_M1 SPA consistent p-value <= 0.05",
+        "M0_MINUS_M1 RealityCheck consistent p-value <= 0.05"
+      ],
+      "retention": "REJECT_FROM_CANDIDATE_FEATURE_SURFACE"
+    },
+    "NO_MEASURABLE_INCREMENTAL_VALUE": {
+      "all_required": [
+        "PRIMARY_METRICS_FINITE",
+        "INCREMENTAL_VALUE_SUPPORTED gate is not fully satisfied",
+        "DEGRADED gate is not fully satisfied"
+      ],
+      "retention": "CLOSE_MACRO_V1_QUESTION_RETAIN_MATERIALIZATION_AS_HISTORICAL_EVIDENCE_ONLY"
+    },
+    "INCONCLUSIVE": {
+      "any_required": [
+        "PRIMARY_RANK_IC_UNDEFINED_OR_NONFINITE",
+        "ROW_OR_LABEL_MISMATCH",
+        "CORRUPT_ARTIFACT",
+        "INCOMPLETE_REQUIRED_STATISTICAL_EVIDENCE",
+        "UNRECOVERABLE_RUNTIME_FAILURE"
+      ],
+      "weak_results_alone_are_inconclusive": false,
+      "retention": "ONLY_EXACT_NO_PROTOCOL_CHANGE_RECOVERY_MAY_BE_CONSIDERED"
+    }
+  },
+  "post_result_policy": {
+    "INCREMENTAL_VALUE_SUPPORTED": "ELIGIBLE_FOR_LATER_P6_INTEGRATION_OR_PROMOTION",
+    "NO_MEASURABLE_INCREMENTAL_VALUE": {
+      "macro_v1_question_closed": true,
+      "add_more_macro_series": false,
+      "try_alternate_transformations": false,
+      "add_GDP_or_GDPC1": false,
+      "tune_lags": false,
+      "materialization_role": "HISTORICAL_EVIDENCE_ONLY_UNLESS_SEPARATELY_PREREGISTERED"
+    },
+    "DEGRADED": "REJECT_FROM_CANDIDATE_FEATURE_SURFACE",
+    "INCONCLUSIVE": "ONLY_EXACT_NO_PROTOCOL_CHANGE_RECOVERY_MAY_BE_CONSIDERED"
+  },
+  "future_execution": {
+    "minimum_path": "REUSE_PROVEN_P5_MECHANICS_WITHOUT_BROAD_FRAMEWORK_GENERALIZATION",
+    "evaluation_framework_created": false,
+    "p5_evaluator_behavior_modified": false,
+    "retry_policy": "EXACT_IMPLEMENTATION_OR_RUNTIME_RECOVERY_ONLY",
+    "next_task": "P6_MACRO_V1_FIRST_AUTHORIZED_ABLATION_EXECUTION_001"
+  },
+  "safety": {
+    "model_training_count": 0,
+    "prediction_count": 0,
+    "backtest_count": 0,
+    "ablation_count": 0,
+    "p2_v2_sealed_oos_accessed": false,
+    "p2_v2_sealed_oos_result_used": false,
+    "new_production_loc": 0,
+    "aq_new_generic_engine_count": 0
+  }
+}
