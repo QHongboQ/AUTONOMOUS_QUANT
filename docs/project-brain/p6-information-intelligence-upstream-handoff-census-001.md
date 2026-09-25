@@ -507,3 +507,117 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 CURRENT_DEVELOPMENT_NEXT = P6_FRED_API_CREDENTIAL_ACTIVATION_AND_MACRO_PIT_POC_001
 FINAL_CLASSIFICATION = PASS_P6_UPSTREAMS_DEPLOYED_RESIDUAL_CUSTOM_AUDIT_COMPLETE
 ```
+
+## FRED credential activation gate (2026-09-25)
+
+The selected macro ownership remains unchanged:
+
+```text
+MACRO_PIT_PRODUCTION_OWNER = OFFICIAL_FRED_ALFRED
+MACRO_PIT_OWNERSHIP_MODE = UPSTREAM_WHOLE
+MACRO_PIT_PYTHON_ACCESS_OWNER = FREDAPI
+MACRO_PIT_PYTHON_ACCESS_MODE = UPSTREAM_LEAF
+CUSTOM_ENGINE_REQUIRED = NO
+```
+
+The existing `/home/zhou/AQ_ENVS/p6-data-gateways` runtime was reused. It
+contains Python 3.11.16 and fredapi 0.5.2, its 12-package freeze remains
+`d75b5380efc2b0dc4629565daf6cb11909d501b8629b8ccc137d345f56a6fcdf`,
+and `uv pip check` passes. The native `Fred` class exposes all five selected
+methods: `get_series`, `get_series_first_release`,
+`get_series_all_releases`, `get_series_as_of_date`, and
+`get_series_vintage_dates`.
+
+No authorized FRED API key was available in the Windows environment, WSL
+environment, or fredapi private default file. No credential value was printed,
+logged, stored, or committed. The task therefore stopped before any live
+request, exactly as required. `GDP`, `CPIAUCSL`, and `UNRATE` were not queried,
+and interface presence is not promoted to live PIT evidence.
+
+```text
+FRED_API_KEY_AVAILABLE = NO
+SERIES_COUNT = 3
+SERIES_IDS = GDP,CPIAUCSL,UNRATE
+FRED_NETWORK_REQUEST_COUNT = 0
+FRED_LATEST_SERIES_POC = BLOCKED_CREDENTIAL_NOT_RUN
+FRED_FIRST_RELEASE_POC = BLOCKED_CREDENTIAL_NOT_RUN
+FRED_ALL_RELEASES_POC = BLOCKED_CREDENTIAL_NOT_RUN
+FRED_AS_OF_DATE_POC = BLOCKED_CREDENTIAL_NOT_RUN
+FRED_VINTAGE_DATES_POC = BLOCKED_CREDENTIAL_NOT_RUN
+GDP_PIT_STATUS = BLOCKED_CREDENTIAL_NOT_RUN
+CPIAUCSL_PIT_STATUS = BLOCKED_CREDENTIAL_NOT_RUN
+UNRATE_PIT_STATUS = BLOCKED_CREDENTIAL_NOT_RUN
+FRED_ALFRED_CAN_PROVE_WHAT_WAS_KNOWN_WHEN = NOT_LIVE_VALIDATED_CREDENTIAL_REQUIRED
+AQ_MACRO_HTTP_CLIENT_CREATED = NO
+AQ_MACRO_REVISION_ENGINE_CREATED = NO
+AQ_MACRO_VINTAGE_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+THIN_SHAPE_ADAPTER_REQUIRED = PENDING_AFTER_LIVE_POC
+THIN_SHAPE_ADAPTER_IMPLEMENTED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+BACKTEST_COUNT = 0
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/fred-api-credential-activation-and-macro-pit-poc-001
+CREDENTIAL_GATE_EVIDENCE_SHA256 = 6623a7c8e62ccc458b68becebbcb1e7dc9c0b7e280b3a50fa6d6dad3ee3b0c90
+CURRENT_DEVELOPMENT_NEXT = P6_FRED_API_CREDENTIAL_PROVISIONING_001
+FINAL_CLASSIFICATION = BLOCKED_FRED_API_CREDENTIAL_REQUIRED
+```
+
+### Live continuation on PR #84
+
+The initial credential gate above remains historical evidence. After the owner
+provisioned a credential in one local D-drive root file, that file was located
+by an explicitly authorized non-recursive root search and read only inside the
+bounded child process. The credential value, length, fingerprint, hash, and
+contents were never printed or persisted. No `FRED_API_KEY` remained in the
+Windows or WSL environment after the process exited.
+
+The same fredapi 0.5.2 runtime then exercised, for exactly `GDP`, `CPIAUCSL`,
+and `UNRATE`, each native public method selected by the authority:
+`get_series`, `get_series_first_release`, `get_series_all_releases`,
+`get_series_as_of_date`, and `get_series_vintage_dates`. This produced 15
+instrumented native upstream requests. Bounded evidence retained observation
+date, `realtime_start` vintage identity, and value; it did not substitute the
+latest revised value for the historical observation.
+
+Each series contained a bounded revision relation: the selected GDP target had
+6 distinct values, CPIAUCSL had 3, and UNRATE had 2. The native as-of results
+and vintage dates prove that official FRED/ALFRED through fredapi can answer
+what value was known at a historical date. The returned pandas Series/DataFrame
+shapes will require a future thin projection to the AQ/Qlib evidence shape, but
+no such adapter was implemented here.
+
+```text
+INITIAL_FRED_CREDENTIAL_GATE = BLOCKED_CREDENTIAL_REQUIRED
+FRED_KEY_FILE_EXISTS = YES
+FRED_API_KEY_AVAILABLE = YES
+FRED_CREDENTIAL_PROVISIONED = YES
+FRED_LIVE_PIT_POC = PASS
+FRED_NETWORK_REQUEST_COUNT = 15
+SERIES_COUNT = 3
+SERIES_IDS = GDP,CPIAUCSL,UNRATE
+FRED_LATEST_SERIES_POC = PASS
+FRED_FIRST_RELEASE_POC = PASS
+FRED_ALL_RELEASES_POC = PASS
+FRED_AS_OF_DATE_POC = PASS
+FRED_VINTAGE_DATES_POC = PASS
+GDP_PIT_STATUS = PASS
+CPIAUCSL_PIT_STATUS = PASS
+UNRATE_PIT_STATUS = PASS
+FRED_ALFRED_CAN_PROVE_WHAT_WAS_KNOWN_WHEN = YES
+AQ_MACRO_HTTP_CLIENT_CREATED = NO
+AQ_MACRO_REVISION_ENGINE_CREATED = NO
+AQ_MACRO_VINTAGE_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+THIN_SHAPE_ADAPTER_REQUIRED = YES
+THIN_SHAPE_ADAPTER_IMPLEMENTED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+BACKTEST_COUNT = 0
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/fred-api-credential-activation-and-macro-pit-poc-001
+LIVE_MACRO_PIT_EVIDENCE_SHA256 = 5335c17cd936ab53785f205d075ad7d5ed6eb22319030d6024984b927d412896
+CURRENT_DEVELOPMENT_NEXT = P6_MACRO_PIT_THIN_SHAPE_ADAPTER_001
+FINAL_CLASSIFICATION = PASS_FRED_ALFRED_LIVE_MACRO_PIT_POC
+```
