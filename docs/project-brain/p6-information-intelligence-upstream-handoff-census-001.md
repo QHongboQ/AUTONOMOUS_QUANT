@@ -1041,3 +1041,114 @@ BACKTEST_COUNT = 0
 CURRENT_DEVELOPMENT_NEXT = P6_MACRO_V1_UPSTREAM_NATIVE_COMPOSITION_POC_001
 FINAL_CLASSIFICATION = PASS_P6_MACRO_FEATURE_OBSERVED_AT_POLICY_FROZEN
 ```
+
+## Macro V1 upstream-native composition POC (2026-09-25)
+
+This bounded private POC exercised the frozen two-feature path without adding
+repository production code or evaluating scientific performance. It reused a
+relation previously produced through the public `vintage.macro` API at Vintage
+0.9.0/source `c55b6d5bd801a21e5844600fc6110de4a3c8dd4b`, the existing
+`aq_xnys_calendar` leaf, DuckDB 1.5.5, Pandera 0.33.1, and pinned Qlib
+0.9.8.dev26/source `2fb9380b342556ddb50a4b24e4fe8655d548b2b8`.
+
+DuckDB independently selected the latest visible revision per exact
+`observed_at`, enforced consecutive monthly dependency windows, calculated the
+frozen transforms, selected the latest valid economic period, and persisted
+the resulting state across XNYS sessions. Independent Python arithmetic matched
+both SQL formulas with maximum absolute error `0.0`. Controlled cases proved:
+
+- missing CPI or UNRATE dependencies emit no new state;
+- a zero CPI dependency emits no code-6 state;
+- a later revision to an already-used UNRATE dependency changes the transformed
+  state only from the revision's own safe session forward;
+- revision backward leakage is zero;
+- 127 session rows demonstrate legitimate state carry-forward;
+- early visibility, interpolation, upstream imputation, and backfill are zero;
+- `GDP` and `GDPC1` are absent.
+
+The private provenance sidecar retains source series, transform code, every
+dependency's `observed_at`, selected `known_at`, effective session, raw value
+and evidence identity, plus transformed-state and upstream runtime identities.
+Pandera validated both this evidence boundary and the exact two-feature Qlib
+surface.
+
+### Global-state boundary and Qlib result
+
+Pinned Qlib's public `StaticDataLoader` can hold a time-only frame, but the
+current `DataHandlerLP`/`DatasetH` research path cannot consume it as a global
+feature surface: the bounded time-only probe failed at instrument-oriented
+slicing (`TypeError: unhashable type: 'slice'`). Therefore native global
+time-only feature support is classified `NO` for this path.
+
+The minimal fallback used no adapter: DuckDB left-joined the global state onto
+an explicitly supplied bounded `(datetime, instrument)` grid. The grid had two
+synthetic instruments with different eligibility rows, so the POC could prove
+that no nonexistent instrument/session row was manufactured. Every instrument
+on the same eligible session received the same global macro state; the
+instrument-dependent value count and manufactured-row count were both zero.
+
+The resulting 114-row surface contained exactly
+`macro_v1_cpiaucsl_d2_log` and `macro_v1_unrate_d1`, including three null cells
+that exercise missingness preservation. With all feature processors empty,
+`StaticDataLoader -> DataHandlerLP -> DatasetH` preserved index, row count,
+column identity, dtypes, values, and missingness exactly. Canonical input and
+output SHA-256 were both
+`f9134b7c9e08fd3a388fa11054f1a8a3d93b3a931aa73814dbb1dfc38e287f19`.
+Two complete executions produced byte-identical result and Parquet hashes.
+
+Private evidence is under
+`D:/AQ_DATA/P6/macro-v1-upstream-native-composition-poc-001`; its checksum
+manifest SHA-256 is
+`29cf981db3501ac7894d29ff00749deb9f9bee9183d32054ee01e413a5246a3d`.
+
+```text
+MACRO_V1_UPSTREAM_NATIVE_COMPOSITION_POC = PASS
+MACRO_V1_SERIES = CPIAUCSL,UNRATE
+CPI_TRANSFORMATION = FRED_CODE_6_EXACT
+UNRATE_TRANSFORMATION = FRED_CODE_2_EXACT
+GDP_INCLUDED = NO
+GDPC1_INCLUDED = NO
+VINTAGE_PUBLIC_API_USED = YES
+XNYS_EXISTING_LEAF_REUSED = YES
+DUCKDB_COMPOSITION_OWNER = YES
+PANDERA_BOUNDARY_VALIDATION = PASS
+LATEST_VISIBLE_REVISION_STATUS = PASS
+TRANSFORMATION_WINDOW_STATUS = PASS
+LATER_OBSERVED_AT_SAFE_SESSION_STATUS = PASS
+REVISION_TRIGGERED_RECOMPUTATION = PASS
+REVISION_BACKWARD_LEAKAGE_COUNT = 0
+SESSION_STATE_CARRY_FORWARD = PASS
+MISSING_DEPENDENCY_STATUS = PASS
+CPI_NONPOSITIVE_FAIL_CLOSED = PASS
+UPSTREAM_MISSING_OBSERVATION_IMPUTATION = NO
+INTERPOLATION = NO
+BACKFILL = NO
+GLOBAL_MACRO_NATIVE_QLIB_SUPPORT = NO
+GLOBAL_TO_INSTRUMENT_MECHANISM = DUCKDB_MECHANICAL_BROADCAST
+INSTRUMENT_DEPENDENT_MACRO_VALUE_COUNT = 0
+MANUFACTURED_INSTRUMENT_SESSION_ROW_COUNT = 0
+QLIB_VERSION = 0.9.8.dev26
+QLIB_SOURCE_IDENTITY = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+QLIB_STATIC_DATA_LOADER = PASS
+QLIB_DATA_HANDLER_LP = PASS
+QLIB_DATASET_H = PASS
+QLIB_ROUNDTRIP_EQUALITY = PASS
+FEATURE_COUNT = 2
+FEATURE_IDS = macro_v1_cpiaucsl_d2_log,macro_v1_unrate_d1
+PROVENANCE_RECOVERABILITY = PASS
+DETERMINISM = PASS
+AQ_MACRO_FEATURE_ENGINE_CREATED = NO
+AQ_MACRO_TRANSFORMATION_ENGINE_CREATED = NO
+AQ_MACRO_QLIB_ADAPTER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/macro-v1-upstream-native-composition-poc-001
+PRIVATE_EVIDENCE_CHECKSUMS_SHA256 = 29cf981db3501ac7894d29ff00749deb9f9bee9183d32054ee01e413a5246a3d
+CURRENT_DEVELOPMENT_NEXT = P6_MACRO_V1_MINIMAL_PRODUCTION_MATERIALIZATION_001
+FINAL_CLASSIFICATION = PASS_P6_MACRO_V1_UPSTREAM_NATIVE_COMPOSITION_POC
+```
