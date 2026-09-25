@@ -693,3 +693,97 @@ PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/macro-pit-upstream-substitution-poc-002
 CURRENT_DEVELOPMENT_NEXT = P6_MACRO_PIT_SESSION_POLICY_ONLY_INTEGRATION_001
 FINAL_CLASSIFICATION = PASS_VINTAGE_SELECTED_FOR_NATIVE_MACRO_EVIDENCE_SHAPE
 ```
+
+## Macro session policy upstream-native composition POC (2026-09-25)
+
+The historical PR #85 selection above remains intact: official FRED/ALFRED is
+the source authority and Vintage 0.9.0 is the selected lossless macro evidence
+leaf. The follow-on bounded POC proved that the remaining session-visibility
+behavior does not require the previously anticipated AQ panel code.
+
+The public `vintage.macro(...)` relation for exactly `GDP`, `CPIAUCSL`, and
+`UNRATE` retained `entity`, `field`, `observed_at`, `known_at`, `value`, and
+source provenance. Its 385 bounded rows exposed non-null date-only `known_at`
+values. The existing `aq_xnys_calendar` leaf generated the XNYS session
+relation, and the retained DuckDB 1.5.5 runtime applied the sole AQ-owned
+predicate:
+
+```sql
+MIN(session) WHERE session > CAST(known_at AS DATE)
+```
+
+The strict comparison is authoritative. Date-only evidence published on a
+trading day is not admitted to that day's session because no intraday release
+time has been proven. Monday, Friday, Saturday, Sunday, and pre-holiday cases
+all mapped to the first strictly later XNYS session; there were zero same-day
+or earlier mappings. Repeated canonical execution was byte/order stable.
+
+For three bounded target sessions, the session-visible relation
+`effective_session <= T` exactly equaled the public Vintage relation obtained
+with `as_of = T - 1 calendar day`. The cutoff is deliberately a calendar day,
+not the previous XNYS session, so weekend evidence remains eligible on Monday.
+All visible revisions stayed lossless, the deterministic DuckDB window query
+selected the latest visible revision per `(entity, field, observed_at)`, no
+future revision leaked, and no conflicting revision identity appeared.
+Different `observed_at` periods were not collapsed and no missing value was
+filled, interpolated, or backfilled.
+
+Vintage's generic backtest panel was not selected for this relation. It pivots
+primarily by `known_at` and entity with last-value aggregation, so it does not
+preserve the required field/observed-at/revision identity. This is a semantic
+mismatch for the macro revision relation, not a rejection of Vintage as its
+evidence owner. The existing P5 fundamentals session and as-of functions were
+also left fundamentals-specific; `aq_hybrid_fundamentals.effective_session`
+is reference-only, while `project_events_asof` and `aq_p5_projection` are
+semantic mismatches for macro evidence.
+
+This POC stops at revision-to-first-safe-session visibility. It does not choose
+which observed period becomes a model feature, define release age or lag,
+derive growth, forward-fill, create Qlib columns, train, predict, or backtest.
+That scientific policy is the next bounded authority task.
+
+```text
+MACRO_SOURCE_AUTHORITY = OFFICIAL_FRED_ALFRED
+MACRO_EVIDENCE_OWNER = VINTAGE_0_9_0
+VINTAGE_PUBLIC_API_USED = YES
+VINTAGE_PRIVATE_INTERNAL_REQUIRED = NO
+KNOWN_AT_PRECISION = DATE_ONLY
+XNYS_OWNER = EXCHANGE_CALENDARS_VIA_AQ_XNYS_CALENDAR
+EXISTING_XNYS_LEAF_REUSED = YES
+RELATIONAL_COMPOSITION_OWNER = DUCKDB
+DUCKDB_VERSION = 1.5.5
+EFFECTIVE_SESSION_POLICY = FIRST_XNYS_SESSION_STRICTLY_AFTER_KNOWN_AT_DATE
+SAME_DAY_DATE_ONLY_VISIBILITY = PROHIBITED
+MONDAY_MAPPING_STATUS = PASS
+FRIDAY_MAPPING_STATUS = PASS
+WEEKEND_MAPPING_STATUS = PASS
+HOLIDAY_MAPPING_STATUS = PASS
+VINTAGE_AS_OF_EQUIVALENCE = PASS
+AS_OF_SESSION_CUTOFF_RULE = TARGET_SESSION_MINUS_ONE_CALENDAR_DAY
+REVISION_RELATION_PRESERVED = PASS
+LATEST_VISIBLE_REVISION_POC = PASS
+FUTURE_REVISION_LEAKAGE_COUNT = 0
+REVISION_IDENTITY_CONFLICT_COUNT = 0
+MISSINGNESS_PRESERVATION = PASS_NO_FILL_INTERPOLATION_OR_BACKFILL
+CROSS_OBSERVED_AT_COLLAPSE_PERFORMED = NO
+FINAL_MACRO_FEATURE_POLICY_SELECTED = NO
+VINTAGE_GENERIC_BACKTEST_PANEL_FOR_MACRO_REVISION_RELATION = NOT_SELECTED_SEMANTIC_MISMATCH
+AQ_HYBRID_FUNDAMENTALS_EFFECTIVE_SESSION = REFERENCE_ONLY
+AQ_HYBRID_FUNDAMENTALS_PROJECT_EVENTS_ASOF = SEMANTIC_MISMATCH
+AQ_P5_PROJECTION = SEMANTIC_MISMATCH
+AQ_P5_PROJECTION_REFACTORED = NO
+AQ_MACRO_SESSION_MAPPER_CREATED = NO
+AQ_MACRO_REVISION_ENGINE_CREATED = NO
+AQ_MACRO_PANEL_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+PRIVATE_POC_CODE_ONLY = YES
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/macro-session-policy-upstream-native-composition-poc-001
+PRIVATE_EVIDENCE_CHECKSUM_MANIFEST_SHA256 = f19e05121a37d25ef8ed8d3231a96be8294062729a5624ac8e5e15a983db4b32
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+CURRENT_DEVELOPMENT_NEXT = P6_MACRO_FEATURE_OBSERVED_AT_POLICY_FREEZE_001
+FINAL_CLASSIFICATION = PASS_UPSTREAM_NATIVE_MACRO_SESSION_COMPOSITION_POC
+```
