@@ -621,3 +621,75 @@ LIVE_MACRO_PIT_EVIDENCE_SHA256 = 5335c17cd936ab53785f205d075ad7d5ed6eb22319030d6
 CURRENT_DEVELOPMENT_NEXT = P6_MACRO_PIT_THIN_SHAPE_ADAPTER_001
 FINAL_CLASSIFICATION = PASS_FRED_ALFRED_LIVE_MACRO_PIT_POC
 ```
+
+## Macro PIT upstream substitution POC 002 (2026-09-25)
+
+The planned AQ macro shape adapter was not implemented. Four specifically
+authorized candidates were evaluated against the sealed PR #84 fredapi
+evidence, and only bounded live calls for `GDP`, `CPIAUCSL`, and `UNRATE` were
+made. Official FRED/ALFRED remains the source authority.
+
+### Candidate decisions
+
+| Candidate | Frozen identity | Runtime evidence | Owner class | Production decision |
+|---|---|---|---|---|
+| Vintage | `vintage-mcp==0.9.0`; source `c55b6d5bd801a21e5844600fc6110de4a3c8dd4b`; MIT; Python 3.11.16 runtime `/home/zhou/AQ_ENVS/p6-vintage`; freeze `20c3c069a3475c503f54d9cfb7fd11bec045c9ccc6dcdeb1769bbfbcca834a68` | Live three-series POC passed. Native rows retain `entity`, `field`, `observed_at`, `known_at`, and `value`. The bounded PR #84 revisions matched exactly and no future revision crossed the as-of cutoff. Missing upstream values are not filled. | `SELECTED_UPSTREAM_LEAF` | Own the upstream-to-AQ macro evidence relation. |
+| pyfredapi | `pyfredapi==0.10.2`; source `6d924602bfa5e18af6630f4bb272fb5181268c0b`; MIT; Python 3.11.16 runtime `/home/zhou/AQ_ENVS/p6-pyfredapi`; freeze `dea654fd2d35299cfbf6da7a1543bb2ff89a4294ebb9b97c8bda0415fb273108` | Live JSON and pandas calls passed for all three series. Full releases, `realtime_start`, `realtime_end`, and vintage dates matched the official data already proven through fredapi 0.5.2. | `VALID_BUT_DUPLICATIVE` | `DUPLICATIVE_NOT_SELECTED`; it does not remove the remaining project session policy. |
+| ferric-fred | source `46887a7a0ea1024c3c6001b2864f0883b901401a`; library/CLI 0.3.8; MCP 0.3.11; MIT OR Apache-2.0 | Source and public interfaces prove ALFRED real-time windows, vintage dates, typed observations, CLI JSON, and MCP schemas. The existing WSL runtime has no Cargo toolchain; installing Rust or adding a Python bridge was not a bounded, zero-burden deployment. | `VALID_BUT_RUNTIME_MISMATCH` | `VALID_UPSTREAM_BUT_NOT_SELECTED_RUNTIME_MISMATCH`. |
+| QuantSmith FRED PIT leaf | current direct repository access returned HTTP 404; the last official search index describes spec 0045 and `fred_point_in_time.py` inside the broader agentic SDK | No current immutable source commit, license, stable import boundary, or independent leaf deployment could be verified. The indexed module is surrounded by QuantSmith orchestration, agents, gates, memory, backtest, and pipeline surfaces. | `VALID_BUT_FRAMEWORK_COUPLED` | `REJECTED_COUPLED_TO_BROADER_FRAMEWORK`; no algorithm was copied. |
+
+Vintage's `as_of` behavior is intentionally recorded precisely: it removes
+rows whose `known_at` is later than the cutoff and preserves every revision
+that was already visible. For the GDP probe this means several visible rows
+can remain for one `observed_at`; the convenience API does not silently select
+one revised value. This is the correct lossless evidence relation, but it is
+not by itself the final AQ/XNYS/Qlib session panel. The only remaining AQ
+behavior is the already project-specific policy that maps `known_at` onto the
+first tradable session and performs the as-of projection. It does not justify
+a macro client, revision engine, normalization adapter, or generic panel
+engine.
+
+pyfredapi is a sound newer access library and exposes a broader typed endpoint
+surface than fredapi, but selecting it would merely replace one working FRED
+client with another. Ferric-fred is also sound upstream code, but using it in
+the present Python/Qlib runtime would introduce a Rust process or bridge for no
+semantic gain. QuantSmith was not vendored or partially copied.
+
+`RezaSoleymanifar/ape-tape` is recorded only for the future role
+`FORWARD_ONLY_SOCIAL_SENTIMENT_ARCHIVE`. It cannot manufacture historical
+social point-in-time data and was not deployed in this task.
+
+```text
+VINTAGE_VERSION = 0.9.0
+VINTAGE_POC_STATUS = PASS
+VINTAGE_OBSERVED_AT_STATUS = PASS
+VINTAGE_KNOWN_AT_STATUS = PASS
+VINTAGE_AS_OF_STATUS = PASS_FILTERS_FUTURE_PRESERVES_VISIBLE_REVISION_RELATION
+VINTAGE_REVISION_PARITY_STATUS = PASS_EXACT_BOUNDED_PR84_MATCH
+VINTAGE_MISSINGNESS_PRESERVATION = PASS_NO_IMPUTATION
+VINTAGE_PRODUCTION_FIT = SELECTED_UPSTREAM_LEAF_FOR_EVIDENCE_SHAPE
+PYFREDAPI_VERSION = 0.10.2
+PYFREDAPI_POC_STATUS = PASS
+PYFREDAPI_PRODUCTION_FIT = DUPLICATIVE_NOT_SELECTED
+FERRIC_FRED_POC_STATUS = SOURCE_AND_INTERFACE_AUDIT_PASS_BUILD_SKIPPED_NO_CARGO
+FERRIC_FRED_PRODUCTION_FIT = VALID_UPSTREAM_BUT_NOT_SELECTED_RUNTIME_MISMATCH
+QUANTSMITH_FRED_PIT_LEAF_STATUS = REJECTED_COUPLED_TO_BROADER_FRAMEWORK
+QUANTSMITH_PRODUCTION_FIT = NOT_SELECTED
+SELECTED_MACRO_PIT_NORMALIZATION_OWNER = VINTAGE_0_9_0
+CAN_UPSTREAM_OWN_MACRO_EVIDENCE_SHAPE = YES
+CAN_UPSTREAM_OWN_MACRO_PIT_PANEL = NO
+AQ_MACRO_SHAPE_ADAPTER_REQUIRED = NO
+AQ_MACRO_PIT_PANEL_CODE_REQUIRED = YES_PROJECT_SESSION_POLICY_ONLY
+AQ_MACRO_SESSION_POLICY_ONLY_REMAINS = YES
+CUSTOM_ENGINE_REQUIRED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+APE_TAPE_FUTURE_ROLE = FORWARD_ONLY_SOCIAL_SENTIMENT_ARCHIVE
+P2_V2_SEALED_OOS_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/macro-pit-upstream-substitution-poc-002
+CURRENT_DEVELOPMENT_NEXT = P6_MACRO_PIT_SESSION_POLICY_ONLY_INTEGRATION_001
+FINAL_CLASSIFICATION = PASS_VINTAGE_SELECTED_FOR_NATIVE_MACRO_EVIDENCE_SHAPE
+```
