@@ -1491,3 +1491,157 @@ P2_V2_SEALED_OOS_RESULT_USED = NO
 CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_GDELT_GKG_HISTORICAL_SAFE_AVAILABILITY_POC_001
 FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_EVIDENCE_SAFE_AVAILABILITY_POLICY_FROZEN
 ```
+
+## Raw GDELT GKG historical safe-availability POC (2026-09-25)
+
+The policy freeze was exercised on real GDELT GKG 2.1 archives without using
+GDELT DOC, publisher URLs, Media Cloud, Common Crawl, article content, NLP, or
+entity binding. The official master list was streamed and filtered in memory;
+it was never persisted. The deterministic selection rule produced:
+
+| Role | Selected official archive | Advertised bytes |
+|---|---|---:|
+| Anchor 2015-04-01 | `20150401000000.gkg.csv.zip` | 9,671,813 |
+| Anchor 2017-07-04 | `20170704001500.gkg.csv.zip` | 10,014,189 |
+| Anchor 2020-03-14 | `20200314000000.gkg.csv.zip` | 9,094,197 |
+| Anchor 2022-01-03 | `20220103000000.gkg.csv.zip` | 2,606,082 |
+| Adjacent +1 | `20220103001500.gkg.csv.zip` | 2,930,590 |
+| Adjacent +2 | `20220103003000.gkg.csv.zip` | 2,822,320 |
+| Adjacent +3 | `20220103004500.gkg.csv.zip` | 3,239,163 |
+| Anchor 2024-12-31 | `20241231000000.gkg.csv.zip` | 5,858,646 |
+
+The total was 46,237,000 bytes, safely below the 128 MiB limit. Every archive
+matched both official advertised bytes and MD5; local SHA-256 identities are
+sealed in private evidence. ZIPs were deleted after two-pass analysis and only
+the bounded evidence relation and aggregate reports remain.
+
+### Schema, identity, and exact URL results
+
+The parser used the official 27-field ordering. Of 11,750 source rows, 11,749
+were strict UTF-8 and exactly 27 fields. One row in
+`20220103000000.gkg.csv.zip` failed strict UTF-8 decoding. It was counted as a
+malformed row and excluded without byte replacement, heuristic repair, or
+column shifting. This isolated fail-closed exclusion is not material schema
+drift.
+
+All 11,749 valid rows were source collection `1` (`WEB`). Every valid record ID
+matched `YYYYMMDDHHMMSS-X` or `YYYYMMDDHHMMSS-TX`, was unique in the selected
+evidence, and matched its archive batch prefix. Every WEB row had a non-empty
+document identifier. No Translingual `T` record appeared in this fixed sample.
+
+The complete four-batch 2022-01-03 window contained 2,875 unique byte-exact
+URLs and zero repeat groups. This is the truthful result of the frozen window:
+no URL normalization or fuzzy join was introduced merely to manufacture
+duplicates. The grouping operation remains exact-string-only and retains every
+source record identity.
+
+`V2.1DATE` was equal to the batch calendar date for all 11,749 valid rows; the
+less-than, greater-than, and unknown/zero counts were each zero. These are
+diagnostics only. A controlled negative assertion supplied a present
+`published_at` with an invalid batch identity; the row remained unadmitted and
+safe availability remained null.
+
+Native metadata presence over admitted WEB rows was:
+
+| Surface | Rows | Presence rate |
+|---|---:|---:|
+| Organizations / Enhanced Organizations | 8,917 | 75.895821% |
+| Themes / Enhanced Themes | 10,385 | 88.390501% |
+| Tone | 11,749 | 100.000000% |
+| GCAM | 11,749 | 100.000000% |
+
+These measurements remain descriptive evidence metadata; no news feature was
+selected.
+
+### Date-only XNYS admission and cutoff
+
+No timezone was attached to any 14-digit GKG batch prefix. The existing
+`aq_xnys_calendar` owner resolved the strict-after-date rule as follows:
+
+| Safe available date | Effective XNYS session | Usable by 2024-12-31 |
+|---|---|---|
+| 2015-04-01 | 2015-04-02 | Yes |
+| 2017-07-04 | 2017-07-05 | Yes |
+| 2020-03-14 | 2020-03-16 | Yes |
+| 2022-01-03 | 2022-01-04 | Yes |
+| 2024-12-31 | 2025-01-02 | No |
+
+Thus the holiday, weekend, ordinary-session, and end-boundary cases all obey
+the conservative policy, including zero leakage from the 2024-12-31 anchor
+into the frozen 2024 research surface. Re-running normalization over the same
+verified ZIP bytes reproduced file identities, sample order, safe dates,
+sessions, exact-URL grouping, metadata counts, and diagnostics exactly.
+
+The private evidence root contains selected-file metadata, archive checksum
+identities, schema diagnostics, a deterministic first-500-WEB-row sample for
+each anchor, URL aggregation, XNYS mappings, the negative fallback assertion,
+the final report, and a SHA-256 manifest. It contains no archive ZIP, article
+body, HTML, WARC payload, credential, or full master list.
+
+```text
+HISTORICAL_NEWS_SAFE_AVAILABILITY_OWNER = GDELT_GKG_2_1_RAW_ARCHIVE
+GDELT_GKG_OWNER_DECISION = SELECTED_PRIMARY_HISTORICAL_NEWS_EVIDENCE_LEAF
+SELECTED_GKG_FILE_COUNT = 8
+SELECTED_GKG_COMPRESSED_BYTES = 46237000
+DOWNLOAD_BUDGET_STATUS = PASS
+ANCHOR_2015_04_01 = 20150401000000.gkg.csv.zip
+ANCHOR_2017_07_04 = 20170704001500.gkg.csv.zip
+ANCHOR_2020_03_14 = 20200314000000.gkg.csv.zip
+ANCHOR_2022_01_03 = 20220103000000.gkg.csv.zip
+ANCHOR_2024_12_31 = 20241231000000.gkg.csv.zip
+GDELT_SELECTED_FILE_INTEGRITY = PASS
+EXPECTED_MAJOR_FIELD_COUNT = 27
+TOTAL_ANALYZED_ROW_COUNT = 11750
+VALID_27_FIELD_ROW_COUNT = 11749
+MALFORMED_ROW_COUNT = 1
+WEB_ROW_COUNT = 11749
+NON_WEB_EXCLUDED_ROW_COUNT = 0
+INVALID_GKGRECORDID_COUNT = 0
+DUPLICATE_GKGRECORDID_COUNT = 0
+BATCH_PREFIX_FILE_MATCH_COUNT = 11749
+BATCH_PREFIX_FILE_MISMATCH_COUNT = 0
+GDELT_BATCH_TIMEZONE = UNPROVEN
+SAFE_AVAILABILITY_PRECISION = DATE
+FABRICATED_GDELT_INTRADAY_TIMESTAMP_COUNT = 0
+EMPTY_WEB_DOCUMENT_IDENTIFIER_COUNT = 0
+ADJACENT_WINDOW_FILE_COUNT = 4
+UNIQUE_EXACT_URL_COUNT = 2875
+EXACT_URL_REPEAT_GROUP_COUNT = 0
+EXACT_URL_REPEAT_RECORD_COUNT = 0
+PUBLISHED_DATE_LT_BATCH_DATE = 0
+PUBLISHED_DATE_EQ_BATCH_DATE = 11749
+PUBLISHED_DATE_GT_BATCH_DATE = 0
+PUBLISHED_DATE_UNKNOWN_OR_ZERO = 0
+GDELT_TRANSLINGUAL_ROW_COUNT = 0
+ORGANIZATION_METADATA_PRESENCE_RATE = 0.7589582092092944
+THEME_METADATA_PRESENCE_RATE = 0.8839050131926122
+TONE_METADATA_PRESENCE_RATE = 1.0
+GCAM_METADATA_PRESENCE_RATE = 1.0
+XNYS_DATE_ONLY_MAPPING_STATUS = PASS
+END_BOUNDARY_FUTURE_SESSION_LEAKAGE_COUNT = 0
+PUBLISHED_AT_FALLBACK_USED = NO
+PUBLISHED_AT_FALLBACK_CONTROL_ASSERTION = PASS_NOT_ADMITTED
+SOURCE_ARTICLE_REQUEST_COUNT = 0
+GDELT_DOC_REQUEST_COUNT = 0
+COMMON_CRAWL_CORROBORATION = NOT_REQUIRED
+NORMALIZATION_DETERMINISM = PASS
+NEWS_ENTITY_TO_AQ_SECURITY_BINDING = UNRESOLVED_SEPARATE_POLICY
+NEWS_FEATURE_FAMILY_SELECTED = NO
+LLM_CALL_COUNT = 0
+FINBERT_INFERENCE_COUNT = 0
+LANGEXTRACT_INFERENCE_COUNT = 0
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_NEWS_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-gdelt-gkg-historical-safe-availability-poc-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = dcca9cfa4e041b5f08c54ae95f7834ea3a3a761685e0790c48fb05f0e8a314f6
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_ENTITY_TO_SECURITY_UPSTREAM_SUBSTITUTION_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_GDELT_GKG_HISTORICAL_SAFE_AVAILABILITY_POC
+```
