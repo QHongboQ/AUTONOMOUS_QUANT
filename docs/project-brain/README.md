@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — News V1 Company News Access or Closeout Decision 001**
+> Development Next: **P6 — Global News V1 Minimal Feature Surface Design 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3347,6 +3347,73 @@ FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_WHOLE_UPSTREAM_OWNER_SELECTION
 ```
 
 See [P6 News V1 whole-upstream owner selection 001](p6-news-v1-whole-upstream-owner-selection-001.md).
+
+### P6 Company News closeout and Global News handoff (2026-09-26)
+
+Company-specific historical News V1 is closed for this P6 cycle as
+`DEFERRED_ACCESS_BLOCKED`. RavenPack remains the institutional reference whole
+owner and LSEG remains a valid institutional alternative, but neither is an
+active dependency because AQ has no established access/license. QuantConnect
+Benzinga and Tiingo remain unusable for the required Qlib conversion under the
+public local-download terms. No custom Company News implementation or renewed
+multi-provider patchwork is authorized.
+
+Alpaca's prior real-time evidence remains available only as a future P9
+fallback or challenger. GDELT GKG 2.1 is activated solely for market/global,
+geopolitical, and macro-news context. It does not own company identity, CIK,
+or ticker resolution. The existing conservative GDELT date/batch authority is
+retained: a date-only observation becomes usable on the first XNYS session
+strictly after its safe calendar date; no intraday timestamp is fabricated.
+
+```text
+P6_MACRO_V1 = CLOSED_NO_MEASURABLE_INCREMENTAL_VALUE
+P6_COMPANY_NEWS_V1 = DEFERRED_ACCESS_BLOCKED_NO_CUSTOM_BUILD
+P6_COMPANY_NEWS_PATCHWORK = RETIRED
+P6_GLOBAL_NEWS_V1 = ACTIVE
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_MINIMAL_FACTOR_ABLATION
+
+COMPANY_NEWS_V1_HISTORICAL_STATUS = DEFERRED_ACCESS_BLOCKED
+INSTITUTIONAL_REFERENCE_OWNER = RAVENPACK_COMPANY_NEWS_FACTORS_AND_NEWS_ANALYTICS
+SELECTED_COMPANY_NEWS_WHOLE_OWNER = NONE
+AQ_COMPANY_NEWS_ENGINE_REQUIRED = NO
+COMPANY_NEWS_CUSTOM_BUILD_AUTHORIZED = NO
+REALTIME_COMPANY_NEWS_PRODUCTIONIZATION = DEFERRED_TO_P9
+ALPACA_DIRECT_ROLE = P9_REALTIME_NEWS_FALLBACK_OR_CHALLENGER
+
+GDELT_COMPANY_NEWS_GLUE_ROLE = RETIRED
+GDELT_GLOBAL_NEWS_ROLE = ACTIVE_P6_CANDIDATE
+GDELT_GLOBAL_NEWS_SURFACES = MARKET_LEVEL_NEWS,GLOBAL_NEWS,GEOPOLITICAL_NEWS,MACRO_NEWS_CONTEXT
+GDELT_GLOBAL_NEWS_SOURCE = GKG_2_1_WEB_ONLY
+GDELT_DATE_ONLY_EFFECTIVE_RULE = FIRST_XNYS_SESSION_STRICTLY_AFTER_SAFE_CALENDAR_DATE
+GLOBAL_NEWS_FEATURE_FAMILY_SELECTED = NO
+
+FUTURE_GLOBAL_NEWS_M0 = BASE_157
+FUTURE_GLOBAL_NEWS_M1 = BASE_157_PLUS_EXACT_FROZEN_GLOBAL_NEWS_V1_FEATURES
+P5_FUNDAMENTALS_INCLUDED = NO
+MACRO_V1_INCLUDED = NO
+
+NEW_PRODUCTION_LOC = 0
+AQ_NEWS_ENGINE_CREATED = NO
+AQ_ENTITY_RESOLUTION_ENGINE_CREATED = NO
+AQ_SECURITY_MASTER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+REALTIME_WEBSOCKET_SESSION_COUNT = 0
+ORDER_COUNT = 0
+BROKER_ACTION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_MINIMAL_FEATURE_SURFACE_DESIGN_001
+FINAL_CLASSIFICATION = PASS_P6_COMPANY_NEWS_CLOSEOUT_AND_GLOBAL_NEWS_HANDOFF
+```
+
+The frozen sequence is feature-surface design, minimal materialization,
+ablation-protocol freeze, first authorized ablation, and closeout. No provider
+search is authorized between these stages unless a concrete source defect
+blocks execution. See [P6 Company News closeout and Global News handoff 001](p6-news-v1-company-news-closeout-and-global-news-handoff-001.md).
 
 ---
 
