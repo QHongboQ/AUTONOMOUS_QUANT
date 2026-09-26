@@ -2866,6 +2866,69 @@ PRIVATE_EVIDENCE_CHECKSUM_SHA256 = dcca9cfa4e041b5f08c54ae95f7834ea3a3a761685e07
 CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_ENTITY_TO_SECURITY_UPSTREAM_SUBSTITUTION_AUDIT_001
 ```
 
+### P6 News V1 entity-to-security upstream substitution audit (2026-09-25)
+
+The capability audit selected official SEC Submissions current/former names as
+the primary organization-name-to-CIK leaf and the existing P1/P5
+EpisodeSecCikBindingV1 ledger as the only CIK-to-episode authority. Valuein
+5.2.0 `snapshot_20260918` is supplementary historical security/FIGI
+corroboration; EdgarTools name ranking and RapidFuzz are candidate generation
+only; OpenFIGI is duplicative security corroboration; GLEIF is nonessential
+without a proven CIK bridge; cleanco 2.3 is suffix normalization only. No
+organization text may bind directly to ticker, and neither fuzzy scores nor an
+LLM may admit a CIK.
+
+The reused SEC `submissions.zip` exactly covers all 711 bound CIKs and exposes
+711 current names plus 676 former-name rows. Its SHA-256 remains
+`702fbcd8b4335bc649e9e4eab3a202f3effc314b43421664bfecb59365767165`.
+However, 11 former-name records have `from > to`, the official API page does
+not define interval-boundary inclusion, and current names have no safe inferred
+historical start. Those cases fail closed. Normalization also increases alias
+collisions: ambiguous cross-CIK keys rise from 1 at raw exact matching to 5
+after cleanco suffix removal.
+
+The requested bounded real matching matrix could not run truthfully. The prior
+POC retained 2,500 records with an organization-presence boolean but omitted
+the organization strings, then deleted the verified source ZIPs. This task
+forbids redownloading the GKG corpus. Consequently all reported match counts
+are zero-input counts, not evidence of zero failures or zero coverage. The
+precise blocker is organization-text retention, not missing custom resolution
+logic.
+
+```text
+PR95_MERGE_SHA = 1fcd062ba54597c692e832b342f0de883723038b
+SEC_SUBMISSIONS_ALIAS_STATUS = SELECTED_PRIMARY_UPSTREAM_LEAF_FULL_711_CIK_COVERAGE
+SEC_FORMER_NAMES_DATE_SEMANTICS = FROM_TO_PRESENT_11_INVERTED_BOUNDARY_INCLUSION_UNDOCUMENTED_FAIL_CLOSED
+EXISTING_P5_SEC_BULK_REUSED = YES
+EXISTING_EPISODE_CIK_AUTHORITY_REUSED = YES
+VALUEIN_VERSION = 5.2.0
+VALUEIN_SECURITY_SCD2_STATUS = PASS
+EDGARTOOLS_NAME_SEARCH_STATUS = CANDIDATE_GENERATION_ONLY
+OPENFIGI_STATUS = VALID_BUT_DUPLICATIVE_SUPPLEMENTARY_SECURITY_CORROBORATION
+GLEIF_STATUS = VALID_BUT_NONESSENTIAL
+COMPANY_NAME_NORMALIZATION_LEAF = CLEANCO_2_3_SUPPLEMENTARY_ONLY
+FUZZY_MATCH_AUTO_BIND = NO
+LLM_ENTITY_BINDING_AUTHORITY = NO
+TOTAL_ORGANIZATION_STRING_COUNT = 0
+BOUNDED_MATCH_METRIC_INTERPRETATION = ZERO_ELIGIBLE_INPUT_NOT_ZERO_FAILURE_RATE
+NEWS_ENTITY_TO_AQ_SECURITY_BINDING_STATUS = BLOCKED_BOUNDED_REAL_POC_INPUT_NOT_RETAINED
+AQ_ENTITY_RESOLUTION_ENGINE_REQUIRED = NO
+AQ_NEWS_ENTITY_RESOLVER_CREATED = NO
+AQ_GENERIC_IDENTITY_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+NEWS_FEATURE_FAMILY_SELECTED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-entity-to-security-upstream-substitution-audit-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 83a45d07265f3758df33be3b15c2065f25f27faa351cd47d0044c915052d56f2
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_RETAINED_GKG_ORGANIZATION_TEXT_UNAVAILABLE
+FINAL_CLASSIFICATION = BLOCKED_RETAINED_GKG_SAMPLE_LACKS_ORGANIZATION_TEXT
+```
+
 ---
 
 ## 27. First Principle
