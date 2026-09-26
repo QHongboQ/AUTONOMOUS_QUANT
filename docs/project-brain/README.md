@@ -3138,10 +3138,18 @@ See [P6 News V1 real-time upstream streaming stack POC 001](p6-news-v1-realtime-
 ### P6 News V1 real-time access closure and live observation (2026-09-26)
 
 PR #99 was squash-merged at
-`c2b9d4ac6a4d1e957cf61c1c31613af40799d01d`. The authorized Alpaca secret
-surfaces were rechecked without reading or recording values; no credential pair
-exists, so the real WebSocket lane stopped before connection and no synthetic
-live evidence or FinBERT result was created.
+`c2b9d4ac6a4d1e957cf61c1c31613af40799d01d`. The owner-supplied Alpaca Paper
+credential was found in the explicitly approved D-drive root search and used
+process-locally through `alpaca-py 0.44.0`. One official `NewsDataStream`
+connected, authenticated, subscribed to `*`, remained valid for 5.02 minutes,
+and closed cleanly. No message arrived during the bounded window, so no
+synthetic evidence or FinBERT result was created.
+
+The three plaintext API files found at the D-drive root were consolidated with
+the prior credentials in the existing current-user DPAPI-protected local
+secret store. DPAPI round-trip and restricted-ACL checks passed; all three
+root plaintext files were then deleted. No secret value, hash, fingerprint,
+prefix, or suffix entered evidence, documentation, logs, or Git.
 
 The independent SEC blocker is closed. The existing private `0600`
 `EDGAR_IDENTITY` file was injected process-locally into EdgarTools `5.58.0`,
@@ -3151,12 +3159,12 @@ poller, parser, scheduler, or filing NLP was created.
 
 ```text
 ALPACA_PY_VERSION = 0.44.0
-ALPACA_CREDENTIAL_AVAILABLE = NO
-ALPACA_STREAM_CONNECTION_STATUS = NOT_ATTEMPTED_CREDENTIAL_REQUIRED
-ALPACA_STREAM_AUTH_STATUS = NOT_ATTEMPTED_CREDENTIAL_REQUIRED
-ALPACA_STREAM_SUBSCRIPTION_STATUS = NOT_ATTEMPTED_CREDENTIAL_REQUIRED
-ALPACA_REAL_LIVE_STREAM = BLOCKED
-LIVE_OBSERVATION_MINUTES = 0
+ALPACA_CREDENTIAL_AVAILABLE = YES
+ALPACA_STREAM_CONNECTION_STATUS = PASS
+ALPACA_STREAM_AUTH_STATUS = PASS
+ALPACA_STREAM_SUBSCRIPTION_STATUS = PASS_REQUEST_SENT_ZERO_MESSAGES
+ALPACA_REAL_LIVE_STREAM = PASS
+LIVE_OBSERVATION_MINUTES = 5.019545533333333
 REAL_MESSAGE_COUNT = 0
 LIVE_MESSAGES_WITH_SYMBOLS = 0
 LIVE_MESSAGES_MATCHING_DEV_UNIVERSE = 0
@@ -3165,6 +3173,8 @@ LIVE_SAFE_AVAILABILITY_AUTHORITY = AQ_RECEIVED_AT_UTC
 FABRICATED_RECEIVE_TIMESTAMP_COUNT = 0
 FINBERT_REAL_MESSAGE_ANALYSIS = NOT_RUN
 FINBERT_ANALYZED_MESSAGE_COUNT = 0
+D_ROOT_PLAINTEXT_API_FILE_COUNT_AFTER_MIGRATION = 0
+DPAPI_SECRET_MIGRATION_STATUS = PASS
 SEC_IDENTITY_CONFIGURED = YES
 SEC_CURRENT_FILINGS_OWNER = EDGARTOOLS_NATIVE_CURRENT_FILINGS
 SEC_CURRENT_FILINGS_POC_STATUS = PASS
@@ -3190,9 +3200,9 @@ CAPITAL_AT_RISK = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 POC_BACKGROUND_PROCESS_COUNT_AFTER_CLOSE = 0
 PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-realtime-access-closure-and-live-observation-001
-PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 76a39c9375a4476433fca8afe4085207154bf5be2352931a21808f6813dd53b4
-CURRENT_DEVELOPMENT_NEXT = BLOCKED_USER_SUPPLIED_ALPACA_CREDENTIAL
-FINAL_CLASSIFICATION = BLOCKED_USER_SUPPLIED_ALPACA_CREDENTIAL
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = e31fb1f8a0d2e4bc2ed9e6e7883ede5c588296649eb870114aacf989489aeb33
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_MACHINE_READABLE_SIGNAL_SURFACE_DESIGN_001
+FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_REALTIME_ACCESS_CLOSURE_AND_LIVE_OBSERVATION
 ```
 
 See [P6 News V1 real-time access closure and live observation 001](p6-news-v1-realtime-access-closure-and-live-observation-001.md).
