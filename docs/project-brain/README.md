@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — News V1 Historical Source Closeout Decision 001**
+> Development Next: **P6 — News V1 Company News Access or Closeout Decision 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3284,6 +3284,69 @@ FINAL_CLASSIFICATION = BLOCKED_HISTORICAL_SAFE_AVAILABILITY_CORROBORATION
 ```
 
 See [P6 News V1 historical machine-readable data contract and source freeze 001](p6-news-v1-historical-machine-readable-data-contract-and-source-freeze-001.md).
+
+### P6 News V1 whole-upstream owner selection (2026-09-26)
+
+The Alpaca/Benzinga + GDELT + custom corroboration patchwork is retired. Four
+and only four whole paths were audited against company identity, native PIT
+time, historical/live consistency, symbol history, access/license, and a legal
+Qlib handoff.
+
+RavenPack Company News Factors plus News Analytics is the institutional
+reference owner: it natively owns point-in-time company identity, sentiment,
+relevance, novelty, event taxonomy, news-volume factors, history, and real-time
+delivery. LSEG Machine Readable News plus News Analytics is also a technically
+valid whole owner. Both remain commercially access-blocked for AQ because
+public pricing and a project-compatible license are unavailable without a
+sales/entitlement process.
+
+QuantConnect Benzinga and Tiingo are technically coherent historical/live
+stacks backed by the US Equity Security Master. They are not selectable for
+the required local Qlib handoff: QuantConnect's public download license limits
+data to internal LEAN use and prohibits conversion into another format. AQ
+will not reinterpret that boundary or rebuild the prior patchwork.
+
+```text
+ACTIVE_PHASE = P6_NEWS_MACRO_SKILLS
+P6_MACRO_V1 = CLOSED_NO_MEASURABLE_INCREMENTAL_VALUE
+P6_COMPANY_NEWS_PATCHWORK_APPROACH = RETIRED
+CURRENT_P6_OBJECTIVE = COMPANY_NEWS_V1_CLOSEOUT_DECISION
+
+RAVENPACK_STATUS = VALID_WHOLE_OWNER_BUT_ACCESS_BLOCKED
+LSEG_STATUS = VALID_WHOLE_OWNER_BUT_ACCESS_BLOCKED
+QUANTCONNECT_BENZINGA_STATUS = REJECTED_LICENSE_OR_EXPORT_INCOMPATIBLE
+QUANTCONNECT_TIINGO_STATUS = REJECTED_LICENSE_OR_EXPORT_INCOMPATIBLE
+
+INSTITUTIONAL_REFERENCE_OWNER = RAVENPACK_COMPANY_NEWS_FACTORS_AND_NEWS_ANALYTICS
+DEPLOYABLE_COMPANY_NEWS_OWNER = NONE
+SELECTED_COMPANY_NEWS_WHOLE_OWNER = NONE
+GDELT_COMPANY_NEWS_GLUE_ROLE = RETIRED
+ALPACA_DIRECT_ROLE = REALTIME_DIAGNOSTIC_OR_P9_FALLBACK
+FINBERT_ROLE_AFTER_SELECTION = CHALLENGER_ONLY_NO_SELECTED_HISTORICAL_OWNER
+
+AQ_NEWS_ENGINE_CREATED = NO
+AQ_ENTITY_RESOLUTION_ENGINE_CREATED = NO
+AQ_TIMESTAMP_ENGINE_CREATED = NO
+AQ_SECURITY_MASTER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+NEWS_ARTICLE_DOWNLOAD_COUNT = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+REALTIME_WEBSOCKET_SESSION_COUNT = 0
+ORDER_COUNT = 0
+BROKER_ACTION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-whole-upstream-owner-selection-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = f273ed8b89512e9f88ba62d57881de59fa80f59cd1fc0737c21ba2e45b60006c
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_COMPANY_NEWS_ACCESS_OR_CLOSEOUT_DECISION_001
+FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_WHOLE_UPSTREAM_OWNER_SELECTION
+```
+
+See [P6 News V1 whole-upstream owner selection 001](p6-news-v1-whole-upstream-owner-selection-001.md).
 
 ---
 
