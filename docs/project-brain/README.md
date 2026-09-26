@@ -2733,6 +2733,75 @@ NEW_PRODUCTION_LOC = 0
 CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_EVIDENCE_AND_SAFE_AVAILABILITY_POLICY_FREEZE_001
 ```
 
+### P6 News V1 evidence and safe-availability authority (2026-09-25)
+
+News V1 does not require or claim a universal exact first-publication time. Its
+admission authority is a conservative upstream observation: an accepted
+archive/capture/processing event proving that the exact document URL existed
+no later than that event. Publication dates remain metadata only unless a
+provider-specific contract is separately proven.
+
+The primary historical candidate is raw GDELT GKG 2.1, restricted to source
+collection `1` (`WEB`). The official codebook defines `GKGRECORDID` as the
+unique record identity whose prefix is the full date/time of the 15-minute
+batch in which the record was created, while `V2.1DATE` is the document's
+publication date. The codebook does not normatively define the record-prefix
+timezone. GDELT is therefore admitted only at date precision: the first XNYS
+session strictly after the batch calendar date. It is not admitted as an
+intraday UTC timestamp.
+
+Official master metadata and two tiny boundary samples established availability
+over the required 2015-04-01 through 2024-12-31 range. Each sample contained 27
+columns and only `WEB` rows in the bounded sample. Organizations and themes
+were present but legitimately sparse; tone and GCAM were present in every
+sampled row. This is evidence-policy validation, not a corpus build or feature
+selection.
+
+For an exact same URL, the tightest conservative authority is the earliest
+qualified capture/processing observation, with its original precision and
+semantics retained. Date-only observations are not ordered as intraday events,
+and no fuzzy-title or approximate-URL join is allowed. A timezone-aware instant
+uses the existing daily timing rule: first XNYS session whose market open is
+strictly later. A date-only or timezone-unproven observation uses the more
+conservative first XNYS session strictly after its calendar date.
+
+```text
+NEWS_EXACT_FIRST_AVAILABLE_AT = NOT_REQUIRED_NOT_UNIVERSALLY_PROVABLE
+GDELT_GKG_ROLE = PRIMARY_HISTORICAL_SAFE_AVAILABILITY_EVIDENCE_CANDIDATE
+GDELT_GKG_RECORD_ID_SEMANTICS = UNIQUE_RECORD_ID_WITH_15_MINUTE_CREATION_BATCH_PREFIX_NOT_PUBLICATION_TIME
+GDELT_GKG_BATCH_TIMEZONE = UNPROVEN
+GDELT_GKG_SAFE_AVAILABILITY_STATUS = PASS_DATE_ONLY_CONSERVATIVE
+GDELT_GKG_HISTORICAL_COVERAGE_STATUS = PASS_2015_04_01_THROUGH_2024_12_31_BOUNDARY_VERIFIED
+GDELT_WEB_SOURCE_COLLECTION_ONLY = YES
+GDELT_DOC_ROLE = SUPPLEMENTARY_QUERY_INTERFACE
+OPENBB_NEWS_ROLE = NEWS_PROVIDER_GATEWAY
+OPENBB_PUBLISHED_AT_ADMISSION_AUTHORITY = NO
+MEDIA_CLOUD_ROLE = SUPPLEMENTARY_SAFE_AVAILABILITY_AUTHORITY
+MEDIA_CLOUD_INDEXED_DATE_SEMANTICS = CONSERVATIVE_CAPTURE_PROCESSING_UPPER_BOUND
+COMMON_CRAWL_ROLE = SUPPLEMENTARY_CAPTURE_PROVENANCE_LEAF
+COMMON_CRAWL_CAPTURE_TIMESTAMP_SEMANTICS = ARCHIVE_CAPTURE_TIME_FOR_KNOWN_URL_NOT_PUBLICATION_OR_DISCOVERY
+NEWS_SAFE_AVAILABLE_AT_POLICY = EARLIEST_QUALIFIED_PROVEN_CAPTURE_OR_PROCESSING_OBSERVATION_FOR_EXACT_SAME_URL_PRECISION_PRESERVED
+NEWS_SESSION_VISIBILITY_POLICY = AWARE_INSTANT_FIRST_XNYS_OPEN_STRICTLY_AFTER_INSTANT_ELSE_FIRST_XNYS_SESSION_STRICTLY_AFTER_CALENDAR_DATE
+NEWS_FULL_TEXT_REQUIRED_FOR_EVIDENCE = NO
+GDELT_NATIVE_ORGANIZATION_METADATA = UPSTREAM_NATIVE_PARTIAL_NOT_SECURITY_IDENTITY
+GDELT_NATIVE_THEME_METADATA = UPSTREAM_NATIVE_USABLE_AS_EVIDENCE_METADATA
+GDELT_NATIVE_TONE_GCAM_METADATA = TONE_UPSTREAM_NATIVE_USABLE_GCAM_CHALLENGER_ONLY_NO_DIMENSION_SELECTED
+LANGEXTRACT_REQUIRED_FOR_NEWS_V1_EVIDENCE = NO
+FINBERT_REQUIRED_FOR_NEWS_V1_EVIDENCE = NO
+NEWS_ENTITY_TO_AQ_SECURITY_BINDING = UNRESOLVED_SEPARATE_POLICY
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_NEWS_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_GDELT_GKG_HISTORICAL_SAFE_AVAILABILITY_POC_001
+```
+
 ---
 
 ## 27. First Principle
