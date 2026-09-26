@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P6 — News and macro skills**
+> Active Development: **P6 — News information intelligence**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Macro V1 Negative Result Closeout 001**
+> Development Next: **P6 — News V1 Historical Source Closeout Decision 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3206,6 +3206,84 @@ FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_REALTIME_ACCESS_CLOSURE_AND_LIVE_OBSERVAT
 ```
 
 See [P6 News V1 real-time access closure and live observation 001](p6-news-v1-realtime-access-closure-and-live-observation-001.md).
+
+### P6 News V1 historical machine-readable data contract and source freeze (2026-09-26)
+
+P6 has returned to its scientific mainline. Macro V1 is closed with no
+measurable incremental value; the real-time News upstream path is sufficiently
+proven for P6, while productionization and paper execution are deferred to P9.
+The current objective is a PIT-safe historical company-news factor that must
+eventually face a frozen ablation against `BASE_157`.
+
+The bounded source POC selected 12 P1 episodes before observing news results:
+five ordinary continuous, three ticker/name-change, two inactive/acquired or
+delisted, and two overlapping shared-CIK/share-class episodes. Two 14-calendar-
+day windows per episode produced 24 deterministic windows. Official
+`alpaca-py 0.44.0` historical News calls succeeded for all 24 windows and
+returned 174 rows representing 173 unique Benzinga article IDs/URLs. Every row
+carried provider-native symbols, and the queried historical ticker appeared in
+all 174 rows. No current-ticker fallback or article-body retrieval occurred.
+
+Historical PIT admission nevertheless failed closed. Exact string equality was
+required between each Alpaca URL and GDELT GKG `V2DOCUMENTIDENTIFIER`. A
+deterministically prioritized GKG scan consumed 267,567,105 of the authorized
+268,435,456 compressed bytes without retaining ZIPs or requesting source
+articles. It found zero exact matches among the 173 unique URLs. Alpaca
+`created_at` and `updated_at` remain provenance-only metadata, so zero articles
+are PIT-admissible and `NewsEvidenceV1` is not frozen. URL normalization,
+redirect following, timestamp substitution, entity resolution, and feature
+design remain prohibited.
+
+```text
+ACTIVE_PHASE = P6_NEWS_MACRO_SKILLS
+ACTIVE_DEVELOPMENT = P6_NEWS_INFORMATION_INTELLIGENCE
+P6_MACRO_V1 = CLOSED_NO_MEASURABLE_INCREMENTAL_VALUE
+P6_REALTIME_NEWS_UPSTREAM_POC = SUFFICIENT_DEFER_PRODUCTIONIZATION_TO_P9
+REALTIME_NEWS_PRODUCTIONIZATION = DEFERRED_TO_P9
+CURRENT_P6_OBJECTIVE = NEWS_V1_HISTORICAL_PIT_DATA_AND_FACTOR_ABLATION
+EPISODE_SAMPLE_COUNT = 12
+EPISODE_WINDOW_COUNT = 24
+ALPACA_PY_VERSION = 0.44.0
+ALPACA_HISTORICAL_NEWS_STATUS = PASS_REAL_2015_2024_BOUNDED_WINDOWS
+ALPACA_SUCCESSFUL_WINDOW_COUNT = 24
+ALPACA_FAILED_WINDOW_COUNT = 0
+ALPACA_ARTICLE_COUNT = 174
+ALPACA_UNIQUE_ARTICLE_COUNT = 173
+ALPACA_ARTICLES_WITH_SYMBOLS = 174
+ALPACA_REQUESTED_TICKER_PRESENT_COUNT = 174
+ALPACA_REQUESTED_TICKER_ABSENT_COUNT = 0
+ALPACA_ARTICLE_URL_PRESENT_COUNT = 174
+CURRENT_TICKER_BACKFILL_COUNT = 0
+GDELT_URL_MATCH_SEMANTICS = EXACT_STRING_EQUALITY_ONLY
+GDELT_ADDITIONAL_COMPRESSED_BYTES = 267567105
+GDELT_COMPRESSED_BUDGET_BREACH_COUNT = 0
+GDELT_EXACT_URL_MATCH_COUNT = 0
+GDELT_EXACT_URL_MATCH_RATE = 0.0
+PIT_ADMISSIBLE_ARTICLE_COUNT = 0
+PIT_ADMISSIBLE_EPISODE_COUNT = 0
+PIT_ADMISSIBLE_WINDOW_COUNT = 0
+NEWS_EVIDENCE_V1_CONTRACT_FROZEN = NO
+GDELT_COMPANY_ENTITY_RESOLUTION_USED = NO
+AQ_ENTITY_RESOLUTION_ENGINE_CREATED = NO
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_GENERIC_NEWS_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+NEWS_FEATURE_FAMILY_SELECTED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+ORDER_COUNT = 0
+BROKER_ACTION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-historical-machine-readable-data-contract-and-source-freeze-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 49856e97c80db6150b1566c25ee72efa12ee30934d4c9b55eb0a97026908f807
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_HISTORICAL_SOURCE_CLOSEOUT_DECISION_001
+FINAL_CLASSIFICATION = BLOCKED_HISTORICAL_SAFE_AVAILABILITY_CORROBORATION
+```
+
+See [P6 News V1 historical machine-readable data contract and source freeze 001](p6-news-v1-historical-machine-readable-data-contract-and-source-freeze-001.md).
 
 ---
 
