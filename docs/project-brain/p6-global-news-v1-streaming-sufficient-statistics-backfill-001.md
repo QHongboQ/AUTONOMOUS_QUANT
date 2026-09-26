@@ -1,5 +1,90 @@
 # P6 Global News V1 streaming sufficient-statistics backfill 001
 
+## Official raw-source authority arbitration (authoritative)
+
+The official GDELT raw GKG 2.1 publication stream does **not** provide a clean
+replacement for the defective BigQuery sentiment semantics. The arbitration
+resolved every archive through the official English and Translingual master
+lists and used the GKG 2.1 codebook's documented batch-prefix and stream-class
+rules. A bounded, outcome-independent BigQuery sample contained exactly 40
+conflicting IDs and 20 non-conflicting controls across 2015–2024. It required
+only 27 unique official batch archives totaling 246,256,050 compressed bytes.
+All 27 archive byte counts and MD5 identities matched the official master-list
+metadata.
+
+The raw ZIPs were streamed without retaining decompressed CSV. For every one of
+the 40 conflicted IDs, the canonical archive contained two physical rows with
+two distinct `(DATE, SourceCollectionIdentifier, V2Tone)` tuples. In all 40
+cases those two raw tuples exactly equaled the two BigQuery variants. All 20
+controls occurred once and matched BigQuery exactly. The conflict therefore
+belongs to the official raw GKG publication artifacts, not merely to the
+BigQuery mirror/load history. An arbitrary first-row, last-row, or other
+deduplication rule remains prohibited.
+
+The official master lists also contain 175 raw GKG batches dated 2017-08-29
+(95 English and 80 Translingual). The absent BigQuery partition for that date
+is therefore a BigQuery mirror coverage gap, not an upstream raw-source gap.
+Master-list metadata for the frozen 2015-03-25 through 2024-12-31 interval
+contains 337,124 English archives (2,553,726,973,890 compressed bytes) and
+331,884 Translingual archives (3,676,360,070,274 compressed bytes), for
+669,008 archives and 6,230,087,044,164 compressed bytes combined. This cost
+estimate is evidence only; no full raw backfill was started.
+
+```text
+CONFLICT_SAMPLE_COUNT = 40
+CONTROL_UNIQUE_ID_COUNT = 20
+RAW_BATCH_ARCHIVE_COUNT_DOWNLOADED = 27
+RAW_COMPRESSED_BYTES_DOWNLOADED = 246256050
+RAW_ARCHIVE_HASH_VERIFICATION_PASS_COUNT = 27
+RAW_ARCHIVE_HASH_VERIFICATION_FAIL_COUNT = 0
+RAW_SINGLE_ROW_COUNT = 0
+RAW_MULTIPLE_IDENTICAL_COUNT = 0
+RAW_MULTIPLE_CONFLICT_COUNT = 40
+RAW_MISSING_COUNT = 0
+RAW_MATCHES_EXACTLY_ONE_BIGQUERY_VARIANT_COUNT = 0
+RAW_CONFLICT_VARIANT_SET_EXACT_BIGQUERY_MATCH_COUNT = 40
+CONTROL_MATCH_COUNT = 20
+CONTROL_MISMATCH_COUNT = 0
+CONTROL_MISSING_COUNT = 0
+RAW_GKG_BATCH_FILE_COUNT_2017_08_29 = 175
+RAW_SOURCE_DATE_PRESENT = YES
+BIGQUERY_2017_08_29_GAP = BIGQUERY_MIRROR_COVERAGE_GAP
+RAW_ENGLISH_ARCHIVE_COUNT_2015_2024 = 337124
+RAW_TRANSLINGUAL_ARCHIVE_COUNT_2015_2024 = 331884
+RAW_TOTAL_ARCHIVE_COUNT_2015_2024 = 669008
+RAW_ENGLISH_COMPRESSED_BYTES_2015_2024 = 2553726973890
+RAW_TRANSLINGUAL_COMPRESSED_BYTES_2015_2024 = 3676360070274
+RAW_TOTAL_COMPRESSED_BYTES_2015_2024 = 6230087044164
+OFFICIAL_RAW_GKG_AUTHORITY = FAIL_SEMANTIC_CONFLICT
+BIGQUERY_GKG_SENTIMENT_ROLE = REJECTED_FOR_HISTORICAL_SENTIMENT_BACKFILL
+PRIOR_GLOBAL_NEWS_V1_MATERIALIZATION_AUTHORITY = DIAGNOSTIC_ONLY_NOT_SCIENTIFICALLY_AUTHORITATIVE
+RAW_GKG_ZIP_RETAINED_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+AQ_NEWS_DATABASE_CREATED = NO
+AQ_RAW_NEWS_ARCHIVE_CREATED = NO
+AQ_GDELT_DOWNLOADER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_CLOSEOUT
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_CLOSEOUT_001
+FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_OFFICIAL_RAW_SOURCE_AUTHORITY_ARBITRATION
+```
+
+Private bounded comparison evidence is retained at
+`D:/AQ_DATA/P6/global-news-v1-official-raw-source-authority-arbitration-001`.
+The SHA-256 of its `checksums.json` is
+`09fd75d89fd7d276ee736de756e98ff1da4f2a811d869dd0727e290dd468d1a9`.
+No raw ZIP, decompressed GKG row, article URL, headline, body, credential, or
+outcome data is retained or committed. The sections below remain historical
+diagnostic evidence and are superseded wherever they imply that an official
+raw-stream retry could restore sentiment authority.
+
 ## GKGRECORDID integrity correction (authoritative)
 
 The follow-up integrity gate found that the materialization described below is

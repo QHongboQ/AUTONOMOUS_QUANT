@@ -3605,6 +3605,73 @@ CURRENT_DEVELOPMENT_NEXT = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
 FINAL_CLASSIFICATION = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
 ```
 
+### P6 Global News V1 official raw-source authority arbitration (2026-09-26)
+
+The official GDELT raw GKG 2.1 publication stream was tested as the only
+authorized replacement candidate for the non-authoritative BigQuery sentiment
+materialization. A deterministic 2015–2024 sample used 40 conflicted IDs and 20
+non-conflicting controls. Official English/Translingual master-list resolution
+reduced the sample to 27 unique archives totaling 246,256,050 compressed bytes;
+all 27 byte-count and MD5 checks passed.
+
+Every conflicted ID appeared twice in its canonical raw archive with two
+distinct selected semantic tuples, and those raw variant sets exactly matched
+the two BigQuery variants in all 40 cases. All 20 controls matched. The defect
+therefore exists in the official raw GKG artifacts themselves; neither the
+BigQuery mirror nor the raw publication stream is an admissible historical
+sentiment owner, and no arbitrary deduplication repair is authorized.
+
+The official master lists contain 175 GKG batches for 2017-08-29, proving that
+the absent BigQuery partition is a mirror coverage gap. For 2015-03-25 through
+2024-12-31, the master lists contain 669,008 GKG archives totaling
+6,230,087,044,164 compressed bytes. This metadata-only cost census did not
+start a historical raw backfill.
+
+```text
+CONFLICT_SAMPLE_COUNT = 40
+CONTROL_UNIQUE_ID_COUNT = 20
+RAW_BATCH_ARCHIVE_COUNT_DOWNLOADED = 27
+RAW_COMPRESSED_BYTES_DOWNLOADED = 246256050
+RAW_ARCHIVE_HASH_VERIFICATION_PASS_COUNT = 27
+RAW_ARCHIVE_HASH_VERIFICATION_FAIL_COUNT = 0
+RAW_SINGLE_ROW_COUNT = 0
+RAW_MULTIPLE_IDENTICAL_COUNT = 0
+RAW_MULTIPLE_CONFLICT_COUNT = 40
+RAW_MISSING_COUNT = 0
+RAW_CONFLICT_VARIANT_SET_EXACT_BIGQUERY_MATCH_COUNT = 40
+CONTROL_MATCH_COUNT = 20
+CONTROL_MISMATCH_COUNT = 0
+CONTROL_MISSING_COUNT = 0
+RAW_GKG_BATCH_FILE_COUNT_2017_08_29 = 175
+RAW_SOURCE_DATE_PRESENT = YES
+BIGQUERY_2017_08_29_GAP = BIGQUERY_MIRROR_COVERAGE_GAP
+RAW_ENGLISH_ARCHIVE_COUNT_2015_2024 = 337124
+RAW_TRANSLINGUAL_ARCHIVE_COUNT_2015_2024 = 331884
+RAW_TOTAL_ARCHIVE_COUNT_2015_2024 = 669008
+RAW_ENGLISH_COMPRESSED_BYTES_2015_2024 = 2553726973890
+RAW_TRANSLINGUAL_COMPRESSED_BYTES_2015_2024 = 3676360070274
+RAW_TOTAL_COMPRESSED_BYTES_2015_2024 = 6230087044164
+OFFICIAL_RAW_GKG_AUTHORITY = FAIL_SEMANTIC_CONFLICT
+BIGQUERY_GKG_SENTIMENT_ROLE = REJECTED_FOR_HISTORICAL_SENTIMENT_BACKFILL
+PRIOR_GLOBAL_NEWS_V1_MATERIALIZATION_AUTHORITY = DIAGNOSTIC_ONLY_NOT_SCIENTIFICALLY_AUTHORITATIVE
+RAW_GKG_ZIP_RETAINED_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+AQ_GDELT_DOWNLOADER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/global-news-v1-official-raw-source-authority-arbitration-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 09fd75d89fd7d276ee736de756e98ff1da4f2a811d869dd0727e290dd468d1a9
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_CLOSEOUT
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_CLOSEOUT_001
+FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_OFFICIAL_RAW_SOURCE_AUTHORITY_ARBITRATION
+```
+
 ---
 
 ## 27. First Principle
