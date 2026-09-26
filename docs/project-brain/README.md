@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Global News V1 Minimal Feature Surface Design 001**
+> Development Next: **P6 — Global News V1 Minimal Materialization 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3414,6 +3414,70 @@ The frozen sequence is feature-surface design, minimal materialization,
 ablation-protocol freeze, first authorized ablation, and closeout. No provider
 search is authorized between these stages unless a concrete source defect
 blocks execution. See [P6 Company News closeout and Global News handoff 001](p6-news-v1-company-news-closeout-and-global-news-handoff-001.md).
+
+### P6 Global News V1 minimal feature surface (2026-09-26)
+
+Global News V1 is frozen as four session-global fields from GDELT GKG 2.1 WEB
+records. The contract uses one unique `GKGRECORDID` as one observation, native
+`V1.5TONE` components, DuckDB aggregation, and the existing conservative
+date-only availability rule. Canonical storage remains one row per XNYS
+session, not one row per security.
+
+Raw document count is replaced, not supplemented, by
+`log1p(COUNT(DISTINCT GKGRECORDID))`. The transform has no fitted parameters,
+future observations, rolling-window choice, or warm-up state. A bounded set of
+previously frozen anchor batches varied from 636 to 2,721 valid WEB rows, a
+4.2783x ratio, supporting variance compression without opening a predictive
+window-selection search.
+
+The bounded sanity POC reused the prior 2,500-row evidence and one exact
+2.6 MB frozen 2022 anchor. Strict parsing retained 636 WEB records, rejected
+one known decode-error row, found zero duplicate record IDs, zero selected
+tone parse failures, and zero non-finite selected values. The archive matched
+its prior byte count and MD5 and was deleted after verification. Its safe date
+`2022-01-03` mapped to XNYS session `2022-01-04`.
+
+```text
+GLOBAL_NEWS_V1_SOURCE = GDELT_GKG_2_1_WEB
+GLOBAL_NEWS_SOURCE_OWNER = GDELT_GKG_2_1
+GLOBAL_NEWS_SAFE_AVAILABILITY_OWNER = GDELT_GKG_EXISTING_FROZEN_POLICY
+GLOBAL_NEWS_SESSION_OWNER = EXCHANGE_CALENDARS_XNYS
+GLOBAL_NEWS_RELATIONAL_COMPOSITION_OWNER = DUCKDB
+GLOBAL_NEWS_V1_FEATURE_COUNT = 4
+GLOBAL_NEWS_V1_FEATURES = global_news_log1p_volume,global_news_mean_tone,global_news_mean_negative_score,global_news_mean_polarity
+GLOBAL_NEWS_VOLUME_TRANSFORM = log1p(COUNT(DISTINCT GKGRECORDID))
+GLOBAL_NEWS_EMPTY_SESSION_POLICY = LOG1P_VOLUME_0_EMOTIONAL_FIELDS_NULL_NO_FORWARD_FILL
+GLOBAL_NEWS_V1_GCAM_USED = NO
+GLOBAL_NEWS_V1_THEMES_USED = NO
+GLOBAL_NEWS_V1_EVENT_DATABASE_USED = NO
+GLOBAL_NEWS_SOURCE_WEIGHTING_USED = NO
+GLOBAL_NEWS_SEMANTIC_DEDUP_USED = NO
+OUTCOME_BASED_SELECTION_USED = NO
+
+FUTURE_GLOBAL_NEWS_M0 = BASE_157
+FUTURE_GLOBAL_NEWS_M1 = BASE_157_PLUS_EXACT_GLOBAL_NEWS_V1_4
+P5_FUNDAMENTALS_INCLUDED = NO
+MACRO_V1_INCLUDED = NO
+COMPANY_NEWS_INCLUDED = NO
+
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_MINIMAL_MATERIALIZATION
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_MINIMAL_MATERIALIZATION_001
+NEW_PRODUCTION_LOC = 0
+AQ_NEWS_FEATURE_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/global-news-v1-minimal-feature-surface-design-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 9ca69a381ef78090e59d93f1e140e92481dfcadbf340b3f020c0a1caf1fbe7eb
+FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_MINIMAL_FEATURE_SURFACE_DESIGN
+```
+
+GCAM, themes, the separate GDELT Events database, positive score, activity
+reference density, and self/group reference density are excluded. See
+[P6 Global News V1 minimal feature surface design 001](p6-global-news-v1-minimal-feature-surface-design-001.md).
 
 ---
 
