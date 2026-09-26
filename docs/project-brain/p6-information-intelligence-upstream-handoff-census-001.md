@@ -1343,3 +1343,151 @@ NEW_PRODUCTION_LOC = 0
 CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_EVIDENCE_AND_SAFE_AVAILABILITY_POLICY_FREEZE_001
 FINAL_CLASSIFICATION = PASS_P6_MACRO_V1_NEGATIVE_RESULT_CLOSEOUT
 ```
+
+## News V1 evidence and safe-availability policy freeze (2026-09-25)
+
+### Authority question and decision
+
+News V1 asks what upstream evidence proves that a document already existed and
+was safely usable at a historical time. It does not require a universally exact
+first-publication time because that property is not generally observable. A
+publication timestamp, HTML date, RSS date, GDELT `V2.1DATE`, or generic OpenBB
+`date` is metadata rather than historical admission authority by default.
+
+An admissible evidence row must have immutable source identity, exact document
+identity, qualified conservative availability evidence, frozen timestamp
+semantics, a safe availability no later than the research cutoff, and no
+future/reprocessed metadata projected backward. If safe availability cannot be
+proved, the row is rejected; `published_at` is never substituted.
+
+### Official GDELT GKG 2.1 finding
+
+The [official GKG 2.1 codebook](https://data.gdeltproject.org/documentation/GDELT-Global_Knowledge_Graph_Codebook-V2.1.pdf)
+defines one tab-delimited row per document and the following distinct fields:
+
+- `GKGRECORDID`: globally unique string `YYYYMMDDHHMMSS-X` or
+  `YYYYMMDDHHMMSS-TX`; the prefix is the full date/time of the 15-minute update
+  batch in which the record was created.
+- `V2.1DATE`: the source document's publication date, not the creation batch.
+- `V2SOURCECOLLECTIONIDENTIFIER`: interpretation authority for the document
+  identifier. Only `1 = WEB` is automatically eligible for News V1.
+- `V2SOURCECOMMONNAME`: human-readable source, normally the top-level domain
+  for web material.
+- `V2DOCUMENTIDENTIFIER`: unique external document identifier; for `WEB` it is
+  a fully qualified URL.
+
+The codebook does not explicitly and normatively assign a timezone to the
+`GKGRECORDID` batch prefix. Related GDELT products cannot supply that missing
+contract by inference. The prefix is therefore retained as timezone-unproven
+date/time metadata, and only its calendar date is used for conservative
+historical admission. `V2.1DATE` remains publication metadata and is not a
+fallback.
+
+GDELT's [official data page](https://gdeltproject.org/data.html) describes GKG
+2.x as updating every 15 minutes, while the official launch record states the
+2.x files begin on 2015-02-19. Bounded master-file checks found the required
+GKG files at the research-range boundaries and direct retrieval passed:
+
+| Official file | Master-list bytes | Master-list MD5 | Retrieved SHA-256 | Bounded sample |
+|---|---:|---|---|---|
+| `20150401000000.gkg.csv.zip` | 9,671,813 | `6b3348c36995a54246736e014e0d7022` | `a4edc9c182f6e59db070e014438d4b37d2c1ccc486a9dd23196189b0c24208d2` | 200 rows, 27 columns, 200 `WEB` |
+| `20241231120000.gkg.csv.zip` | 3,941,030 | `d836879425b178bcb2f3dc3b2c26184e` | `55523bb4fe1153ad372296b03b2dbe8d18807381b172acab11e30146ea29a0d5` | 200 rows, 27 columns, 200 `WEB` |
+
+Both samples had all 200 record IDs, `V2.1DATE` values, source names, URLs,
+tone values, and GCAM values. Organizations were populated in 156 and 152
+rows; themes in 186 and 181 rows. Sparsity is permitted by the codebook and no
+field is assumed populated. Temporary archives were retired after aggregation;
+no article body, HTML, or copyrighted archive entered Git.
+
+Coverage is therefore sufficient to advance to a bounded multi-year historical
+POC. This conclusion establishes endpoint/file availability over the requested
+range, not complete corpus recall or content quality.
+
+### Other upstream roles
+
+| Upstream | Frozen role | Safe-availability meaning and limit |
+|---|---|---|
+| GDELT DOC / `gdeltdoc` | `SUPPLEMENTARY_QUERY_INTERFACE` | Official ArticleList is ranked/windowed and capped; use it for bounded discovery, timelines, and metadata inspection, not as the 2015-2024 dataset authority. |
+| OpenBB | `NEWS_PROVIDER_GATEWAY` | Normalizes provider-specific news surfaces. Its standard `date` is documented as publication time; it is not universal safe availability. A provider-specific crawl/first-seen field requires separate proof. |
+| Media Cloud | `SUPPLEMENTARY_SAFE_AVAILABILITY_AUTHORITY` | Official `indexed_date` is the timezone-aware time content was captured and processed for archive insertion. This is a conservative capture/processing upper bound, not exact publication or first availability. Account/API-key access and quotas apply; absent access does not block the primary GDELT path. |
+| Common Crawl | `SUPPLEMENTARY_CAPTURE_PROVENANCE_LEAF` | CDX/WARC capture timestamp, URL, status, digest, filename, offset, and length can corroborate a known exact URL. It is not news discovery, publication time, or authority to retain WARC content. |
+
+For the exact same URL, multiple qualified observations yield the earliest
+qualified proven capture/processing observation. Each observation retains its
+precision and source semantics. A date-only GDELT observation is never compared
+or represented as a fabricated intraday UTC instant. Cross-document joining
+requires exact identity first; fuzzy title matching, approximate URL matching,
+query-parameter stripping, AMP/mobile merging, and guessed canonicalization are
+not authorized.
+
+### Session visibility compatibility
+
+The existing P5 daily timing authority already maps a timezone-aware instant to
+the first XNYS session whose market open is strictly later. News V1 reuses that
+rule without a new calendar engine. Thus legitimate pre-open evidence can enter
+that session, while at-open or later evidence enters the next session. For
+date-only or timezone-unproven evidence, including GDELT GKG under this freeze,
+the stricter rule is the first XNYS session strictly after the evidence's
+calendar date.
+
+### Native structured intelligence and evidence shape
+
+The GKG codebook and bounded samples prove native Organizations, Enhanced
+Organizations, Themes, Tone, and GCAM surfaces. Organizations are useful
+upstream metadata but are not AQ ticker/CIK identity; Themes and Tone are usable
+as evidence metadata; GCAM remains a challenger because the upstream surface
+contains thousands of dimensions and none is selected here. These surfaces let
+News V1 postpone full-text, LangExtract, and FinBERT for evidence admission.
+They do not authorize a news feature family.
+
+The minimum future evidence shape is frozen semantically as:
+`source_system`, `source_record_id`, `source_collection_id`, `source_name`,
+`document_identifier`, nullable `published_at`, `published_at_semantics`,
+`capture_or_batch_at`, `capture_semantics`, `safe_available_at`,
+`safe_available_source`, `source_metadata_digest`, `archive_locator`,
+`language_or_translation_status`, and native organization/theme/tone presence
+flags. Only source identity, document identity, and qualified safe availability
+are mandatory for admission. This is a contract freeze, not an implementation.
+
+```text
+NEWS_EXACT_FIRST_AVAILABLE_AT = NOT_REQUIRED_NOT_UNIVERSALLY_PROVABLE
+GDELT_GKG_ROLE = PRIMARY_HISTORICAL_SAFE_AVAILABILITY_EVIDENCE_CANDIDATE
+GDELT_GKG_RECORD_ID_SEMANTICS = UNIQUE_RECORD_ID_WITH_15_MINUTE_CREATION_BATCH_PREFIX_NOT_PUBLICATION_TIME
+GDELT_GKG_BATCH_TIMEZONE = UNPROVEN
+GDELT_GKG_SAFE_AVAILABILITY_STATUS = PASS_DATE_ONLY_CONSERVATIVE
+GDELT_GKG_HISTORICAL_COVERAGE_FOR_P6 = PASS
+GDELT_GKG_HISTORICAL_COVERAGE_STATUS = PASS_2015_04_01_THROUGH_2024_12_31_BOUNDARY_VERIFIED
+GDELT_WEB_SOURCE_COLLECTION_ONLY = YES
+GDELT_DOC_ROLE = SUPPLEMENTARY_QUERY_INTERFACE
+OPENBB_NEWS_ROLE = NEWS_PROVIDER_GATEWAY
+OPENBB_PUBLISHED_AT = PUBLICATION_METADATA_ONLY_BY_DEFAULT
+OPENBB_PUBLISHED_AT_ADMISSION_AUTHORITY = NO
+MEDIA_CLOUD_ROLE = SUPPLEMENTARY_SAFE_AVAILABILITY_AUTHORITY
+MEDIA_CLOUD_INDEXED_DATE = CONSERVATIVE_CAPTURE_PROCESSING_UPPER_BOUND
+MEDIA_CLOUD_INDEXED_DATE_SEMANTICS = CONSERVATIVE_CAPTURE_PROCESSING_UPPER_BOUND
+MEDIA_CLOUD_CREDENTIAL_REQUIREMENT = REGISTERED_ACCOUNT_API_ACCESS
+COMMON_CRAWL_ROLE = SUPPLEMENTARY_CAPTURE_PROVENANCE_LEAF
+COMMON_CRAWL_CAPTURE_TIMESTAMP_SEMANTICS = ARCHIVE_CAPTURE_TIME_FOR_KNOWN_URL_NOT_PUBLICATION_OR_DISCOVERY
+NEWS_SAFE_AVAILABLE_AT_POLICY = EARLIEST_QUALIFIED_PROVEN_CAPTURE_OR_PROCESSING_OBSERVATION_FOR_EXACT_SAME_URL_PRECISION_PRESERVED
+NEWS_SESSION_VISIBILITY_POLICY = AWARE_INSTANT_FIRST_XNYS_OPEN_STRICTLY_AFTER_INSTANT_ELSE_FIRST_XNYS_SESSION_STRICTLY_AFTER_CALENDAR_DATE
+NEWS_FULL_TEXT_REQUIRED_FOR_EVIDENCE = NO
+GDELT_NATIVE_ORGANIZATION_METADATA = UPSTREAM_NATIVE_PARTIAL_NOT_SECURITY_IDENTITY
+GDELT_NATIVE_THEME_METADATA = UPSTREAM_NATIVE_USABLE_AS_EVIDENCE_METADATA
+GDELT_NATIVE_TONE_GCAM_METADATA = TONE_UPSTREAM_NATIVE_USABLE_GCAM_CHALLENGER_ONLY_NO_DIMENSION_SELECTED
+LANGEXTRACT_REQUIRED_FOR_NEWS_V1_EVIDENCE = NO
+FINBERT_REQUIRED_FOR_NEWS_V1_EVIDENCE = NO
+NEWS_ENTITY_TO_AQ_SECURITY_BINDING = UNRESOLVED_SEPARATE_POLICY
+NEWS_FEATURE_FAMILY_SELECTED = NO
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_NEWS_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_GDELT_GKG_HISTORICAL_SAFE_AVAILABILITY_POC_001
+FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_EVIDENCE_SAFE_AVAILABILITY_POLICY_FROZEN
+```
