@@ -1,0 +1,107 @@
+# P6 Global News V1 streaming sufficient-statistics backfill 001
+
+## Result
+
+PR #104 was squash-merged as
+`db36a63aaeda5a86c303996e50e1f6b0bf4dfb55`. The backfill branch was created
+from that exact clean main.
+
+The mandatory BigQuery access gate failed closed before schema inspection,
+dry-run, or historical execution. Windows and WSL have no `gcloud` or `bq`
+command, no Google Cloud SDK configuration directory, and no standard Google
+Cloud application-credential or project environment variable. No credential
+value was read or printed.
+
+```text
+BIGQUERY_AUTH_AVAILABLE = NO
+BIGQUERY_PROJECT_AVAILABLE = NO
+BIGQUERY_BILLING_STATUS = UNKNOWN_NOT_CHECKABLE_NO_AUTH_OR_PROJECT
+BIGQUERY_SOURCE_TABLE = NOT_QUERIED
+BIGQUERY_DRY_RUN = NOT_RUN_AUTH_UNAVAILABLE
+BIGQUERY_ESTIMATED_BYTES_PROCESSED = NOT_AVAILABLE
+BIGQUERY_ACTUAL_BYTES_PROCESSED = 0
+BIGQUERY_QUERY_SQL_SHA256 = NONE
+```
+
+The task explicitly prohibits raw-download fallback when authorization is
+absent. Accordingly, no GDELT ZIP, raw row, article content, daily aggregate,
+session feature history, query SQL, or guessed source schema was created.
+
+## Frozen architecture retained
+
+The feature contract and intended storage model remain unchanged:
+
+```text
+GLOBAL_NEWS_SOURCE_OWNER = GDELT_GKG_2_1
+GLOBAL_NEWS_SOURCE_COLLECTION = WEB_ONLY
+GLOBAL_NEWS_SAFE_AVAILABILITY_OWNER = EXISTING_FROZEN_GDELT_POLICY
+GLOBAL_NEWS_SESSION_OWNER = EXCHANGE_CALENDARS_XNYS
+GLOBAL_NEWS_RELATIONAL_COMPOSITION_OWNER = DUCKDB
+HISTORICAL_BACKFILL_MODEL = UPSTREAM_SERVER_SIDE_STREAMING_REDUCTION
+GLOBAL_NEWS_STORAGE_MODEL = SESSION_FEATURE_HISTORY_ONLY
+RAW_NEWS_RETENTION = NONE
+
+SOURCE_QUERY_START = 2015-03-25
+SOURCE_QUERY_END = 2024-12-31
+GLOBAL_NEWS_V1_FEATURE_COUNT = 4
+GLOBAL_NEWS_V1_FEATURES = global_news_log1p_volume,global_news_mean_tone,global_news_mean_negative_score,global_news_mean_polarity
+```
+
+When authorized access exists, the upstream query must return only one row of
+sufficient statistics per safe calendar date: distinct-document count plus
+sum and valid-count pairs for Tone, Negative Score, and Polarity. It must pass
+a dry run below the 750 GiB ceiling and return no individual GKG record.
+Calendar dates must then map to the first strictly later XNYS session; DuckDB
+must combine sums and counts rather than average daily means.
+
+## Non-actions and accounting
+
+```text
+SOURCE_RECORD_COUNT = NOT_QUERIED
+DISTINCT_GKGRECORDID_COUNT = NOT_QUERIED
+TONE_MALFORMED_COUNT = NOT_QUERIED
+NEGATIVE_MALFORMED_COUNT = NOT_QUERIED
+POLARITY_MALFORMED_COUNT = NOT_QUERIED
+RETURNED_RAW_GKG_ROW_COUNT = 0
+DAILY_SUFFICIENT_STATISTICS_ROW_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+RAW_NEWS_RECORDS_PERSISTED = 0
+RAW_GDELT_ZIP_RETAINED_COUNT = 0
+ARTICLE_BODY_RETAINED_COUNT = 0
+ARTICLE_HEADLINE_RETAINED_COUNT = 0
+EXPECTED_XNYS_SESSION_COUNT = NOT_COMPUTED_STOPPED_AT_ACCESS_GATE
+MATERIALIZED_SESSION_COUNT = 0
+EMPTY_SESSION_COUNT = NOT_COMPUTED
+RIGHT_EDGE_POST_2024_SESSION_COUNT = NOT_COMPUTED
+RIGHT_EDGE_POST_2024_DOCUMENT_COUNT = NOT_QUERIED
+GLOBAL_NEWS_V1_MATERIALIZATION_ID = NONE
+DAILY_SUFFICIENT_STATISTICS_SHA256 = NONE
+SESSION_FEATURE_HISTORY_SHA256 = NONE
+
+FUTURE_REALTIME_STATE_MODEL = MUTABLE_LATEST_STATE_PLUS_IMMUTABLE_SESSION_SNAPSHOTS
+REALTIME_STATEFUL_STREAM_PROCESSOR_SELECTION = DEFERRED_TO_P9
+AQ_NEWS_DATABASE_CREATED = NO
+AQ_RAW_NEWS_ARCHIVE_CREATED = NO
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_GDELT_DOWNLOADER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+```
+
+Private access-gate evidence is retained at
+`D:/AQ_DATA/P6/global-news-v1-streaming-sufficient-statistics-backfill-001`.
+Its deterministic evidence-set SHA-256 is
+`18c98bd71d649368baccfd038a6bda6af4f56318d87bd50cfcdb7d783c9f564c`.
+
+```text
+P6_GLOBAL_NEWS_V1 = CONTRACT_FROZEN_BACKFILL_BLOCKED
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_HISTORICAL_FEATURE_BACKFILL_BLOCKED_BIGQUERY_AUTH
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_USER_SUPPLIED_BIGQUERY_PROJECT_OR_AUTH
+FINAL_CLASSIFICATION = BLOCKED_USER_SUPPLIED_BIGQUERY_PROJECT_OR_AUTH
+```

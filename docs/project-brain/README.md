@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Global News V1 Minimal Materialization 001**
+> Development Next: **Blocked — User-Supplied BigQuery Project or Authorization**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3478,6 +3478,71 @@ FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_MINIMAL_FEATURE_SURFACE_DESIGN
 GCAM, themes, the separate GDELT Events database, positive score, activity
 reference density, and self/group reference density are excluded. See
 [P6 Global News V1 minimal feature surface design 001](p6-global-news-v1-minimal-feature-surface-design-001.md).
+
+### P6 Global News V1 streaming backfill access gate (2026-09-26)
+
+The historical materialization stopped at its mandatory BigQuery access gate.
+Neither Windows nor WSL exposes `gcloud` or `bq`; no ADC configuration directory
+or standard Google Cloud credential/project environment variable is present.
+No credential value was inspected. A BigQuery project, billing state, source
+schema, partitioned table, or dry-run cost therefore cannot be established.
+
+The architecture remains frozen as upstream server-side sufficient-statistics
+reduction. No raw-download fallback, local GDELT archive, local news database,
+schema guess, SQL execution, or materialization was attempted. The four-field
+feature contract remains unchanged but is not yet materialized.
+
+```text
+P6_GLOBAL_NEWS_V1 = CONTRACT_FROZEN_BACKFILL_BLOCKED
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_HISTORICAL_FEATURE_BACKFILL_BLOCKED_BIGQUERY_AUTH
+HISTORICAL_BACKFILL_MODEL = UPSTREAM_SERVER_SIDE_STREAMING_REDUCTION
+GLOBAL_NEWS_STORAGE_MODEL = SESSION_FEATURE_HISTORY_ONLY
+RAW_NEWS_RETENTION = NONE
+
+BIGQUERY_AUTH_AVAILABLE = NO
+BIGQUERY_PROJECT_AVAILABLE = NO
+BIGQUERY_BILLING_STATUS = UNKNOWN_NOT_CHECKABLE_NO_AUTH_OR_PROJECT
+BIGQUERY_SOURCE_TABLE = NOT_QUERIED
+BIGQUERY_DRY_RUN = NOT_RUN_AUTH_UNAVAILABLE
+BIGQUERY_ESTIMATED_BYTES_PROCESSED = NOT_AVAILABLE
+BIGQUERY_ACTUAL_BYTES_PROCESSED = 0
+
+SOURCE_QUERY_START = 2015-03-25
+SOURCE_QUERY_END = 2024-12-31
+SOURCE_COLLECTION = WEB_ONLY
+RETURNED_RAW_GKG_ROW_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+RAW_NEWS_RECORDS_PERSISTED = 0
+RAW_GDELT_ZIP_RETAINED_COUNT = 0
+ARTICLE_BODY_RETAINED_COUNT = 0
+ARTICLE_HEADLINE_RETAINED_COUNT = 0
+DAILY_SUFFICIENT_STATISTICS_MATERIALIZED = NO
+SESSION_FEATURE_HISTORY_MATERIALIZED = NO
+
+GLOBAL_NEWS_V1_FEATURE_COUNT = 4
+GLOBAL_NEWS_V1_FEATURES = global_news_log1p_volume,global_news_mean_tone,global_news_mean_negative_score,global_news_mean_polarity
+FUTURE_REALTIME_STATE_MODEL = MUTABLE_LATEST_STATE_PLUS_IMMUTABLE_SESSION_SNAPSHOTS
+REALTIME_STATEFUL_STREAM_PROCESSOR_SELECTION = DEFERRED_TO_P9
+
+AQ_NEWS_DATABASE_CREATED = NO
+AQ_RAW_NEWS_ARCHIVE_CREATED = NO
+AQ_GDELT_DOWNLOADER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/global-news-v1-streaming-sufficient-statistics-backfill-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 18c98bd71d649368baccfd038a6bda6af4f56318d87bd50cfcdb7d783c9f564c
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_USER_SUPPLIED_BIGQUERY_PROJECT_OR_AUTH
+FINAL_CLASSIFICATION = BLOCKED_USER_SUPPLIED_BIGQUERY_PROJECT_OR_AUTH
+```
+
+See [P6 Global News V1 streaming sufficient-statistics backfill 001](p6-global-news-v1-streaming-sufficient-statistics-backfill-001.md).
 
 ---
 
