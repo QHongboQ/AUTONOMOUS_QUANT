@@ -1645,3 +1645,131 @@ PRIVATE_EVIDENCE_CHECKSUM_SHA256 = dcca9cfa4e041b5f08c54ae95f7834ea3a3a761685e07
 CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_ENTITY_TO_SECURITY_UPSTREAM_SUBSTITUTION_AUDIT_001
 FINAL_CLASSIFICATION = PASS_P6_NEWS_V1_GDELT_GKG_HISTORICAL_SAFE_AVAILABILITY_POC
 ```
+
+## News V1 entity-to-security upstream substitution audit (2026-09-25)
+
+The upstream capability audit is complete, but its requested bounded real-name
+matrix is fail-closed. PR #95 was squash-merged at
+`1fcd062ba54597c692e832b342f0de883723038b`. The retained 2,500-row GKG
+sample contains only the boolean `native_organization_metadata_present`; it
+does not retain either Organizations or Enhanced Organizations text. The eight
+verified source ZIPs were deliberately retired by the preceding POC. The task
+prohibited downloading the GKG corpus again, so the deterministic first 500
+exact organization strings do not exist as an authorized input. All bounded
+match counts below are therefore zero-input counts, not a measured zero-match
+rate.
+
+The accepted P5 `submissions.zip` was reused without a network request. Its
+1,564,656,199 bytes hash to
+`702fbcd8b4335bc649e9e4eab3a202f3effc314b43421664bfecb59365767165`,
+and all 711 bound CIKs have exact members. Those members contain 711 current
+names and 676 former-name entries. The official SEC API documentation confirms
+that Submissions JSON contains current/former names and current ticker/exchange
+metadata, and that the bulk ZIP is the same official API surface. It does not
+define former-name `from`/`to` boundary inclusion. More importantly, 11 of the
+676 retained entries have `from > to`. These fields are useful upstream alias
+evidence but are not an unconditional historical interval contract. Inverted
+or boundary cases fail closed, current names receive no invented historical
+start, and current `tickers[]` are never projected backward. See the
+[official SEC API page](https://www.sec.gov/search-filings/edgar-application-programming-interfaces).
+
+The exact Valuein 5.2.0 `snapshot_20260918` remains a supplementary private
+identity leaf. Its 968-row entity table covers all 711 bound CIKs; 434 of those
+CIKs have non-empty `former_names`. Its 1,263-row security/reference surfaces
+provide SCD2 `valid_from`/`valid_to`, inactive rows, FIGI, composite FIGI and
+share-class FIGI. The exact SDK has no `search_companies` method; deterministic
+historical inspection is by direct `run_query` over `entity` and `security`,
+not an active-only convenience lookup. Compared with the later SEC bulk, 710
+current names and 666 complete former-name lists are byte-equivalent, which is
+why snapshot identities may not be mixed. Valuein corroborates and supplies
+security metadata; it does not override P1 membership or an accepted
+EpisodeSecCikBindingV1 conflict.
+
+EdgarTools 5.58.0 source authority
+`e23d04eba952e70310c0f62402f4c2523f9a44bf` was inspected in place. Its
+`find(company_name)` uses a scored `FastSearch` over the current company-ticker
+table with a default threshold of 60. It is candidate discovery, not
+historical name authority; `Company(CIK)` is exact only after the CIK is known.
+The [EdgarTools company documentation](https://dgunning.github.io/edgartools/company/)
+likewise distinguishes ticker/CIK lookup from company-name search.
+
+OpenFIGI remains duplicative supplementary security corroboration: its official
+API maps security identifiers to FIGI metadata but exposes neither CIK as an
+identifier type nor a historical effective-date contract. GLEIF supplies legal
+entity names and LEIs but no project-proven direct CIK bridge, so it is valid
+but nonessential. Cleanco 2.3 is selected only for mechanical legal-suffix
+normalization. RapidFuzz or EdgarTools ranking may generate review candidates,
+but may never auto-bind. The official [OpenFIGI API](https://www.openfigi.com/api/documentation),
+[GLEIF data dictionary](https://www.gleif.org/lei-data/access-and-use-lei-data/gleif-data-dictionary/2023-11-07_gleif-data-dictionary_v1.0_final.pdf),
+[cleanco repository](https://github.com/psolin/cleanco), and
+[RapidFuzz repository](https://github.com/rapidfuzz/RapidFuzz) are the audited
+upstream references.
+
+The official alias corpus itself proves why normalization is policy, not
+authority:
+
+| Tier | Alias keys | Unique-CIK keys | Ambiguous-CIK keys | Normalization collisions |
+|---|---:|---:|---:|---:|
+| 0 raw exact/case-sensitive | 1,340 | 1,339 | 1 | 0 |
+| 1 NFKC/casefold/whitespace | 1,333 | 1,332 | 1 | 7 |
+| 2 conservative punctuation | 1,239 | 1,237 | 2 | 98 |
+| 3 cleanco 2.3 suffix removal | 1,193 | 1,188 | 5 | 138 |
+
+The smallest safe architecture remains upstream-owned: exact GKG organization
+text plus admitted safe date, exact SEC alias evidence yielding one CIK,
+optional Valuein corroboration, existing EpisodeSecCikBindingV1 date
+containment, then P1 InstrumentEpisodeV1. It never binds organization text
+directly to ticker. Brands, subsidiaries, fuzzy scores, first-ranked search
+results and LLM judgments cannot create identity. No AQ resolver or generic
+identity engine is required. The next work is blocked specifically on retaining
+the already-selected GKG organization strings; it is not blocked on a need for
+custom fuzzy logic.
+
+```text
+PR95_MERGE_SHA = 1fcd062ba54597c692e832b342f0de883723038b
+SEC_SUBMISSIONS_ALIAS_STATUS = SELECTED_PRIMARY_UPSTREAM_LEAF_FULL_711_CIK_COVERAGE
+SEC_FORMER_NAMES_DATE_SEMANTICS = FROM_TO_PRESENT_11_INVERTED_BOUNDARY_INCLUSION_UNDOCUMENTED_FAIL_CLOSED
+EXISTING_P5_SEC_BULK_REUSED = YES
+EXISTING_EPISODE_CIK_AUTHORITY_REUSED = YES
+VALUEIN_VERSION = 5.2.0
+VALUEIN_SOURCE_OR_SNAPSHOT_IDENTITY = snapshot_20260918_SHA256_67adf1ce4639ad3d0b67f771b868c1857f4a8d0370c8fae608a343fd80537dc4
+VALUEIN_ENTITY_FORMER_NAMES_STATUS = PRESENT_434_OF_711_BOUND_CIKS_NONEMPTY
+VALUEIN_SECURITY_SCD2_STATUS = PASS_VALID_FROM_VALID_TO_INACTIVE_AND_FIGI_PRESENT
+VALUEIN_ENTITY_SEARCH_STATUS = DIRECT_TABLE_QUERY_ONLY_NO_PUBLIC_SEARCH_COMPANIES_METHOD
+EDGARTOOLS_VERSION = 5.58.0
+EDGARTOOLS_NAME_SEARCH_STATUS = CANDIDATE_GENERATION_ONLY_CURRENT_COMPANY_TICKER_FASTSEARCH
+OPENFIGI_STATUS = VALID_BUT_DUPLICATIVE_SUPPLEMENTARY_SECURITY_CORROBORATION
+GLEIF_STATUS = VALID_BUT_NONESSENTIAL_NO_PROJECT_PROVEN_CIK_BRIDGE
+COMPANY_NAME_NORMALIZATION_LEAF = CLEANCO_2_3_SUPPLEMENTARY_ONLY
+FUZZY_MATCH_AUTO_BIND = NO
+LLM_ENTITY_BINDING_AUTHORITY = NO
+TOTAL_ORGANIZATION_STRING_COUNT = 0
+EXACT_RAW_UNIQUE_BIND_COUNT = 0
+NORMALIZED_UNIQUE_BIND_COUNT = 0
+FORMER_NAME_BIND_COUNT = 0
+VALUEIN_SUPPORTED_BIND_COUNT = 0
+EDGARTOOLS_SUPPORTED_BIND_COUNT = 0
+OPENFIGI_CORROBORATED_COUNT = 0
+VALID_NON_AQ_ENTITY_COUNT = 0
+AMBIGUOUS_COUNT = 0
+UNMATCHED_COUNT = 0
+DATE_INVALID_ALIAS_COUNT = 0
+IDENTITY_CONFLICT_COUNT = 0
+BOUNDED_MATCH_METRIC_INTERPRETATION = ZERO_ELIGIBLE_INPUT_NOT_ZERO_FAILURE_RATE
+NEWS_ENTITY_TO_AQ_SECURITY_BINDING_STATUS = BLOCKED_BOUNDED_REAL_POC_INPUT_NOT_RETAINED
+AQ_ENTITY_RESOLUTION_ENGINE_REQUIRED = NO
+AQ_NEWS_ENTITY_RESOLVER_CREATED = NO
+AQ_GENERIC_IDENTITY_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+NEWS_FEATURE_FAMILY_SELECTED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-entity-to-security-upstream-substitution-audit-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 83a45d07265f3758df33be3b15c2065f25f27faa351cd47d0044c915052d56f2
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_RETAINED_GKG_ORGANIZATION_TEXT_UNAVAILABLE
+FINAL_CLASSIFICATION = BLOCKED_RETAINED_GKG_SAMPLE_LACKS_ORGANIZATION_TEXT
+```
