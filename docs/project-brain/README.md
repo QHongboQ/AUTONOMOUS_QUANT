@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P6 — News information intelligence**
+> Active Development: **P7 — Entry audit**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **Blocked — GDELT Duplicate Record Semantic Conflict**
+> Development Next: **P7 — Multi-Alpha Ensemble Entry Audit 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3671,6 +3671,111 @@ CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_CLOSEOUT
 CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_CLOSEOUT_001
 FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_OFFICIAL_RAW_SOURCE_AUTHORITY_ARBITRATION
 ```
+
+### P6 Global News V1 and phase closeout (2026-09-26)
+
+P6 is complete. Global News V1 is rejected because the official raw GDELT GKG
+2.1 publication stream itself contains conflicting Tone, Negative Score, and
+Polarity variants for the same globally unique logical `GKGRECORDID`. No
+upstream-authoritative selection exists among those variants, so AQ applies no
+first/last/mean/median/`ANY_VALUE` or load-order rule. The prior BigQuery
+materialization and its session feature history remain diagnostic audit
+evidence only and are prohibited from all scientific or downstream use.
+
+The exact Macro V1 candidate reached a scientifically admissible negative
+result: no measurable incremental value over `BASE_157`. Company News V1,
+earnings-call intelligence, and social sentiment remain explicitly deferred
+at their access, license, PIT, or model-contract boundaries; none authorizes a
+custom AQ substitute. Realtime Alpaca/Benzinga, official Fed/BLS feeds, and
+EdgarTools current-filings work remain sufficient POCs whose productionization
+is deferred to P9. FinBERT, LangExtract, TradingAgents, FinGPT, and financial
+skills remain upstream leaves, challengers, or workflow guidance—not admitted
+factor families.
+
+P6 therefore admits zero new feature families. The post-P6 control remains the
+exact 157-column base surface. P7 is not authorized to assume that multiple
+independent alpha families exist; it begins with an entry audit of actual
+admissible outputs from P1–P6.
+
+```text
+ACTIVE_DEVELOPMENT = P7_ENTRY_AUDIT
+P6_STATUS = COMPLETE
+P6_ACTIVE = NO
+
+P6_GLOBAL_NEWS_V1 = REJECTED_SOURCE_SEMANTIC_CONFLICT
+OFFICIAL_RAW_GKG_AUTHORITY = FAIL_SEMANTIC_CONFLICT
+BIGQUERY_GKG_DUPLICATE_CONFLICT = NOT_BIGQUERY_ONLY
+OFFICIAL_RAW_GKG_DUPLICATE_CONFLICT = PROVEN
+AQ_GDELT_DUPLICATE_RESOLUTION_POLICY = NONE_FAIL_CLOSED
+FULL_RAW_GDELT_BACKFILL_AUTHORIZED = NO
+GLOBAL_NEWS_V1_PRIOR_MATERIALIZATION_STATUS = DIAGNOSTIC_ONLY_INVALID_FOR_SCIENTIFIC_USE
+GLOBAL_NEWS_V1_MATERIALIZATION_ID = 293f69052f3184ca798a55ce2183c5c8c4bf179c72b78d1247f58d2282fb4c4f
+GLOBAL_NEWS_V1_SESSION_FEATURE_HISTORY_SHA256 = 3184ab20246300465dc34b1aa2dd7c5f0938e69439581d2bb4b022bc9ce448cb
+GLOBAL_NEWS_V1_FEATURE_CONTRACT_STATUS = REJECTED_NOT_ADMITTED
+GLOBAL_NEWS_V1_FEATURE_COUNT_ADMITTED = 0
+GDELT_GKG_SENTIMENT_FACTOR_ROLE = REJECTED_FOR_P6_HISTORICAL_GLOBAL_NEWS_V1
+GDELT_COMPANY_NEWS_GLUE_ROLE = RETIRED
+GDELT_FUTURE_ROLE = REFERENCE_OR_DISCOVERY_SOURCE
+BIGQUERY_PRODUCTION_DEPENDENCY = NO
+BIGQUERY_P9_DEPENDENCY = NO
+
+MISSING_BIGQUERY_SOURCE_DATE = 2017-08-29
+RAW_GKG_BATCH_FILE_COUNT_2017_08_29 = 175
+RAW_SOURCE_DATE_PRESENT = YES
+BIGQUERY_2017_08_29_GAP = BIGQUERY_MIRROR_COVERAGE_GAP
+RAW_TOTAL_ARCHIVE_COUNT_2015_2024 = 669008
+RAW_TOTAL_COMPRESSED_BYTES_2015_2024 = 6230087044164
+
+P6_MACRO_V1 = CLOSED_NO_MEASURABLE_INCREMENTAL_VALUE
+P6_MACRO_V1_SCIENTIFIC_CONCLUSION = NO_MEASURABLE_INCREMENTAL_VALUE
+P6_COMPANY_NEWS_V1 = DEFERRED_ACCESS_BLOCKED_NO_CUSTOM_BUILD
+SELECTED_COMPANY_NEWS_WHOLE_OWNER = NONE
+COMPANY_NEWS_CUSTOM_BUILD_AUTHORIZED = NO
+P6_EARNINGS_CALL_TEXT_INTELLIGENCE = DEFERRED_ACCESS_AND_MODEL_CONTRACT
+P6_SOCIAL_SENTIMENT = DEFERRED_NO_MATURE_HISTORICAL_PIT_UPSTREAM
+P6_SKILLS_FACTOR_FAMILY_ADMITTED = NO
+FINBERT_ROLE_AFTER_P6 = AVAILABLE_UPSTREAM_LEAF_NOT_ADMITTED_AS_STANDALONE_FACTOR
+LANGEXTRACT_ROLE_AFTER_P6 = VALID_UPSTREAM_EXTRACTION_MECHANICS
+FINANCIAL_SERVICES_AGENT_SKILLS_ROLE_AFTER_P6 = WORKFLOW_GUIDANCE_ONLY
+TRADINGAGENTS_ROLE_AFTER_P6 = CHALLENGER_INFORMATION_SYNTHESIS_ONLY
+FINGPT_ROLE_AFTER_P6 = REFERENCE_OR_CHALLENGER_ONLY
+
+P6_REALTIME_NEWS_INFRASTRUCTURE_POC = PASS_SUFFICIENT
+REALTIME_NEWS_PRODUCTIONIZATION = DEFERRED_TO_P9
+ALPACA_PAPER_ACCOUNT = AVAILABLE_FOR_FUTURE_P9_PAPER_POC
+
+P6_NEW_ADMITTED_FEATURE_FAMILY_COUNT = 0
+POST_P6_CONTROL_FEATURE_FAMILY = BASE_157
+POST_P6_CONTROL_FEATURE_COLUMN_COUNT = 157
+
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_ENTITY_RESOLUTION_ENGINE_CREATED = NO
+AQ_NEWS_DATABASE_CREATED = NO
+AQ_SENTIMENT_ENGINE_CREATED = NO
+AQ_LLM_FRAMEWORK_CREATED = NO
+AQ_MULTI_AGENT_FRAMEWORK_CREATED = NO
+AQ_SOCIAL_SCRAPER_CREATED = NO
+AQ_MACRO_CLIENT_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT_P6 = 0
+P6_CUSTOM_ENGINE_CREATED_COUNT = 0
+
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+REALTIME_WEBSOCKET_SESSION_COUNT = 0
+ORDER_COUNT = 0
+BROKER_ACTION_COUNT = 0
+CAPITAL_AT_RISK = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_SEALED_OOS_RESULT_USED = NO
+
+NEXT_TASK = P7_MULTI_ALPHA_ENSEMBLE_ENTRY_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P6_PHASE_CLOSEOUT_NO_NEW_ADMITTED_FEATURE_FAMILY
+```
+
+See [P6 Global News V1 and phase closeout 001](p6-global-news-v1-and-phase-closeout-001.md).
 
 ---
 
