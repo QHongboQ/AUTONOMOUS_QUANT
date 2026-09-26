@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Historical News Selected Upstream Bounded Factor POC 001**
+> Development Next: **P6 — Historical News FinSen Ablation Protocol Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3699,6 +3699,42 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 NEW_PRODUCTION_LOC = 0
 CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_SELECTED_UPSTREAM_BOUNDED_FACTOR_POC_001
 FINAL_CLASSIFICATION = PASS_P6_HISTORICAL_NEWS_MATURE_UPSTREAM_REENTRY_AUDIT
+```
+
+---
+
+### P6 FinSen bounded historical-news factor POC (2026-09-26)
+
+The research-only FinSen path materialized one deterministic global-market
+factor, `finsen_finbert_market_sentiment`. It reproduces the published FinBERT
+score `P(positive) - P(negative)` and daily arithmetic mean over `Content`, then
+uses the first XNYS session strictly after each date. Sessions without source
+evidence remain NULL; no forward fill, backfill, zero fill, return access, or
+model evaluation occurred.
+
+FinSen remains date-only and research-use constrained. The factor is therefore
+a materialized research challenger, not a production-PIT admission. PR #106
+remains open and unmerged until the lane reaches a terminal scientific result.
+
+```text
+P6_STATUS = REOPENED_BOUNDED_HISTORICAL_NEWS_RESEARCH
+P6_CLOSEOUT_CANDIDATE = PR_106_HELD_UNMERGED
+FINSEN_RESEARCH_FACTOR_STATUS = MATERIALIZED_RESEARCH_CHALLENGER
+RESEARCH_FACTOR_NAME = finsen_finbert_market_sentiment
+RESEARCH_FACTOR_COUNT = 1
+STRICT_PRODUCTION_PIT_READY = NO
+PRODUCTION_ADMISSION_AUTHORIZED = NO
+SOURCE_ROW_COUNT = 15534
+ELIGIBLE_2015_2023_ROW_COUNT = 14240
+XNYS_SESSION_COUNT = 2087
+SESSION_WITH_SIGNAL_COUNT = 2003
+SESSION_WITHOUT_SIGNAL_COUNT = 84
+RESEARCH_SIGNAL_SHA256 = 93bc6a62550accc0a4484e86d6f3af8242c69a6211a51ef40bb34d0c9bc60f48
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 6e56cfd78213eef31b256a4362f70352cfc37afb5e6ba9517b7b4bf73ae5c2f5
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_FINSEN_ABLATION_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P6_HISTORICAL_NEWS_FINSEN_BOUNDED_FACTOR_POC
 ```
 
 ---
