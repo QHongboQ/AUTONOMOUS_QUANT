@@ -12,3 +12,15 @@ may mechanically join it onto an explicit `(datetime, instrument)` grid.
 
 The credential is external runtime configuration expected by Vintage. It is
 not a source dependency or artifact field.
+
+## Terminal status
+
+```text
+STATUS = RETIRED_FROM_ACTIVE_CANDIDATE_PATH
+SCIENTIFIC_RESULT = NO_MEASURABLE_INCREMENTAL_VALUE
+ROLE = HISTORICAL_REPRODUCIBILITY_REFERENCE_ONLY
+ACTIVE_DVC_STAGE = NO
+```
+
+The implementation and tests remain unchanged as historical reproducibility
+references. They are not an active production or candidate feature path.
