@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Global News V1 Minimal Materialization 001**
+> Development Next: **Blocked — GDELT Duplicate Record Semantic Conflict**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3478,6 +3478,199 @@ FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_MINIMAL_FEATURE_SURFACE_DESIGN
 GCAM, themes, the separate GDELT Events database, positive score, activity
 reference density, and self/group reference density are excluded. See
 [P6 Global News V1 minimal feature surface design 001](p6-global-news-v1-minimal-feature-surface-design-001.md).
+
+### P6 Global News V1 streaming backfill (2026-09-26)
+
+Global News V1 is materialized. The owner supplied an authorized BigQuery
+Sandbox project after the initial fail-closed access check. The official
+partitioned `gdelt-bq.gdeltv2.gkg_partitioned` table then owned server-side
+reduction across the frozen 2015-03-25 through 2024-12-31 source range. The
+daily query returned 3,569 sufficient-statistics rows and zero raw GKG rows;
+its exact scan was 216,430,419,549 bytes. The separate quality-count query used
+the same bounded scan, keeping total task scan below the 750 GiB ceiling.
+
+The existing pinned XNYS authority applied first-session-strictly-after
+date-only availability, and DuckDB combined sum/count pairs into 2,455 exact
+session-global rows from 2015-04-01 through 2024-12-31. The one empty session
+retains zero volume and NULL means. No raw news corpus, article content, URL,
+theme, GCAM field, or credential entered AQ storage or Git.
+
+```text
+P6_GLOBAL_NEWS_V1 = MATERIALIZED
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_ABLATION_PROTOCOL_FREEZE
+HISTORICAL_BACKFILL_MODEL = UPSTREAM_SERVER_SIDE_STREAMING_REDUCTION
+GLOBAL_NEWS_STORAGE_MODEL = SESSION_FEATURE_HISTORY_ONLY
+RAW_NEWS_RETENTION = NONE
+
+BIGQUERY_AUTH_AVAILABLE = YES
+BIGQUERY_PROJECT_AVAILABLE = YES
+BIGQUERY_BILLING_STATUS = BIGQUERY_SANDBOX_NO_PAID_BILLING_ENABLED
+BIGQUERY_SOURCE_TABLE = gdelt-bq.gdeltv2.gkg_partitioned
+BIGQUERY_DRY_RUN = PASS
+BIGQUERY_ESTIMATED_BYTES_PROCESSED = 216430419549
+BIGQUERY_TOTAL_ESTIMATED_SCAN_BYTES = 432860839098
+BIGQUERY_ACTUAL_BYTES_PROCESSED = 216430419549
+BIGQUERY_QUERY_SQL_SHA256 = 93ecce9771cc6aa312dea8e557264ca84fe257fc853aaf9e6919e222b03d4375
+
+SOURCE_QUERY_START = 2015-03-25
+SOURCE_QUERY_END = 2024-12-31
+SOURCE_COLLECTION = WEB_ONLY
+SOURCE_RECORD_COUNT = 1618459226
+DISTINCT_GKGRECORDID_COUNT = 1345072369
+TONE_MALFORMED_COUNT = 0
+NEGATIVE_MALFORMED_COUNT = 0
+POLARITY_MALFORMED_COUNT = 0
+RETURNED_RAW_GKG_ROW_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+RAW_NEWS_RECORDS_PERSISTED = 0
+RAW_GDELT_ZIP_RETAINED_COUNT = 0
+ARTICLE_BODY_RETAINED_COUNT = 0
+ARTICLE_HEADLINE_RETAINED_COUNT = 0
+DAILY_SUFFICIENT_STATISTICS_ROW_COUNT = 3569
+EXPECTED_XNYS_SESSION_COUNT = 2455
+MATERIALIZED_SESSION_COUNT = 2455
+EMPTY_SESSION_COUNT = 1
+RIGHT_EDGE_POST_2024_SESSION_COUNT = 1
+RIGHT_EDGE_POST_2024_DOCUMENT_COUNT = 302925
+DAILY_SUFFICIENT_STATISTICS_MATERIALIZED = YES
+SESSION_FEATURE_HISTORY_MATERIALIZED = YES
+
+GLOBAL_NEWS_V1_FEATURE_COUNT = 4
+GLOBAL_NEWS_V1_FEATURES = global_news_log1p_volume,global_news_mean_tone,global_news_mean_negative_score,global_news_mean_polarity
+GLOBAL_NEWS_V1_MATERIALIZATION_ID = 293f69052f3184ca798a55ce2183c5c8c4bf179c72b78d1247f58d2282fb4c4f
+DAILY_SUFFICIENT_STATISTICS_SHA256 = 5d85aba4f584c08178100638709cc3cda4e7472f1a72da29c677777834b77e9d
+SESSION_FEATURE_HISTORY_SHA256 = 3184ab20246300465dc34b1aa2dd7c5f0938e69439581d2bb4b022bc9ce448cb
+FUTURE_REALTIME_STATE_MODEL = MUTABLE_LATEST_STATE_PLUS_IMMUTABLE_SESSION_SNAPSHOTS
+REALTIME_STATEFUL_STREAM_PROCESSOR_SELECTION = DEFERRED_TO_P9
+
+AQ_NEWS_DATABASE_CREATED = NO
+AQ_RAW_NEWS_ARCHIVE_CREATED = NO
+AQ_GDELT_DOWNLOADER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/global-news-v1-streaming-sufficient-statistics-backfill-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 75e0e85e0448d28abb3df18e0802f1d7574d5c628fb386f2d8fc6574d8e57118
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_ABLATION_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_STREAMING_SUFFICIENT_STATISTICS_BACKFILL
+```
+
+See [P6 Global News V1 streaming sufficient-statistics backfill 001](p6-global-news-v1-streaming-sufficient-statistics-backfill-001.md).
+
+### P6 Global News V1 GKGRECORDID integrity gate (2026-09-26)
+
+The post-materialization integrity gate blocks the Global News V1 ablation.
+The official GDELT GKG 2.1 codebook defines `GKGRECORDID` as a globally unique
+record identifier and one GKG row as one codified document. The retained
+backfill SQL correctly used distinct IDs for volume but computed the three
+sentiment sum/count pairs over physical rows.
+
+One additional partition-pruned BigQuery pass remained within its 250 GiB
+ceiling and proved that the physical duplicates cannot be collapsed by an
+arbitrary row choice. Of 241,297,210 duplicated IDs, 240,643,925 conflict on
+Tone, 240,604,624 on Negative Score, and 241,180,404 on Polarity. Date and the
+already-filtered WEB source collection had zero conflicts. No corrected
+artifact or replacement materialization identity was created.
+
+The missing source date is `2017-08-29`. Its BigQuery partition is absent, so
+the affected `2017-08-30` XNYS session is a `SOURCE_COVERAGE_GAP`, not a
+genuine zero-news session. All four frozen feature values must be NULL if a
+future authoritative materialization resolves the duplicate semantics.
+
+```text
+GKGRECORDID_SEMANTICS = GLOBALLY_UNIQUE_LOGICAL_GKG_RECORD
+EXISTING_SENTIMENT_DEDUP_SEMANTICS = PHYSICAL_ROWS
+DUPLICATE_PHYSICAL_ROW_EXCESS = 273386857
+DUPLICATE_PHYSICAL_ROW_RATE = 0.16891797618879278
+DUPLICATE_GKGRECORDID_COUNT = 241297210
+DUPLICATE_ID_DATE_CONFLICT_COUNT = 0
+DUPLICATE_ID_SOURCE_COLLECTION_CONFLICT_COUNT = 0
+DUPLICATE_ID_TONE_CONFLICT_COUNT = 240643925
+DUPLICATE_ID_NEGATIVE_CONFLICT_COUNT = 240604624
+DUPLICATE_ID_POLARITY_CONFLICT_COUNT = 241180404
+MISSING_SOURCE_CALENDAR_DATES = 2017-08-29
+EMPTY_SESSION = 2017-08-30
+EMPTY_SESSION_CLASSIFICATION = SOURCE_COVERAGE_GAP
+SOURCE_COVERAGE_GAP_FEATURE_POLICY = ALL_FOUR_FEATURES_NULL
+PRIOR_GLOBAL_NEWS_V1_MATERIALIZATION_AUTHORITY = DIAGNOSTIC_ONLY_NOT_SCIENTIFICALLY_AUTHORITATIVE
+CORRECTED_GLOBAL_NEWS_V1_MATERIALIZATION_ID = NOT_CREATED_BLOCKED
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_GKGRECORDID_INTEGRITY_BLOCKER
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
+FINAL_CLASSIFICATION = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
+```
+
+### P6 Global News V1 official raw-source authority arbitration (2026-09-26)
+
+The official GDELT raw GKG 2.1 publication stream was tested as the only
+authorized replacement candidate for the non-authoritative BigQuery sentiment
+materialization. A deterministic 2015–2024 sample used 40 conflicted IDs and 20
+non-conflicting controls. Official English/Translingual master-list resolution
+reduced the sample to 27 unique archives totaling 246,256,050 compressed bytes;
+all 27 byte-count and MD5 checks passed.
+
+Every conflicted ID appeared twice in its canonical raw archive with two
+distinct selected semantic tuples, and those raw variant sets exactly matched
+the two BigQuery variants in all 40 cases. All 20 controls matched. The defect
+therefore exists in the official raw GKG artifacts themselves; neither the
+BigQuery mirror nor the raw publication stream is an admissible historical
+sentiment owner, and no arbitrary deduplication repair is authorized.
+
+The official master lists contain 175 GKG batches for 2017-08-29, proving that
+the absent BigQuery partition is a mirror coverage gap. For 2015-03-25 through
+2024-12-31, the master lists contain 669,008 GKG archives totaling
+6,230,087,044,164 compressed bytes. This metadata-only cost census did not
+start a historical raw backfill.
+
+```text
+CONFLICT_SAMPLE_COUNT = 40
+CONTROL_UNIQUE_ID_COUNT = 20
+RAW_BATCH_ARCHIVE_COUNT_DOWNLOADED = 27
+RAW_COMPRESSED_BYTES_DOWNLOADED = 246256050
+RAW_ARCHIVE_HASH_VERIFICATION_PASS_COUNT = 27
+RAW_ARCHIVE_HASH_VERIFICATION_FAIL_COUNT = 0
+RAW_SINGLE_ROW_COUNT = 0
+RAW_MULTIPLE_IDENTICAL_COUNT = 0
+RAW_MULTIPLE_CONFLICT_COUNT = 40
+RAW_MISSING_COUNT = 0
+RAW_CONFLICT_VARIANT_SET_EXACT_BIGQUERY_MATCH_COUNT = 40
+CONTROL_MATCH_COUNT = 20
+CONTROL_MISMATCH_COUNT = 0
+CONTROL_MISSING_COUNT = 0
+RAW_GKG_BATCH_FILE_COUNT_2017_08_29 = 175
+RAW_SOURCE_DATE_PRESENT = YES
+BIGQUERY_2017_08_29_GAP = BIGQUERY_MIRROR_COVERAGE_GAP
+RAW_ENGLISH_ARCHIVE_COUNT_2015_2024 = 337124
+RAW_TRANSLINGUAL_ARCHIVE_COUNT_2015_2024 = 331884
+RAW_TOTAL_ARCHIVE_COUNT_2015_2024 = 669008
+RAW_ENGLISH_COMPRESSED_BYTES_2015_2024 = 2553726973890
+RAW_TRANSLINGUAL_COMPRESSED_BYTES_2015_2024 = 3676360070274
+RAW_TOTAL_COMPRESSED_BYTES_2015_2024 = 6230087044164
+OFFICIAL_RAW_GKG_AUTHORITY = FAIL_SEMANTIC_CONFLICT
+BIGQUERY_GKG_SENTIMENT_ROLE = REJECTED_FOR_HISTORICAL_SENTIMENT_BACKFILL
+PRIOR_GLOBAL_NEWS_V1_MATERIALIZATION_AUTHORITY = DIAGNOSTIC_ONLY_NOT_SCIENTIFICALLY_AUTHORITATIVE
+RAW_GKG_ZIP_RETAINED_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+AQ_GDELT_DOWNLOADER_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+OUTCOME_DATA_ACCESSED = NO
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/global-news-v1-official-raw-source-authority-arbitration-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 09fd75d89fd7d276ee736de756e98ff1da4f2a811d869dd0727e290dd468d1a9
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_CLOSEOUT
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_CLOSEOUT_001
+FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_OFFICIAL_RAW_SOURCE_AUTHORITY_ARBITRATION
+```
 
 ---
 
