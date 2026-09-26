@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **Blocked — GDELT Duplicate Record Semantic Conflict**
+> Development Next: **P6 — Historical News Selected Upstream Bounded Factor POC 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3670,6 +3670,35 @@ PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 09fd75d89fd7d276ee736de756e98ff1da4f2a811d869
 CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_CLOSEOUT
 CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_CLOSEOUT_001
 FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_OFFICIAL_RAW_SOURCE_AUTHORITY_ARBITRATION
+```
+
+---
+
+### P6 historical-news mature-upstream reentry audit (2026-09-26)
+
+The five-candidate audit found one bounded research path but no certified
+production-PIT historical news owner. FinSen's public US research benchmark and
+its documented ProsusAI/FinBERT daily aggregation method may be tested as one
+global-market `news_sentiment` challenger with a thin Qlib handoff. Its
+date-only timing remains disqualifying for production PIT authority.
+
+FNSPID is blocked by conflicting public license terms; FinRL-DeepSeek,
+TradeTheEvent, and FinGPT forecasting remain reference methods only. PR #106
+stays open and unmodified as the frozen P6 closeout candidate.
+
+```text
+P6_CLOSEOUT_CANDIDATE = PR_106_HELD_PENDING_FINAL_HISTORICAL_NEWS_REENTRY
+P6_STATUS = REOPENED_BOUNDED_HISTORICAL_NEWS_RESEARCH
+SELECTED_HISTORICAL_NEWS_DATA_OWNER = FINSEN_US_RESEARCH_ONLY_BENCHMARK
+SELECTED_NEWS_SIGNAL_METHOD_OWNER = PROSUSAI_FINBERT_VIA_FINSEN_DAILY_AGGREGATION_METHOD
+SELECTED_NEWS_PREDICTION_RESEARCH_PATH = FINSEN_GLOBAL_MARKET_DAILY_SENTIMENT_TO_QLIB_INCREMENTAL_ABLATION
+STRICT_PRODUCTION_PIT_READY = NO
+BOUNDED_RESEARCH_POC_READY = YES
+MAX_RETAINED_RAW_NEWS_ROWS = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_SELECTED_UPSTREAM_BOUNDED_FACTOR_POC_001
+FINAL_CLASSIFICATION = PASS_P6_HISTORICAL_NEWS_MATURE_UPSTREAM_REENTRY_AUDIT
 ```
 
 ---
