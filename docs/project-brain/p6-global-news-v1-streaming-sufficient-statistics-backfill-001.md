@@ -1,5 +1,75 @@
 # P6 Global News V1 streaming sufficient-statistics backfill 001
 
+## GKGRECORDID integrity correction (authoritative)
+
+The follow-up integrity gate found that the materialization described below is
+not scientifically authoritative. The official [GDELT GKG 2.1
+codebook](https://data.gdeltproject.org/documentation/GDELT-Global_Knowledge_Graph_Codebook-V2.1.pdf)
+defines `GKGRECORDID` as a globally unique record identifier and states that
+each row represents one document codified by the GKG. One logical
+`GKGRECORDID` therefore may receive at most one weight in every frozen Global
+News V1 feature.
+
+The retained SQL used `COUNT(DISTINCT GKGRECORDID)` only for volume. Its Tone,
+Negative Score, and Polarity sums and valid counts were calculated directly
+over physical rows. The observed excess was 273,386,857 physical rows, or
+0.16891797618879278 of all 1,618,459,226 qualifying WEB rows.
+
+A single partition-pruned BigQuery pass first grouped the selected population
+by `GKGRECORDID`, then measured duplicate consistency before any candidate
+daily aggregation. Its dry-run and exact actual scan were both
+216,430,419,549 bytes, below the 250 GiB follow-up ceiling. The result fails
+closed: the duplicate records are not semantically identical on the selected
+sentiment fields, so no first-row, last-row, `ANY_VALUE`, or other arbitrary
+selection is admissible.
+
+```text
+GKGRECORDID_SEMANTICS = GLOBALLY_UNIQUE_LOGICAL_GKG_RECORD
+EXISTING_SENTIMENT_DEDUP_SEMANTICS = PHYSICAL_ROWS
+SOURCE_RECORD_COUNT = 1618459226
+DISTINCT_GKGRECORDID_COUNT = 1345072369
+DUPLICATE_PHYSICAL_ROW_EXCESS = 273386857
+DUPLICATE_PHYSICAL_ROW_RATE = 0.16891797618879278
+DUPLICATE_GKGRECORDID_COUNT = 241297210
+DUPLICATE_ID_DATE_CONFLICT_COUNT = 0
+DUPLICATE_ID_SOURCE_COLLECTION_CONFLICT_COUNT = 0
+DUPLICATE_ID_TONE_CONFLICT_COUNT = 240643925
+DUPLICATE_ID_NEGATIVE_CONFLICT_COUNT = 240604624
+DUPLICATE_ID_POLARITY_CONFLICT_COUNT = 241180404
+BIGQUERY_ADDITIONAL_ESTIMATED_BYTES = 216430419549
+BIGQUERY_ADDITIONAL_ACTUAL_BYTES = 216430419549
+RETURNED_RAW_GKG_ROW_COUNT = 0
+RAW_GKG_ROWS_PERSISTED = 0
+```
+
+The local calendar comparison independently found the only missing source date
+to be `2017-08-29`. A smallest-possible BigQuery check against only that
+partition processed zero bytes and returned zero partition rows: the partition
+is absent, rather than a present day with zero qualifying WEB documents. Under
+strict-next XNYS mapping, it feeds the previously empty `2017-08-30` session.
+That session is a source-coverage gap and all four feature values must be NULL;
+zero volume is rejected.
+
+```text
+EXPECTED_SOURCE_CALENDAR_DATE_COUNT = 3570
+OBSERVED_SOURCE_CALENDAR_DATE_COUNT = 3569
+MISSING_SOURCE_CALENDAR_DATE_COUNT = 1
+MISSING_SOURCE_CALENDAR_DATES = 2017-08-29
+EMPTY_SESSION = 2017-08-30
+EMPTY_SESSION_CLASSIFICATION = SOURCE_COVERAGE_GAP
+SOURCE_COVERAGE_GAP_FEATURE_POLICY = ALL_FOUR_FEATURES_NULL
+```
+
+Because duplicate sentiment semantics conflict, no corrected daily or session
+artifact was sealed and no replacement materialization identity was created.
+The prior materialization ID and hashes remain retained as diagnostic evidence
+only; they must not enter an ablation. The task stops at
+`BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT`.
+
+The remainder of this document records the pre-audit materialization as
+historical evidence and is superseded by this integrity correction wherever it
+claims scientific authority.
+
 ## Result
 
 PR #104 was squash-merged as
@@ -120,7 +190,7 @@ The complete evidence set is 394,939 bytes; the SHA-256 of `checksums.json` is
 No private Parquet, query result row, credential, or GDELT content is committed.
 
 ```text
-CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_ABLATION_PROTOCOL_FREEZE
-CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_ABLATION_PROTOCOL_FREEZE_001
-FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_STREAMING_SUFFICIENT_STATISTICS_BACKFILL
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_GKGRECORDID_INTEGRITY_BLOCKER
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
+FINAL_CLASSIFICATION = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
 ```

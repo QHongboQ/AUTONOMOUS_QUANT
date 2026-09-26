@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **Blocked — User-Supplied BigQuery Project or Authorization**
+> Development Next: **Blocked — GDELT Duplicate Record Semantic Conflict**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3562,6 +3562,48 @@ FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_STREAMING_SUFFICIENT_STATISTICS_BA
 ```
 
 See [P6 Global News V1 streaming sufficient-statistics backfill 001](p6-global-news-v1-streaming-sufficient-statistics-backfill-001.md).
+
+### P6 Global News V1 GKGRECORDID integrity gate (2026-09-26)
+
+The post-materialization integrity gate blocks the Global News V1 ablation.
+The official GDELT GKG 2.1 codebook defines `GKGRECORDID` as a globally unique
+record identifier and one GKG row as one codified document. The retained
+backfill SQL correctly used distinct IDs for volume but computed the three
+sentiment sum/count pairs over physical rows.
+
+One additional partition-pruned BigQuery pass remained within its 250 GiB
+ceiling and proved that the physical duplicates cannot be collapsed by an
+arbitrary row choice. Of 241,297,210 duplicated IDs, 240,643,925 conflict on
+Tone, 240,604,624 on Negative Score, and 241,180,404 on Polarity. Date and the
+already-filtered WEB source collection had zero conflicts. No corrected
+artifact or replacement materialization identity was created.
+
+The missing source date is `2017-08-29`. Its BigQuery partition is absent, so
+the affected `2017-08-30` XNYS session is a `SOURCE_COVERAGE_GAP`, not a
+genuine zero-news session. All four frozen feature values must be NULL if a
+future authoritative materialization resolves the duplicate semantics.
+
+```text
+GKGRECORDID_SEMANTICS = GLOBALLY_UNIQUE_LOGICAL_GKG_RECORD
+EXISTING_SENTIMENT_DEDUP_SEMANTICS = PHYSICAL_ROWS
+DUPLICATE_PHYSICAL_ROW_EXCESS = 273386857
+DUPLICATE_PHYSICAL_ROW_RATE = 0.16891797618879278
+DUPLICATE_GKGRECORDID_COUNT = 241297210
+DUPLICATE_ID_DATE_CONFLICT_COUNT = 0
+DUPLICATE_ID_SOURCE_COLLECTION_CONFLICT_COUNT = 0
+DUPLICATE_ID_TONE_CONFLICT_COUNT = 240643925
+DUPLICATE_ID_NEGATIVE_CONFLICT_COUNT = 240604624
+DUPLICATE_ID_POLARITY_CONFLICT_COUNT = 241180404
+MISSING_SOURCE_CALENDAR_DATES = 2017-08-29
+EMPTY_SESSION = 2017-08-30
+EMPTY_SESSION_CLASSIFICATION = SOURCE_COVERAGE_GAP
+SOURCE_COVERAGE_GAP_FEATURE_POLICY = ALL_FOUR_FEATURES_NULL
+PRIOR_GLOBAL_NEWS_V1_MATERIALIZATION_AUTHORITY = DIAGNOSTIC_ONLY_NOT_SCIENTIFICALLY_AUTHORITATIVE
+CORRECTED_GLOBAL_NEWS_V1_MATERIALIZATION_ID = NOT_CREATED_BLOCKED
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_GKGRECORDID_INTEGRITY_BLOCKER
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
+FINAL_CLASSIFICATION = BLOCKED_GDELT_DUPLICATE_RECORD_SEMANTIC_CONFLICT
+```
 
 ---
 
