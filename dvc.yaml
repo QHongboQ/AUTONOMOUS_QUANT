@@ -405,20 +405,3 @@ stages:
     outs:
       - ../AQ_DATA/P5/h1-incremental-fundamental-evaluation-and-closeout-001/attempt-005-final-end-to-end:
           cache: false
-  p6_macro_v1_materialization:
-    cmd: >-
-      env PYTHONDONTWRITEBYTECODE=1
-      PYTHONPATH=10-data-system/trading-calendar/xnys/exchange-calendars-adapter
-      /home/zhou/AQ_ENVS/p6-macro-v1/bin/python -B
-      20-intelligence-system/macro-factors/macro-v1/materialize.py
-      --sql 20-intelligence-system/macro-factors/macro-v1/macro_v1.sql
-      --vintage-source /home/zhou/AQ_UPSTREAMS/P6_SUBSTITUTION_POC_002/vintage
-      --output ../AQ_DATA/P6/macro-v1-001
-    deps:
-      - 20-intelligence-system/macro-factors/macro-v1/materialize.py
-      - 20-intelligence-system/macro-factors/macro-v1/macro_v1.sql
-      - 10-data-system/trading-calendar/xnys/exchange-calendars-adapter/aq_xnys_calendar/__init__.py
-      - 10-data-system/trading-calendar/xnys/exchange-calendars-adapter/aq_xnys_calendar/adapter.py
-    outs:
-      - ../AQ_DATA/P6/macro-v1-001:
-          cache: false

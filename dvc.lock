@@ -893,35 +893,3 @@ stages:
       md5: d2223c9de4963e6f655eeedcb4c411bc.dir
       size: 670111097
       nfiles: 32
-  p6_macro_v1_materialization:
-    cmd: env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=10-data-system/trading-calendar/xnys/exchange-calendars-adapter
-      /home/zhou/AQ_ENVS/p6-macro-v1/bin/python -B 20-intelligence-system/macro-factors/macro-v1/materialize.py
-      --sql 20-intelligence-system/macro-factors/macro-v1/macro_v1.sql --vintage-source
-      /home/zhou/AQ_UPSTREAMS/P6_SUBSTITUTION_POC_002/vintage --output ../AQ_DATA/P6/macro-v1-001
-    deps:
-    - path: 10-data-system/trading-calendar/xnys/exchange-calendars-adapter/aq_xnys_calendar/__init__.py
-      hash: md5
-      md5: 746912d3531c303abac373abbdd0765a
-      size: 306
-      isexec: true
-    - path: 10-data-system/trading-calendar/xnys/exchange-calendars-adapter/aq_xnys_calendar/adapter.py
-      hash: md5
-      md5: 2921c34cadbfbc8740f6f096c273d864
-      size: 3720
-      isexec: true
-    - path: 20-intelligence-system/macro-factors/macro-v1/macro_v1.sql
-      hash: md5
-      md5: 995e1ea8719d3f45e1faffd649843c98
-      size: 4406
-      isexec: true
-    - path: 20-intelligence-system/macro-factors/macro-v1/materialize.py
-      hash: md5
-      md5: 0b897f4a55b1c1a1bf4606c3c470634f
-      size: 8415
-      isexec: true
-    outs:
-    - path: ../AQ_DATA/P6/macro-v1-001
-      hash: md5
-      md5: cd86e3b00a7a9258b6e90ea62e5004fd.dir
-      size: 94750
-      nfiles: 4
