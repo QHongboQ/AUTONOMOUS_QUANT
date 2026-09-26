@@ -3479,48 +3479,67 @@ GCAM, themes, the separate GDELT Events database, positive score, activity
 reference density, and self/group reference density are excluded. See
 [P6 Global News V1 minimal feature surface design 001](p6-global-news-v1-minimal-feature-surface-design-001.md).
 
-### P6 Global News V1 streaming backfill access gate (2026-09-26)
+### P6 Global News V1 streaming backfill (2026-09-26)
 
-The historical materialization stopped at its mandatory BigQuery access gate.
-Neither Windows nor WSL exposes `gcloud` or `bq`; no ADC configuration directory
-or standard Google Cloud credential/project environment variable is present.
-No credential value was inspected. A BigQuery project, billing state, source
-schema, partitioned table, or dry-run cost therefore cannot be established.
+Global News V1 is materialized. The owner supplied an authorized BigQuery
+Sandbox project after the initial fail-closed access check. The official
+partitioned `gdelt-bq.gdeltv2.gkg_partitioned` table then owned server-side
+reduction across the frozen 2015-03-25 through 2024-12-31 source range. The
+daily query returned 3,569 sufficient-statistics rows and zero raw GKG rows;
+its exact scan was 216,430,419,549 bytes. The separate quality-count query used
+the same bounded scan, keeping total task scan below the 750 GiB ceiling.
 
-The architecture remains frozen as upstream server-side sufficient-statistics
-reduction. No raw-download fallback, local GDELT archive, local news database,
-schema guess, SQL execution, or materialization was attempted. The four-field
-feature contract remains unchanged but is not yet materialized.
+The existing pinned XNYS authority applied first-session-strictly-after
+date-only availability, and DuckDB combined sum/count pairs into 2,455 exact
+session-global rows from 2015-04-01 through 2024-12-31. The one empty session
+retains zero volume and NULL means. No raw news corpus, article content, URL,
+theme, GCAM field, or credential entered AQ storage or Git.
 
 ```text
-P6_GLOBAL_NEWS_V1 = CONTRACT_FROZEN_BACKFILL_BLOCKED
-CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_HISTORICAL_FEATURE_BACKFILL_BLOCKED_BIGQUERY_AUTH
+P6_GLOBAL_NEWS_V1 = MATERIALIZED
+CURRENT_P6_OBJECTIVE = GLOBAL_NEWS_V1_ABLATION_PROTOCOL_FREEZE
 HISTORICAL_BACKFILL_MODEL = UPSTREAM_SERVER_SIDE_STREAMING_REDUCTION
 GLOBAL_NEWS_STORAGE_MODEL = SESSION_FEATURE_HISTORY_ONLY
 RAW_NEWS_RETENTION = NONE
 
-BIGQUERY_AUTH_AVAILABLE = NO
-BIGQUERY_PROJECT_AVAILABLE = NO
-BIGQUERY_BILLING_STATUS = UNKNOWN_NOT_CHECKABLE_NO_AUTH_OR_PROJECT
-BIGQUERY_SOURCE_TABLE = NOT_QUERIED
-BIGQUERY_DRY_RUN = NOT_RUN_AUTH_UNAVAILABLE
-BIGQUERY_ESTIMATED_BYTES_PROCESSED = NOT_AVAILABLE
-BIGQUERY_ACTUAL_BYTES_PROCESSED = 0
+BIGQUERY_AUTH_AVAILABLE = YES
+BIGQUERY_PROJECT_AVAILABLE = YES
+BIGQUERY_BILLING_STATUS = BIGQUERY_SANDBOX_NO_PAID_BILLING_ENABLED
+BIGQUERY_SOURCE_TABLE = gdelt-bq.gdeltv2.gkg_partitioned
+BIGQUERY_DRY_RUN = PASS
+BIGQUERY_ESTIMATED_BYTES_PROCESSED = 216430419549
+BIGQUERY_TOTAL_ESTIMATED_SCAN_BYTES = 432860839098
+BIGQUERY_ACTUAL_BYTES_PROCESSED = 216430419549
+BIGQUERY_QUERY_SQL_SHA256 = 93ecce9771cc6aa312dea8e557264ca84fe257fc853aaf9e6919e222b03d4375
 
 SOURCE_QUERY_START = 2015-03-25
 SOURCE_QUERY_END = 2024-12-31
 SOURCE_COLLECTION = WEB_ONLY
+SOURCE_RECORD_COUNT = 1618459226
+DISTINCT_GKGRECORDID_COUNT = 1345072369
+TONE_MALFORMED_COUNT = 0
+NEGATIVE_MALFORMED_COUNT = 0
+POLARITY_MALFORMED_COUNT = 0
 RETURNED_RAW_GKG_ROW_COUNT = 0
 RAW_GKG_ROWS_PERSISTED = 0
 RAW_NEWS_RECORDS_PERSISTED = 0
 RAW_GDELT_ZIP_RETAINED_COUNT = 0
 ARTICLE_BODY_RETAINED_COUNT = 0
 ARTICLE_HEADLINE_RETAINED_COUNT = 0
-DAILY_SUFFICIENT_STATISTICS_MATERIALIZED = NO
-SESSION_FEATURE_HISTORY_MATERIALIZED = NO
+DAILY_SUFFICIENT_STATISTICS_ROW_COUNT = 3569
+EXPECTED_XNYS_SESSION_COUNT = 2455
+MATERIALIZED_SESSION_COUNT = 2455
+EMPTY_SESSION_COUNT = 1
+RIGHT_EDGE_POST_2024_SESSION_COUNT = 1
+RIGHT_EDGE_POST_2024_DOCUMENT_COUNT = 302925
+DAILY_SUFFICIENT_STATISTICS_MATERIALIZED = YES
+SESSION_FEATURE_HISTORY_MATERIALIZED = YES
 
 GLOBAL_NEWS_V1_FEATURE_COUNT = 4
 GLOBAL_NEWS_V1_FEATURES = global_news_log1p_volume,global_news_mean_tone,global_news_mean_negative_score,global_news_mean_polarity
+GLOBAL_NEWS_V1_MATERIALIZATION_ID = 293f69052f3184ca798a55ce2183c5c8c4bf179c72b78d1247f58d2282fb4c4f
+DAILY_SUFFICIENT_STATISTICS_SHA256 = 5d85aba4f584c08178100638709cc3cda4e7472f1a72da29c677777834b77e9d
+SESSION_FEATURE_HISTORY_SHA256 = 3184ab20246300465dc34b1aa2dd7c5f0938e69439581d2bb4b022bc9ce448cb
 FUTURE_REALTIME_STATE_MODEL = MUTABLE_LATEST_STATE_PLUS_IMMUTABLE_SESSION_SNAPSHOTS
 REALTIME_STATEFUL_STREAM_PROCESSOR_SELECTION = DEFERRED_TO_P9
 
@@ -3537,9 +3556,9 @@ ABLATION_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 
 PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/global-news-v1-streaming-sufficient-statistics-backfill-001
-PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 18c98bd71d649368baccfd038a6bda6af4f56318d87bd50cfcdb7d783c9f564c
-CURRENT_DEVELOPMENT_NEXT = BLOCKED_USER_SUPPLIED_BIGQUERY_PROJECT_OR_AUTH
-FINAL_CLASSIFICATION = BLOCKED_USER_SUPPLIED_BIGQUERY_PROJECT_OR_AUTH
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 75e0e85e0448d28abb3df18e0802f1d7574d5c628fb386f2d8fc6574d8e57118
+CURRENT_DEVELOPMENT_NEXT = P6_GLOBAL_NEWS_V1_ABLATION_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P6_GLOBAL_NEWS_V1_STREAMING_SUFFICIENT_STATISTICS_BACKFILL
 ```
 
 See [P6 Global News V1 streaming sufficient-statistics backfill 001](p6-global-news-v1-streaming-sufficient-statistics-backfill-001.md).
