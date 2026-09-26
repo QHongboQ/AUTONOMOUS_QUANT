@@ -2802,6 +2802,70 @@ P2_V2_SEALED_OOS_RESULT_USED = NO
 CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_GDELT_GKG_HISTORICAL_SAFE_AVAILABILITY_POC_001
 ```
 
+### P6 News V1 raw GKG historical safe-availability POC (2026-09-25)
+
+The bounded real-data POC promoted the raw GDELT GKG 2.1 archive to the primary
+historical news safe-availability evidence leaf. Five frozen date anchors and
+three adjacent 2022-01-03 batches selected from streamed official master
+metadata totaled 46,237,000 compressed bytes. All eight archives matched their
+advertised size and MD5; no full master list or archive entered Git.
+
+Across 11,750 rows, 11,749 decoded strictly as UTF-8 and contained exactly the
+official 27 fields. One source row failed strict UTF-8 decoding and was counted
+as malformed, then excluded without replacement or repair. Every valid row was
+`WEB`, had a non-empty exact URL, passed the official record-ID grammar, and
+matched its file batch prefix. The four-batch exact-URL probe found 2,875 unique
+URLs and no repeated exact URL; that zero result is retained rather than widened
+with fuzzy identity.
+
+The existing `aq_xnys_calendar` leaf mapped the five dates to 2015-04-02,
+2017-07-05, 2020-03-16, 2022-01-04, and 2025-01-02 respectively. Therefore no
+2024-12-31 GKG record becomes visible inside the 2024 research cutoff. Two
+normalization passes over the same verified archives were identical. GKG batch
+time remains timezone-unproven and date-only; publication metadata never acts
+as a fallback.
+
+```text
+HISTORICAL_NEWS_SAFE_AVAILABILITY_OWNER = GDELT_GKG_2_1_RAW_ARCHIVE
+GDELT_GKG_OWNER_DECISION = SELECTED_PRIMARY_HISTORICAL_NEWS_EVIDENCE_LEAF
+SELECTED_GKG_FILE_COUNT = 8
+SELECTED_GKG_COMPRESSED_BYTES = 46237000
+GDELT_SELECTED_FILE_INTEGRITY = PASS
+EXPECTED_MAJOR_FIELD_COUNT = 27
+TOTAL_ANALYZED_ROW_COUNT = 11750
+VALID_27_FIELD_ROW_COUNT = 11749
+MALFORMED_ROW_COUNT = 1
+WEB_ROW_COUNT = 11749
+NON_WEB_EXCLUDED_ROW_COUNT = 0
+INVALID_GKGRECORDID_COUNT = 0
+DUPLICATE_GKGRECORDID_COUNT = 0
+BATCH_PREFIX_FILE_MATCH_COUNT = 11749
+BATCH_PREFIX_FILE_MISMATCH_COUNT = 0
+GDELT_BATCH_TIMEZONE = UNPROVEN
+SAFE_AVAILABILITY_PRECISION = DATE
+FABRICATED_GDELT_INTRADAY_TIMESTAMP_COUNT = 0
+EMPTY_WEB_DOCUMENT_IDENTIFIER_COUNT = 0
+XNYS_DATE_ONLY_MAPPING_STATUS = PASS
+END_BOUNDARY_FUTURE_SESSION_LEAKAGE_COUNT = 0
+PUBLISHED_AT_FALLBACK_USED = NO
+SOURCE_ARTICLE_REQUEST_COUNT = 0
+NORMALIZATION_DETERMINISM = PASS
+NEWS_ENTITY_TO_AQ_SECURITY_BINDING = UNRESOLVED_SEPARATE_POLICY
+NEWS_FEATURE_FAMILY_SELECTED = NO
+AQ_NEWS_CRAWLER_CREATED = NO
+AQ_NEWS_ENGINE_CREATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+MODEL_TRAINING_COUNT = 0
+PREDICTION_COUNT = 0
+BACKTEST_COUNT = 0
+ABLATION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/news-v1-gdelt-gkg-historical-safe-availability-poc-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = dcca9cfa4e041b5f08c54ae95f7834ea3a3a761685e0790c48fb05f0e8a314f6
+CURRENT_DEVELOPMENT_NEXT = P6_NEWS_V1_ENTITY_TO_SECURITY_UPSTREAM_SUBSTITUTION_AUDIT_001
+```
+
 ---
 
 ## 27. First Principle
