@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Post-inconclusive successor research admissibility audit**
+> Active Development: **P7 — Successor static-ensemble label-observable input-contract freeze**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Post-Inconclusive Successor Research Admissibility Audit 001**
+> Development Next: **P7 — Successor Static Ensemble Label Observable Input Contract Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4737,6 +4737,67 @@ FINAL_CLASSIFICATION = PASS_P7_STATIC_ENSEMBLE_V1_TERMINAL_INCONCLUSIVE_CLOSEOUT
 ```
 
 See [P7 historical static ensemble inconclusive result closeout 001](p7-historical-static-ensemble-inconclusive-result-closeout-001.md).
+
+---
+
+#### P7 post-inconclusive successor research admissibility (2026-09-27)
+
+An independent scientific review found that a wholly new successor study is
+permissible with explicit post-failure disclosure. V1 remains permanently
+`STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE` and is not superseded. No performance,
+prediction relationship, or label magnitude was exposed; the post-failure
+information is limited to structural label observability.
+
+A successor may use only a preregistered rule requiring a valid prediction and
+control population row, present label key, and finite label. This changes the
+estimand to one conditional on preregistered label observability. The 72
+membership-horizon and 42 provider-gap exclusions are not assumed MCAR and
+require explicit structural coverage disclosure without imputation or
+performance stratification.
+
+Pinned Qlib remains the label-generation and semantics owner. Qlib natively
+stores missing raw labels and `DropnaLabel` removes missing labels only for
+learning; AQ may own only the thin fail-closed input-contract gate. A successor
+requires new study, protocol, input-contract, population, label-mask, and
+execution-attempt identities, plus pre-outcome committed execution code and a
+manifest-bound script SHA.
+
+```text
+V1_EXECUTION_STATUS = TERMINAL_INCONCLUSIVE
+V1_RERUN_ALLOWED = NO
+V1_RESULT = STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE
+V1_IS_SUPERSEDED = NO
+PERFORMANCE_INFORMATION_EXPOSED = NO
+PREDICTION_PERFORMANCE_RELATIONSHIP_EXPOSED = NO
+LABEL_MAGNITUDE_INFORMATION_EXPOSED = NO
+PROPOSED_SUCCESSOR_ROW_RULE = PREDICTION_CONTROL_POPULATION_VALID AND LABEL_KEY_PRESENT AND LABEL_FINITE
+ROW_RULE_PERFORMANCE_INDEPENDENT = YES
+ROW_RULE_LABEL_MAGNITUDE_INDEPENDENT = YES
+ROW_RULE_STRUCTURAL_OBSERVABILITY_BASED = YES
+MISSINGNESS_ASSUMPTION = NOT_MCAR
+ESTIMAND_CHANGED_FROM_V1 = YES
+SUCCESSOR_ESTIMAND = CONDITIONAL_ON_PREREGISTERED_LABEL_OBSERVABILITY
+POST_FAILURE_INFORMATION_CONTAMINATION = LIMITED_STRUCTURAL_ONLY
+STRUCTURAL_MISSINGNESS_DISCLOSURE_REQUIRED = YES
+QLIB_SUPPORTS_MISSING_LABEL_STATE = YES
+QLIB_NATIVE_LEARNING_DROPS_MISSING_LABELS = YES
+FUTURE_ROW_LEVEL_LABEL_GATE_COMPATIBLE_WITH_QLIB = YES
+FILL_LABEL_WITH_ZERO = PROHIBITED
+FORWARD_FILL_LABEL = PROHIBITED
+BACKFILL_LABEL = PROHIBITED
+SYNTHETIC_RETURN_IMPUTATION = PROHIBITED
+CUSTOM_AQ_LABEL_GENERATION = PROHIBITED
+SUCCESSOR_RESEARCH_ADMISSIBILITY = SCIENTIFICALLY_PERMISSIBLE_WITH_POST_FAILURE_DISCLOSURE
+AQ_LABEL_ENGINE = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_STATIC_ENSEMBLE_LABEL_OBSERVABLE_INPUT_CONTRACT_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P7_SUCCESSOR_RESEARCH_SCIENTIFICALLY_PERMISSIBLE_WITH_POST_FAILURE_DISCLOSURE
+```
+
+See [P7 post-inconclusive successor research admissibility audit 001](p7-post-inconclusive-successor-research-admissibility-audit-001.md).
 
 ---
 
