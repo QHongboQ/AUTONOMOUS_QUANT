@@ -344,8 +344,11 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             repo = Path(directory)
             self.create_realistic_seal_repository(repo)
             seal_path = repo / runner.PROVENANCE_SEAL
+            mutated_seal = runner.read_json(seal_path)
+            mutated_seal["synthetic_content_mutation"] = True
             seal_path.write_text(
-                seal_path.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+                json.dumps(mutated_seal, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
             )
             loaded = runner.load_provenance_seal(repo)
             runtime = runner.runtime_authority(repo, loaded)
