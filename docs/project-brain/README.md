@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Historical static ensemble inconclusive-result closeout**
+> Active Development: **P7 — Post-inconclusive successor research admissibility audit**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Historical Static Ensemble Inconclusive Result Closeout 001**
+> Development Next: **P7 — Post-Inconclusive Successor Research Admissibility Audit 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4678,6 +4678,65 @@ CURRENT_DEVELOPMENT_NEXT = P7_HISTORICAL_STATIC_ENSEMBLE_INCONCLUSIVE_RESULT_CLO
 ```
 
 See [P7 historical static ensemble research execution 001](p7-historical-static-ensemble-research-execution-001.md).
+
+---
+
+#### P7 historical static ensemble terminal inconclusive closeout (2026-09-27)
+
+P7 V1 is permanently closed as `STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE`;
+repair, protocol mutation and rerun are prohibited. A structural-only audit
+found that all 374,591 population keys exist in the frozen label artifact, but
+114 present rows contain NaN. There are no absent keys or infinite values.
+The affected rows span 74 sessions and 57 instruments.
+
+The 114 rows resolve completely to structural availability conditions: 72
+membership episodes ended before the complete two-session label horizon and
+42 rows coincide with known provider gaps. No unresolved row remains. The
+input qualification checked the global calendar horizon but omitted a
+row-level finite-label eligibility gate. Qlib remains the label-generation and
+label-semantics owner; AQ may add only a thin fail-closed integrity contract in
+any independently authorized successor study.
+
+The V1 attempt manifest also did not bind the execution script content SHA or
+a pre-outcome commit containing that script. This provenance gap does not
+change the terminal classification. Any successor one-shot study must commit
+its execution code before outcome access and bind the code SHA in its attempt
+manifest. V1 provides no performance evidence for or against the ensemble.
+
+```text
+V1_EXECUTION_STATUS = TERMINAL_INCONCLUSIVE
+V1_RERUN_ALLOWED = NO
+LABEL_POPULATION_ROW_COUNT = 374591
+LABEL_KEY_ABSENT_COUNT = 0
+LABEL_PRESENT_NAN_COUNT = 114
+LABEL_PRESENT_INF_COUNT = 0
+LABEL_AFFECTED_SESSION_COUNT = 74
+LABEL_AFFECTED_INSTRUMENT_COUNT = 57
+LABEL_FAILURE_CAUSE_COUNTS = MEMBERSHIP_EPISODE_ENDED_BEFORE_LABEL_HORIZON:72; KNOWN_PROVIDER_GAP:42
+UNRESOLVED_LABEL_FAILURE_ROW_COUNT = 0
+CALENDAR_LEVEL_LABEL_HORIZON_CHECK = YES
+ROW_LEVEL_LABEL_FINITE_CHECK = NO
+INPUT_CONTRACT_GAP = INPUT_CONTRACT_OMITTED_ROW_LEVEL_LABEL_ELIGIBILITY
+FUTURE_LABEL_GENERATION_OWNER = QLIB
+FUTURE_LABEL_SEMANTICS_OWNER = QLIB
+FUTURE_LABEL_INTEGRITY_OWNER = AQ_THIN_FAIL_CLOSED_CONTRACT
+PRE_OUTCOME_EXECUTION_SCRIPT_CONTENT_SHA_BOUND = NO
+PRE_OUTCOME_EXECUTION_COMMIT_BOUND = NO
+FUTURE_ONE_SHOT_EXECUTION_CODE_MUST_BE_COMMITTED_BEFORE_OUTCOME_ACCESS = YES
+FUTURE_ATTEMPT_MANIFEST_MUST_BIND_EXECUTION_CODE_SHA256 = YES
+V1_PROVIDES_PERFORMANCE_EVIDENCE_FOR_ENSEMBLE = NO
+V1_PROVIDES_PERFORMANCE_EVIDENCE_AGAINST_ENSEMBLE = NO
+SUCCESSOR_RESEARCH_ADMISSIBILITY = REQUIRES_INDEPENDENT_REVIEW
+AQ_LABEL_ENGINE = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_POST_INCONCLUSIVE_SUCCESSOR_RESEARCH_ADMISSIBILITY_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P7_STATIC_ENSEMBLE_V1_TERMINAL_INCONCLUSIVE_CLOSEOUT
+```
+
+See [P7 historical static ensemble inconclusive result closeout 001](p7-historical-static-ensemble-inconclusive-result-closeout-001.md).
 
 ---
 
