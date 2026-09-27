@@ -158,4 +158,11 @@ FINAL_CLASSIFICATION = PASS_P6_FINSEN_INCONCLUSIVE_AND_PHASE_CLOSEOUT_NO_NEW_ADM
 ```
 
 PR #106 is stale historical closeout evidence from before the FinSen reentry.
-It must not be merged and is superseded by this final closeout.
+After PR #111 was created, PR #106 was explicitly closed without merge and
+marked superseded by the new final authority.
+
+```text
+PR106_STATE = CLOSED_SUPERSEDED
+PR106_MERGED = NO
+PR106_SUPERSEDED = YES
+```
