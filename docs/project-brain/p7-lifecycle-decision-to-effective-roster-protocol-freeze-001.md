@@ -92,11 +92,10 @@ It provides provenance, not authorization. Member-level fields remain
 `members[].candidate_id` and `members[].authorization_evidence_id`; `roster_id`
 continues to identify the immutable roster manifest.
 
-PR #116's merged `EffectiveRoster.authorization_evidence_id` field is now
-known to be semantically misnamed/unsupported for whole-roster authorization.
-This documentation-only correction does not silently mutate that reviewed
-runtime contract. A tiny successor task must rename or remove that field and
-update its schema/tests before any real roster use. No
+PR #116's merged, semantically misnamed whole-roster field has now been aligned
+inside PR #117: `EffectiveRoster.source_decision_bundle_identity` and the
+RFC8785 identity projection use the same provenance-only name as this V2
+protocol. Member-level `authorization_evidence_id` is unchanged. No
 `RosterAuthorizationEvidenceV1`, P7 certification object, approval engine, or
 new authorization authority is introduced.
 
@@ -159,6 +158,6 @@ REAL_ENSEMBLE_COUNT = 0
 BACKTEST_COUNT = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_COHORT_MODIFIED = NO
-CURRENT_DEVELOPMENT_NEXT = P7_PR116_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT_001
-FINAL_CLASSIFICATION = PASS_P7_LIFECYCLE_TO_ROSTER_SEMANTIC_CORRECTION
+CURRENT_DEVELOPMENT_NEXT = MERGE_GATE_PR_117
+FINAL_CLASSIFICATION = PASS_P7_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT
 ```

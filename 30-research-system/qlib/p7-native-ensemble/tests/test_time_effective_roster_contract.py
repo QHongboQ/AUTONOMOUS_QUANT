@@ -38,7 +38,7 @@ def roster_sequence() -> tuple[object, ...]:
     members = {number: member(number) for number in range(1, 6)}
     first = handoff.build_roster(
         use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
-        authorization_evidence_id=identity(301),
+        source_decision_bundle_identity=identity(301),
         evidence_cutoff=utc(1),
         effective_session="2024-01-02",
         supersedes_roster_id=None,
@@ -46,7 +46,7 @@ def roster_sequence() -> tuple[object, ...]:
     )
     second = handoff.build_roster(
         use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
-        authorization_evidence_id=identity(302),
+        source_decision_bundle_identity=identity(302),
         evidence_cutoff=utc(3),
         effective_session="2024-01-04",
         supersedes_roster_id=first.roster_id,
@@ -54,7 +54,7 @@ def roster_sequence() -> tuple[object, ...]:
     )
     third = handoff.build_roster(
         use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
-        authorization_evidence_id=identity(303),
+        source_decision_bundle_identity=identity(303),
         evidence_cutoff=utc(7, 23),
         effective_session="2024-01-08",
         supersedes_roster_id=second.roster_id,
@@ -71,12 +71,16 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
             {"candidate_id", "authorization_evidence_id"},
         )
         self.assertEqual(len({item.candidate_id for item in members}), 5)
+        self.assertNotIn("authorization_evidence_id", handoff.EffectiveRoster.model_fields)
+        self.assertIn(
+            "source_decision_bundle_identity", handoff.EffectiveRoster.model_fields
+        )
 
     def test_rfc8785_identity_is_deterministic_and_member_order_independent(self) -> None:
         first, _, _ = roster_sequence()
         reordered = handoff.build_roster(
             use_scope=first.use_scope,
-            authorization_evidence_id=first.authorization_evidence_id,
+            source_decision_bundle_identity=first.source_decision_bundle_identity,
             evidence_cutoff=first.evidence_cutoff,
             effective_session=first.effective_session,
             supersedes_roster_id=None,
@@ -84,11 +88,11 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
         )
         self.assertEqual(first.roster_id, reordered.roster_id)
 
-    def test_member_or_effective_session_changes_identity(self) -> None:
+    def test_member_bundle_or_effective_session_changes_identity(self) -> None:
         first, _, _ = roster_sequence()
         member_changed = handoff.build_roster(
             use_scope=first.use_scope,
-            authorization_evidence_id=first.authorization_evidence_id,
+            source_decision_bundle_identity=first.source_decision_bundle_identity,
             evidence_cutoff=first.evidence_cutoff,
             effective_session=first.effective_session,
             supersedes_roster_id=None,
@@ -96,14 +100,27 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
         )
         session_changed = handoff.build_roster(
             use_scope=first.use_scope,
-            authorization_evidence_id=first.authorization_evidence_id,
+            source_decision_bundle_identity=first.source_decision_bundle_identity,
             evidence_cutoff=first.evidence_cutoff,
             effective_session="2024-01-03",
             supersedes_roster_id=None,
             members=first.members,
         )
+        bundle_changed = handoff.build_roster(
+            use_scope=first.use_scope,
+            source_decision_bundle_identity=identity(399),
+            evidence_cutoff=first.evidence_cutoff,
+            effective_session=first.effective_session,
+            supersedes_roster_id=None,
+            members=first.members,
+        )
         self.assertNotEqual(first.roster_id, member_changed.roster_id)
         self.assertNotEqual(first.roster_id, session_changed.roster_id)
+        self.assertNotEqual(first.roster_id, bundle_changed.roster_id)
+        self.assertEqual(first.members, bundle_changed.members)
+        self.assertNotIn(
+            identity(4), {item.candidate_id for item in bundle_changed.members}
+        )
 
         tampered = first.model_copy(update={"roster_id": identity(999)})
         with self.assertRaisesRegex(ValueError, "content identity mismatch"):
@@ -142,7 +159,7 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
         first, second, _ = roster_sequence()
         late = handoff.build_roster(
             use_scope=second.use_scope,
-            authorization_evidence_id=second.authorization_evidence_id,
+            source_decision_bundle_identity=second.source_decision_bundle_identity,
             evidence_cutoff=utc(4, 23),
             effective_session=second.effective_session,
             supersedes_roster_id=first.roster_id,
@@ -178,7 +195,7 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
             handoff.EffectiveRoster(
                 roster_id=identity(401),
                 use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
-                authorization_evidence_id=identity(301),
+                source_decision_bundle_identity=identity(301),
                 evidence_cutoff=datetime(2024, 1, 1),  # noqa: DTZ001 - rejection fixture
                 effective_session="2024-01-02",
                 supersedes_roster_id=None,

@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — PR116 Effective Roster Source Bundle Field Alignment 001**
+> Development Next: **Merge Gate — PR #117**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4197,8 +4197,9 @@ No existing P2/P4 artifact authorizes a whole P7 roster. The successor
 protocol therefore replaces the unsupported whole-roster
 `authorization_evidence_id` semantics with non-authoritative
 `source_decision_bundle_identity` provenance. Member-level evidence references
-remain. PR #116's runtime field requires a tiny successor rename/removal before
-real roster use; this authority correction adds no runtime code.
+remain. PR #116's runtime field is now aligned in PR #117 as
+`source_decision_bundle_identity`; its RFC8785 identity projection binds that
+provenance-only field, while member authorization semantics remain unchanged.
 
 Updates are event-driven. The first usable session is the first XNYS session
 strictly after the New York calendar date containing the verified UTC evidence
@@ -4219,7 +4220,7 @@ P7_P4_CHALLENGER_ROLE_USED_AS_ROSTER_AUTHORITY = NO
 P7_CHAMPION_ROSTER_ELIGIBILITY = ELIGIBLE_RESEARCH_ONLY_NO_PRODUCTION_OR_LIVE_CAPITAL_AUTHORITY
 P7_WHOLE_ROSTER_AUTHORIZATION_FIELD = REMOVED_FROM_SUCCESSOR_PROTOCOL
 P7_SOURCE_DECISION_BUNDLE_IDENTITY = NON_AUTHORITATIVE_PROVENANCE
-P7_PR116_RUNTIME_FIELD_ALIGNMENT = FOLLOW_UP_REQUIRED_BEFORE_REAL_ROSTER_USE
+P7_PR116_RUNTIME_FIELD_ALIGNMENT = PASS_IN_PR117
 P7_ROSTER_MEMBER_COUNT_IS_FIXED = NO
 P7_EFFECTIVE_SESSION_RULE = FIRST_XNYS_SESSION_STRICTLY_AFTER_CUTOFF_NEW_YORK_DATE
 P7_MINIMUM_AUTHORIZED_MEMBER_COUNT = 2
@@ -4239,8 +4240,8 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 P7_EXIT_CONDITION_SATISFIED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 AQ_NEW_PRODUCTION_LOC = 0
-CURRENT_DEVELOPMENT_NEXT = P7_PR116_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT_001
-FINAL_CLASSIFICATION = PASS_P7_LIFECYCLE_TO_ROSTER_SEMANTIC_CORRECTION
+CURRENT_DEVELOPMENT_NEXT = MERGE_GATE_PR_117
+FINAL_CLASSIFICATION = PASS_P7_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT
 ```
 
 See [P7 lifecycle decision to effective roster protocol freeze 001](p7-lifecycle-decision-to-effective-roster-protocol-freeze-001.md).
