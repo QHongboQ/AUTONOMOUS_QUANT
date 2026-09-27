@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P8 — Entry audit**
+> Active Development: **P8 — Portfolio / risk contract design**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P8 — Portfolio / Risk Entry Audit 001**
+> Development Next: **P8 — Portfolio Upstream Ownership and TargetPortfolio Contract Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3929,6 +3929,47 @@ not by itself create a second family. The P8 next task is entry-audit only and
 must not treat P7 as complete.
 
 See [P7 Multi-Alpha Ensemble entry audit 001](p7-multi-alpha-ensemble-entry-audit-001.md).
+
+
+---
+
+### P8 portfolio / risk entry audit (2026-09-26)
+
+P8 may begin bounded contract and upstream-ownership work, but real portfolio
+tournament and risk-overlay execution remain deferred. Qlib and skfolio already
+own generic research portfolio/backtest/optimization mechanics, while P0 POC-C
+and POC-D proved the synthetic broker-neutral TargetPortfolio boundary.
+
+P7 has no ensemble artifact, P2 sealed OOS remains closed, and P4 has no real
+Certified or Champion artifact. P8 therefore may design the minimal
+TargetPortfolio and human-risk-envelope contracts, but may not allocate real
+candidate capital or duplicate upstream portfolio engines.
+
+```text
+P8_ENTRY_AUDIT = COMPLETE
+P8_ENTRY_ALLOWED_FOR_CONTRACT_AND_UPSTREAM_DESIGN = YES
+P8_REAL_PORTFOLIO_TOURNAMENT_AUTHORIZED = NO
+P8_REAL_RISK_OVERLAY_EXECUTION_AUTHORIZED = NO
+P8_EXIT_CONDITION_SATISFIED = NO
+P8_GENERIC_PORTFOLIO_OPTIMIZER_OWNER = SKFOLIO
+P8_RESEARCH_BACKTEST_PORTFOLIO_OWNER = QLIB
+P0_TARGETPORTFOLIO_POC = PASS_SYNTHETIC_INTEGRATION_ONLY
+P7_ENSEMBLE_ARTIFACT_AVAILABLE = NO
+P4_REAL_CERTIFIED_ARTIFACT_COUNT = 0
+P4_REAL_CHAMPION_COUNT = 0
+P8_REAL_CERTIFIED_STRATEGY_INPUT_COUNT = 0
+P8_MODEL_TRAINING_COUNT = 0
+P8_BACKTEST_COUNT = 0
+P8_REAL_PORTFOLIO_OPTIMIZATION_COUNT = 0
+P8_BROKER_ACTION_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+NEXT_TASK = P8_PORTFOLIO_UPSTREAM_OWNERSHIP_AND_TARGETPORTFOLIO_CONTRACT_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P8_ENTRY_AUDIT_CONTRACT_DESIGN_ALLOWED_REAL_PORTFOLIO_EXECUTION_DEFERRED
+```
+
+See [P8 Portfolio / Risk entry audit 001](p8-portfolio-risk-entry-audit-001.md).
 
 ---
 
