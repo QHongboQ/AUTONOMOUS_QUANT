@@ -1,8 +1,8 @@
-# P7 Successor One-Shot Execution Code Rebase After Boundary Correction 001
+# P7 Successor One-Shot Execution Code Rebase and Nonrecursive Authority Fix 001
 
 Date: 2026-09-27
 
-Status: `PASS_SUCCESSOR_EXECUTION_CODE_REBASED_AFTER_BOUNDARY_CORRECTION`
+Status: `PASS_NONRECURSIVE_PROVENANCE_AUTHORITY_FIXED`
 
 ## Corrected authority
 
@@ -23,8 +23,10 @@ LABEL_VALIDITY_MASK_SHA256 = 2d0c312c509625ebab0460f7024866b7f629e39e67384b907fe
 The prior script identity
 `12ec3ad8df9b6b053356ccf7997d41f21b1d98863a33cbe80ae9a3bb76aecf95`
 is retired and cannot be used by a future provenance seal. The corrected
-script identity is
-`996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b`.
+boundary-corrected script identity
+`996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b`
+is also retired by the nonrecursive provenance-authority fix. The final script
+identity is recorded below.
 
 ## Scientific boundary
 
@@ -66,6 +68,22 @@ seal, tracked-seal, protocol/contract/population/mask/script hashes, clean
 worktree, commit ancestry, HEAD authority, artifact byte hashes, pre-value
 marker, and second-attempt rejection remain enforced.
 
+The seal no longer stores its own authority commit. Runtime instead requires
+the current HEAD to equal `origin/main`, derives the seal authority with
+`git log -1 --format=%H -- <seal-path>`, and requires that derived commit to be
+the current HEAD. The working-tree seal bytes must equal `HEAD:<seal-path>`.
+The seal still binds the execution-code commit and script hash; runtime verifies
+that commit is an ancestor of both HEAD and `origin/main`, hashes the script
+blob at that commit, hashes the current runtime script bytes, and requires both
+to equal the sealed script identity. Sealed dependency versions must equal the
+frozen dependency authority, and runtime versions must equal the sealed map.
+
+A temporary Git regression proved commit A (execution code) followed by commit
+B (tracked seal binding A) validates without storing B in the seal. Commit C,
+which leaves the seal unchanged, is rejected because the seal's last-change
+commit is no longer HEAD. A worktree-only seal mutation and a non-ancestor
+execution commit are also rejected.
+
 Synthetic-only validation proved:
 
 ```text
@@ -82,6 +100,10 @@ SYNTHETIC_SPA_STATUS = PASS_LOWER_CONSISTENT_UPPER
 SYNTHETIC_MCS_STATUS = PASS_18_COLUMNS
 SYNTHETIC_WALKFORWARD_FOLD_COUNT = 3
 SYNTHETIC_CPCV_SPLIT_COUNT = 45
+REALISTIC_SEAL_COMMIT_TEST = PASS
+LATER_UNRELATED_COMMIT_REJECTION = PASS
+SEAL_WORKTREE_MUTATION_REJECTION = PASS
+EXECUTION_COMMIT_ANCESTRY_REJECTION = PASS
 ```
 
 No real Candidate predictions, OLS predictions, label magnitudes, ensemble,
@@ -92,7 +114,16 @@ RankIC, portfolio result, or performance metric were opened or computed.
 ```text
 REAL_EXECUTION_PROVENANCE_SEAL_PRESENT = NO
 REAL_EXECUTION_READY = NO_PENDING_POST_MERGE_PROVENANCE_SEAL
-EXECUTION_SCRIPT_SHA256 = 996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b
+PRIOR_EXECUTION_SCRIPT_SHA256 = 996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b
+EXECUTION_SCRIPT_SHA256 = a1a666cba8b8d7162f52cf24c24b9ec58f0463750ea424eaa716c931158d875f
+AUTHORITY_COMMIT_SHA_STORED_INSIDE_SEAL = NO
+CURRENT_HEAD_MUST_EQUAL_ORIGIN_MAIN = YES
+SEAL_LAST_CHANGE_COMMIT_MUST_EQUAL_HEAD = YES
+WORKTREE_SEAL_MUST_MATCH_HEAD = YES
+EXECUTION_CODE_COMMIT_BOUND = YES
+EXECUTION_CODE_COMMIT_ANCESTOR_REQUIRED = YES
+EXECUTION_COMMIT_SCRIPT_BYTES_VERIFIED = YES
+DEPENDENCY_VERSION_SEAL_ENFORCED = YES
 REAL_OUTCOME_ACCESS_STARTED = NO
 CANDIDATE_PREDICTION_VALUES_DESERIALIZED_FOR_ANALYSIS = 0
 OLS_PREDICTION_VALUES_DESERIALIZED_FOR_ANALYSIS = 0
@@ -101,11 +132,11 @@ ENSEMBLE_EXECUTION_COUNT = 0
 RANKIC_COMPUTATION_COUNT = 0
 PERFORMANCE_METRICS_COMPUTED = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
-NEW_RESEARCH_EXECUTION_LOC = 1134
-NEW_TEST_LOC = 339
+NEW_RESEARCH_EXECUTION_LOC = 1212
+NEW_TEST_LOC = 487
 NEW_PRODUCTION_LOC = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_COHORT_MODIFIED = NO
 CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_SEAL_001
-FINAL_CLASSIFICATION = PASS_SUCCESSOR_EXECUTION_CODE_REBASED_AFTER_BOUNDARY_CORRECTION
+FINAL_CLASSIFICATION = PASS_NONRECURSIVE_PROVENANCE_AUTHORITY_FIXED
 ```

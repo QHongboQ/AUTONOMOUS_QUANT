@@ -48,6 +48,10 @@ PROVENANCE_SEAL = Path(
     "30-research-system/qlib/p7-native-ensemble/"
     "successor-one-shot-execution-provenance-seal.json"
 )
+EXECUTION_SCRIPT = Path(
+    "30-research-system/qlib/p7-native-ensemble/"
+    "execute_successor_historical_static_research.py"
+)
 OUTPUT_ROOT = Path(
     "/mnt/d/AQ_DATA/P7/"
     "successor-historical-static-ensemble-research-execution-001"
@@ -75,10 +79,14 @@ class Authorities:
 @dataclass(frozen=True)
 class RuntimeAuthority:
     current_head: str
+    origin_main_head: str
     worktree_clean: bool
+    seal_last_change_commit: str
+    seal_worktree_matches_head: bool
+    execution_commit_on_current_head: bool
     execution_commit_on_origin_main: bool
-    authority_commit_on_origin_main: bool
-    script_sha256: str
+    execution_commit_script_sha256: str
+    runtime_script_sha256: str
     dependency_versions: dict[str, str]
 
 
@@ -301,19 +309,50 @@ def git(repo: Path, *args: str, check: bool = True) -> str:
     return result.stdout.strip()
 
 
-def commit_on_origin_main(repo: Path, commit: str) -> bool:
+def commit_is_ancestor(repo: Path, commit: str, descendant: str) -> bool:
     result = subprocess.run(
-        ["git", "-C", str(repo), "merge-base", "--is-ancestor", commit, "origin/main"],
+        ["git", "-C", str(repo), "merge-base", "--is-ancestor", commit, descendant],
         check=False,
         capture_output=True,
     )
     return result.returncode == 0
 
 
-def runtime_authority(repo: Path, seal: Mapping[str, Any]) -> RuntimeAuthority:
+def git_blob_sha256(repo: Path, commit: str, path: Path) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo), "show", f"{commit}:{path.as_posix()}"],
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        raise GateError("EXECUTION_COMMIT_SCRIPT_MISSING")
+    return hashlib.sha256(result.stdout).hexdigest()
+
+
+def seal_worktree_matches_head(repo: Path) -> bool:
+    seal_path = repo / PROVENANCE_SEAL
+    result = subprocess.run(
+        ["git", "-C", str(repo), "show", f"HEAD:{PROVENANCE_SEAL.as_posix()}"],
+        check=False,
+        capture_output=True,
+    )
+    return (
+        result.returncode == 0
+        and seal_path.is_file()
+        and seal_path.read_bytes() == result.stdout
+    )
+
+
+def runtime_authority(
+    repo: Path,
+    seal: Mapping[str, Any],
+    runtime_script_path: Path | None = None,
+) -> RuntimeAuthority:
     import qlib
 
     head = git(repo, "rev-parse", "HEAD")
+    origin_main = git(repo, "rev-parse", "origin/main")
+    execution_commit = str(seal.get("execution_code_commit_sha", ""))
     stats_versions = json.loads(
         subprocess.check_output(
             [
@@ -332,14 +371,24 @@ def runtime_authority(repo: Path, seal: Mapping[str, Any]) -> RuntimeAuthority:
         raise GateError("QLIB_SOURCE_IDENTITY_MISMATCH", qlib_source)
     return RuntimeAuthority(
         current_head=head,
+        origin_main_head=origin_main,
         worktree_clean=not bool(git(repo, "status", "--porcelain", "--untracked-files=all")),
-        execution_commit_on_origin_main=commit_on_origin_main(
-            repo, str(seal.get("execution_code_commit_sha", ""))
+        seal_last_change_commit=git(
+            repo, "log", "-1", "--format=%H", "--", PROVENANCE_SEAL.as_posix()
         ),
-        authority_commit_on_origin_main=commit_on_origin_main(
-            repo, str(seal.get("authority_commit_sha", ""))
+        seal_worktree_matches_head=seal_worktree_matches_head(repo),
+        execution_commit_on_current_head=commit_is_ancestor(
+            repo, execution_commit, head
         ),
-        script_sha256=file_sha256(Path(__file__).resolve()),
+        execution_commit_on_origin_main=commit_is_ancestor(
+            repo, execution_commit, "origin/main"
+        ),
+        execution_commit_script_sha256=git_blob_sha256(
+            repo, execution_commit, EXECUTION_SCRIPT
+        ),
+        runtime_script_sha256=file_sha256(
+            (runtime_script_path or Path(__file__)).resolve()
+        ),
         dependency_versions=versions,
     )
 
@@ -349,7 +398,14 @@ def load_provenance_seal(repo: Path) -> dict[str, Any]:
     if not path.is_file():
         raise GateError("EXECUTION_PROVENANCE_SEAL_MISSING")
     tracked = subprocess.run(
-        ["git", "-C", str(repo), "ls-files", "--error-unmatch", str(PROVENANCE_SEAL)],
+        [
+            "git",
+            "-C",
+            str(repo),
+            "ls-files",
+            "--error-unmatch",
+            PROVENANCE_SEAL.as_posix(),
+        ],
         check=False,
         capture_output=True,
     )
@@ -363,6 +419,9 @@ def validate_provenance_seal(
     seal: Mapping[str, Any],
     runtime: RuntimeAuthority,
 ) -> None:
+    if "authority_commit_sha" in seal:
+        raise GateError("SELF_REFERENTIAL_AUTHORITY_COMMIT_FORBIDDEN")
+    sealed_dependencies = seal.get("expected_dependency_versions")
     comparisons = (
         ("PROTOCOL_MISMATCH", seal.get("successor_protocol_sha256"), PROTOCOL_SHA256),
         (
@@ -382,24 +441,42 @@ def validate_provenance_seal(
         ),
         ("LABEL_MASK_MISMATCH", seal.get("label_validity_mask_sha256"), LABEL_MASK_SHA256),
         ("QLIB_SOURCE_MISMATCH", seal.get("qlib_source_sha"), QLIB_SOURCE_SHA),
-        ("SCRIPT_HASH_MISMATCH", seal.get("execution_script_sha256"), runtime.script_sha256),
         (
-            "DEPENDENCY_VERSION_MISMATCH",
-            runtime.dependency_versions,
+            "SEALED_DEPENDENCY_AUTHORITY_MISMATCH",
+            sealed_dependencies,
             EXPECTED_DEPENDENCIES,
+        ),
+        (
+            "RUNTIME_DEPENDENCY_VERSION_MISMATCH",
+            runtime.dependency_versions,
+            sealed_dependencies,
+        ),
+        (
+            "EXECUTION_COMMIT_SCRIPT_HASH_MISMATCH",
+            runtime.execution_commit_script_sha256,
+            seal.get("execution_script_sha256"),
+        ),
+        (
+            "RUNTIME_SCRIPT_HASH_MISMATCH",
+            runtime.runtime_script_sha256,
+            seal.get("execution_script_sha256"),
         ),
     )
     for code, actual, expected in comparisons:
         if actual != expected:
             raise GateError(code)
+    if runtime.current_head != runtime.origin_main_head:
+        raise GateError("HEAD_NOT_EXACT_ORIGIN_MAIN")
+    if runtime.seal_last_change_commit != runtime.current_head:
+        raise GateError("SEAL_LAST_CHANGE_NOT_CURRENT_HEAD")
+    if not runtime.seal_worktree_matches_head:
+        raise GateError("SEAL_WORKTREE_HEAD_MISMATCH")
     if not runtime.worktree_clean:
         raise GateError("DIRTY_WORKTREE_FORBIDDEN")
-    if runtime.current_head != seal.get("authority_commit_sha"):
-        raise GateError("HEAD_AUTHORITY_MISMATCH")
+    if not runtime.execution_commit_on_current_head:
+        raise GateError("EXECUTION_COMMIT_NOT_ANCESTOR_OF_CURRENT_HEAD")
     if not runtime.execution_commit_on_origin_main:
         raise GateError("EXECUTION_COMMIT_NOT_ON_ORIGIN_MAIN")
-    if not runtime.authority_commit_on_origin_main:
-        raise GateError("AUTHORITY_COMMIT_NOT_ON_ORIGIN_MAIN")
     _validate_artifact_authority(authorities, seal)
 
 
@@ -485,7 +562,8 @@ def pre_outcome_manifest(
         "qlib_source_sha": QLIB_SOURCE_SHA,
         "dependency_versions": runtime.dependency_versions,
         "execution_commit_sha": seal["execution_code_commit_sha"],
-        "execution_script_sha256": runtime.script_sha256,
+        "execution_script_sha256": runtime.runtime_script_sha256,
+        "seal_last_change_commit": runtime.seal_last_change_commit,
         "current_head": runtime.current_head,
         "clean_worktree": runtime.worktree_clean,
         "real_outcome_access_started": False,

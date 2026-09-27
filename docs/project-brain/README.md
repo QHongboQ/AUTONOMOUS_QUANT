@@ -4965,9 +4965,17 @@ are secondary and cannot change a locked primary classification.
 
 The future provenance seal must bind separate construction/evaluation
 population artifact byte identities and both ordered-index semantic identities.
-The old PR #130 script SHA is retired; the corrected script SHA is
-`996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b`.
+The old PR #130 script SHA and the first boundary-corrected script SHA
+`996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b`
+are retired. The remaining self-reference was removed: the future seal does not
+store its own authority commit. HEAD must equal `origin/main`; the seal's
+Git-derived last-change commit must equal HEAD; working-tree seal bytes must
+equal `HEAD:<seal-path>`; and the sealed execution commit must be an ancestor
+whose script blob and current runtime script both match the sealed script hash.
 No seal was created and no real outcome was opened.
+
+The resulting execution-script SHA-256 is
+`a1a666cba8b8d7162f52cf24c24b9ec58f0463750ea424eaa716c931158d875f`.
 
 ```text
 SUCCESSOR_INPUT_CONTRACT_SHA256 = b9e0c447794c318d7ddc00803e0f2ea5468abc4c77a43752ead2910804b8a7b5
@@ -4981,13 +4989,19 @@ MCS_INCOMPLETE_MATRIX_POLICY = NOT_AVAILABLE_SECONDARY_INCOMPLETE_LOSS_MATRIX
 PRIMARY_CLASSIFICATION_LOCK_POINT = AFTER_COMPLETE_VALID_SIX_GATE_PRIMARY_AND_ROBUSTNESS_EVIDENCE
 REAL_EXECUTION_PROVENANCE_SEAL_PRESENT = NO
 REAL_EXECUTION_READY = NO_PENDING_POST_MERGE_PROVENANCE_SEAL
+AUTHORITY_COMMIT_SHA_STORED_INSIDE_SEAL = NO
+CURRENT_HEAD_MUST_EQUAL_ORIGIN_MAIN = YES
+SEAL_LAST_CHANGE_COMMIT_MUST_EQUAL_HEAD = YES
+WORKTREE_SEAL_MUST_MATCH_HEAD = YES
+EXECUTION_COMMIT_SCRIPT_BYTES_VERIFIED = YES
+DEPENDENCY_VERSION_SEAL_ENFORCED = YES
 REAL_OUTCOME_ACCESS_STARTED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 NEW_PRODUCTION_LOC = 0
 P2_V2_SEALED_OOS_ACCESSED = NO
 P2_V2_COHORT_MODIFIED = NO
 CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_SEAL_001
-FINAL_CLASSIFICATION = PASS_SUCCESSOR_EXECUTION_CODE_REBASED_AFTER_BOUNDARY_CORRECTION
+FINAL_CLASSIFICATION = PASS_NONRECURSIVE_PROVENANCE_AUTHORITY_FIXED
 ```
 
 See [P7 successor execution-code rebase after boundary correction 001](p7-successor-one-shot-execution-code-precommit-and-preflight-freeze-001.md).
