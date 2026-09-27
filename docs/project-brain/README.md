@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P8 — Portfolio / risk contract design**
+> Active Development: **P7 — Qlib-native ensemble integration and input qualification**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P8 — Portfolio Upstream Ownership and TargetPortfolio Contract Freeze 001**
+> Development Next: **P7 — Real-data ensemble input contract and protocol feasibility 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
