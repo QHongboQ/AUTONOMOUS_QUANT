@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Historical static ensemble research execution**
+> Active Development: **P7 — Historical static ensemble inconclusive-result closeout**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Historical Static Ensemble Research Execution 001**
+> Development Next: **P7 — Historical Static Ensemble Inconclusive Result Closeout 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4646,6 +4646,38 @@ FINAL_CLASSIFICATION = PASS_P7_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_FROZ
 ```
 
 See [P7 historical static ensemble research protocol freeze 001](p7-historical-static-ensemble-research-protocol-freeze-001.md).
+
+---
+
+#### P7 historical static ensemble one-shot execution (2026-09-27)
+
+The frozen protocol's Phase A passed all input-identity and synthetic upstream
+API checks. Phase B then began exactly once. The attempt stopped fail-closed
+before ensemble combination or metric calculation because the frozen label
+artifact contained missing or non-finite values after projection to the exact
+374,591-row population. The one-shot firewall prohibits repair and retry after
+real outcome access, so the sealed result is inconclusive and contains no
+evidence for or against the ensemble.
+
+```text
+PROTOCOL_SHA256 = b60078bdba4190fbda2c6f3d3580f0e40a9801c87867095bfaa12885a0fb3ff4
+REAL_OUTCOME_ACCESS_STARTED = YES
+REAL_OUTCOME_EXECUTION_ATTEMPT_COUNT = 1
+RESULT_CLASSIFICATION = STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE
+ENSEMBLE_EXECUTION_COUNT = 0
+RANKIC_COMPUTATION_COUNT = 0
+PORTFOLIO_BACKTEST_COUNT = 0
+PRISTINE_OOS = NO
+P2_CERTIFICATION_EVIDENCE = NO
+P7_DYNAMIC_ROSTER_EVIDENCE = NO
+P7_EXIT_CONDITION_EVIDENCE = NO
+PRODUCTION_AUTHORIZATION = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_HISTORICAL_STATIC_ENSEMBLE_INCONCLUSIVE_RESULT_CLOSEOUT_001
+```
+
+See [P7 historical static ensemble research execution 001](p7-historical-static-ensemble-research-execution-001.md).
 
 ---
 

@@ -1,0 +1,13 @@
+{
+  "attempt_manifest_sha256": "07f974108cd9778558bcbdbf68122d117cdb815e559bba86b25b0fe92803f0fc",
+  "checksums_manifest_sha256": "728c6b9dac2235fdd93a96ee7b856476d939206ee6494fa9251f3c5842f9b5f4",
+  "failure_sha256": "76bec2f79b75eafa0ba28c0a55d85850a65de4d19d9a103b52d6d5c19fa048ae",
+  "final_result_sha256": "d9e9bec3c8b11d9027aafb3f64afeb7f099a7ba7039440019fcd28f31c98d396",
+  "input_contract_sha256": "92de81d0b8b7b7a29891bf523ae8519af44456f52fea3410ebf0ebd210d0f81f",
+  "population_index_sha256": "2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e",
+  "private_evidence_root": "D:/AQ_DATA/P7/historical-static-ensemble-research-execution-001",
+  "protocol_sha256": "b60078bdba4190fbda2c6f3d3580f0e40a9801c87867095bfaa12885a0fb3ff4",
+  "real_outcome_execution_attempt_count": 1,
+  "result_classification": "STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE",
+  "schema": "AQ_P7_HISTORICAL_STATIC_ENSEMBLE_EXECUTION_RESULT_REFERENCE_V1"
+}
