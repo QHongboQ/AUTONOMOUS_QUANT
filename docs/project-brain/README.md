@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **Merge Gate — PR #117**
+> Development Next: **P7 — Qlib runtime substitution closeout 001 (after this POC merges)**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4248,6 +4248,72 @@ FINAL_CLASSIFICATION = PASS_P7_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT
 ```
 
 See [P7 lifecycle decision to effective roster protocol freeze 001](p7-lifecycle-decision-to-effective-roster-protocol-freeze-001.md).
+
+#### P7 Qlib collector / rolling dynamic-pool substitution POC (2026-09-27)
+
+A bounded synthetic POC exercised pinned Qlib Recorder/MLflow artifacts through
+`RecorderCollector`, `RollingGroup` / `RollingEnsemble`, `MergeCollector`, the
+existing P7 thin authorization and validation boundary, and
+`AverageEnsemble`. Seven synthetic Recorders cover C1/C2 R1/R2 overlaps and
+the existing 3 -> 5 -> 2 roster fixture. Qlib's later rolling window wins on
+duplicate prediction identities, and the native chain exactly matches the
+current pre-rolled path in index, values, roster periods and active-component
+reports.
+
+`OnlineToolR` is runtime readiness only. It is not Candidate authorization or
+certification authority. Source audit confirms `OnlineManager` owns
+per-strategy rolling updates, runtime history and signal preparation but not
+P2/P4-driven cross-Candidate roster membership. P7 therefore retains only its
+project-specific authorization projection plus strict row, numeric,
+session-local constant and minimum-component gates.
+
+No current runtime code is safely deletable: the existing 198-LOC handoff does
+not duplicate Recorder retrieval, rolling stitching or multi-Candidate
+collection. The POC instead prevents those capabilities from being added to
+AQ during closeout.
+
+```text
+P7_QLIB_COLLECTOR_ROLLING_POC = PASS_PARTIAL_SUBSTITUTION
+P7_QLIB_VERSION = 0.9.8.dev26
+P7_QLIB_SOURCE_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+P7_RECORDER_COLLECTOR_STATUS = PASS
+P7_MERGE_COLLECTOR_STATUS = PASS
+P7_ROLLING_GROUP_STATUS = PASS
+P7_ROLLING_ENSEMBLE_STATUS = PASS_LATEST_WINDOW_WINS
+P7_AVERAGE_ENSEMBLE_STATUS = PASS_EXISTING_OWNER
+P7_ONLINE_TOOL_R_STATUS = PASS_RUNTIME_READINESS_ONLY
+P7_SYNTHETIC_ROSTER_SEQUENCE = 3_TO_5_TO_2
+P7_SYNTHETIC_ROLLING_RECORDER_COUNT = 7
+P7_CURRENT_PATH_VS_QLIB_NATIVE_PATH = EXACT_MATCH
+P7_OUTPUT_INDEX_MATCH = YES
+P7_OUTPUT_VALUE_MATCH = YES
+P7_ROSTER_PERIOD_MATCH = YES
+P7_ACTIVE_COMPONENT_MATCH = YES
+P7_QLIB_ONLINE_TAG_IS_CERTIFICATION_AUTHORITY = NO
+P7_ONLINE_MANAGER_PER_STRATEGY_ROLLING_OWNER = YES
+P7_ONLINE_MANAGER_RUNTIME_HISTORY_OWNER = YES
+P7_ONLINE_MANAGER_SIGNAL_PREPARATION_OWNER = YES
+P7_ONLINE_MANAGER_DYNAMIC_ROSTER_AUTHORITY = NOT_NATIVE
+P7_RUNTIME_LOC_BEFORE = 198
+P7_RUNTIME_LOC_AFTER = 198
+P7_NET_RUNTIME_LOC_CHANGE = 0
+P7_REAL_CANDIDATE_ARTIFACTS_ACCESSED = 0
+P7_REAL_MODEL_TRAINING_COUNT = 0
+P7_REAL_MODEL_REFIT_COUNT = 0
+P7_REAL_PREDICTION_GENERATION_COUNT = 0
+P7_REAL_DYNAMIC_ROSTER_EXECUTION_COUNT = 0
+P7_REAL_ENSEMBLE_EXECUTION_COUNT = 0
+P7_BACKTEST_COUNT = 0
+P7_PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_COHORT_MODIFIED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P7_QLIB_RUNTIME_SUBSTITUTION_CLOSEOUT_001
+FINAL_CLASSIFICATION = PASS_PARTIAL_SUBSTITUTION
+```
+
+See [P7 Qlib collector / rolling dynamic-pool substitution POC 001](p7-qlib-collector-rolling-dynamic-pool-substitution-poc-001.md).
 
 ---
 
