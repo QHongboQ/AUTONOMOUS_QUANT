@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Qlib runtime substitution closeout 001 (after this POC merges)**
+> Development Next: **P7 — Dynamic research execution readiness audit 001 (after this closeout merges)**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4314,6 +4314,66 @@ FINAL_CLASSIFICATION = PASS_PARTIAL_SUBSTITUTION
 ```
 
 See [P7 Qlib collector / rolling dynamic-pool substitution POC 001](p7-qlib-collector-rolling-dynamic-pool-substitution-poc-001.md).
+
+#### P7 Qlib runtime substitution closeout (2026-09-27)
+
+The complete active P7 runtime boundary was audited against pinned Qlib source
+and deletion counterfactuals. Qlib remains the sole owner of Recorder
+collection, rolling grouping/ensembling, collector merging, per-strategy
+online runtime management and `AverageEnsemble` numerical combination. P7
+retains only external authorization/effective-roster projection, exact
+eligible-row and numeric guards, session-local constant policy and the
+minimum-active component rule.
+
+No further runtime deletion is safe. Native Qlib accepts a common row omitted
+by every component and emits a shorter result; an extreme finite component can
+overflow during standardization and be silently omitted from the mean. These
+tests prove the remaining guards prevent scientific population or roster
+changes that the upstream runtime does not report.
+
+```text
+P7_RUNTIME_SUBSTITUTION_CLOSEOUT = PASS
+P7_QLIB_SOURCE_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+P7_RUNTIME_SCOPE = time_effective_roster_handoff.py; session_local_router.py; average_ensemble_boundary.py
+P7_TIME_EFFECTIVE_ROSTER_HANDOFF_PHYSICAL_LOC = 198
+P7_SESSION_LOCAL_ROUTER_PHYSICAL_LOC = 55
+P7_AVERAGE_ENSEMBLE_BOUNDARY_PHYSICAL_LOC = 99
+P7_RUNTIME_PHYSICAL_LOC_TOTAL = 352
+P7_RUNTIME_LOC_BEFORE = 352
+P7_RUNTIME_LOC_AFTER = 352
+P7_NET_RUNTIME_LOC_CHANGE = 0
+P7_UNNECESSARY_DUPLICATION_COUNT = 0
+P7_UPSTREAM_DELEGATED_LOC = 14
+P7_IRREDUCIBLE_AQ_DOMAIN_POLICY_LOC = 116
+P7_IRREDUCIBLE_FAIL_CLOSED_BOUNDARY_LOC = 153
+P7_NEUTRAL_SCAFFOLDING_LOC = 69
+P7_EXACT_ROW_GUARD_DECISION = RETAIN_IRREDUCIBLE_FAIL_CLOSED_BOUNDARY
+P7_FINITE_NUMERIC_GUARD_DECISION = RETAIN_IRREDUCIBLE_FAIL_CLOSED_BOUNDARY
+P7_EXTREME_VALUE_GUARD_DECISION = RETAIN_IRREDUCIBLE_FAIL_CLOSED_BOUNDARY
+P7_EXACT_CONSTANT_POLICY_DECISION = RETAIN_IRREDUCIBLE_AQ_DOMAIN_POLICY
+P7_MINIMUM_ACTIVE_COMPONENT_GATE_DECISION = RETAIN_IRREDUCIBLE_AQ_DOMAIN_POLICY
+P7_RUNTIME_READY_GATE_DECISION = RETAIN_IRREDUCIBLE_FAIL_CLOSED_BOUNDARY
+P7_ONLINE_MANAGER_DYNAMIC_ROSTER_AUTHORITY = NOT_NATIVE
+P7_QLIB_ONLINE_TAG_IS_CERTIFICATION_AUTHORITY = NO
+P7_FINAL_RUNTIME_BOUNDARY = EXTERNAL_AUTHORIZED_CANDIDATE_SET_TO_P7_VALIDATION_ROUTING_TO_QLIB_UPSTREAM_RUNTIME_ENSEMBLE
+P7_RUNTIME_CLOSEOUT_TEST_RESULT = PASS_45_OF_45
+P7_REAL_CANDIDATE_ARTIFACTS_ACCESSED = 0
+P7_REAL_MODEL_TRAINING_COUNT = 0
+P7_REAL_MODEL_REFIT_COUNT = 0
+P7_REAL_PREDICTION_GENERATION_COUNT = 0
+P7_REAL_DYNAMIC_ROSTER_EXECUTION_COUNT = 0
+P7_REAL_ENSEMBLE_EXECUTION_COUNT = 0
+P7_BACKTEST_COUNT = 0
+P7_PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_COHORT_MODIFIED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P7_DYNAMIC_RESEARCH_EXECUTION_READINESS_AUDIT_001
+FINAL_CLASSIFICATION = PASS_RUNTIME_SUBSTITUTION_CLOSED_NO_FURTHER_SAFE_DELETION
+```
+
+See [P7 Qlib runtime substitution closeout 001](p7-qlib-runtime-substitution-closeout-001.md).
 
 ---
 
