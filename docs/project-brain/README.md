@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Entry audit**
+> Active Development: **P8 — Entry audit**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Multi-Alpha Ensemble Entry Audit 001**
+> Development Next: **P8 — Portfolio / Risk Entry Audit 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3885,6 +3885,50 @@ PR106_SUPERSEDED = YES
 ```
 
 See [P6 Historical News FinSen inconclusive and phase closeout 001](p6-historical-news-finsen-inconclusive-and-phase-closeout-001.md).
+
+
+---
+
+### P7 multi-alpha ensemble entry audit (2026-09-26)
+
+P7 fails closed at its entry gate because the current project has only one
+candidate alpha family: the 17 P3 AlphaGen Candidate V3 objects are all members
+of the same `FORMULAIC_ALPHA` family. `BASE_157` remains a control surface,
+not a second candidate family. P5 admitted no fundamental increment and P6
+admitted no information-intelligence family.
+
+```text
+P7_ENTRY_AUDIT = COMPLETE
+P7_STATUS = DEFERRED_INSUFFICIENT_INDEPENDENT_ALPHA_FAMILIES
+P7_ACTIVE = NO
+P7_EXIT_CONDITION_SATISFIED = NO
+P7_ENSEMBLE_EXECUTION_AUTHORIZED = NO
+P7_MINIMUM_INDEPENDENT_ALPHA_FAMILIES_REQUIRED = 2
+P7_CURRENT_INDEPENDENT_CANDIDATE_ALPHA_FAMILIES = 1
+P7_ALPHA_FAMILY_1 = P3_FORMULAIC_ALPHA
+P7_SECOND_INDEPENDENT_ALPHA_FAMILY = NONE
+P7_CONTROL_SURFACE = BASE_157
+P7_CONTROL_IS_INDEPENDENT_ALPHA_FAMILY = NO
+P3_REAL_CANDIDATE_V3_COUNT = 17
+P3_FORMULAIC_ALPHA_FAMILY_COUNT = 1
+P5_ADMITTED_INCREMENTAL_ALPHA_FAMILY_COUNT = 0
+P6_NEW_ADMITTED_FEATURE_FAMILY_COUNT = 0
+MODEL_TRAINING_COUNT = 0
+BACKTEST_COUNT = 0
+ENSEMBLE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+NEXT_TASK = P8_PORTFOLIO_RISK_ENTRY_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P7_ENTRY_AUDIT_DEFERRED_INSUFFICIENT_INDEPENDENT_ALPHA_FAMILIES
+```
+
+P7 may be reopened only after at least two genuinely independent admissible
+alpha families exist. P2 certification of additional Formulaic candidates does
+not by itself create a second family. The P8 next task is entry-audit only and
+must not treat P7 as complete.
+
+See [P7 Multi-Alpha Ensemble entry audit 001](p7-multi-alpha-ensemble-entry-audit-001.md).
 
 ---
 
