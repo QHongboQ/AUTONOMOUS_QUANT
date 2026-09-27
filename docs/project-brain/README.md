@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Roster Update Policy Upstream Substitution Audit 001**
+> Development Next: **P7 — Dynamic Roster Research Protocol Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4176,6 +4176,53 @@ FINAL_CLASSIFICATION = PASS_P7_ROSTER_UPDATE_POLICY_UPSTREAM_SUBSTITUTION_AUDIT
 ```
 
 See [P7 variable-roster upstream handoff POC 001](p7-variable-roster-upstream-handoff-poc-001.md).
+
+#### P7 lifecycle decision to effective roster protocol freeze (2026-09-27)
+
+P7 now has one frozen, research-only policy for converting already-authorized
+P2/P4 lifecycle evidence into a prospective daily XNYS roster. Existing P4
+authority makes only `CERTIFIED` and `SHADOW` eligible for the Challenger
+research roster; `RESEARCH_CANDIDATE`, `CHAMPION`, `DEGRADED`, and `RETIRED`
+are ineligible. This mapping grants no live-capital or production authority.
+
+Updates are event-driven. The first usable session is the first XNYS session
+strictly after the New York calendar date containing the verified UTC evidence
+cutoff. There is no same-session or intraday activation, no periodic P7
+reevaluation engine, and P12 remains scheduling owner. Roster count is
+variable; 17 remains immutable historical snapshot metadata only. Fewer than
+two authorized members or fewer than two session-active components fails
+closed without fabricating or resurrecting members.
+
+```text
+P7_ROSTER_PROTOCOL_STATUS = FROZEN_PRE_EXECUTION
+P7_ROSTER_PROTOCOL_SHA256 = fa8107fe9bf834f1d088e22fcf2500f3160e94337bc92ff63e494519d0f4171e
+P7_RESEARCH_ROSTER_ELIGIBLE_STATES = CERTIFIED; SHADOW
+P7_RESEARCH_ROSTER_INELIGIBLE_STATES = RESEARCH_CANDIDATE; CHAMPION; DEGRADED; RETIRED
+P7_ELIGIBILITY_AUTHORITY = P2_CERTIFICATION_AND_P4_LIFECYCLE_DECISIONS
+P7_ROSTER_MEMBER_COUNT_IS_FIXED = NO
+P7_EFFECTIVE_SESSION_RULE = FIRST_XNYS_SESSION_STRICTLY_AFTER_CUTOFF_NEW_YORK_DATE
+P7_MINIMUM_AUTHORIZED_MEMBER_COUNT = 2
+P7_MINIMUM_SESSION_ACTIVE_COMPONENT_COUNT = 2
+P7_PERIODIC_REEVALUATION_ENGINE = NONE
+P7_ROSTER_PERSISTENCE_OWNER = DVC
+P7_SCHEDULER_OWNER = P12
+P7_REAL_CANDIDATE_SELECTION_COUNT = 0
+P7_REAL_LIFECYCLE_TRANSITION_COUNT = 0
+P7_REAL_ROSTER_MUTATION_COUNT = 0
+P7_REAL_MODEL_TRAINING_COUNT = 0
+P7_REAL_PREDICTION_GENERATION_COUNT = 0
+P7_REAL_ENSEMBLE_COUNT = 0
+P7_BACKTEST_COUNT = 0
+P2_V2_COHORT_MODIFIED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+P7_EXIT_CONDITION_SATISFIED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+AQ_NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P7_DYNAMIC_ROSTER_RESEARCH_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P7_LIFECYCLE_DECISION_TO_EFFECTIVE_ROSTER_PROTOCOL_FREEZE
+```
+
+See [P7 lifecycle decision to effective roster protocol freeze 001](p7-lifecycle-decision-to-effective-roster-protocol-freeze-001.md).
 
 ---
 
