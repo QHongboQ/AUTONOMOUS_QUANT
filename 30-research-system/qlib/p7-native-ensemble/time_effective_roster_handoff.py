@@ -24,12 +24,12 @@ class RosterMember(BaseModel):
 
 
 class EffectiveRoster(BaseModel):
-    """Immutable externally authorized roster for daily XNYS research."""
+    """Immutable roster-provenance handoff for daily XNYS research."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
     roster_id: Sha256Identity
     use_scope: NonEmptyIdentity
-    authorization_evidence_id: Sha256Identity
+    source_decision_bundle_identity: Sha256Identity
     evidence_cutoff: datetime
     effective_session: NonEmptyIdentity
     supersedes_roster_id: Sha256Identity | None
@@ -58,7 +58,7 @@ def _identity_projection(fields: Mapping[str, Any]) -> dict[str, Any]:
     members = sorted(fields["members"], key=lambda member: member["candidate_id"])
     return {
         "use_scope": fields["use_scope"],
-        "authorization_evidence_id": fields["authorization_evidence_id"],
+        "source_decision_bundle_identity": fields["source_decision_bundle_identity"],
         "evidence_cutoff": fields["evidence_cutoff"].isoformat(),
         "effective_session": fields["effective_session"],
         "supersedes_roster_id": fields["supersedes_roster_id"],
@@ -79,7 +79,7 @@ def roster_content_identity(fields: Mapping[str, Any]) -> str:
 
 
 def build_roster(**fields: Any) -> EffectiveRoster:
-    """Create an RFC 8785 identity in the existing contract-authority runtime."""
+    """Create an RFC 8785 identity for an already-decided roster handoff."""
 
     members = [
         member.model_dump(mode="json") if isinstance(member, RosterMember) else member
