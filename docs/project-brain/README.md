@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor static-ensemble label-observable input-contract freeze**
+> Active Development: **P7 — Successor historical static-ensemble research-protocol freeze**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor Static Ensemble Label Observable Input Contract Freeze 001**
+> Development Next: **P7 — Successor Historical Static Ensemble Research Protocol Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4798,6 +4798,60 @@ FINAL_CLASSIFICATION = PASS_P7_SUCCESSOR_RESEARCH_SCIENTIFICALLY_PERMISSIBLE_WIT
 ```
 
 See [P7 post-inconclusive successor research admissibility audit 001](p7-post-inconclusive-successor-research-admissibility-audit-001.md).
+
+---
+
+#### P7 successor label-observable input contract freeze (2026-09-27)
+
+A wholly new successor input contract is frozen without creating a research
+protocol or accessing performance. It retains the exact 17 Candidate V3
+identities and source hashes, OLS control, Qlib label, signs, roster, weighting
+and primary comparator. V1 remains terminal inconclusive and is not
+superseded.
+
+The only new eligibility condition is structural: an otherwise valid V1
+prediction/control population row must have a present, finite Qlib label. The
+374,591-row Boolean mask excludes exactly the 114 sealed invalid-label rows,
+producing a 374,477-row successor grid. All 751 sessions remain, with at least
+490 rows per session. Candidate and OLS coverage passes by their previously
+sealed complete V1-grid coverage and the strict-subset relationship.
+
+```text
+V1_RESULT = STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE
+V1_IS_SUPERSEDED = NO
+SUCCESSOR_ESTIMAND = CONDITIONAL_ON_PREREGISTERED_LABEL_OBSERVABILITY
+SUCCESSOR_ROW_RULE = V1_PREDICTION_CONTROL_POPULATION_VALID AND LABEL_KEY_PRESENT AND LABEL_FINITE
+LABEL_SHA256 = c14c7c3f1e698126663b85dfcf436cf3258dc4609e8217e95ed188d9be7db35e
+LABEL_VALIDITY_MASK_ROW_COUNT = 374591
+LABEL_VALIDITY_MASK_SHA256 = 2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf
+V1_ROW_COUNT = 374591
+SUCCESSOR_ROW_COUNT = 374477
+EXCLUDED_ROW_COUNT = 114
+MEMBERSHIP_HORIZON_EXCLUSION_COUNT = 72
+PROVIDER_GAP_EXCLUSION_COUNT = 42
+MISSINGNESS_ASSUMPTION = NOT_MCAR
+SUCCESSOR_POPULATION_INDEX_SHA256 = 50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0
+SUCCESSOR_SESSION_COUNT = 751
+SUCCESSOR_INSTRUMENT_COUNT = 547
+SUCCESSOR_START = 2022-01-03
+SUCCESSOR_END = 2024-12-27
+SUCCESSOR_MINIMUM_ROWS_PER_SESSION = 490
+SUCCESSOR_ALL_SESSIONS_RANKIC_STRUCTURALLY_FEASIBLE = YES
+CANDIDATE_17_SUCCESSOR_ROW_COVERAGE = PASS
+OLS_SUCCESSOR_ROW_COVERAGE = PASS
+SUCCESSOR_INPUT_CONTRACT_SHA256 = b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee
+LABEL_GENERATION_OWNER = QLIB
+LABEL_SEMANTICS_OWNER = QLIB
+AQ_LABEL_ENGINE = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT_FROZEN
+```
+
+See [P7 successor static-ensemble label-observable input-contract freeze 001](p7-successor-static-ensemble-label-observable-input-contract-freeze-001.md).
 
 ---
 
