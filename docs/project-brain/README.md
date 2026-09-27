@@ -3973,6 +3973,48 @@ See [P8 Portfolio / Risk entry audit 001](p8-portfolio-risk-entry-audit-001.md).
 
 ---
 
+### P7 Qlib-native ensemble integration and input qualification (2026-09-26)
+
+P7 is reopened for bounded research integration and real-input qualification,
+not declared complete. The earlier family-count audit remains correct that all
+17 frozen Candidate V3 objects share one Formulaic Alpha producer family, but
+the inference that a common producer prevents combination research from even
+beginning is superseded. Producer identity, economic signal family and
+empirical diversification are different concepts.
+
+The pinned Qlib `AverageEnsemble` public API now passes strict synthetic-only
+integration and input-boundary tests. All 17 Candidate identities and their
+recorded prediction byte hashes are present and verified without opening real
+prediction values. Exact common-support keys, real finite/nonconstant panel
+compatibility, component policy and empirical complementarity remain pending.
+
+```text
+P7_CURRENT_STATUS = ACTIVE_RESEARCH_INTEGRATION_AND_INPUT_QUALIFICATION
+P7_EXIT_CONDITION_SATISFIED = NO
+SIGNAL_COMPLEMENTARITY = NOT_YET_ESTABLISHED
+P7_ENSEMBLE_OWNER = MICROSOFT_QLIB
+P7_UPSTREAM_CLASS = qlib.model.ens.ensemble.AverageEnsemble
+P7_SYNTHETIC_TEST_RESULT = 15_OF_15_PASS
+P7_FROZEN_CANDIDATE_ID_COUNT = 17
+P7_PREDICTION_ARTIFACT_IDENTITY_VERIFIED_COUNT = 17
+P7_REAL_INPUT_COMPATIBILITY_STATUS = NOT_VERIFIED_METADATA_ONLY
+P7_REAL_ENSEMBLE_EXECUTION_COUNT = 0
+P7_PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+P8_STATUS = EARLY_DESIGN_EVIDENCE_ONLY_NO_IMPLEMENTATION
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P7_REAL_DATA_ENSEMBLE_INPUT_CONTRACT_AND_PROTOCOL_FEASIBILITY_001
+FINAL_CLASSIFICATION = PASS_P7_QLIB_NATIVE_ENSEMBLE_INTEGRATION_POC_REAL_INPUT_QUALIFICATION_PENDING
+```
+
+See [P7 Qlib-native ensemble integration POC 001](p7-qlib-native-ensemble-integration-poc-001.md),
+the historical [P7 entry audit](p7-multi-alpha-ensemble-entry-audit-001.md),
+and the historical [P8 entry audit](p8-portfolio-risk-entry-audit-001.md).
+
+---
+
 ## 27. First Principle
 
 > **Do not build what a mature upstream already solves.**
