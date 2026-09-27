@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Dynamic Roster Research Protocol Freeze 001**
+> Development Next: **P7 — PR116 Effective Roster Source Bundle Field Alignment 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4179,11 +4179,26 @@ See [P7 variable-roster upstream handoff POC 001](p7-variable-roster-upstream-ha
 
 #### P7 lifecycle decision to effective roster protocol freeze (2026-09-27)
 
-P7 now has one frozen, research-only policy for converting already-authorized
-P2/P4 lifecycle evidence into a prospective daily XNYS roster. Existing P4
-authority makes only `CERTIFIED` and `SHADOW` eligible for the Challenger
-research roster; `RESEARCH_CANDIDATE`, `CHAMPION`, `DEGRADED`, and `RETIRED`
-are ineligible. This mapping grants no live-capital or production authority.
+P7 now has one semantically corrected, research-only policy for converting
+P2/P4 lifecycle evidence into a prospective daily XNYS roster. P7 research-
+roster eligibility is distinct from the P4 Challenger role: `CERTIFIED`,
+`SHADOW`, and `CHAMPION` are eligible; `RESEARCH_CANDIDATE`, `DEGRADED`, and
+`RETIRED` are ineligible. A Champion's research-roster eligibility grants no
+live-capital or production authority.
+
+State reconstruction begins at `CERTIFIED` only with valid P2 evidence and
+then applies accepted P4 state-changing decisions in authoritative order.
+`NO_CHANGE`, `CHALLENGER_NEEDED`, `RESEARCH_REQUESTED`, and
+`REJECT_TRANSITION` retain the prior state; a rejected target never becomes
+current. Conflict, broken edges, ambiguous ordering, or missing authority
+fails closed.
+
+No existing P2/P4 artifact authorizes a whole P7 roster. The successor
+protocol therefore replaces the unsupported whole-roster
+`authorization_evidence_id` semantics with non-authoritative
+`source_decision_bundle_identity` provenance. Member-level evidence references
+remain. PR #116's runtime field requires a tiny successor rename/removal before
+real roster use; this authority correction adds no runtime code.
 
 Updates are event-driven. The first usable session is the first XNYS session
 strictly after the New York calendar date containing the verified UTC evidence
@@ -4194,11 +4209,17 @@ two authorized members or fewer than two session-active components fails
 closed without fabricating or resurrecting members.
 
 ```text
-P7_ROSTER_PROTOCOL_STATUS = FROZEN_PRE_EXECUTION
-P7_ROSTER_PROTOCOL_SHA256 = fa8107fe9bf834f1d088e22fcf2500f3160e94337bc92ff63e494519d0f4171e
-P7_RESEARCH_ROSTER_ELIGIBLE_STATES = CERTIFIED; SHADOW
-P7_RESEARCH_ROSTER_INELIGIBLE_STATES = RESEARCH_CANDIDATE; CHAMPION; DEGRADED; RETIRED
-P7_ELIGIBILITY_AUTHORITY = P2_CERTIFICATION_AND_P4_LIFECYCLE_DECISIONS
+P7_ROSTER_PROTOCOL_STATUS = FROZEN_PRE_EXECUTION_SEMANTICALLY_CORRECTED
+P7_ROSTER_PROTOCOL_SHA256 = 5034cd1fb5ef6969e7116fa63d5ac40ce22e05f8b16688e0e77f2f72bae97c02
+P7_ROSTER_PROTOCOL_SUPERSEDED_SHA256 = fa8107fe9bf834f1d088e22fcf2500f3160e94337bc92ff63e494519d0f4171e
+P7_RESEARCH_ROSTER_ELIGIBLE_STATES = CERTIFIED; SHADOW; CHAMPION
+P7_RESEARCH_ROSTER_INELIGIBLE_STATES = RESEARCH_CANDIDATE; DEGRADED; RETIRED
+P7_ELIGIBILITY_AUTHORITY = P7_RESEARCH_ROSTER_PROJECTION_OVER_EXISTING_P2_P4_LIFECYCLE_STATE
+P7_P4_CHALLENGER_ROLE_USED_AS_ROSTER_AUTHORITY = NO
+P7_CHAMPION_ROSTER_ELIGIBILITY = ELIGIBLE_RESEARCH_ONLY_NO_PRODUCTION_OR_LIVE_CAPITAL_AUTHORITY
+P7_WHOLE_ROSTER_AUTHORIZATION_FIELD = REMOVED_FROM_SUCCESSOR_PROTOCOL
+P7_SOURCE_DECISION_BUNDLE_IDENTITY = NON_AUTHORITATIVE_PROVENANCE
+P7_PR116_RUNTIME_FIELD_ALIGNMENT = FOLLOW_UP_REQUIRED_BEFORE_REAL_ROSTER_USE
 P7_ROSTER_MEMBER_COUNT_IS_FIXED = NO
 P7_EFFECTIVE_SESSION_RULE = FIRST_XNYS_SESSION_STRICTLY_AFTER_CUTOFF_NEW_YORK_DATE
 P7_MINIMUM_AUTHORIZED_MEMBER_COUNT = 2
@@ -4218,8 +4239,8 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 P7_EXIT_CONDITION_SATISFIED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 AQ_NEW_PRODUCTION_LOC = 0
-CURRENT_DEVELOPMENT_NEXT = P7_DYNAMIC_ROSTER_RESEARCH_PROTOCOL_FREEZE_001
-FINAL_CLASSIFICATION = PASS_P7_LIFECYCLE_DECISION_TO_EFFECTIVE_ROSTER_PROTOCOL_FREEZE
+CURRENT_DEVELOPMENT_NEXT = P7_PR116_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT_001
+FINAL_CLASSIFICATION = PASS_P7_LIFECYCLE_TO_ROSTER_SEMANTIC_CORRECTION
 ```
 
 See [P7 lifecycle decision to effective roster protocol freeze 001](p7-lifecycle-decision-to-effective-roster-protocol-freeze-001.md).

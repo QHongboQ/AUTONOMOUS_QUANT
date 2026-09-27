@@ -1,12 +1,13 @@
 {
-  "protocol_version": "AQ_P7_LIFECYCLE_DECISION_TO_EFFECTIVE_ROSTER_PROTOCOL_V1",
-  "status": "FROZEN_PRE_EXECUTION",
-  "purpose": "Convert already-authorized Candidate and lifecycle evidence into one prospective daily XNYS P7 research roster without inspecting performance or granting production authority.",
+  "protocol_version": "AQ_P7_LIFECYCLE_DECISION_TO_EFFECTIVE_ROSTER_PROTOCOL_V2",
+  "status": "FROZEN_PRE_EXECUTION_SEMANTICALLY_CORRECTED",
+  "purpose": "Reconstruct authoritative Candidate lifecycle state and project eligible states into one prospective daily XNYS P7 research roster without inspecting performance, changing P4 semantics, or granting production authority.",
   "ownership": {
     "candidate_generation": ["ALPHAGEN", "RD_AGENT"],
     "research_pool_mechanics": "ALPHAGEN",
     "certification": "P2",
     "lifecycle_transitions": "P4",
+    "research_roster_projection": "P7_THIN_POLICY",
     "drift_mathematics": "FROUROS",
     "training_rolling_runtime": "MICROSOFT_QLIB",
     "experiment_run_lineage": ["QLIB", "MLFLOW"],
@@ -18,15 +19,13 @@
   },
   "eligibility": {
     "scope": "P7_RESEARCH_ROSTER_ONLY",
-    "eligible_states": ["CERTIFIED", "SHADOW"],
-    "ineligible_states": [
-      "RESEARCH_CANDIDATE",
-      "CHAMPION",
-      "DEGRADED",
-      "RETIRED"
-    ],
-    "authority": "P2_CERTIFICATION_AND_P4_LIFECYCLE_DECISIONS",
-    "existing_authority_basis": "P4 challenger_role_allowed permits only CERTIFIED and SHADOW; CHAMPION cannot simultaneously hold the Challenger role.",
+    "eligible_states": ["CERTIFIED", "SHADOW", "CHAMPION"],
+    "ineligible_states": ["RESEARCH_CANDIDATE", "DEGRADED", "RETIRED"],
+    "authority": "P7_RESEARCH_ROSTER_PROJECTION_OVER_EXISTING_P2_P4_LIFECYCLE_STATE",
+    "p4_challenger_role_used_as_roster_authority": false,
+    "semantic_distinction": "P7_RESEARCH_ROSTER_ELIGIBILITY_NE_P4_CHALLENGER_ROLE_ELIGIBILITY",
+    "existing_authority_basis": "P2 owns certification and P4 owns lifecycle state. P7's research roster is not the P4 Challenger role: CERTIFIED, SHADOW, and CHAMPION remain valid research lifecycle states; DEGRADED and RETIRED are adverse states; RESEARCH_CANDIDATE lacks P2 certification.",
+    "champion_in_research_roster_implies_production_or_live_capital_authorization": false,
     "production_trading_authorization_implied": false,
     "live_capital_authorization_implied": false,
     "candidate_identity_required": "VALID_CANDIDATE_V3",
@@ -34,48 +33,66 @@
     "raw_performance_inputs_permitted": false,
     "alpha_pool_metrics_permitted": false
   },
-  "decision_mapping": [
-    {
-      "evidence": "P2CertificationEvidenceV1:CERTIFIED",
-      "resulting_state": "CERTIFIED",
-      "research_roster_eligibility": "ELIGIBLE"
+  "decision_kind_mapping": {
+    "ADMIT_SHADOW": {
+      "classification": "STATE_CHANGING_ACCEPTED_DECISION",
+      "resulting_state": "SHADOW"
     },
-    {
-      "evidence": "LifecycleDecisionEvidenceV1:ADMIT_SHADOW",
-      "resulting_state": "SHADOW",
-      "research_roster_eligibility": "ELIGIBLE"
+    "PROMOTE_CHAMPION": {
+      "classification": "STATE_CHANGING_ACCEPTED_DECISION",
+      "resulting_state": "CHAMPION"
     },
-    {
-      "evidence": "LifecycleDecisionEvidenceV1:PROMOTE_CHAMPION",
-      "resulting_state": "CHAMPION",
-      "research_roster_eligibility": "NOT_ELIGIBLE"
+    "MARK_DEGRADED": {
+      "classification": "STATE_CHANGING_ACCEPTED_DECISION",
+      "resulting_state": "DEGRADED"
     },
-    {
-      "evidence": "LifecycleDecisionEvidenceV1:MARK_DEGRADED",
-      "resulting_state": "DEGRADED",
-      "research_roster_eligibility": "NOT_ELIGIBLE"
+    "RETIRE": {
+      "classification": "STATE_CHANGING_ACCEPTED_DECISION",
+      "resulting_state": "RETIRED"
     },
-    {
-      "evidence": "LifecycleDecisionEvidenceV1:RETIRE",
-      "resulting_state": "RETIRED",
-      "research_roster_eligibility": "NOT_ELIGIBLE"
+    "NO_CHANGE": {
+      "classification": "NON_STATE_CHANGING_DECISION",
+      "resulting_state": "RETAIN_PRIOR_AUTHORITATIVE_LIFECYCLE_STATE"
     },
-    {
-      "evidence": "LifecycleDecisionEvidenceV1:NO_CHANGE_OR_NON_STATE_DECISION",
-      "resulting_state": "UNCHANGED",
-      "research_roster_eligibility": "RETAIN_PRIOR_AUTHORITATIVE_STATE_MAPPING"
+    "CHALLENGER_NEEDED": {
+      "classification": "NON_STATE_CHANGING_DECISION",
+      "resulting_state": "RETAIN_PRIOR_AUTHORITATIVE_LIFECYCLE_STATE"
     },
-    {
-      "evidence": "P2_REJECTED_NOT_ELIGIBLE_OR_MISSING_CERTIFICATION",
-      "resulting_state": "RESEARCH_CANDIDATE_OR_UNAUTHORIZED",
-      "research_roster_eligibility": "NOT_ELIGIBLE"
+    "RESEARCH_REQUESTED": {
+      "classification": "NON_STATE_CHANGING_DECISION",
+      "resulting_state": "RETAIN_PRIOR_AUTHORITATIVE_LIFECYCLE_STATE"
+    },
+    "REJECT_TRANSITION": {
+      "classification": "NON_STATE_CHANGING_REJECTED_DECISION",
+      "resulting_state": "RETAIN_PRIOR_AUTHORITATIVE_LIFECYCLE_STATE",
+      "rejected_target_state_becomes_current_state": false
     }
-  ],
+  },
+  "state_reconstruction": {
+    "initial_state": "CERTIFIED_ONLY_WITH_VALID_P2CertificationEvidenceV1_FOR_THE_CANDIDATE",
+    "ordered_inputs": "ACCEPTED_P4_LifecycleDecisionEvidenceV1_RECORDS_IN_AUTHORITATIVE_CHRONOLOGICAL_EVIDENCE_ORDER_AVAILABLE_AT_OR_BEFORE_CUTOFF",
+    "ordering_authority": "IMMUTABLE_EXTERNAL_P2_P4_AUTHORITY_DELIVERY_EVIDENCE_NOT_P7_INFERENCE",
+    "procedure": [
+      "validate CandidateV3 identity and real P2 certification evidence",
+      "initialize the post-P2 authoritative lifecycle state as CERTIFIED",
+      "process authoritative P4 decision records in chronological evidence order through the cutoff",
+      "require each decision's candidate identity and current_state to agree with the reconstructed chain where applicable",
+      "apply only ADMIT_SHADOW, PROMOTE_CHAMPION, MARK_DEGRADED, and RETIRE as accepted state changes",
+      "retain the prior state for NO_CHANGE, CHALLENGER_NEEDED, RESEARCH_REQUESTED, and REJECT_TRANSITION",
+      "project the final reconstructed state through the P7 research-roster eligibility mapping"
+    ],
+    "raw_p4_source_evidence_reinterpreted_by_p7": false,
+    "conflicting_accepted_transitions": "FAIL_CLOSED",
+    "broken_lifecycle_edges": "FAIL_CLOSED",
+    "ambiguous_ordering": "FAIL_CLOSED",
+    "missing_required_authority": "FAIL_CLOSED"
+  },
   "evidence_inputs": {
     "directly_consumed": [
       "CandidateV3 identity",
       "P2CertificationEvidenceV1",
-      "LifecycleDecisionEvidenceV1"
+      "LifecycleDecisionEvidenceV1",
+      "immutable authority-delivery identities and availability timestamps"
     ],
     "transitively_referenced_not_interpreted_by_p7": [
       "ShadowEvidenceV2",
@@ -89,12 +106,27 @@
       "LifecycleDecisionEvidenceV1": "REAL_EXTERNAL_EVIDENCE"
     },
     "test_fixture_classifications_admissible_to_real_roster": false,
-    "rule": "P7 consumes authoritative decisions and their immutable source identities, never the performance or detector metrics that produced them."
+    "rule": "P7 consumes authoritative decisions and immutable source identities, never the performance or detector metrics that produced them."
+  },
+  "whole_roster_authority_audit": {
+    "authoritative_existing_artifact_that_authorizes_the_whole_roster": null,
+    "whole_roster_authorization_evidence_id_status": "REMOVED_FROM_SUCCESSOR_PROTOCOL_NOT_SUPPORTED_BY_EXISTING_P2_P4_AUTHORITY",
+    "replacement_field": "source_decision_bundle_identity",
+    "replacement_semantics": "NON_AUTHORITATIVE_IMMUTABLE_IDENTITY_OF_THE_EXACT_EXTERNAL_P2_P4_EVIDENCE_SET_USED_TO_FORM_THE_ROSTER",
+    "replacement_grants_authorization": false,
+    "member_level_authorization_retained": [
+      "members[].candidate_id",
+      "members[].authorization_evidence_id"
+    ],
+    "new_roster_authorization_contract_created": false,
+    "runtime_consistency_follow_up": "TINY_SUCCESSOR_TO_PR116_MUST_RENAME_OR_REMOVE_EffectiveRoster.authorization_evidence_id_BEFORE_REAL_ROSTER_USE"
   },
   "decision_evidence_cutoff": {
     "type": "TIMEZONE_AWARE_UTC_TIMESTAMP",
     "rule": "LATEST_AUTHORITATIVE_AVAILABILITY_TIMESTAMP_OF_THE_COMPLETE_VERIFIED_DECISION_BUNDLE",
     "source": "IMMUTABLE_AUTHORITY_DELIVERY_ENVELOPE_NOT_P7_WALL_CLOCK",
+    "source_decision_bundle_identity": "SHA256_RFC8785_IDENTITY_OF_THE_EXACT_ORDERED_EXTERNAL_EVIDENCE_REFERENCES_AND_AVAILABILITY_METADATA",
+    "source_decision_bundle_is_authorization": false,
     "missing_or_ambiguous": "FAIL_CLOSED",
     "reconstructed_from_market_or_performance_data": false
   },
@@ -102,6 +134,13 @@
     "identity_type": "ISO_YYYY_MM_DD_XNYS_SESSION",
     "owner": "aq_xnys_calendar",
     "rule": "FIRST_XNYS_SESSION_WITH_SESSION_DATE_STRICTLY_AFTER_THE_AMERICA_NEW_YORK_CALENDAR_DATE_OF_DECISION_EVIDENCE_CUTOFF",
+    "conversion_sequence": [
+      "read the timezone-aware UTC cutoff instant",
+      "convert that same instant to America/New_York",
+      "take the America/New_York calendar date",
+      "select the first XNYS session strictly after that date"
+    ],
+    "utc_date_shortcut_permitted": false,
     "same_session_activation": false,
     "intraday_activation": false,
     "backward_rewrite": false,
@@ -111,17 +150,18 @@
     "inputs": [
       "current immutable effective roster",
       "verified CandidateV3 identities",
-      "new P2/P4 authoritative decisions available by cutoff",
+      "complete externally ordered P2/P4 authority bundle available by cutoff",
       "frozen use scope",
+      "source decision bundle identity",
       "decision evidence cutoff",
       "derived effective session"
     ],
     "procedure": [
-      "derive one unambiguous authoritative lifecycle state per Candidate at the cutoff",
-      "retain exactly Candidates whose authoritative state is CERTIFIED or SHADOW",
-      "bind each member to the immutable evidence identity authorizing that state",
+      "reconstruct one unambiguous authoritative lifecycle state per Candidate at the cutoff",
+      "retain exactly Candidates whose authoritative state is CERTIFIED, SHADOW, or CHAMPION",
+      "bind each member to the immutable evidence identity supporting its reconstructed eligible state",
       "sort members by candidate_id",
-      "fail closed on conflicting decisions or duplicate Candidate identities",
+      "fail closed on conflicting transitions, broken edges, ambiguous ordering, missing authority, or duplicate Candidate identities",
       "form at most one next manifest for an effective session",
       "bind supersedes_roster_id to the immediately prior manifest",
       "derive roster_id as SHA256 of RFC8785 JCS over all immutable non-ID fields"
@@ -130,11 +170,12 @@
     "dynamic_weighting": false,
     "target_member_count": null,
     "member_count_is_fixed": false,
-    "member_count_definition": "N_t equals the number of externally authorized eligible members at time t."
+    "member_count_definition": "N_t equals the number of authoritative Candidates in CERTIFIED, SHADOW, or CHAMPION at time t."
   },
   "minimum_component_policy": {
     "minimum_authorized_member_count": 2,
     "authorized_member_count_below_minimum": "FAIL_CLOSED_NO_RUNNABLE_ROSTER_FROM_EFFECTIVE_SESSION; DO_NOT_CARRY_FORWARD_UNAUTHORIZED_MEMBERS; DO_NOT_FABRICATE_OR_RESURRECT_MEMBERS",
+    "valid_champion_is_unauthorized": false,
     "minimum_session_active_component_count": 2,
     "session_active_count_rule": "Existing session-local exact-constant policy remains unchanged; missing, non-finite, misaligned or otherwise invalid prediction input fails closed rather than becoming ordinary inactivity.",
     "authorized_member_count_is_distinct_from_session_active_component_count": true
@@ -170,7 +211,7 @@
     "minimum_serialized_fields": [
       "roster_id",
       "use_scope",
-      "authorization_evidence_id",
+      "source_decision_bundle_identity",
       "evidence_cutoff",
       "effective_session",
       "supersedes_roster_id",
@@ -179,24 +220,23 @@
     ],
     "runtime_readiness_input": "SET_OF_CANDIDATE_IDS_RESOLVED_THROUGH_CANDIDATE_V3_QLIB_RECORDER_AUTHORITY",
     "preferred_future_persistence": "DVC_IMMUTABLE_ARTIFACT",
-    "new_transport_framework": false
+    "new_transport_framework": false,
+    "existing_pr116_runtime_schema_alignment": "FOLLOW_UP_REQUIRED_BEFORE_REAL_ROSTER_USE"
   },
-  "synthetic_proof": {
+  "synthetic_semantic_cases": {
     "classification": "TEST_FIXTURE_NOT_REAL_EVIDENCE",
-    "sequence": [
-      {
-        "event": "INITIAL_EXTERNAL_AUTHORIZATION",
-        "authorized_member_count": 3
-      },
-      {
-        "event": "TWO_ADDITIONAL_EXTERNAL_AUTHORIZATIONS",
-        "authorized_member_count": 5
-      },
-      {
-        "event": "THREE_EXTERNAL_LIFECYCLE_DECISIONS_MAKE_MEMBERS_INELIGIBLE",
-        "authorized_member_count": 2
-      }
-    ],
+    "cases": {
+      "A": "CERTIFIED -> ELIGIBLE",
+      "B": "CERTIFIED -> ADMIT_SHADOW -> SHADOW -> ELIGIBLE",
+      "C": "SHADOW -> PROMOTE_CHAMPION -> CHAMPION -> ELIGIBLE",
+      "D": "CHAMPION -> MARK_DEGRADED -> DEGRADED -> INELIGIBLE_PROSPECTIVELY",
+      "E": "DEGRADED -> RETIRE -> RETIRED -> INELIGIBLE",
+      "F": "SHADOW + REJECT_TRANSITION(target=CHAMPION) -> SHADOW -> ELIGIBLE",
+      "G": "CHAMPION + CHALLENGER_NEEDED -> CHAMPION -> ELIGIBLE",
+      "H": "ANY_STATE + RESEARCH_REQUESTED -> STATE_UNCHANGED",
+      "I": "CHAMPION + CERTIFIED -> AUTHORIZED_MEMBER_COUNT_2 -> RUNNABLE_SUBJECT_TO_SESSION_ACTIVE_GATE"
+    },
+    "variable_count_fixture_preserved": "3_TO_5_TO_2",
     "real_candidate_identities_used": false,
     "real_lifecycle_records_modified": false,
     "performance_accessed": false
@@ -214,5 +254,5 @@
     "p2_v2_sealed_oos_accessed": false,
     "p2_v2_cohort_modified": false
   },
-  "next_task": "P7_DYNAMIC_ROSTER_RESEARCH_PROTOCOL_FREEZE_001"
+  "next_task": "P7_PR116_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT_001"
 }
