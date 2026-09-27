@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Historical static ensemble research protocol freeze**
+> Active Development: **P7 — Historical static ensemble research execution**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Historical Static Ensemble Research Protocol Freeze 001**
+> Development Next: **P7 — Historical Static Ensemble Research Execution 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4590,6 +4590,62 @@ FINAL_CLASSIFICATION = PASS_FUTURE_CANDIDATE_UPSTREAM_PATH_FROZEN
 ```
 
 See [P3 future Candidate upstream path freeze 001](p3-future-candidate-upstream-path-freeze-001.md).
+
+---
+
+#### P7 historical static ensemble research protocol freeze (2026-09-27)
+
+One research-only historical static ensemble protocol is frozen before result
+access. It binds the exact 17 Formulaic Candidate V3 snapshot, complete
+374,591-row P7 input contract, and preregistered OLS Alpha158 control. Pinned
+Qlib `AverageEnsemble` owns session-local standardization and equal averaging;
+exact constants are inactive only for their session and at least two active
+components remain mandatory.
+
+Daily cross-sectional RankIC delta versus OLS is the sole primary endpoint.
+arch SPA owns the one preregistered primary inference, skfolio WalkForward and
+CPCV own robustness partitions only, and arch MCS supplies a descriptive
+ensemble-plus-17-component family diagnostic. The frozen P2 V2 Top-30/drop-3
+configuration is authorized only as a secondary descriptive projection.
+
+```text
+STUDY_TYPE = RESEARCH_ONLY_HISTORICAL_STATIC_ENSEMBLE
+PRISTINE_OOS = NO
+P2_CERTIFICATION_EVIDENCE = NO
+P7_DYNAMIC_ROSTER_EVIDENCE = NO
+P7_EXIT_CONDITION_EVIDENCE = NO
+MASTER_CANDIDATE_COUNT = 17
+INDEPENDENT_ALPHA_FAMILY_COUNT = 1
+ROW_COUNT = 374591
+SESSION_COUNT = 751
+INSTRUMENT_COUNT = 547
+POPULATION_INDEX_SHA256 = 2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e
+INPUT_CONTRACT_SHA256 = 92de81d0b8b7b7a29891bf523ae8519af44456f52fea3410ebf0ebd210d0f81f
+ENSEMBLE_OWNER = QLIB_AVERAGEENSEMBLE
+ENSEMBLE_WEIGHTING = SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT
+MINIMUM_ACTIVE_COMPONENT_COUNT = 2
+PRIMARY_METRIC = DAILY_CROSS_SECTIONAL_RANK_IC
+PRIMARY_COMPARISON = STATIC_17_ENSEMBLE_MINUS_OLS_ALPHA158_CONTROL
+PRIMARY_ENDPOINT = MEAN_DAILY_RANK_IC_DELTA_VS_OLS_CONTROL
+MULTIPLE_COMPARISON_PROCEDURE = ARCH_8_0_0_MCS_DESCRIPTIVE_18_SIGNAL_FAMILY
+TEMPORAL_CV_RESTORES_PRISTINE_OOS = NO
+PORTFOLIO_PROJECTION_STATUS = AUTHORIZED_SECONDARY_REUSE_FROZEN_P2_V2_CONFIGURATION
+RESULT_CLASSIFICATIONS = STATIC_ENSEMBLE_RESEARCH_SUPPORTIVE; STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE; STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE
+PROTOCOL_SHA256 = b60078bdba4190fbda2c6f3d3580f0e40a9801c87867095bfaa12885a0fb3ff4
+PROTOCOL_STATUS = FROZEN_PRE_EXECUTION
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+ENSEMBLE_EXECUTION_COUNT = 0
+RANKIC_COMPUTATION_COUNT = 0
+PORTFOLIO_BACKTEST_COUNT = 0
+PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_EXECUTION_001
+FINAL_CLASSIFICATION = PASS_P7_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_FROZEN
+```
+
+See [P7 historical static ensemble research protocol freeze 001](p7-historical-static-ensemble-research-protocol-freeze-001.md).
 
 ---
 
