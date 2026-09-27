@@ -147,6 +147,21 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
                 eligible_index=eligible,
             )
 
+    def test_same_row_omission_across_all_candidates_fails_against_eligibility(self) -> None:
+        selected, predictions, ready, eligible = fixture_inputs()
+        omitted_key = (pd.Timestamp("2024-01-02"), "A")
+        all_omitted = {
+            name: frame.drop(index=omitted_key) if omitted_key in frame.index else frame.copy()
+            for name, frame in predictions.items()
+        }
+        with self.assertRaisesRegex(ValueError, "do not match eligibility"):
+            handoff.combine_selected_roster_predictions(
+                selected=selected,
+                predictions=all_omitted,
+                runtime_ready_candidates=ready,
+                eligible_index=eligible,
+            )
+
     def test_constant_policy_and_minimum_active_gate(self) -> None:
         selected, predictions, ready, eligible = fixture_inputs()
         one_constant = {name: frame.copy() for name, frame in predictions.items()}

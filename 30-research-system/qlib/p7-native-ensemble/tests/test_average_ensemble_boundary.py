@@ -56,6 +56,21 @@ class AverageEnsembleBoundaryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "row identities"):
             boundary.combine_complete_predictions(components)
 
+    def test_same_row_omission_requires_the_external_eligible_index_guard(self) -> None:
+        components = complete_components()
+        omitted = {name: frame.iloc[1:] for name, frame in components.items()}
+        native = AverageEnsemble()(omitted)
+        guarded = boundary.combine_complete_predictions(omitted)
+        self.assertEqual(len(native), len(components["alpha"]) - 1)
+        self.assertTrue(np.isfinite(native).all())
+        self.assertTrue(guarded.index.equals(omitted["alpha"].index))
+
+    def test_unsorted_rows_fail_closed(self) -> None:
+        components = complete_components()
+        components["beta"] = components["beta"].iloc[::-1]
+        with self.assertRaisesRegex(ValueError, "index must be sorted"):
+            boundary.combine_complete_predictions(components)
+
     def test_duplicate_keys_fail_closed(self) -> None:
         components = complete_components()
         duplicate = pd.concat([components["beta"], components["beta"].iloc[[0]]]).sort_index()
@@ -85,6 +100,17 @@ class AverageEnsembleBoundaryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "non-finite standardization mean"):
                 boundary.combine_complete_predictions(components)
             ensemble.assert_not_called()
+
+    def test_native_overflow_silently_drops_the_invalid_component(self) -> None:
+        components = complete_components()
+        components["large"] = components["alpha"].copy()
+        components["large"].loc[:, "score"] = [8e307, 9e307, 1e308] * 2
+        with np.errstate(over="ignore", invalid="ignore"):
+            native = AverageEnsemble()(components)
+            without_large = AverageEnsemble()(
+                {name: frame for name, frame in components.items() if name != "large"}
+            )
+        assert_series_equal(native, without_large)
 
     def test_finite_nonconstant_std_underflow_fails_before_native_ensemble(self) -> None:
         components = complete_components()
