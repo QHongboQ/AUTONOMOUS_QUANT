@@ -1,0 +1,213 @@
+{
+  "candidate_snapshot": {
+    "bindings": [
+      {
+        "candidate_id": "sha256:de6ecb854a360ffe185ab055df5220d581da8a5e8c14f1a1adf24ef4cc60d577",
+        "slot": "candidate-001",
+        "source_prediction_sha256": "6f94bbd7aa14e5b8abfd810b27cf0f10521d9d1a7f615470776ba5a13bfdd3ce"
+      },
+      {
+        "candidate_id": "sha256:5f3c9e5f6ce0a1fdf38d87ab6a4609d94f3e170e70008c4289ef3828898e9b5d",
+        "slot": "candidate-002",
+        "source_prediction_sha256": "6cf5f69b5fb3358ec3725219806a55e44ae39cded37e98b45cc409225222e558"
+      },
+      {
+        "candidate_id": "sha256:e36c1cd6a92ee4b078cdf3e514f839739d74a72940596c0377dcb6bbbeeb3e16",
+        "slot": "candidate-003",
+        "source_prediction_sha256": "a5f8a0bf419a3cc10be5a2b2135703793649e4f698886a4c02dacdcbb7045bce"
+      },
+      {
+        "candidate_id": "sha256:5e2c2e5746a020393ced636cbae76d612aaf9334cfa2ea4addd6dd6ba1960d85",
+        "slot": "candidate-004",
+        "source_prediction_sha256": "6d95d4910386802ec8bc0cd0495e6a4bb89b4703571c16f7c154152a8c24b092"
+      },
+      {
+        "candidate_id": "sha256:f8409ded53d351c83de386794cf7fbf383813805cf7c60bd112dbb8fae1dc1cc",
+        "slot": "candidate-005",
+        "source_prediction_sha256": "51952a9d5ea12aae48df6121a6522f42e55ee53af767a1af40eed30e945676a9"
+      },
+      {
+        "candidate_id": "sha256:aad1eaafe206dfa683dfd47934b17fa0d16df65fcf7b967534f19f518ba3a81b",
+        "slot": "candidate-006",
+        "source_prediction_sha256": "891327baf5c52a6ee8f5c9da043070ac7c54d48bdd6aa62c628909de1395a2b7"
+      },
+      {
+        "candidate_id": "sha256:80662d497b6e0da7f60f528d56e3048f20fa3531a1f179fc36587784fbe104e7",
+        "slot": "candidate-007",
+        "source_prediction_sha256": "dd732208e18da7c1ae26cb27872e9befef6eb5abf395230dc1a9c5ab5b2d5012"
+      },
+      {
+        "candidate_id": "sha256:7353d7a77ffb0883014e81b10457de323d4d300954be304f31c17c2b18230b15",
+        "slot": "candidate-008",
+        "source_prediction_sha256": "86be2394545bb84a092e64153b1ad335969d4776860422b47a65b49f9ab89f76"
+      },
+      {
+        "candidate_id": "sha256:61ae57c774925c90836ba69ff0fbfdbaa0ef015127f61f3a5b6e6b7f063adb4c",
+        "slot": "candidate-009",
+        "source_prediction_sha256": "2c7bdae6db795d1fc2b1736e7bba09af7dfafc9bba1e51e92b37bda72548b017"
+      },
+      {
+        "candidate_id": "sha256:89397f82c2361985cde1e73ce740e8da808d4db005bc28885dbd1ad4271c5d5d",
+        "slot": "candidate-010",
+        "source_prediction_sha256": "c5c735400f843049a49dc04095f417f0ac25991bf1bf51137140d0beee77039f"
+      },
+      {
+        "candidate_id": "sha256:99bdafc3e9f0b1c7f895810d50f398eac92a2f8805f33b87c7fa00347f344195",
+        "slot": "candidate-011",
+        "source_prediction_sha256": "d5a5a506fec62ef76c76757cf574e3c89eb15434b0f77741bc57458067f5f6a4"
+      },
+      {
+        "candidate_id": "sha256:36ef2725aea4552dcbe35791fc63b4deed4c889197d12afcc272089e19fee33b",
+        "slot": "candidate-012",
+        "source_prediction_sha256": "056d2d66cc84e674789939fc4f4f601a85f15ddf9eab82251ac98fc320c57865"
+      },
+      {
+        "candidate_id": "sha256:c73944e9e3d16055e30d3ad5c3e1935450c32981aa3fc7408e0814662b9a88ec",
+        "slot": "candidate-013",
+        "source_prediction_sha256": "f86a5906821697852e347fa7f60cd393b2c043d717f8861fc4516d896cc1f41a"
+      },
+      {
+        "candidate_id": "sha256:644a49049888306381197754c95574f536fd98267766431afebd46ac0f600934",
+        "slot": "candidate-014",
+        "source_prediction_sha256": "fe9cbbdfa2c70fd1a497051ee1089e54db61718f6efaea782cb8de362ef6ffd3"
+      },
+      {
+        "candidate_id": "sha256:c21850f3f1ef47bc22ec70096622118216452ec550013f8c06874a3b6a851086",
+        "slot": "candidate-015",
+        "source_prediction_sha256": "bc3b23a4e44bfacc2686142690303f8a7a4efb15b38fcb054465000dae02b679"
+      },
+      {
+        "candidate_id": "sha256:20f058b616bed7ce14c4c820e4742c92cafb10b12447a1706b90364137e87f0b",
+        "slot": "candidate-016",
+        "source_prediction_sha256": "570320e758cd3ea278613189bd89f2a5d28fdf33d697160f446f7aa9cb1fc01c"
+      },
+      {
+        "candidate_id": "sha256:1a0e410676276ef1a7381d94d7a13feace60969b8207f195e51ea77f23450719",
+        "slot": "candidate-017",
+        "source_prediction_sha256": "46e12a561f33f4ada8b15069263823e1cc436c65e02bacea7f4748d738793d88"
+      }
+    ],
+    "candidate_count": 17,
+    "candidate_signs": "UNCHANGED_FROM_V1_NO_SIGN_FLIPPING",
+    "candidate_weights": "UNCHANGED_FROM_V1_SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT",
+    "coverage": "PASS_EXACT_V1_GRID_COVERAGE_IMPLIES_STRICT_SUCCESSOR_SUBSET_COVERAGE",
+    "roster": "EXACT_V1_17_CANDIDATE_V3_IDENTITIES"
+  },
+  "contract_status": "FROZEN_PRE_PROTOCOL",
+  "control": {
+    "control_id": "p2_certification_historical_rehearsal_linear_ols",
+    "coverage": "PASS_EXACT_V1_GRID_COVERAGE_IMPLIES_STRICT_SUCCESSOR_SUBSET_COVERAGE",
+    "fit_policy": "TRAIN_ONLY",
+    "model_config_identity": "sha256:b9a92537a9737ce909284e77e583ad20c0a3d2b18f795271d85db6c5ba5eafc1",
+    "model_identity": "qlib.contrib.model.linear.LinearModel(estimator=ols)",
+    "source_prediction_sha256": "26c3433faa58a64914393fe13eac169d9ce86dbbe86f16dfb2b24fbd64139dab"
+  },
+  "future_execution_provenance": {
+    "dirty_worktree_allowed": false,
+    "execution_code_committed_pre_outcome_required": true,
+    "manifest_binds_commit_sha": true,
+    "manifest_binds_script_sha256": true,
+    "reject_head_mismatch": true,
+    "reject_input_contract_identity_mismatch": true,
+    "reject_protocol_identity_mismatch": true
+  },
+  "immutable_scientific_elements": {
+    "candidate_identities": "UNCHANGED_FROM_V1",
+    "candidate_source_predictions": "UNCHANGED_FROM_V1",
+    "candidate_signs": "UNCHANGED_FROM_V1",
+    "candidate_weights": "UNCHANGED_FROM_V1",
+    "ensemble_weighting": "SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT",
+    "ols_control": "UNCHANGED_FROM_V1",
+    "primary_comparator": "STATIC_17_ENSEMBLE_MINUS_OLS_ALPHA158_CONTROL",
+    "roster_membership": "UNCHANGED_FROM_V1"
+  },
+  "label_authority": {
+    "expression": "Ref($close, -2)/Ref($close, -1) - 1",
+    "label_artifact_sha256": "c14c7c3f1e698126663b85dfcf436cf3258dc4609e8217e95ed188d9be7db35e",
+    "label_generation_owner": "MICROSOFT_QLIB",
+    "label_semantics_owner": "MICROSOFT_QLIB",
+    "qlib_source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8",
+    "qlib_version": "0.9.8.dev26"
+  },
+  "label_validity_mask": {
+    "artifact_byte_sha256": "5f0b363ca5b699b5dd575260e2343155737e8a436b49a9899f5ee04f3b05956d",
+    "key_identity": "EXACT_V1_POPULATION_KEY_AND_ORDER",
+    "row_count": 374591,
+    "rule": "LABEL_KEY_PRESENT AND LABEL_FINITE",
+    "semantic_sha256": "2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf"
+  },
+  "missingness_disclosure": {
+    "affected_instrument_count": 57,
+    "affected_session_count": 74,
+    "label_nonfinite_row_count": 114,
+    "membership_horizon_exclusion_count": 72,
+    "missingness_assumption": "NOT_MCAR",
+    "performance_split_by_missingness_cause": "PROHIBITED",
+    "provider_gap_exclusion_count": 42,
+    "successor_results_generalize_only_to": "LABEL_OBSERVABLE_EVALUATION_POPULATION"
+  },
+  "no_imputation_policy": {
+    "backfill_label": "PROHIBITED",
+    "custom_aq_label_generation": "PROHIBITED",
+    "fill_label_with_zero": "PROHIBITED",
+    "forward_fill_label": "PROHIBITED",
+    "synthetic_return_imputation": "PROHIBITED"
+  },
+  "non_authorizations": {
+    "ensemble_execution": false,
+    "performance_access": false,
+    "research_protocol_created": false,
+    "v1_repair": false,
+    "v1_rerun": false
+  },
+  "ownership": {
+    "aq_label_engine": false,
+    "aq_scope": [
+      "STRUCTURAL_LABEL_VALIDITY_CONTRACT",
+      "POPULATION_IDENTITY",
+      "DISCLOSURE_SEMANTICS",
+      "FAIL_CLOSED_CHECKS"
+    ],
+    "label_generation_owner": "QLIB",
+    "label_semantics_owner": "QLIB"
+  },
+  "predecessor_v1": {
+    "input_contract_sha256": "92de81d0b8b7b7a29891bf523ae8519af44456f52fea3410ebf0ebd210d0f81f",
+    "is_superseded": false,
+    "population_index_sha256": "2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e",
+    "result": "STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE",
+    "row_count": 374591,
+    "successor_input_contract_replaces_v1_history": false
+  },
+  "private_artifacts": {
+    "checksums_sha256": "f5e7e4b2bbb038b3e8125dd68d50f716397faffd24abe2dee3c1bed381d02baa",
+    "root": "D:/AQ_DATA/P7/successor-static-ensemble-label-observable-input-contract-freeze-001",
+    "successor_population_artifact_byte_sha256": "5f240cb9d88a318047d597c2ed11c1356eebc60fe0b59ae982d347089dcf4c38"
+  },
+  "row_rules": {
+    "label_valid_row": "LABEL_KEY_PRESENT AND LABEL_FINITE",
+    "performance_independent": true,
+    "successor_row_eligible": "V1_PREDICTION_CONTROL_POPULATION_VALID AND LABEL_VALID_ROW"
+  },
+  "schema": "AQ_P7_SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT_V1",
+  "study": {
+    "classification": "NEW_RESEARCH_ONLY_POST_FAILURE_DISCLOSED_STATIC_ENSEMBLE",
+    "estimand": "CONDITIONAL_ON_PREREGISTERED_LABEL_OBSERVABILITY",
+    "estimand_changed_from_v1": true,
+    "new_input_contract_identity": true,
+    "new_label_validity_mask_identity": true,
+    "new_population_index_identity": true
+  },
+  "successor_population": {
+    "all_sessions_rankic_structurally_feasible": true,
+    "artifact_byte_sha256": "5f240cb9d88a318047d597c2ed11c1356eebc60fe0b59ae982d347089dcf4c38",
+    "end": "2024-12-27",
+    "excluded_row_count": 114,
+    "instrument_count": 547,
+    "minimum_rows_per_session": 490,
+    "ordered_index_sha256": "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0",
+    "row_count": 374477,
+    "session_count": 751,
+    "start": "2022-01-03"
+  }
+}
