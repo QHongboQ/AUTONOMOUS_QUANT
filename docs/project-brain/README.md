@@ -3876,7 +3876,13 @@ FINAL_CLASSIFICATION = PASS_P6_FINSEN_INCONCLUSIVE_AND_PHASE_CLOSEOUT_NO_NEW_ADM
 
 The FinSen executor is retained as a frozen single-use research executor for
 audit/reproduction only; it is not a generic evaluation framework. PR #106 is
-superseded stale closeout evidence and must not be merged.
+closed without merge and superseded by this final P6 closeout.
+
+```text
+PR106_STATE = CLOSED_SUPERSEDED
+PR106_MERGED = NO
+PR106_SUPERSEDED = YES
+```
 
 See [P6 Historical News FinSen inconclusive and phase closeout 001](p6-historical-news-finsen-inconclusive-and-phase-closeout-001.md).
 
