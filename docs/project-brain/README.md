@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Historical News FinSen First Authorized Ablation 001**
+> Development Next: **P6 — Historical News FinSen Inconclusive Closeout or Exact Recovery 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3779,6 +3779,57 @@ FINAL_CLASSIFICATION = PASS_P6_HISTORICAL_NEWS_FINSEN_ABLATION_PROTOCOL_FROZEN
 ```
 
 PR #106 remains open, unmerged, and unmodified stale closeout evidence.
+
+---
+
+### P6 FinSen first authorized ablation (2026-09-26)
+
+The single preregistered `M0 = BASE_157` versus
+`M1 = BASE_157 + finsen_finbert_market_sentiment` comparison passed every
+pre-fit identity, row, label, membership, missingness, broadcast, runtime, and
+model-config gate. Exactly two Qlib models were fitted. The 1,011,952-row
+surfaces remained identical apart from the one frozen FinSen column, including
+all 84 NULL sessions.
+
+The finite Qlib Rank IC evidence is `0.004271356026045012` for M0 and
+`0.005851775987652466` for M1, a delta of `0.0015804199616074538`. This does
+not support a positive scientific classification because the preregistered
+WalkForward procedure is impossible on the frozen common-support test window:
+`train_size=504` plus `purged_size=2` requires at least 506 observations, while
+the exact test window contains 385 sessions. No WalkForward, CPCV, SPA, or
+RealityCheck result was fabricated, and no parameter, date, factor, or model
+was changed after outcome access.
+
+The initial composition call also inherited the P2 reference module's longer
+2024 test boundary. Those outputs are retained only as invalid diagnostic
+evidence. An exact no-refit recovery rebound the same shared Qlib backtest
+mechanics to the already-frozen FinSen end date, and the authoritative return
+evidence has exactly 385 sessions. Model refit count for that recovery is zero.
+
+```text
+FINSEN_ABLATION_RESULT = INCONCLUSIVE
+INCONCLUSIVE_REASON = FROZEN_WALKFORWARD_REQUIRES_AT_LEAST_506_OBSERVATIONS_BUT_TEST_HAS_385
+PROTOCOL_SHA256 = 63c69d4eb80a7d98ad4b846484ca14a0bc47e83b2fc5659a261098e7852d79b9
+M0_ROW_COUNT = 1011952
+M1_ROW_COUNT = 1011952
+M0_TEST_RANK_IC = 0.004271356026045012
+M1_TEST_RANK_IC = 0.005851775987652466
+RANK_IC_DELTA = 0.0015804199616074538
+MODEL_TRAINING_COUNT = 2
+PREDICTION_COUNT = 2
+BACKTEST_COUNT = 2
+ABLATION_COUNT = 1
+PROTOCOL_CHANGING_RERUN_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+PRIVATE_EVIDENCE_ROOT = D:/AQ_DATA/P6/historical-news-finsen-first-authorized-ablation-001
+PRIVATE_EVIDENCE_CHECKSUM_SHA256 = 728cd2ac31eb9e40f1f9682fe6663ac46a68ac17af71f446ee32c31892d2a5d0
+PR106_STATE = OPEN
+PR106_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_FINSEN_INCONCLUSIVE_CLOSEOUT_OR_EXACT_RECOVERY_001
+FINAL_CLASSIFICATION = INCONCLUSIVE_P6_HISTORICAL_NEWS_FINSEN_FROZEN_WALKFORWARD_INSUFFICIENT_OBSERVATIONS
+```
 
 ---
 
