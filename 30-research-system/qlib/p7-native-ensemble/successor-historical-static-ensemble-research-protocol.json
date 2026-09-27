@@ -1,0 +1,223 @@
+{
+  "candidate_snapshot": {
+    "binding_owner": "SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT",
+    "candidate_count": 17,
+    "candidate_identities_and_source_hashes": "BOUND_BY_SUCCESSOR_INPUT_CONTRACT_SHA256",
+    "candidate_signs": "UNCHANGED_FROM_V1_NO_SIGN_FLIPPING",
+    "independent_alpha_family_count": 1,
+    "roster_policy": "FIXED_EXISTING_FORMULAIC_CANDIDATE_V3_SNAPSHOT"
+  },
+  "classification": {
+    "inconclusive_when": "REQUIRED_INPUT_OR_METHOD_INTEGRITY_FAILURE_PREVENTS_COMPLETE_VALID_PRIMARY_AND_ROBUSTNESS_EVIDENCE",
+    "not_supportive_when": "COMPLETE_VALID_EXECUTION_AND_ANY_REQUIRED_SUPPORTIVE_GATE_IS_FALSE",
+    "result_classifications": [
+      "STATIC_ENSEMBLE_RESEARCH_SUPPORTIVE",
+      "STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE",
+      "STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE"
+    ],
+    "supportive_when_all": [
+      "FULL_PERIOD_MEAN_DAILY_RANK_IC_DELTA_GREATER_THAN_ZERO",
+      "ARCH_SPA_CONSISTENT_PVALUE_LESS_THAN_OR_EQUAL_TO_0_05",
+      "WALKFORWARD_POSITIVE_FOLD_FRACTION_GREATER_THAN_OR_EQUAL_TO_0_6",
+      "WALKFORWARD_MEDIAN_FOLD_MEAN_DELTA_GREATER_THAN_ZERO",
+      "CPCV_POSITIVE_SPLIT_FRACTION_GREATER_THAN_OR_EQUAL_TO_0_6",
+      "CPCV_MEDIAN_SPLIT_MEAN_DELTA_GREATER_THAN_ZERO"
+    ]
+  },
+  "component_family_diagnostics": {
+    "classification_role": "DESCRIPTIVE_ONLY_NO_PRIMARY_GATE_NO_SELECTION",
+    "component_control_count": 17,
+    "loss_columns": "STATIC_17_ENSEMBLE_PLUS_ALL_17_COMPONENTS_NEGATIVE_DAILY_RANK_IC",
+    "procedure": "ARCH_8_0_0_MCS",
+    "procedure_parameters": {
+      "block_size": 10,
+      "bootstrap": "stationary",
+      "method": "R",
+      "reps": 5000,
+      "seed": 20260913,
+      "size": 0.05
+    },
+    "roster_selection_role": "NONE"
+  },
+  "control": {
+    "control_id": "p2_certification_historical_rehearsal_linear_ols",
+    "fit_policy": "TRAIN_ONLY",
+    "model_config_identity": "sha256:b9a92537a9737ce909284e77e583ad20c0a3d2b18f795271d85db6c5ba5eafc1",
+    "model_identity": "qlib.contrib.model.linear.LinearModel(estimator=ols)",
+    "prediction_sha256": "26c3433faa58a64914393fe13eac169d9ce86dbbe86f16dfb2b24fbd64139dab",
+    "recorder_id": "d6035e318a0640da876e52d587137e7c"
+  },
+  "ensemble": {
+    "constant_session_policy": "EXACT_CONSTANT_COMPONENT_INACTIVE_FOR_CURRENT_SESSION_ONLY_NOT_A_ROSTER_CHANGE",
+    "minimum_active_component_count": 2,
+    "missing_nonfinite_misaligned_policy": "FAIL_CLOSED",
+    "owner": "QLIB_AVERAGEENSEMBLE",
+    "qlib_source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8",
+    "upstream_class": "qlib.model.ens.ensemble.AverageEnsemble",
+    "weighting": "SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT"
+  },
+  "execution_provenance_firewall": {
+    "attempt_manifest_must_bind": [
+      "PROTOCOL_SHA256",
+      "SUCCESSOR_INPUT_CONTRACT_SHA256",
+      "SUCCESSOR_POPULATION_INDEX_SHA256",
+      "LABEL_VALIDITY_MASK_SHA256",
+      "EXECUTION_COMMIT_SHA",
+      "EXECUTION_SCRIPT_SHA256",
+      "CANDIDATE_ARTIFACT_HASHES",
+      "OLS_ARTIFACT_HASH",
+      "LABEL_ARTIFACT_HASH",
+      "QLIB_SKFOLIO_ARCH_VERSIONS"
+    ],
+    "dirty_worktree_allowed": false,
+    "execution_code_must_be_committed_pre_outcome": true,
+    "execution_commit_must_be_on_origin_main": true,
+    "head_mismatch": "FAIL_CLOSED",
+    "script_hash_mismatch": "FAIL_CLOSED"
+  },
+  "input_contract": {
+    "end": "2024-12-27",
+    "instrument_count": 547,
+    "label_validity_mask_sha256": "2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf",
+    "population_index_sha256": "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0",
+    "population_recomputation_at_execution": "PROHIBITED",
+    "row_count": 374477,
+    "row_policy": "EXACT_FROZEN_SUCCESSOR_POPULATION_AND_ORDER_NO_RUNTIME_DROP_INTERSECTION_OR_UNION",
+    "session_count": 751,
+    "start": "2022-01-03",
+    "successor_input_contract_sha256": "b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee"
+  },
+  "label": {
+    "execution_requirement": "EVERY_FROZEN_SUCCESSOR_ROW_KEY_PRESENT_AND_FINITE",
+    "expression": "Ref($close, -2)/Ref($close, -1) - 1",
+    "label_artifact_sha256": "c14c7c3f1e698126663b85dfcf436cf3258dc4609e8217e95ed188d9be7db35e",
+    "label_validity_mask_sha256": "2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf",
+    "owner": "QLIB",
+    "runtime_dropping": "PROHIBITED",
+    "runtime_imputation": "PROHIBITED",
+    "runtime_intersection": "PROHIBITED"
+  },
+  "non_authorizations": {
+    "certified_result": false,
+    "dynamic_roster_validated": false,
+    "p2_certification_evidence": false,
+    "p7_exit_condition_evidence": false,
+    "production_authorization": false,
+    "protocol_changing_rerun_authorized": false,
+    "successor_execution_code_created": false
+  },
+  "ownership": {
+    "ensemble_owner": "QLIB",
+    "label_owner": "QLIB",
+    "rank_ic_owner": "QLIB",
+    "reproducibility_owner": "DVC",
+    "run_lineage_owner": "QLIB_MLFLOW",
+    "statistical_test_owner": "ARCH",
+    "temporal_split_owner": "SKFOLIO"
+  },
+  "portfolio_projection": {
+    "account": 100000000,
+    "benchmark": null,
+    "classification_role": "SECONDARY_DESCRIPTIVE_ONLY_NO_PRIMARY_GATE",
+    "end": "2024-12-27",
+    "exchange": {
+      "close_cost": 0.0015,
+      "deal_price": "close",
+      "limit_threshold": 0.095,
+      "min_cost": 5,
+      "open_cost": 0.0005
+    },
+    "n_drop": 3,
+    "parameter_neighbor_tests": "PROHIBITED",
+    "status": "AUTHORIZED_SECONDARY_REUSE_FROZEN_V1_P2_V2_CONFIGURATION",
+    "strategy_class": "qlib.contrib.strategy.signal_strategy.TopkDropoutStrategy",
+    "topk": 30,
+    "tuning_from_successor_outcomes": "PROHIBITED",
+    "start": "2022-01-03"
+  },
+  "post_failure_disclosure": {
+    "affected_instrument_count": 57,
+    "affected_session_count": 74,
+    "excluded_row_count": 114,
+    "membership_horizon_exclusion_count": 72,
+    "missingness_assumption": "NOT_MCAR",
+    "performance_stratification_by_missingness_cause": "PROHIBITED",
+    "provider_gap_exclusion_count": 42,
+    "results_generalize_only_to": "LABEL_OBSERVABLE_EVALUATION_POPULATION",
+    "successor_population_row_count": 374477,
+    "v1_population_row_count": 374591
+  },
+  "predecessor_v1": {
+    "is_superseded": false,
+    "protocol_sha256": "b60078bdba4190fbda2c6f3d3580f0e40a9801c87867095bfaa12885a0fb3ff4",
+    "rerun_allowed": false,
+    "result": "STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE"
+  },
+  "primary_endpoint": {
+    "comparison": "STATIC_17_ENSEMBLE_MINUS_OLS_ALPHA158_CONTROL",
+    "endpoint": "MEAN_DAILY_RANK_IC_DELTA_VS_OLS_CONTROL",
+    "inference": {
+      "alternative_loss": "NEGATIVE_STATIC_17_ENSEMBLE_DAILY_RANK_IC",
+      "benchmark_loss": "NEGATIVE_OLS_CONTROL_DAILY_RANK_IC",
+      "consistent_pvalue_gate": "LESS_THAN_OR_EQUAL_TO_0_05",
+      "primary_pvalue": "consistent",
+      "procedure": "ARCH_8_0_0_SPA_SINGLE_PREREGISTERED_ALTERNATIVE",
+      "procedure_parameters": {
+        "block_size": 10,
+        "bootstrap": "stationary",
+        "nested": false,
+        "reps": 5000,
+        "seed": 20260913,
+        "studentize": true
+      }
+    },
+    "metric": "DAILY_CROSS_SECTIONAL_RANK_IC",
+    "metric_owner": "QLIB_CALC_IC"
+  },
+  "protocol_id": "P7_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_V1",
+  "protocol_status": "FROZEN_PRE_EXECUTION_CODE",
+  "secondary_component_controls": {
+    "allowed_descriptive_outputs": [
+      "MEAN_DAILY_RANK_IC",
+      "MEDIAN_DAILY_RANK_IC",
+      "POSITIVE_SESSION_FRACTION",
+      "VALID_SESSION_COUNT",
+      "ENSEMBLE_LOCATION_RELATIVE_TO_COMPONENT_DISTRIBUTION"
+    ],
+    "component_count": 17,
+    "post_hoc_best_candidate_comparator": "PROHIBITED"
+  },
+  "study": {
+    "estimand": "CONDITIONAL_ON_PREREGISTERED_LABEL_OBSERVABILITY",
+    "historical_test_status": "CONSUMED_AS_RESEARCH_EVIDENCE",
+    "primary_question": "DOES_THE_FIXED_ALL_17_FORMULAIC_ALPHA_STATIC_QLIB_AVERAGEENSEMBLE_IMPROVE_HISTORICAL_PREDICTIVE_SIGNAL_QUALITY_RELATIVE_TO_THE_PREREGISTERED_OLS_ALPHA158_HISTORICAL_CONTROL_ON_THE_EXACT_FROZEN_SUCCESSOR_LABEL_OBSERVABLE_EVALUATION_POPULATION",
+    "pristine_oos": false,
+    "study_type": "NEW_RESEARCH_ONLY_POST_FAILURE_DISCLOSED_HISTORICAL_STATIC_ENSEMBLE",
+    "successor_is_new_study": true
+  },
+  "temporal_robustness": {
+    "cpcv": {
+      "embargo_size": 2,
+      "expected_split_count": 45,
+      "median_split_mean_delta_gate": "GREATER_THAN_ZERO",
+      "n_folds": 10,
+      "n_test_folds": 2,
+      "positive_split_fraction_minimum": 0.6,
+      "purged_size": 2
+    },
+    "owner": "SKFOLIO_1_0_6",
+    "role": "ROBUSTNESS_PARTITIONS_OF_FROZEN_DAILY_RANK_IC_DELTA_ONLY_NO_REFIT",
+    "temporal_cv_restores_pristine_oos": false,
+    "walkforward": {
+      "expand_train": false,
+      "expected_unused_tail_sessions": 56,
+      "expected_usable_fold_count": 3,
+      "median_fold_mean_delta_gate": "GREATER_THAN_ZERO",
+      "positive_fold_fraction_minimum": 0.6,
+      "purged_size": 2,
+      "reduce_test": false,
+      "test_size": 63,
+      "train_size": 504
+    }
+  }
+}

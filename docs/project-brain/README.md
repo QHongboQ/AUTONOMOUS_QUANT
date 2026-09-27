@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor historical static-ensemble research-protocol freeze**
+> Active Development: **P7 — Successor one-shot execution-code precommit and preflight freeze**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor Historical Static Ensemble Research Protocol Freeze 001**
+> Development Next: **P7 — Successor One-Shot Execution Code Precommit and Preflight Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4852,6 +4852,57 @@ FINAL_CLASSIFICATION = PASS_SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT_FROZEN
 ```
 
 See [P7 successor static-ensemble label-observable input-contract freeze 001](p7-successor-static-ensemble-label-observable-input-contract-freeze-001.md).
+
+---
+
+#### P7 successor historical static-ensemble research protocol freeze (2026-09-27)
+
+A wholly new research-only successor protocol is frozen before successor
+outcome access. V1 remains permanently `STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE`,
+is not superseded, and may not be rerun. The successor binds the exact
+label-observable input contract and preserves every V1 pre-outcome scientific
+and statistical choice because V1 exposed no performance information.
+
+The successor estimand is conditional on preregistered label observability.
+Its 374,477-row population excludes 114 structurally unavailable labels from
+V1: 72 membership-horizon rows and 42 provider-gap rows. Missingness is not
+assumed MCAR, and results generalize only to this frozen label-observable
+population.
+
+```text
+V1_RESULT = STATIC_ENSEMBLE_RESEARCH_INCONCLUSIVE
+V1_IS_SUPERSEDED = NO
+SUCCESSOR_STUDY_TYPE = NEW_RESEARCH_ONLY_POST_FAILURE_DISCLOSED_HISTORICAL_STATIC_ENSEMBLE
+SUCCESSOR_ESTIMAND = CONDITIONAL_ON_PREREGISTERED_LABEL_OBSERVABILITY
+SUCCESSOR_INPUT_CONTRACT_SHA256 = b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee
+SUCCESSOR_POPULATION_INDEX_SHA256 = 50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0
+LABEL_VALIDITY_MASK_SHA256 = 2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf
+MASTER_CANDIDATE_COUNT = 17
+INDEPENDENT_ALPHA_FAMILY_COUNT = 1
+ENSEMBLE_OWNER = QLIB_AVERAGEENSEMBLE
+ENSEMBLE_WEIGHTING = SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT
+PRIMARY_METRIC = DAILY_CROSS_SECTIONAL_RANK_IC
+PRIMARY_COMPARISON = STATIC_17_ENSEMBLE_MINUS_OLS_ALPHA158_CONTROL
+PRIMARY_ENDPOINT = MEAN_DAILY_RANK_IC_DELTA_VS_OLS_CONTROL
+WALKFORWARD_USABLE_FOLD_COUNT = 3
+CPCV_USABLE_SPLIT_COUNT = 45
+RESULTS_GENERALIZE_ONLY_TO = LABEL_OBSERVABLE_EVALUATION_POPULATION
+EXECUTION_CODE_MUST_BE_COMMITTED_PRE_OUTCOME = YES
+DIRTY_WORKTREE_ALLOWED = NO
+SUCCESSOR_PROTOCOL_SHA256 = a4ca307c3e3a245bb211978d36f03d8a2552c81df28049ddb6b667231689a894
+SUCCESSOR_PROTOCOL_STATUS = FROZEN_PRE_EXECUTION_CODE
+ENSEMBLE_EXECUTION_COUNT = 0
+RANKIC_COMPUTATION_COUNT = 0
+PERFORMANCE_METRICS_COMPUTED = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_CODE_PRECOMMIT_AND_PREFLIGHT_FREEZE_001
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_PROTOCOL_FROZEN
+```
+
+See [P7 successor historical static-ensemble research protocol freeze 001](p7-successor-historical-static-ensemble-research-protocol-freeze-001.md).
 
 ---
 
