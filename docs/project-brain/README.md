@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Roster Update Policy and Research Protocol Design 001**
+> Development Next: **P7 — Roster Update Policy Upstream Substitution Audit 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4116,14 +4116,19 @@ A focused synthetic POC proves that P7 can consume externally authorized,
 immutable, time-effective roster versions without becoming a certification or
 model-management owner.
 
-The handoff keeps Candidate, model, Recorder, eligibility-evidence, cutoff,
-effective-time and supersession identities distinct. It selects only a roster
-already known and effective at the decision time, then delegates the selected
-session inputs to the existing session-local boundary and Qlib
-`AverageEnsemble`. Qlib's `OnlineToolR.ONLINE_TAG` is reused as Recorder state,
-not certification evidence. The previously tested Qlib `OnlineManager` stack
-was inspected but deliberately not executed because it may train or update
-real predictions.
+The corrected handoff retains only Candidate, external authorization-evidence
+and Recorder references per member. Candidate V3 remains authoritative for
+model/configuration identity; P2/P4 or the applicable research policy owns
+authorization; Qlib/MLflow owns runtime lineage and readiness. Qlib online
+status is neither roster authorization nor certification evidence.
+
+Roster identity is SHA-256 over RFC 8785 JCS of immutable non-ID fields using
+the already-authorized Python `rfc8785==0.1.4` leaf. Frozen Pydantic models
+reject extra fields. Daily activation now uses an explicit XNYS
+`effective_session`, validated by existing `exchange_calendars`, separately
+from the timezone-aware UTC evidence cutoff. The validated session-to-members
+handoff then delegates to the existing session-local boundary and Qlib
+`AverageEnsemble`.
 
 Synthetic `TEST_FIXTURE_NOT_REAL_EVIDENCE` rosters transition from 3 to 5 to 2
 members. Tests prove exact boundary activation, no future-member contribution,
@@ -4139,12 +4144,18 @@ P7_FIXED_17_CANDIDATE_SNAPSHOT_MUTATED = NO
 P7_FIXED_ROSTER_PROTOCOL_TASK = PAUSED_REFERENCE_NOT_EXECUTED
 P7_SYNTHETIC_ROSTER_SEQUENCE = 3_TO_5_TO_2
 P7_ROSTER_EVIDENCE_CLASSIFICATION = TEST_FIXTURE_NOT_REAL_EVIDENCE
-P7_EFFECTIVE_TIME_SELECTION = PASS
+P7_EFFECTIVE_TIME_SELECTION = PASS_XNYS_DAILY_SESSION
 P7_FUTURE_ROSTER_BACKWARD_REWRITE_COUNT = 0
 P7_REPLAY_DETERMINISM = PASS
+P7_ROSTER_IDENTITY = SHA256_RFC8785_JCS_IMMUTABLE_NON_ID_FIELDS
+P7_AQ_CUSTOM_CANONICALIZER = NO
+P7_ROSTER_MEMBER_FIELD_COUNT = 3
 P7_UPSTREAM_ENSEMBLE_OWNER = MICROSOFT_QLIB_AVERAGEENSEMBLE
-P7_UPSTREAM_RECORDER_STATE_SEMANTIC = QLIB_ONLINETOOLR_ONLINE_TAG
+P7_QLIB_ONLINE_TAG_IS_CERTIFICATION_AUTHORITY = NO
+P7_RUNTIME_READINESS_SEPARATED = YES
 P7_ONLINE_MANAGER_EXECUTED = NO
+P7_ROSTER_RUNTIME_LOC_BEFORE = 242
+P7_ROSTER_RUNTIME_LOC_AFTER = 202
 P7_REAL_LIFECYCLE_RECORDS_MODIFIED = 0
 P7_REAL_MODEL_TRAINING_COUNT = 0
 P7_REAL_PREDICTION_GENERATION_COUNT = 0
@@ -4155,8 +4166,8 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 P7_EXIT_CONDITION_SATISFIED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ENVIRONMENT_MUTATED = NO
-CURRENT_DEVELOPMENT_NEXT = P7_ROSTER_UPDATE_POLICY_AND_RESEARCH_PROTOCOL_DESIGN_001
-FINAL_CLASSIFICATION = PASS_P7_VARIABLE_ROSTER_UPSTREAM_HANDOFF_POC
+CURRENT_DEVELOPMENT_NEXT = P7_ROSTER_UPDATE_POLICY_UPSTREAM_SUBSTITUTION_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P7_VARIABLE_ROSTER_UPSTREAM_SUBSTITUTION_CLOSEOUT
 ```
 
 See [P7 variable-roster upstream handoff POC 001](p7-variable-roster-upstream-handoff-poc-001.md).

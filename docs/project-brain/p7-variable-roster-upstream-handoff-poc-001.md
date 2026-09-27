@@ -1,96 +1,110 @@
 # P7 Variable-Roster Upstream Handoff POC 001
 
-## Result
+## Result and closeout
 
-P7 can consume immutable, externally authorized, time-effective candidate
-rosters through a narrow identity/time/permission handoff and the existing
-session-local Qlib ensemble boundary. The bounded synthetic sequence
-`3 -> 5 -> 2` passes. This proves switching mechanics only; it does not prove
-profitable adaptive selection, create certification authority, execute a real
-ensemble, or satisfy the P7 exit condition.
+The synthetic `3 -> 5 -> 2` variable-roster POC passes after upstream
+substitution and code contraction. It proves daily roster switching mechanics,
+not profitable adaptive selection, certification, or P7 exit.
 
 ```text
 BASE_MAIN = fcb525a3193d3d914da7c24e122164a69914088e
 VARIABLE_ROSTER_HANDOFF_STATUS = PASS_SYNTHETIC_UPSTREAM_HANDOFF
-SYNTHETIC_ROSTER_SEQUENCE = 3_TO_5_TO_2
 EVIDENCE_CLASSIFICATION = TEST_FIXTURE_NOT_REAL_EVIDENCE
 FIXED_17_CANDIDATE_SNAPSHOT_MUTATED = NO
 EARLIER_FIXED_ROSTER_RESEARCH_PROTOCOL = PAUSED_REFERENCE_NOT_EXECUTED
 P7_EXIT_CONDITION_SATISFIED = NO
 ```
 
-## Reused ownership and capabilities
+## Upstream and project authorities reused
 
-| Capability | Owner / existing boundary | This task |
+| Capability | Owner | Exercised result |
 | --- | --- | --- |
-| prediction validation and numeric guard | existing P7 `average_ensemble_boundary.py` | executed on synthetic panels through the existing router |
-| session-local constant-component policy | existing P7 `session_local_router.py` | executed unchanged; constants are inactive only for that session and fewer than two active components fail closed |
-| standardization and equal averaging | Microsoft Qlib `qlib.model.ens.ensemble.AverageEnsemble` | executed on synthetic panels; AQ did not reproduce its math |
-| Recorder online/offline state | Qlib `OnlineToolR` | `ONLINE_TAG` reused as member Recorder-state semantics; it is explicitly not certification evidence |
-| model lifecycle and eligibility meaning | existing P4 contracts; P2 remains certification owner | inspected and represented only by immutable external evidence references; no real record was opened or mutated |
-| online model management | Qlib `OnlineManager`, `RollingStrategy`, `TrainerR`, `OnlineToolR` | existing tested handoff inspected; manager routines were not run because they may train, update predictions, or read provider state |
+| semantic identity | Python `rfc8785==0.1.4` | SHA-256 over RFC 8785 JCS of every immutable non-ID roster field; member collections sorted before JCS; no AQ canonicalizer or fallback |
+| immutable contract style | Pydantic `2.13.5` | frozen models with `extra="forbid"` and existing SHA-256 identity shape |
+| daily session authority | `exchange_calendars==4.13.2`, XNYS | effective roster and requested labels must be valid XNYS sessions |
+| Candidate/model identity | existing Candidate V3 identity | referenced by `candidate_id`; model class/configuration/dataset facts are not copied into P7 |
+| eligibility/lifecycle authority | external P2/P4 or authorized research-policy evidence | referenced by immutable evidence identity; Qlib online state is not authorization |
+| runtime lineage/readiness | Qlib Recorder / MLflow run identity | `recorder_id` is used only for prediction retrieval/readiness; no model registration or lifecycle mutation |
+| session-local input policy | existing P7 router | missing/non-finite/misaligned inputs and fewer than two active components fail closed; exact constants remain session-local inactive |
+| standardization and averaging | Qlib `AverageEnsemble` | executed through the unchanged router on synthetic panels |
 
-AQ adds only a pure handoff module. It performs no I/O or persistence and owns
-no registry, database, scheduler, model manager, training loop, prediction
-store or generic evaluator. A roster contains its content identity, version,
-scope, external authorization-evidence identity, evidence cutoff, effective
-time, superseded roster identity, and immutable member references. Each member
-retains distinct Candidate, model and Recorder identities plus an external
-eligibility-evidence identity. Qlib online status alone never admits a member.
+The existing P5 contract-authority runtime already contains Pydantic,
+RFC8785 and exchange_calendars. It authors and validates the roster contract
+and session selection. The pinned Qlib runtime consumes the validated
+session-to-members handoff and runs the existing Qlib-owned combiner. No
+environment was changed and no cross-environment `site-packages` mixing was
+used.
 
-## Synthetic proof
+## Contract contraction
 
-The fixtures use five distinct Candidate/model/Recorder identities sharing the
-same model class. The effective roster sequence is:
-
-| version | effective UTC boundary | member count | relationship |
-| --- | --- | ---: | --- |
-| `fixture-v1` | 2024-01-02 | 3 | initial |
-| `fixture-v2` | 2024-01-04 | 5 | supersedes v1 |
-| `fixture-v3` | 2024-01-06 | 2 | supersedes v2 |
-
-Every decision session selects the latest roster whose evidence cutoff and
-effective time are both visible. A later roster cannot change the exact output
-prefix produced under earlier versions. New members require no prediction
-before entry; removed members require none after removal. Within an applicable
-session, every roster member must provide the exact eligible row index.
-Missing members, missing/non-finite values, row mismatch, ambiguous effective
-times, broken supersession, or fewer than two active components fail closed.
+`RosterMember` previously duplicated seven fields:
 
 ```text
-EFFECTIVE_BOUNDARY_ACTIVATION = PASS
-ONE_UNAMBIGUOUS_ROSTER_PER_SESSION = PASS
-FUTURE_MEMBER_EARLY_CONTRIBUTION_COUNT = 0
-FUTURE_ROSTER_BACKWARD_REWRITE_COUNT = 0
-SAME_MODEL_CLASS_DISTINCT_IDENTITY = PASS
-PREDICTION_ROW_ALIGNMENT = PASS_FAIL_CLOSED
-MISSING_OR_NONFINITE_INPUT = PASS_FAIL_CLOSED
-SESSION_LOCAL_CONSTANT_POLICY = PASS_UNCHANGED
-INSUFFICIENT_ACTIVE_COMPONENT_POLICY = PASS_FAIL_CLOSED
-DETERMINISTIC_REPLAY = PASS
-SYNTHETIC_TEST_RESULT = 34_OF_34_PASS
+candidate_id
+model_class
+model_identity
+recorder_identity
+online_status
+eligibility_evidence_identity
+evidence_classification
 ```
 
-The 34 checks comprise 30 Qlib-boundary/router/handoff tests in the pinned
-Qlib runtime and four existing split-feasibility tests in the pinned skfolio
-runtime. No environment or dependency was changed.
+It now retains exactly three references:
 
-## Boundaries and remaining work
+| Field | Why it remains |
+| --- | --- |
+| `candidate_id` | selects one immutable Candidate V3 authority; same-class candidates remain distinct through their Candidate identities |
+| `authorization_evidence_id` | proves external eligibility/permission without copying lifecycle state into P7 |
+| `recorder_id` | identifies the Qlib Recorder/MLflow run needed to retrieve predictions and assess runtime readiness |
 
-The 17 Candidate V3 identities and their immutable input snapshot are
-unchanged. No real P4/MLflow/Recorder or certification state was mutated. No
-real prediction value, label, return or performance artifact was inspected.
-There was no real ensemble, training, prediction generation, backtest, broker
-action, P8 implementation or P2 V2 sealed-OOS access.
-
-The POC intentionally does not define how a real roster earns authorization,
-how update proposals are scheduled, or which future research protocol may
-compare roster policies. It also does not turn missing/numeric failure into
-retirement. Those decisions require a separate preregistered policy task; they
-must reuse the existing evidence/storage owners and must not add a roster
-engine or state store.
+Model class, model identity, configuration, dataset identity, lifecycle state,
+Qlib online tag and evidence classification are not duplicated. Fixture scope
+is held once at roster level as `TEST_FIXTURE_NOT_REAL_EVIDENCE`.
 
 ```text
+ROSTER_RUNTIME_LOC_BEFORE = 242
+ROSTER_RUNTIME_LOC_AFTER = 202
+NET_RUNTIME_LOC_CHANGE = -40
+AQ_CUSTOM_CANONICALIZER = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+```
+
+The remaining executable functions are limited to project-specific glue:
+immutable-field projection into upstream RFC8785; frozen roster construction;
+selection by external evidence cutoff plus XNYS effective session; and exact
+session/member routing into the existing Qlib combiner. The module performs no
+I/O and owns no registry, database, scheduler, model store, alias service,
+lifecycle engine or persistence service.
+
+## Daily activation and runtime separation
+
+`effective_session` is an XNYS daily session label. `evidence_cutoff` and each
+session's preregistered decision cutoff are timezone-aware UTC instants. A
+roster can affect a session only when its effective session is no later than
+that session and its evidence was available by that session's cutoff. Evidence
+arriving after a session cutoff cannot affect that session, while later
+sessions may use it. No intraday activation semantics are implied.
+
+Roster membership means externally authorized. Recorder readiness is supplied
+separately to the Qlib handoff. An authorized member lacking a ready Recorder
+raises a runtime-readiness error; a ready Recorder that is absent from the
+authorized roster contributes nothing. `OnlineToolR.ONLINE_TAG` is neither a
+contract field nor certification authority.
+
+## Synthetic evidence
+
+The fixtures use distinct Candidate and Recorder references and roster counts
+`3 -> 5 -> 2`. Tests prove RFC8785 determinism, member-order invariance,
+identity changes from member/session changes, identity mismatch rejection,
+XNYS validation, cutoff/session separation, exact boundary activation,
+prospective-only supersession, authorization/readiness separation, unchanged
+prior outputs, deterministic replay, exact row alignment, fail-closed numeric
+inputs, and the existing constant/minimum-active policy.
+
+```text
+SYNTHETIC_TEST_RESULT = 37_OF_37_PASS
+FUTURE_ROSTER_BACKWARD_REWRITE_COUNT = 0
+QLIB_ONLINE_TAG_IS_CERTIFICATION_AUTHORITY = NO
 REAL_LIFECYCLE_RECORDS_MODIFIED = 0
 P2_COHORT_MODIFIED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
@@ -99,7 +113,12 @@ REAL_PREDICTION_GENERATION_COUNT = 0
 REAL_ENSEMBLE_COUNT = 0
 BACKTEST_COUNT = 0
 ENVIRONMENT_MUTATED = NO
-AQ_NEW_GENERIC_ENGINE_COUNT = 0
-CURRENT_DEVELOPMENT_NEXT = P7_ROSTER_UPDATE_POLICY_AND_RESEARCH_PROTOCOL_DESIGN_001
-FINAL_CLASSIFICATION = PASS_P7_VARIABLE_ROSTER_UPSTREAM_HANDOFF_POC
+CURRENT_DEVELOPMENT_NEXT = P7_ROSTER_UPDATE_POLICY_UPSTREAM_SUBSTITUTION_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P7_VARIABLE_ROSTER_UPSTREAM_SUBSTITUTION_CLOSEOUT
 ```
+
+The 37 tests comprise seven contract/session tests in the existing
+RFC8785/XNYS authority runtime, 26 Qlib boundary/router/handoff tests in the
+pinned Qlib runtime, and four existing skfolio split-feasibility tests. No real
+Candidate values, lifecycle records, predictions, labels, returns or
+performance evidence were opened.
