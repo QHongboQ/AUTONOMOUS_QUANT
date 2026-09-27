@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — First Ensemble Research Protocol Freeze 001**
+> Development Next: **P7 — Roster Update Policy Upstream Substitution Audit 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4104,6 +4104,78 @@ NEW_PRODUCTION_LOC = 0
 CURRENT_DEVELOPMENT_NEXT = P7_FIRST_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
 FINAL_CLASSIFICATION = PASS_P7_REAL_DATA_ENSEMBLE_INPUT_AND_CONTROL_CONTRACT_CLOSEOUT
 ```
+
+---
+
+### P7 variable-roster upstream handoff POC (2026-09-26)
+
+The fixed 17-candidate snapshot remains immutable, but its count is snapshot
+metadata rather than a permanent runtime constraint. The proposed fixed-roster
+research-protocol task is paused as reference evidence and was not executed.
+A focused synthetic POC proves that P7 can consume externally authorized,
+immutable, time-effective roster versions without becoming a certification or
+model-management owner.
+
+The corrected handoff retains only Candidate and external authorization-evidence
+references per member. Candidate V3 remains authoritative for
+model/configuration identity; P2/P4 or the applicable research policy owns
+authorization; Qlib/MLflow owns runtime lineage and readiness. Qlib online
+status is neither roster authorization nor certification evidence.
+
+Roster identity is SHA-256 over RFC 8785 JCS of immutable non-ID fields using
+the already-authorized Python `rfc8785==0.1.4` leaf. Frozen Pydantic models
+reject extra fields. Daily activation now uses an explicit XNYS
+`effective_session`, validated directly by the existing `aq_xnys_calendar`
+leaf over `exchange_calendars`, separately
+from the timezone-aware UTC evidence cutoff. The validated session-to-members
+handoff then delegates to the existing session-local boundary and Qlib
+`AverageEnsemble`.
+
+Synthetic `TEST_FIXTURE_NOT_REAL_EVIDENCE` rosters transition from 3 to 5 to 2
+members. Tests prove exact boundary activation, no future-member contribution,
+distinct identities for same-class models, no fabricated pre-entry
+predictions, exact row alignment, fail-closed missing/non-finite values,
+unchanged session-local constant handling, minimum-active-component rejection,
+deterministic replay and unchanged earlier outputs after later roster versions
+exist. No real lifecycle record or Candidate V3 identity was changed.
+
+```text
+P7_VARIABLE_ROSTER_HANDOFF_STATUS = PASS_SYNTHETIC_UPSTREAM_HANDOFF
+P7_FIXED_17_CANDIDATE_SNAPSHOT_MUTATED = NO
+P7_FIXED_ROSTER_PROTOCOL_TASK = PAUSED_REFERENCE_NOT_EXECUTED
+P7_SYNTHETIC_ROSTER_SEQUENCE = 3_TO_5_TO_2
+P7_ROSTER_EVIDENCE_CLASSIFICATION = TEST_FIXTURE_NOT_REAL_EVIDENCE
+P7_EFFECTIVE_TIME_SELECTION = PASS_XNYS_DAILY_SESSION
+P7_FUTURE_ROSTER_BACKWARD_REWRITE_COUNT = 0
+P7_REPLAY_DETERMINISM = PASS
+P7_ROSTER_IDENTITY = SHA256_RFC8785_JCS_IMMUTABLE_NON_ID_FIELDS
+P7_AQ_CUSTOM_CANONICALIZER = NO
+P7_ROSTER_MEMBER_FIELD_COUNT = 2
+P7_ROSTER_MEMBER_FIELDS = candidate_id; authorization_evidence_id
+P7_RECORDER_ID_FIELD = REMOVED_REUSE_CANDIDATE_V3
+P7_XNYS_DUPLICATION_STATUS = REMOVED
+P7_AQ_XNYS_ADAPTER_REUSED = YES
+P7_UPSTREAM_ENSEMBLE_OWNER = MICROSOFT_QLIB_AVERAGEENSEMBLE
+P7_QLIB_ONLINE_TAG_IS_CERTIFICATION_AUTHORITY = NO
+P7_RUNTIME_READINESS_SEPARATED = YES
+P7_ONLINE_MANAGER_EXECUTED = NO
+P7_ROSTER_RUNTIME_LOC_BEFORE = 242
+P7_ROSTER_RUNTIME_LOC_AFTER = 198
+P7_REAL_LIFECYCLE_RECORDS_MODIFIED = 0
+P7_REAL_MODEL_TRAINING_COUNT = 0
+P7_REAL_PREDICTION_GENERATION_COUNT = 0
+P7_REAL_ENSEMBLE_EXECUTION_COUNT = 0
+P7_BACKTEST_COUNT = 0
+P2_V2_COHORT_MODIFIED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+P7_EXIT_CONDITION_SATISFIED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+ENVIRONMENT_MUTATED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_LIFECYCLE_DECISION_TO_EFFECTIVE_ROSTER_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P7_ROSTER_UPDATE_POLICY_UPSTREAM_SUBSTITUTION_AUDIT
+```
+
+See [P7 variable-roster upstream handoff POC 001](p7-variable-roster-upstream-handoff-poc-001.md).
 
 ---
 
