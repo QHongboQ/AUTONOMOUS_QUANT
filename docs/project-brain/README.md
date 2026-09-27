@@ -4116,8 +4116,8 @@ A focused synthetic POC proves that P7 can consume externally authorized,
 immutable, time-effective roster versions without becoming a certification or
 model-management owner.
 
-The corrected handoff retains only Candidate, external authorization-evidence
-and Recorder references per member. Candidate V3 remains authoritative for
+The corrected handoff retains only Candidate and external authorization-evidence
+references per member. Candidate V3 remains authoritative for
 model/configuration identity; P2/P4 or the applicable research policy owns
 authorization; Qlib/MLflow owns runtime lineage and readiness. Qlib online
 status is neither roster authorization nor certification evidence.
@@ -4125,7 +4125,8 @@ status is neither roster authorization nor certification evidence.
 Roster identity is SHA-256 over RFC 8785 JCS of immutable non-ID fields using
 the already-authorized Python `rfc8785==0.1.4` leaf. Frozen Pydantic models
 reject extra fields. Daily activation now uses an explicit XNYS
-`effective_session`, validated by existing `exchange_calendars`, separately
+`effective_session`, validated directly by the existing `aq_xnys_calendar`
+leaf over `exchange_calendars`, separately
 from the timezone-aware UTC evidence cutoff. The validated session-to-members
 handoff then delegates to the existing session-local boundary and Qlib
 `AverageEnsemble`.
@@ -4149,13 +4150,17 @@ P7_FUTURE_ROSTER_BACKWARD_REWRITE_COUNT = 0
 P7_REPLAY_DETERMINISM = PASS
 P7_ROSTER_IDENTITY = SHA256_RFC8785_JCS_IMMUTABLE_NON_ID_FIELDS
 P7_AQ_CUSTOM_CANONICALIZER = NO
-P7_ROSTER_MEMBER_FIELD_COUNT = 3
+P7_ROSTER_MEMBER_FIELD_COUNT = 2
+P7_ROSTER_MEMBER_FIELDS = candidate_id; authorization_evidence_id
+P7_RECORDER_ID_FIELD = REMOVED_REUSE_CANDIDATE_V3
+P7_XNYS_DUPLICATION_STATUS = REMOVED
+P7_AQ_XNYS_ADAPTER_REUSED = YES
 P7_UPSTREAM_ENSEMBLE_OWNER = MICROSOFT_QLIB_AVERAGEENSEMBLE
 P7_QLIB_ONLINE_TAG_IS_CERTIFICATION_AUTHORITY = NO
 P7_RUNTIME_READINESS_SEPARATED = YES
 P7_ONLINE_MANAGER_EXECUTED = NO
 P7_ROSTER_RUNTIME_LOC_BEFORE = 242
-P7_ROSTER_RUNTIME_LOC_AFTER = 202
+P7_ROSTER_RUNTIME_LOC_AFTER = 198
 P7_REAL_LIFECYCLE_RECORDS_MODIFIED = 0
 P7_REAL_MODEL_TRAINING_COUNT = 0
 P7_REAL_PREDICTION_GENERATION_COUNT = 0
@@ -4166,8 +4171,8 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 P7_EXIT_CONDITION_SATISFIED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ENVIRONMENT_MUTATED = NO
-CURRENT_DEVELOPMENT_NEXT = P7_ROSTER_UPDATE_POLICY_UPSTREAM_SUBSTITUTION_AUDIT_001
-FINAL_CLASSIFICATION = PASS_P7_VARIABLE_ROSTER_UPSTREAM_SUBSTITUTION_CLOSEOUT
+CURRENT_DEVELOPMENT_NEXT = P7_LIFECYCLE_DECISION_TO_EFFECTIVE_ROSTER_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P7_ROSTER_UPDATE_POLICY_UPSTREAM_SUBSTITUTION_AUDIT
 ```
 
 See [P7 variable-roster upstream handoff POC 001](p7-variable-roster-upstream-handoff-poc-001.md).

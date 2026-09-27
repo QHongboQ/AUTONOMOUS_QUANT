@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping, Sequence
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from itertools import pairwise
 from typing import Annotated, Any
 
@@ -16,12 +16,11 @@ NonEmptyIdentity = Annotated[str, StringConstraints(min_length=1)]
 
 
 class RosterMember(BaseModel):
-    """References existing Candidate, authorization, and Recorder authorities."""
+    """References existing Candidate and authorization authorities."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
     candidate_id: Sha256Identity
     authorization_evidence_id: Sha256Identity
-    recorder_id: NonEmptyIdentity
 
 
 class EffectiveRoster(BaseModel):
@@ -32,7 +31,7 @@ class EffectiveRoster(BaseModel):
     use_scope: NonEmptyIdentity
     authorization_evidence_id: Sha256Identity
     evidence_cutoff: datetime
-    effective_session: date
+    effective_session: NonEmptyIdentity
     supersedes_roster_id: Sha256Identity | None
     members: tuple[RosterMember, ...]
 
@@ -61,7 +60,7 @@ def _identity_projection(fields: Mapping[str, Any]) -> dict[str, Any]:
         "use_scope": fields["use_scope"],
         "authorization_evidence_id": fields["authorization_evidence_id"],
         "evidence_cutoff": fields["evidence_cutoff"].isoformat(),
-        "effective_session": fields["effective_session"].isoformat(),
+        "effective_session": fields["effective_session"],
         "supersedes_roster_id": fields["supersedes_roster_id"],
         "members": members,
     }
@@ -93,11 +92,12 @@ def build_roster(**fields: Any) -> EffectiveRoster:
 def select_effective_rosters(
     *,
     rosters: Sequence[EffectiveRoster],
-    sessions: pd.DatetimeIndex,
-    decision_cutoffs: Mapping[pd.Timestamp, datetime],
-    xnys_sessions: pd.DatetimeIndex,
-) -> dict[pd.Timestamp, tuple[RosterMember, ...]]:
+    sessions: Sequence[str],
+    decision_cutoffs: Mapping[str, datetime],
+) -> dict[str, tuple[RosterMember, ...]]:
     """Select one authorized roster per validated XNYS daily session."""
+
+    from aq_xnys_calendar import is_session
 
     if not rosters:
         raise ValueError("at least one roster is required")
@@ -114,16 +114,13 @@ def select_effective_rosters(
         if current.supersedes_roster_id != previous.roster_id:
             raise ValueError("roster supersession chain is broken")
 
-    calendar = pd.DatetimeIndex(xnys_sessions)
-    requested = pd.DatetimeIndex(sessions)
-    if calendar.tz is not None or requested.tz is not None:
-        raise ValueError("XNYS and requested sessions must be naive labels")
-    effective = pd.DatetimeIndex([roster.effective_session for roster in rosters])
-    if not requested.isin(calendar).all() or not effective.isin(calendar).all():
+    if not all(is_session(session) for session in sessions) or not all(
+        is_session(roster.effective_session) for roster in rosters
+    ):
         raise ValueError("session is not an XNYS session")
 
-    selected: dict[pd.Timestamp, tuple[RosterMember, ...]] = {}
-    for session in requested:
+    selected: dict[str, tuple[RosterMember, ...]] = {}
+    for session in sessions:
         cutoff = decision_cutoffs.get(session)
         if (
             cutoff is None
@@ -134,8 +131,7 @@ def select_effective_rosters(
         eligible = [
             roster
             for roster in rosters
-            if pd.Timestamp(roster.effective_session) <= session
-            and roster.evidence_cutoff <= cutoff
+            if roster.effective_session <= session and roster.evidence_cutoff <= cutoff
         ]
         if not eligible:
             raise ValueError("no authorized roster is effective at the session cutoff")
@@ -145,9 +141,9 @@ def select_effective_rosters(
 
 def combine_selected_roster_predictions(
     *,
-    selected: Mapping[pd.Timestamp, tuple[RosterMember, ...]],
+    selected: Mapping[str, tuple[RosterMember, ...]],
     predictions: Mapping[str, pd.DataFrame],
-    runtime_ready_recorders: frozenset[str],
+    runtime_ready_candidates: frozenset[str],
     eligible_index: pd.MultiIndex,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Apply a validated handoff through the existing Qlib-owned combiner."""
@@ -162,15 +158,15 @@ def combine_selected_roster_predictions(
     outputs: list[pd.DataFrame] = []
     reports: list[dict[str, object]] = []
     for session in eligible_index.get_level_values("datetime").unique():
-        members = selected.get(session)
+        members = selected.get(pd.Timestamp(session).date().isoformat())
         if members is None:
             raise ValueError("validated roster handoff is missing for session")
         inputs: dict[str, pd.DataFrame] = {}
         expected = eligible_index[eligible_index.get_level_values("datetime") == session]
         for member in members:
-            if member.recorder_id not in runtime_ready_recorders:
+            if member.candidate_id not in runtime_ready_candidates:
                 raise RuntimeError(
-                    f"{member.candidate_id}: authorized member Recorder is not runtime-ready"
+                    f"{member.candidate_id}: authorized Candidate is not runtime-ready"
                 )
             frame = predictions.get(member.candidate_id)
             if frame is None:

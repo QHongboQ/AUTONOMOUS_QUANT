@@ -3,13 +3,15 @@ from __future__ import annotations
 import importlib.util
 import sys
 import unittest
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
-import exchange_calendars
-import pandas as pd
-
 MODULE_PATH = Path(__file__).parents[1] / "time_effective_roster_handoff.py"
+CALENDAR_ADAPTER = (
+    Path(__file__).parents[4]
+    / "10-data-system/trading-calendar/xnys/exchange-calendars-adapter"
+)
+sys.path.insert(0, str(CALENDAR_ADAPTER))
 SPEC = importlib.util.spec_from_file_location("time_effective_roster_handoff", MODULE_PATH)
 assert SPEC and SPEC.loader
 handoff = importlib.util.module_from_spec(SPEC)
@@ -25,7 +27,6 @@ def member(number: int) -> object:
     return handoff.RosterMember(
         candidate_id=identity(number),
         authorization_evidence_id=identity(100 + number),
-        recorder_id=f"fixture-recorder-{number}",
     )
 
 
@@ -39,7 +40,7 @@ def roster_sequence() -> tuple[object, ...]:
         use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
         authorization_evidence_id=identity(301),
         evidence_cutoff=utc(1),
-        effective_session=date(2024, 1, 2),
+        effective_session="2024-01-02",
         supersedes_roster_id=None,
         members=[members[3], members[1], members[2]],
     )
@@ -47,7 +48,7 @@ def roster_sequence() -> tuple[object, ...]:
         use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
         authorization_evidence_id=identity(302),
         evidence_cutoff=utc(3),
-        effective_session=date(2024, 1, 4),
+        effective_session="2024-01-04",
         supersedes_roster_id=first.roster_id,
         members=[members[5], members[1], members[4], members[2], members[3]],
     )
@@ -55,7 +56,7 @@ def roster_sequence() -> tuple[object, ...]:
         use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
         authorization_evidence_id=identity(303),
         evidence_cutoff=utc(7, 23),
-        effective_session=date(2024, 1, 8),
+        effective_session="2024-01-08",
         supersedes_roster_id=second.roster_id,
         members=[members[5], members[4]],
     )
@@ -63,17 +64,11 @@ def roster_sequence() -> tuple[object, ...]:
 
 
 class TimeEffectiveRosterContractTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.sessions = exchange_calendars.get_calendar("XNYS").sessions_in_range(
-            "2024-01-01", "2024-01-12"
-        ).tz_localize(None)
-
     def test_member_contract_references_authorities_without_model_duplication(self) -> None:
         members = [member(number) for number in range(1, 6)]
         self.assertEqual(
             set(handoff.RosterMember.model_fields),
-            {"candidate_id", "authorization_evidence_id", "recorder_id"},
+            {"candidate_id", "authorization_evidence_id"},
         )
         self.assertEqual(len({item.candidate_id for item in members}), 5)
 
@@ -103,7 +98,7 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
             use_scope=first.use_scope,
             authorization_evidence_id=first.authorization_evidence_id,
             evidence_cutoff=first.evidence_cutoff,
-            effective_session=date(2024, 1, 3),
+            effective_session="2024-01-03",
             supersedes_roster_id=None,
             members=first.members,
         )
@@ -114,22 +109,25 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "content identity mismatch"):
             handoff.select_effective_rosters(
                 rosters=(tampered,),
-                sessions=pd.DatetimeIndex(["2024-01-02"]),
-                decision_cutoffs={pd.Timestamp("2024-01-02"): utc(2, 23)},
-                xnys_sessions=self.sessions,
+                sessions=("2024-01-02",),
+                decision_cutoffs={"2024-01-02": utc(2, 23)},
             )
 
     def test_exact_xnys_activation_and_no_backward_rewrite(self) -> None:
         rosters = roster_sequence()
-        requested = pd.to_datetime(
-            ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05", "2024-01-08", "2024-01-09"]
+        requested = (
+            "2024-01-02",
+            "2024-01-03",
+            "2024-01-04",
+            "2024-01-05",
+            "2024-01-08",
+            "2024-01-09",
         )
-        cutoffs = {session: utc(session.day, 23) for session in requested}
+        cutoffs = {session: utc(int(session[-2:]), 23) for session in requested}
         selected = handoff.select_effective_rosters(
             rosters=rosters,
             sessions=requested,
             decision_cutoffs=cutoffs,
-            xnys_sessions=self.sessions,
         )
         self.assertEqual([len(selected[item]) for item in requested], [3, 3, 5, 5, 2, 2])
         prefix = requested[:4]
@@ -137,7 +135,6 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
             rosters=rosters[:2],
             sessions=prefix,
             decision_cutoffs={item: cutoffs[item] for item in prefix},
-            xnys_sessions=self.sessions,
         )
         self.assertEqual({key: selected[key] for key in prefix}, earlier)
 
@@ -151,25 +148,23 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
             supersedes_roster_id=first.roster_id,
             members=second.members,
         )
-        requested = pd.to_datetime(["2024-01-04", "2024-01-05"])
+        requested = ("2024-01-04", "2024-01-05")
         selected = handoff.select_effective_rosters(
             rosters=(first, late),
             sessions=requested,
             decision_cutoffs={requested[0]: utc(4, 20), requested[1]: utc(5, 20)},
-            xnys_sessions=self.sessions,
         )
         self.assertEqual(len(selected[requested[0]]), 3)
         self.assertEqual(len(selected[requested[1]]), 5)
 
     def test_non_xnys_session_fails_closed(self) -> None:
         first, _, _ = roster_sequence()
-        saturday = pd.Timestamp("2024-01-06")
+        saturday = "2024-01-06"
         with self.assertRaisesRegex(ValueError, "not an XNYS session"):
             handoff.select_effective_rosters(
                 rosters=(first,),
-                sessions=pd.DatetimeIndex([saturday]),
+                sessions=(saturday,),
                 decision_cutoffs={saturday: utc(6, 23)},
-                xnys_sessions=self.sessions,
             )
 
     def test_extra_fields_and_non_utc_cutoff_fail_closed(self) -> None:
@@ -177,7 +172,6 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
             handoff.RosterMember(
                 candidate_id=identity(1),
                 authorization_evidence_id=identity(101),
-                recorder_id="fixture-recorder-1",
                 online_status="online",
             )
         with self.assertRaisesRegex(ValueError, "timezone-aware UTC"):
@@ -186,7 +180,7 @@ class TimeEffectiveRosterContractTests(unittest.TestCase):
                 use_scope="TEST_FIXTURE_NOT_REAL_EVIDENCE",
                 authorization_evidence_id=identity(301),
                 evidence_cutoff=datetime(2024, 1, 1),  # noqa: DTZ001 - rejection fixture
-                effective_session=date(2024, 1, 2),
+                effective_session="2024-01-02",
                 supersedes_roster_id=None,
                 members=(member(1), member(2)),
             )

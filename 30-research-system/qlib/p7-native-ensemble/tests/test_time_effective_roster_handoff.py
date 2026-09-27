@@ -26,12 +26,11 @@ def member(number: int) -> object:
     return handoff.RosterMember(
         candidate_id=identity(number),
         authorization_evidence_id=identity(100 + number),
-        recorder_id=f"fixture-recorder-{number}",
     )
 
 
 def fixture_inputs() -> tuple[
-    dict[pd.Timestamp, tuple[object, ...]],
+    dict[str, tuple[object, ...]],
     dict[str, pd.DataFrame],
     frozenset[str],
     pd.MultiIndex,
@@ -41,12 +40,12 @@ def fixture_inputs() -> tuple[
         ["2024-01-02", "2024-01-03", "2024-01-04", "2024-01-05", "2024-01-08", "2024-01-09"]
     )
     selected = {
-        sessions[0]: (members[1], members[2], members[3]),
-        sessions[1]: (members[1], members[2], members[3]),
-        sessions[2]: tuple(members.values()),
-        sessions[3]: tuple(members.values()),
-        sessions[4]: (members[4], members[5]),
-        sessions[5]: (members[4], members[5]),
+        sessions[0].date().isoformat(): (members[1], members[2], members[3]),
+        sessions[1].date().isoformat(): (members[1], members[2], members[3]),
+        sessions[2].date().isoformat(): tuple(members.values()),
+        sessions[3].date().isoformat(): tuple(members.values()),
+        sessions[4].date().isoformat(): (members[4], members[5]),
+        sessions[5].date().isoformat(): (members[4], members[5]),
     }
     eligible = pd.MultiIndex.from_product(
         [sessions, ["A", "B", "C"]], names=["datetime", "instrument"]
@@ -73,7 +72,7 @@ def fixture_inputs() -> tuple[
         predictions[identity(number)] = pd.DataFrame(
             {"score": patterns[number] * len(dates)}, index=index
         )
-    ready = frozenset(f"fixture-recorder-{number}" for number in range(1, 6))
+    ready = frozenset(identity(number) for number in range(1, 6))
     return selected, predictions, ready, eligible
 
 
@@ -83,7 +82,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
         result, report = handoff.combine_selected_roster_predictions(
             selected=selected,
             predictions=predictions,
-            runtime_ready_recorders=ready,
+            runtime_ready_candidates=ready,
             eligible_index=eligible,
         )
         self.assertTrue(result.index.equals(eligible))
@@ -94,7 +93,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
         baseline, _ = handoff.combine_selected_roster_predictions(
             selected=selected,
             predictions=predictions,
-            runtime_ready_recorders=ready,
+            runtime_ready_candidates=ready,
             eligible_index=eligible,
         )
         extra = dict(predictions)
@@ -102,15 +101,15 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
         with_ready_nonmember, _ = handoff.combine_selected_roster_predictions(
             selected=selected,
             predictions=extra,
-            runtime_ready_recorders=ready | {"fixture-recorder-6"},
+            runtime_ready_candidates=ready | {identity(6)},
             eligible_index=eligible,
         )
         assert_frame_equal(baseline, with_ready_nonmember)
-        with self.assertRaisesRegex(RuntimeError, "authorized member Recorder is not runtime-ready"):
+        with self.assertRaisesRegex(RuntimeError, "authorized Candidate is not runtime-ready"):
             handoff.combine_selected_roster_predictions(
                 selected=selected,
                 predictions=predictions,
-                runtime_ready_recorders=ready - {"fixture-recorder-2"},
+                runtime_ready_candidates=ready - {identity(2)},
                 eligible_index=eligible,
             )
 
@@ -122,7 +121,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
             handoff.combine_selected_roster_predictions(
                 selected=selected,
                 predictions=missing,
-                runtime_ready_recorders=ready,
+                runtime_ready_candidates=ready,
                 eligible_index=eligible,
             )
 
@@ -132,7 +131,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
             handoff.combine_selected_roster_predictions(
                 selected=selected,
                 predictions=nonfinite,
-                runtime_ready_recorders=ready,
+                runtime_ready_candidates=ready,
                 eligible_index=eligible,
             )
 
@@ -144,7 +143,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
             handoff.combine_selected_roster_predictions(
                 selected=selected,
                 predictions=misaligned,
-                runtime_ready_recorders=ready,
+                runtime_ready_candidates=ready,
                 eligible_index=eligible,
             )
 
@@ -157,7 +156,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
         _, report = handoff.combine_selected_roster_predictions(
             selected=selected,
             predictions=one_constant,
-            runtime_ready_recorders=ready,
+            runtime_ready_candidates=ready,
             eligible_index=eligible,
         )
         self.assertEqual(report.iloc[0]["active_component_count"], 2)
@@ -171,7 +170,7 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
             handoff.combine_selected_roster_predictions(
                 selected=selected,
                 predictions=insufficient,
-                runtime_ready_recorders=ready,
+                runtime_ready_candidates=ready,
                 eligible_index=eligible,
             )
 
@@ -180,22 +179,22 @@ class TimeEffectiveRosterHandoffTests(unittest.TestCase):
         first, first_report = handoff.combine_selected_roster_predictions(
             selected=selected,
             predictions=predictions,
-            runtime_ready_recorders=ready,
+            runtime_ready_candidates=ready,
             eligible_index=eligible,
         )
         second, second_report = handoff.combine_selected_roster_predictions(
             selected=selected,
             predictions=predictions,
-            runtime_ready_recorders=ready,
+            runtime_ready_candidates=ready,
             eligible_index=eligible,
         )
         assert_frame_equal(first, second)
         assert_frame_equal(first_report, second_report)
         prefix = eligible[eligible.get_level_values("datetime") < pd.Timestamp("2024-01-08")]
         earlier, _ = handoff.combine_selected_roster_predictions(
-            selected={key: value for key, value in selected.items() if key < pd.Timestamp("2024-01-08")},
+            selected={key: value for key, value in selected.items() if key < "2024-01-08"},
             predictions=predictions,
-            runtime_ready_recorders=ready,
+            runtime_ready_candidates=ready,
             eligible_index=prefix,
         )
         assert_frame_equal(first.loc[prefix], earlier)
