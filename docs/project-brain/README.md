@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P6 — News information intelligence**
+> Active Development: **P7 — Entry audit**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
@@ -3830,6 +3830,55 @@ PR106_MODIFIED = NO
 CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_FINSEN_INCONCLUSIVE_CLOSEOUT_OR_EXACT_RECOVERY_001
 FINAL_CLASSIFICATION = INCONCLUSIVE_P6_HISTORICAL_NEWS_FINSEN_FROZEN_WALKFORWARD_INSUFFICIENT_OBSERVATIONS
 ```
+
+
+---
+
+### P6 FinSen inconclusive and phase closeout (2026-09-26)
+
+The first and only preregistered FinSen ablation remains scientifically
+`INCONCLUSIVE`. Its Rank IC delta was positive, but the frozen statistical
+protocol cannot complete because the 385-session common-support test window is
+shorter than the 506 observations required by the frozen WalkForward
+`train_size=504` and `purged_size=2`. No after-the-fact protocol change or
+second FinSen experiment is authorized.
+
+All P6 information-intelligence lanes now have terminal dispositions. Macro V1
+found no measurable incremental value; Company News V1 remains access-blocked
+with no custom AQ substitute; Global News V1 is rejected for official-source
+semantic conflict; and FinSen closes inconclusive. No P6 feature family is
+admitted, so the post-P6 control remains exact `BASE_157`.
+
+```text
+P6_STATUS = COMPLETE
+P6_ACTIVE = NO
+P6_MACRO_V1 = CLOSED_NO_MEASURABLE_INCREMENTAL_VALUE
+P6_COMPANY_NEWS_V1 = DEFERRED_ACCESS_BLOCKED_NO_CUSTOM_BUILD
+P6_GLOBAL_NEWS_V1 = REJECTED_SOURCE_SEMANTIC_CONFLICT
+P6_FINSEN_HISTORICAL_NEWS = INCONCLUSIVE_PROTOCOL_FEASIBILITY_FAILURE
+FINSEN_INCONCLUSIVE_REASON = FROZEN_WALKFORWARD_REQUIRES_AT_LEAST_506_OBSERVATIONS_BUT_TEST_HAS_385
+EXACT_NO_PROTOCOL_CHANGE_RECOVERY_AVAILABLE = NO
+FINSEN_SECOND_EXPERIMENT_AUTHORIZED = NO
+P6_NEW_ADMITTED_FEATURE_FAMILY_COUNT = 0
+POST_P6_CONTROL_SURFACE = BASE_157
+POST_P6_CONTROL_FEATURE_COLUMN_COUNT = 157
+STRICT_PRODUCTION_PIT_READY = NO
+PRODUCTION_ADMISSION_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+P4_REAL_CERTIFIED_ARTIFACT_COUNT = 0
+P4_REAL_CHAMPION_COUNT = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+ACTIVE_DEVELOPMENT = P7_ENTRY_AUDIT
+CURRENT_DEVELOPMENT_NEXT = P7_MULTI_ALPHA_ENSEMBLE_ENTRY_AUDIT_001
+FINAL_CLASSIFICATION = PASS_P6_FINSEN_INCONCLUSIVE_AND_PHASE_CLOSEOUT_NO_NEW_ADMITTED_FEATURE_FAMILY
+```
+
+The FinSen executor is retained as a frozen single-use research executor for
+audit/reproduction only; it is not a generic evaluation framework. PR #106 is
+superseded stale closeout evidence and must not be merged.
+
+See [P6 Historical News FinSen inconclusive and phase closeout 001](p6-historical-news-finsen-inconclusive-and-phase-closeout-001.md).
 
 ---
 
