@@ -205,3 +205,141 @@ ensemble or choose a subset using observed performance.
 ```text
 CURRENT_DEVELOPMENT_NEXT = P7_REAL_DATA_ENSEMBLE_INPUT_AND_CONTROL_CONTRACT_CLOSEOUT_001
 ```
+
+---
+
+## Closeout and superseding input policy
+
+The original qualification above remains historical evidence. This closeout
+supersedes only its partial input-contract conclusion. It did not call Qlib's
+ensemble on real scores, train or refit a model, generate a prediction, compute
+performance, run a backtest, change a P2 cohort, or access sealed OOS.
+
+Before the additional reads, the task froze an expanded 753-path allowlist:
+18 prediction artifacts, five historical membership/identity authorities, and
+730 contemporaneous close-availability files. The frozen allowlist SHA-256 is
+`8f8aab65cebb5571d7e3c2cd548c39bc5847d7d846a9a8d3eadca43c2b859089`.
+The source code confirms that the P2 control TEST ends on 2024-12-31, the P3
+two-session label-safe prediction interval ends on 2024-12-27, and the control
+handler applies Qlib's `ExpressionDFilter` through `current_close_filter()`.
+
+The selected control Series was converted losslessly with
+`Series.to_frame(name="score")` and stored separately. Its index and order,
+dtype, values, and missingness are unchanged; the original artifact still
+hashes to
+`26c3433faa58a64914393fe13eac169d9ce86dbbe86f16dfb2b24fbd64139dab`.
+
+### Exhaustive row accounting
+
+All 4,353 symmetric-difference rows have mutually exclusive explanations:
+
+```text
+OUTSIDE_DECLARED_COMMON_DATE_WINDOW = 1006
+EXPLAINED_BY_HISTORICAL_MEMBERSHIP_IDENTITY = 3316
+EXPLAINED_BY_CURRENT_CLOSE_AVAILABILITY_RULE = 31
+UNEXPLAINED_ROW_COUNT = 0
+```
+
+The 1,006 control-only rows are on 2024-12-30 and 2024-12-31, after the
+candidate label-safe end. The 3,347 candidate-only rows consist of 2,360
+`NO_PROVIDER_ASSET`, 21 `IDENTITY_AMBIGUOUS`, 935
+`TERMINAL_POLICY_UNRESOLVED`, 30 `KNOWN_PROVIDER_GAP`, and one
+`KNOWN_TERMINAL_SESSION_PROVIDER_GAP`. The availability grid equals the
+explicit historical membership grid; every row is backed by date-valid
+episode and identity evidence. The Qlib current-close-filtered grid equals the
+rows classified as contemporaneously observed.
+
+### Complete population contract
+
+Conditions A-D passed independently of the prediction-file intersection. The
+frozen population rule is:
+
+```text
+FINAL_POPULATION_RULE = P2_HISTORICAL_MEMBERSHIP_AND_QLIB_CURRENT_CLOSE_AVAILABLE_WITHIN_P3_TWO_SESSION_LABEL_SAFE_INTERVAL
+FINAL_POPULATION_ROW_COUNT = 374591
+FINAL_POPULATION_SESSION_COUNT = 751
+FINAL_POPULATION_INSTRUMENT_COUNT = 547
+FINAL_POPULATION_START = 2022-01-03
+FINAL_POPULATION_END = 2024-12-27
+FINAL_POPULATION_INDEX_SHA256 = 2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e
+SOURCE_CANDIDATE_ROWS_EXCLUDED = 3347
+SOURCE_CONTROL_ROWS_EXCLUDED = 1006
+INPUT_CONTRACT_STATUS = COMPLETE
+INPUT_CONTRACT_SHA256 = 92de81d0b8b7b7a29891bf523ae8519af44456f52fea3410ebf0ebd210d0f81f
+ORIGINAL_ARTIFACT_HASH_CHANGED_COUNT = 0
+```
+
+All 17 candidates and the selected OLS control cover this exact ordered grid.
+The derived views are private research inputs with explicit source identities;
+they do not change P2 populations or source artifacts.
+
+### Session-local qualification policy
+
+All 17 Candidate V3 identities remain in the master roster. The closeout
+policy is `SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT`: exact constants
+are inactive only on the current session, while missing or non-finite scores
+remain errors. At least two active components are mandatory. Qlib's pinned
+`AverageEnsemble` remains the owner of standardization and equal averaging.
+
+```text
+MASTER_CANDIDATE_COUNT = 17
+INACTIVE_CANDIDATE_SESSION_COUNT = 2575
+UNIQUE_AFFECTED_SESSION_COUNT = 736
+MINIMUM_ACTIVE_COMPONENT_COUNT = 8
+MAXIMUM_ACTIVE_COMPONENT_COUNT = 17
+ACTIVE_COMPONENT_COUNT_DISTRIBUTION = 8:1,9:37,10:93,11:29,12:13,13:61,14:215,15:204,16:83,17:15
+MINIMUM_ACTIVE_COMPONENT_GATE = PASS
+```
+
+The original 385 constant candidate-session observations remain historical
+input evidence from the strict complete-panel check. The 2,575 count is the
+new per-session qualification result on the final eligible grid and is not
+forced to equal the historical count.
+
+A 55-line research-only session router reuses the extracted strict validator
+and delegates each active, flat component mapping to the existing Qlib
+boundary. It contains no z-score, averaging, weighting, learned selection, or
+generic framework. The existing strict boundary behavior remains covered.
+Seven new synthetic router tests plus the 11 strict-boundary and four splitter
+tests pass, 22/22 total. No real score combination was invoked.
+
+### Split feasibility and remaining boundary
+
+Synthetic zero arrays on the final 751-session calendar reproduce three
+WalkForward folds and 45 CPCV splits with zero train/test overlap. WalkForward
+uses train 504, test 63, purge 2, and leaves 56 trailing sessions unused:
+
+| Fold | Train | Test |
+| --- | --- | --- |
+| 1 | 2022-01-03..2024-01-04 | 2024-01-09..2024-04-09 |
+| 2 | 2022-04-04..2024-04-05 | 2024-04-10..2024-07-10 |
+| 3 | 2022-07-06..2024-07-08 | 2024-07-11..2024-10-08 |
+
+CPCV uses 10 folds, two test folds, purge 2 and embargo 2; train sizes are
+589..598 and test sizes are 150..151. This remains mechanics evidence only:
+the statistical protocol is not frozen. Historical prediction reuse is ready
+on the complete derived contract. Prospective model readiness remains blocked
+because the 17 candidate model bytes and control model bytes are not persisted;
+no refit or fabricated model artifact is authorized here.
+
+```text
+P7_STATISTICAL_PROTOCOL_FROZEN = NO
+P7_EXIT_CONDITION_SATISFIED = NO
+HISTORICAL_PREDICTION_REUSE_READINESS = READY_COMPLETE_INPUT_CONTRACT
+PROSPECTIVE_MODEL_READINESS = NOT_READY_MODEL_BYTES_NOT_PERSISTED
+REAL_MODEL_TRAINING_COUNT = 0
+REAL_PREDICTION_GENERATION_COUNT = 0
+REAL_ENSEMBLE_EXECUTION_COUNT = 0
+BACKTEST_COUNT = 0
+PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+ENVIRONMENT_MUTATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_RESEARCH_RUNTIME_LOC = 78_ADDED_13_RETIRED_NET_65
+NEW_TEST_LOC = 104
+NEW_PRODUCTION_LOC = 0
+PRIVATE_CLOSEOUT_CHECKSUM_SHA256 = f0b69f8359748ead463ec300de12f10630300c9b709b2e99825365b4830b7b77
+CURRENT_DEVELOPMENT_NEXT = P7_FIRST_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P7_REAL_DATA_ENSEMBLE_INPUT_AND_CONTROL_CONTRACT_CLOSEOUT
+```

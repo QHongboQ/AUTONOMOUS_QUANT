@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Real-data ensemble input and control contract closeout 001**
+> Development Next: **P7 — First Ensemble Research Protocol Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4040,6 +4040,65 @@ See [P7 Qlib-native ensemble integration POC 001](p7-qlib-native-ensemble-integr
 [P7 real-data ensemble input contract and protocol feasibility 001](p7-real-data-ensemble-input-contract-and-protocol-feasibility-001.md),
 the historical [P7 entry audit](p7-multi-alpha-ensemble-entry-audit-001.md),
 and the historical [P8 entry audit](p8-portfolio-risk-entry-audit-001.md).
+
+#### P7 real-data input and control contract closeout (2026-09-26)
+
+The preceding partial status is retained as historical evidence and is now
+superseded for the input-contract boundary. The selected OLS control was
+losslessly adapted from a named Series to a one-column `score` DataFrame. All
+4,353 row differences are explained: 1,006 lie after the candidate label-safe
+end, 3,316 reflect historical membership/identity exclusions, and 31 reflect
+the existing Qlib current-close availability rule. No row remains unexplained.
+
+The final population was derived independently from P2 historical membership,
+the Qlib current-close eligibility rule, and the P3 two-session label-safe
+interval. It was not defined as the accidental intersection of prediction
+files. All 17 candidates and the OLS control cover the exact 374,591-row,
+751-session ordered grid. The 17 candidates remain in the master roster;
+exactly constant components are inactive only for their current session under
+the research policy below. Qlib continues to own standardization and equal
+averaging. Qualification found at least eight active components on every
+session. No real ensemble was executed.
+
+```text
+P7_CURRENT_STATUS = ACTIVE_RESEARCH_INTEGRATION_INPUT_CONTRACT_COMPLETE
+P7_EXIT_CONDITION_SATISFIED = NO
+SIGNAL_COMPLEMENTARITY = NOT_YET_ESTABLISHED
+P7_ENSEMBLE_OWNER = MICROSOFT_QLIB
+P7_UPSTREAM_CLASS = qlib.model.ens.ensemble.AverageEnsemble
+P7_MASTER_CANDIDATE_COUNT = 17
+P7_CONTROL_FORMAT_ADAPTATION = PASS_LOSSLESS_SERIES_TO_SCORE_DATAFRAME
+P7_ORIGINAL_ARTIFACT_HASH_CHANGED_COUNT = 0
+P7_UNEXPLAINED_ROW_COUNT = 0
+P7_FINAL_POPULATION_RULE = P2_HISTORICAL_MEMBERSHIP_AND_QLIB_CURRENT_CLOSE_AVAILABLE_WITHIN_P3_TWO_SESSION_LABEL_SAFE_INTERVAL
+P7_FINAL_POPULATION_ROW_COUNT = 374591
+P7_FINAL_POPULATION_SESSION_COUNT = 751
+P7_FINAL_POPULATION_INDEX_SHA256 = 2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e
+P7_INPUT_CONTRACT_STATUS = COMPLETE
+P7_INPUT_CONTRACT_SHA256 = 92de81d0b8b7b7a29891bf523ae8519af44456f52fea3410ebf0ebd210d0f81f
+P7_CONSTANT_SESSION_POLICY = SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT
+P7_INACTIVE_CANDIDATE_SESSION_COUNT = 2575
+P7_UNIQUE_AFFECTED_SESSION_COUNT = 736
+P7_MINIMUM_ACTIVE_COMPONENT_COUNT = 8
+P7_SYNTHETIC_TEST_RESULT = 22_OF_22_PASS
+P7_SYNTHETIC_WALKFORWARD_USABLE_FOLD_COUNT = 3
+P7_SYNTHETIC_CPCV_USABLE_SPLIT_COUNT = 45
+P7_STATISTICAL_PROTOCOL_FROZEN = NO
+P7_HISTORICAL_PREDICTION_REUSE_READINESS = READY_COMPLETE_INPUT_CONTRACT
+P7_PROSPECTIVE_MODEL_READINESS = NOT_READY_MODEL_BYTES_NOT_PERSISTED
+P7_REAL_MODEL_TRAINING_COUNT = 0
+P7_REAL_PREDICTION_GENERATION_COUNT = 0
+P7_REAL_ENSEMBLE_EXECUTION_COUNT = 0
+P7_BACKTEST_COUNT = 0
+P7_PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+P8_STATUS = EARLY_DESIGN_EVIDENCE_ONLY_NO_IMPLEMENTATION
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P7_FIRST_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_P7_REAL_DATA_ENSEMBLE_INPUT_AND_CONTROL_CONTRACT_CLOSEOUT
+```
 
 ---
 
