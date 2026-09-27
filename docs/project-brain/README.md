@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Qlib-native ensemble integration and input qualification**
+> Active Development: **P3 — Future Candidate Qlib Recorder persistence alignment**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Prospective model persistence upstream substitution audit 001 (after this readiness audit merges)**
+> Development Next: **P3 — Future Candidate Qlib TrainerR path alignment 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4446,6 +4446,48 @@ FINAL_CLASSIFICATION = NOT_READY_MULTIPLE_BLOCKERS
 ```
 
 See [P7 dynamic research execution readiness audit 001](p7-dynamic-research-execution-readiness-audit-001.md).
+
+---
+
+#### P3 Candidate Qlib Recorder upstream persistence audit (2026-09-27)
+
+The 17 immutable Formulaic Candidate V3 Recorders lack `task`, `params.pkl`
+and `dataset` because the P3 producer directly executed `R.start`, manual
+`LinearModel.fit`, `SignalRecord` and `SigAnaRecord`; it did not use pinned
+Qlib's `TrainerR` / `task_train` path. All 17 Recorders contain predictions,
+labels and signal analysis, while all 17 lack the three runtime artifacts.
+
+Pinned Qlib natively persists `task`, `params.pkl` and `dataset` through the
+standard task-training path, and `RMDLoader` / `PredUpdater` consume the
+persisted model and dataset. RD-Agent's native Qlib workspace already invokes
+`qrun`, which delegates to `task_train`. Candidate V3 already supports a real
+`PERSISTED` serialized-model identity, so no successor contract, AQ model
+store, serializer, Recorder builder or P7 persistence implementation is
+required.
+
+```text
+CURRENT_17_MISSING_ARTIFACT_ROOT_CAUSE = STANDARD_QLIB_TRAINERR_PATH_NOT_USED
+CANDIDATE_MODEL_TRAINING_OWNER = QLIB / P3 PRODUCER PATH
+RUNTIME_MODEL_STATE_OWNER = QLIB_RECORDER
+RUN_LINEAGE_OWNER = QLIB_MLFLOW
+REPRODUCIBILITY_OWNER = DVC
+P7_ROLE = DOWNSTREAM_CONSUMER_ONLY
+CANDIDATE_V3_SUPPORTS_PERSISTED_MODEL_BINDING = YES
+CANDIDATE_SUCCESSOR_CONTRACT_REQUIRED = NO
+MLFLOW_MODEL_REGISTRY_ROLE = NOT_REQUIRED
+CURRENT_17_MODEL_STATE = HISTORICAL_PREDICTION_ONLY
+CURRENT_17_PROSPECTIVE_INFERENCE_READY = NO
+AQ_MODEL_STORE_REQUIRED = NO
+AQ_MODEL_SERIALIZER_REQUIRED = NO
+AQ_RECORDER_BUILDER_REQUIRED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_P3_PRODUCTION_LOC = 0
+NEW_P7_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P3_FUTURE_CANDIDATE_QLIB_TRAINERR_PATH_ALIGNMENT_001
+FINAL_CLASSIFICATION = PASS_STANDARD_QLIB_PERSISTENCE_PATH_WAS_BYPASSED
+```
+
+See [P3 Candidate Qlib Recorder upstream persistence audit 001](p3-candidate-qlib-recorder-upstream-persistence-audit-001.md).
 
 ---
 
