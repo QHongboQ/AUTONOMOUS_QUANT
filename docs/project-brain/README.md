@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — Future Candidate Qlib Recorder persistence alignment**
+> Active Development: **P3 — Future Candidate Qlib-native producer handoff**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — Future Candidate Qlib TrainerR path alignment 001**
+> Development Next: **P3 — Future Candidate upstream path freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4488,6 +4488,58 @@ FINAL_CLASSIFICATION = PASS_STANDARD_QLIB_PERSISTENCE_PATH_WAS_BYPASSED
 ```
 
 See [P3 Candidate Qlib Recorder upstream persistence audit 001](p3-candidate-qlib-recorder-upstream-persistence-audit-001.md).
+
+---
+
+#### P3 future Candidate Qlib-native handoff POC (2026-09-27)
+
+A bounded non-Candidate fixture proved the complete native future-production
+path through pinned Qlib `task_train`. Qlib created `task`, `params.pkl`,
+`dataset` and `pred.pkl` without manual Recorder writes. `RMDLoader` reloaded
+the model and dataset, and bounded `PredUpdater` replays extended the fixture
+while preserving the historical prefix exactly.
+
+RD-Agent already owns the complete `qrun -> task_train` handoff. AlphaGen
+supplies expression identity plus materialized factor Parquet; existing Qlib
+`StaticDataLoader` and task configuration are sufficient, so no executable
+AlphaGen adapter or AQ training runtime is required. Candidate V3's existing
+`PERSISTED` union accepts the actual `params.pkl` content identity alongside
+the Recorder run identity without a schema change.
+
+```text
+QLIB_SOURCE_SHA = 2fb9380b342556ddb50a4b24e4fe8655d548b2b8
+RD_AGENT_FUTURE_CANDIDATE_HANDOFF = UPSTREAM_WHOLE
+ALPHAGEN_OUTPUT_TYPE = EXPRESSION_IDENTITY_PLUS_MATERIALIZED_FACTOR_PARQUET
+ALPHAGEN_TO_QLIB_HANDOFF = QLIB_TASK_CONFIG_WITH_STATICDATALOADER_PARQUET
+ALPHAGEN_TO_QLIB_RESIDUAL = TASK_CONFIGURATION_ONLY
+QLIB_NATIVE_ENTRY_USED = qlib.model.trainer.task_train
+SYNTHETIC_RECORDER_TASK_PRESENT = YES
+SYNTHETIC_RECORDER_PARAMS_PRESENT = YES
+SYNTHETIC_RECORDER_DATASET_PRESENT = YES
+SYNTHETIC_RECORDER_PRED_PRESENT = YES
+PERSISTED_MODEL_RELOAD = PASS
+PERSISTED_DATASET_RELOAD = PASS
+BOUNDED_PREDUPDATER = PASS
+HISTORICAL_PREFIX_UNCHANGED = PASS
+CANDIDATE_V3_PERSISTED_BINDING = PASS_PARAMS_PKL_CONTENT_SHA_PLUS_RECORDER_IDENTITY
+CANDIDATE_V3_SCHEMA_CHANGE_REQUIRED = NO
+RUNTIME_MODEL_STATE_OWNER = QLIB_RECORDER
+RUN_LINEAGE_OWNER = QLIB_MLFLOW
+REPRODUCIBILITY_OWNER = DVC
+AQ_TRAINING_ENGINE = NO
+AQ_MODEL_STORE = NO
+AQ_RECORDER_BUILDER = NO
+ALPHAGEN_THIN_ADAPTER_REQUIRED = NO
+NEW_PRODUCTION_LOC = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+CURRENT_17_REFIT_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P3_FUTURE_CANDIDATE_UPSTREAM_PATH_FREEZE_001
+FINAL_CLASSIFICATION = PASS_RD_AGENT_NATIVE_AND_ALPHAGEN_CONFIG_ONLY_HANDOFF
+```
+
+See [P3 future Candidate Qlib-native handoff POC 001](p3-future-candidate-qlib-native-handoff-poc-001.md).
 
 ---
 
