@@ -22,10 +22,23 @@ The normative machine-readable artifact is
 `30-research-system/qlib/p7-native-ensemble/lifecycle-decision-to-effective-roster-protocol.json`.
 Its current identity is SHA-256 over the `rfc8785==0.1.4` JCS bytes of the
 complete JSON object:
-`5034cd1fb5ef6969e7116fa63d5ac40ce22e05f8b16688e0e77f2f72bae97c02`.
-The prior identity
+`2f9bd146822e7f85633b604812c779506d87e438a9ffda3f7f961de6a0a91812`.
+The immediately prior identity
+`5034cd1fb5ef6969e7116fa63d5ac40ce22e05f8b16688e0e77f2f72bae97c02`
+is superseded because it included temporary runtime-alignment and next-task
+metadata. The original pre-semantic-correction identity
 `fa8107fe9bf834f1d088e22fcf2500f3160e94337bc92ff63e494519d0f4171e`
 is superseded PR history, not the current protocol identity.
+
+The normative object now contains policy only. Git, PR, branch, commit,
+next-task, and temporary implementation-alignment state remain outside its
+semantic identity.
+
+```text
+NORMATIVE_PROTOCOL_CONTAINS_GIT_PR_TASK_STATE = NO
+NORMATIVE_PROTOCOL_CONTAINS_TEMPORARY_IMPLEMENTATION_TODO = NO
+RUNTIME_SCHEMA_ALIGNMENT = COMPLETE
+```
 
 ## Research-roster eligibility is not the Challenger role
 

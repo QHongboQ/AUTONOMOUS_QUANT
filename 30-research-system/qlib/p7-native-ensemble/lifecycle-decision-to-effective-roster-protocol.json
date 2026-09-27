@@ -118,8 +118,7 @@
       "members[].candidate_id",
       "members[].authorization_evidence_id"
     ],
-    "new_roster_authorization_contract_created": false,
-    "runtime_consistency_follow_up": "TINY_SUCCESSOR_TO_PR116_MUST_RENAME_OR_REMOVE_EffectiveRoster.authorization_evidence_id_BEFORE_REAL_ROSTER_USE"
+    "new_roster_authorization_contract_created": false
   },
   "decision_evidence_cutoff": {
     "type": "TIMEZONE_AWARE_UTC_TIMESTAMP",
@@ -220,8 +219,7 @@
     ],
     "runtime_readiness_input": "SET_OF_CANDIDATE_IDS_RESOLVED_THROUGH_CANDIDATE_V3_QLIB_RECORDER_AUTHORITY",
     "preferred_future_persistence": "DVC_IMMUTABLE_ARTIFACT",
-    "new_transport_framework": false,
-    "existing_pr116_runtime_schema_alignment": "FOLLOW_UP_REQUIRED_BEFORE_REAL_ROSTER_USE"
+    "new_transport_framework": false
   },
   "synthetic_semantic_cases": {
     "classification": "TEST_FIXTURE_NOT_REAL_EVIDENCE",
@@ -253,6 +251,5 @@
     "backtest_count": 0,
     "p2_v2_sealed_oos_accessed": false,
     "p2_v2_cohort_modified": false
-  },
-  "next_task": "P7_PR116_EFFECTIVE_ROSTER_SOURCE_BUNDLE_FIELD_ALIGNMENT_001"
+  }
 }
