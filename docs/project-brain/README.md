@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Dynamic research execution readiness audit 001 (after this closeout merges)**
+> Development Next: **P7 — Prospective model persistence upstream substitution audit 001 (after this readiness audit merges)**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4374,6 +4374,78 @@ FINAL_CLASSIFICATION = PASS_RUNTIME_SUBSTITUTION_CLOSED_NO_FURTHER_SAFE_DELETION
 ```
 
 See [P7 Qlib runtime substitution closeout 001](p7-qlib-runtime-substitution-closeout-001.md).
+
+#### P7 dynamic research execution readiness audit (2026-09-27)
+
+P7 is mechanically ready at the Qlib runtime and statistical-tooling layers,
+but it is not ready for real prospective dynamic-roster research. The real
+lifecycle census is zero Certified, zero Shadow, zero Champion, zero Degraded
+and zero Retired Candidates; therefore zero Candidates are currently eligible
+for the frozen P7 roster and the minimum authorized count of two cannot be
+met.
+
+The historical surface is independently intact: all 17 original Formulaic
+prediction artifacts, all 17 derived Candidate views, the selected OLS view
+and the final eligible grid exist with their frozen hashes. A separately
+preregistered research-only static ensemble is mechanically executable. It is
+not dynamic-roster evidence, certification evidence or P7 exit evidence.
+
+Prospective inference is a separate blocker. Candidate V3 records model bytes
+as `NOT_PERSISTED_BY_UPSTREAM` for 17/17 Candidates, and the real Recorder
+artifact directories contain no `params.pkl`, `task` or `dataset`. The OLS
+control also has historical prediction bytes but no persisted model artifact.
+Using their run configurations would require an unauthorized refit rather than
+inference from frozen model state.
+
+```text
+P7_DYNAMIC_RESEARCH_EXECUTION_READINESS = NOT_READY_MULTIPLE_BLOCKERS
+P7_REAL_CERTIFIED_CANDIDATE_COUNT = 0
+P7_REAL_SHADOW_CANDIDATE_COUNT = 0
+P7_REAL_CHAMPION_CANDIDATE_COUNT = 0
+P7_REAL_DEGRADED_CANDIDATE_COUNT = 0
+P7_REAL_RETIRED_CANDIDATE_COUNT = 0
+P7_REAL_P2_CERTIFICATION_EVIDENCE_COUNT = 0
+P7_REAL_P4_LIFECYCLE_DECISION_EVIDENCE_COUNT = 0
+P7_REAL_ELIGIBLE_CANDIDATE_COUNT = 0
+P7_MINIMUM_AUTHORIZED_MEMBER_COUNT = 2
+P7_REAL_DYNAMIC_ROSTER_CAN_EXIST_NOW = NO
+P7_FORMULAIC_17_HISTORICAL_PREDICTION_COUNT = 17
+P7_FORMULAIC_17_HISTORICAL_PREDICTION_ARTIFACT_STATUS = PASS_17_EXISTS_AND_SHA256_MATCH
+P7_CLOSEOUT_CHECKSUM_STATUS = PASS_28_OF_28
+P7_CANDIDATE_V3_MANIFEST_HASH_STATUS = PASS_17_OF_17
+P7_FORMULAIC_17_MODEL_BYTES_PERSISTED_COUNT = 0
+P7_FORMULAIC_17_PROSPECTIVE_INFERENCE_READY_COUNT = 0
+P7_OLS_HISTORICAL_PREDICTION_AVAILABLE = YES
+P7_OLS_MODEL_ARTIFACT_AVAILABLE = NO
+P7_OLS_PROSPECTIVE_INFERENCE_READY = NO_REQUIRES_REFIT
+P7_QLIB_DYNAMIC_RUNTIME_MECHANICS_READY = YES_CONDITIONAL_ON_VALID_AUTHORIZED_MODEL_RECORDERS
+P7_FAIREST_PROSPECTIVE_CONTROL = PROSPECTIVE_FIXED_ROSTER_AT_STUDY_START
+P7_FAIREST_PROSPECTIVE_CONTROL_READINESS = NO
+P7_HISTORICAL_STATIC_ENSEMBLE_EXECUTION_READY = YES_RESEARCH_ONLY_NOT_DYNAMIC_NOT_CERTIFICATION
+P7_STATISTICAL_STACK_READY = YES_MECHANICALLY_ONCE_PROSPECTIVE_OBSERVATIONS_EXIST
+P7_RETROACTIVE_SYNTHETIC_P2_CERTIFICATION_FOR_VALUE_TEST = PROHIBITED
+P7_RETROACTIVE_SYNTHETIC_P4_LIFECYCLE_FOR_VALUE_TEST = PROHIBITED
+P7_HISTORICAL_PERFORMANCE_DERIVED_LIFECYCLE_EVENTS = PROHIBITED
+P7_REAL_LIFECYCLE_RECORDS_MODIFIED = 0
+P7_REAL_ROSTER_MUTATION_COUNT = 0
+P7_MODEL_TRAINING_COUNT = 0
+P7_MODEL_REFIT_COUNT = 0
+P7_PREDICTION_GENERATION_COUNT = 0
+P7_REAL_DYNAMIC_ENSEMBLE_EXECUTION_COUNT = 0
+P7_REAL_STATIC_ENSEMBLE_EXECUTION_COUNT = 0
+P7_BACKTEST_COUNT = 0
+P7_PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+ENVIRONMENT_MUTATED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P7_PROSPECTIVE_MODEL_PERSISTENCE_UPSTREAM_SUBSTITUTION_AUDIT_001
+P7_INDEPENDENT_OPTIONAL_STATIC_ROUTE = P7_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = NOT_READY_MULTIPLE_BLOCKERS
+```
+
+See [P7 dynamic research execution readiness audit 001](p7-dynamic-research-execution-readiness-audit-001.md).
 
 ---
 
