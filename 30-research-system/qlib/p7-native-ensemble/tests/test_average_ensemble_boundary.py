@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import copy
 import importlib.util
-from pathlib import Path
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal
 from qlib.model.ens.ensemble import AverageEnsemble
-
 
 MODULE_PATH = Path(__file__).parents[1] / "average_ensemble_boundary.py"
 SPEC = importlib.util.spec_from_file_location("average_ensemble_boundary", MODULE_PATH)
@@ -76,6 +76,24 @@ class AverageEnsembleBoundaryTests(unittest.TestCase):
         components["beta"].loc[:, "score"] = 1.0
         with self.assertRaisesRegex(ValueError, "constant cross-sectional"):
             boundary.combine_complete_predictions(components)
+
+    def test_finite_nonconstant_overflow_fails_before_native_ensemble(self) -> None:
+        components = complete_components()
+        components["large"] = components["alpha"].copy()
+        components["large"].loc[:, "score"] = [8e307, 9e307, 1e308] * 2
+        with patch.object(boundary, "AverageEnsemble") as ensemble:
+            with self.assertRaisesRegex(ValueError, "non-finite standardization mean"):
+                boundary.combine_complete_predictions(components)
+            ensemble.assert_not_called()
+
+    def test_finite_nonconstant_std_underflow_fails_before_native_ensemble(self) -> None:
+        components = complete_components()
+        components["tiny"] = components["alpha"].copy()
+        components["tiny"].loc[:, "score"] = [1e-308, 2e-308, 3e-308] * 2
+        with patch.object(boundary, "AverageEnsemble") as ensemble:
+            with self.assertRaisesRegex(ValueError, "non-finite or nonpositive"):
+                boundary.combine_complete_predictions(components)
+            ensemble.assert_not_called()
 
     def test_insufficient_instruments_fail_closed(self) -> None:
         components = complete_components()

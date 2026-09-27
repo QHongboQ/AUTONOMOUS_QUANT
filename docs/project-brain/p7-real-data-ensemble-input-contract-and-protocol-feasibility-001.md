@@ -343,3 +343,48 @@ PRIVATE_CLOSEOUT_CHECKSUM_SHA256 = f0b69f8359748ead463ec300de12f10630300c9b709b2
 CURRENT_DEVELOPMENT_NEXT = P7_FIRST_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
 FINAL_CLASSIFICATION = PASS_P7_REAL_DATA_ENSEMBLE_INPUT_AND_CONTROL_CONTRACT_CLOSEOUT
 ```
+
+### Numeric boundary guard verification
+
+The pinned Qlib 0.9.8.dev26 / pandas 2.3.3 / NumPy 2.2.6 runtime reproduced
+the numeric gap with a finite, nonconstant component
+`[8e307, 9e307, 1e308]`: native mean and standard deviation became infinite,
+its standardized values became `NaN`, and Qlib's final skip-NA mean still
+returned the finite vector `[0.0, -0.5, 0.5]`. The component was therefore
+effectively lost without a final non-finite result.
+
+The shared validation boundary now uses the same per-session pandas DataFrame
+`mean()` and `std()` reductions, including default ddof, before calling Qlib.
+An intended nonconstant component fails closed if its mean is non-finite or its
+standard deviation is non-finite or nonpositive. Exact constants retain the
+existing strict/session-local policy. No replacement standardization, clipping,
+rescaling, epsilon threshold, source patch, or generic engine was introduced.
+
+Validation-only rechecking covered 13,518 candidate/control component-session
+cross-sections on the already-frozen views. It found zero invalid means and
+zero invalid/nonpositive standard deviations. The 2,575 session-local inactive
+candidate masks are unchanged. Rehashing all 753 original allowlisted files and
+20 derived data files found zero mismatches. The population index and complete
+input contract remain byte-identical; the contract does not bind implementation
+source and therefore needs no successor identity. Separate numeric-guard
+evidence hashes to
+`dafd50d31f7dfea85291c808e32d1b7efc6f0083c4cdde1c09d0c620260dc5eb`.
+
+```text
+PINNED_RUNTIME_REPRODUCTION_RESULT = PASS_NATIVE_NONFINITE_COMPONENT_SILENTLY_LOST_BY_FINAL_SKIPNA_MEAN
+NUMERIC_GUARD_STATUS = PASS_FAIL_CLOSED_BEFORE_ENSEMBLE
+REAL_INVALID_MEAN_COUNT = 0
+REAL_INVALID_STD_COUNT = 0
+ACTIVE_MASK_UNCHANGED = YES
+POPULATION_INDEX_UNCHANGED = YES
+DATA_ARTIFACT_HASHES_UNCHANGED = YES
+INPUT_CONTRACT_IDENTITY_STATUS = UNCHANGED_DATA_CONTRACT_IMPLEMENTATION_GUARD_SEPARATE
+SYNTHETIC_TEST_RESULT = 25_OF_25_PASS
+ENVIRONMENT_MUTATED = NO
+REAL_ENSEMBLE_EXECUTION_COUNT = 0
+PERFORMANCE_METRICS_COMPUTED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P7_STATISTICAL_PROTOCOL_FROZEN = NO
+P7_EXIT_CONDITION_SATISFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_FIRST_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
+```

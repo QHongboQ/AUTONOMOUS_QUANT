@@ -58,6 +58,15 @@ class SessionLocalRouterTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "missing or non-finite"):
                     router.combine_session_local_nonconstant(predictions)
 
+    def test_numeric_failure_is_not_reclassified_as_inactive(self) -> None:
+        predictions = {
+            "large": frame([8e307, 9e307, 1e308], [8e307, 9e307, 1e308]),
+            "alpha": frame([1.0, 2.0, 3.0], [1.0, 3.0, 2.0]),
+            "beta": frame([3.0, 1.0, 2.0], [3.0, 2.0, 1.0]),
+        }
+        with self.assertRaisesRegex(ValueError, "non-finite standardization mean"):
+            router.combine_session_local_nonconstant(predictions)
+
     def test_fewer_than_two_active_components_fails_closed(self) -> None:
         predictions = {
             "constant_a": frame([1.0, 1.0, 1.0], [1.0, 2.0, 3.0]),

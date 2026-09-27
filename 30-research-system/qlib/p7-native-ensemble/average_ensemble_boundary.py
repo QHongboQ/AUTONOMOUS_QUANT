@@ -51,11 +51,25 @@ def validate_complete_predictions(
         values = frame["score"].to_numpy(dtype=float, copy=False)
         if not np.isfinite(values).all():
             raise ValueError(f"{name}: score contains missing or non-finite values")
-        grouped = frame["score"].groupby(level="datetime", sort=False)
-        if (grouped.size() < 2).any():
-            raise ValueError(f"{name}: each session needs at least two instruments")
-        if require_nonconstant and (grouped.nunique(dropna=False) < 2).any():
-            raise ValueError(f"{name}: constant cross-sectional component")
+        for session, session_frame in frame.groupby(level="datetime", sort=False):
+            if len(session_frame) < 2:
+                raise ValueError(f"{name}: each session needs at least two instruments")
+            if session_frame["score"].nunique(dropna=False) < 2:
+                if require_nonconstant:
+                    raise ValueError(f"{name}: constant cross-sectional component")
+                continue
+            # Match AverageEnsemble's native per-session DataFrame reductions,
+            # including pandas' default sample-standard-deviation ddof.
+            mean = session_frame.mean()["score"]
+            std = session_frame.std()["score"]
+            if not np.isfinite(mean):
+                raise ValueError(
+                    f"{name}: non-finite standardization mean at {session}"
+                )
+            if not np.isfinite(std) or std <= 0:
+                raise ValueError(
+                    f"{name}: non-finite or nonpositive standardization std at {session}"
+                )
         validated[name] = frame
 
     if reference_index is None:
