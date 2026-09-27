@@ -6,6 +6,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import numpy as np
+import pandas as pd
+from pandas.testing import assert_frame_equal
 
 
 MODULE_PATH = (
@@ -25,13 +30,32 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.authorities = runner.load_authorities(REPO)
+        cls.router = runner.load_module(
+            REPO
+            / "30-research-system/qlib/p7-native-ensemble/session_local_router.py",
+            "p7_successor_execution_test_router",
+        )
+
+    @staticmethod
+    def synthetic_index(
+        sessions: list[str], instruments: list[str]
+    ) -> pd.MultiIndex:
+        return pd.MultiIndex.from_product(
+            [pd.to_datetime(sessions), instruments],
+            names=["datetime", "instrument"],
+        )
 
     def base_seal(self) -> dict[str, object]:
         contract = self.authorities.input_contract
         return {
             "successor_protocol_sha256": runner.PROTOCOL_SHA256,
             "successor_input_contract_sha256": runner.INPUT_CONTRACT_SHA256,
-            "successor_population_index_sha256": runner.POPULATION_SHA256,
+            "signal_construction_population_index_sha256": (
+                runner.SIGNAL_CONSTRUCTION_POPULATION_SHA256
+            ),
+            "evaluation_population_index_sha256": (
+                runner.EVALUATION_POPULATION_SHA256
+            ),
             "label_validity_mask_sha256": runner.LABEL_MASK_SHA256,
             "execution_code_commit_sha": "code-commit",
             "authority_commit_sha": "authority-commit",
@@ -56,9 +80,15 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
                     "path": "/synthetic/label.pkl",
                     "sha256": contract["label_authority"]["label_artifact_sha256"],
                 },
-                "population": {
-                    "path": "/synthetic/population.parquet",
-                    "sha256": contract["successor_population"]["artifact_byte_sha256"],
+                "signal_construction_population": {
+                    "path": "/synthetic/construction-population.parquet",
+                    "sha256": "a" * 64,
+                },
+                "evaluation_population": {
+                    "path": "/synthetic/evaluation-population.parquet",
+                    "sha256": contract["evaluation_population"][
+                        "artifact_byte_sha256"
+                    ],
                 },
             },
         }
@@ -90,7 +120,14 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
 
     def test_frozen_authorities_are_bound_without_outcome_access(self) -> None:
         self.assertEqual(
-            self.authorities.protocol["input_contract"]["row_count"], 374477
+            self.authorities.protocol["input_contract"][
+                "signal_construction_row_count"
+            ],
+            374591,
+        )
+        self.assertEqual(
+            self.authorities.protocol["input_contract"]["evaluation_row_count"],
+            374477,
         )
         self.assertEqual(
             self.authorities.input_contract["candidate_snapshot"]["candidate_count"],
@@ -112,6 +149,14 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
         seal = self.base_seal()
         seal["successor_input_contract_sha256"] = "wrong"
         self.assert_rejected("INPUT_CONTRACT_MISMATCH", seal)
+
+    def test_both_population_semantic_identities_are_required(self) -> None:
+        seal = self.base_seal()
+        seal["signal_construction_population_index_sha256"] = "wrong"
+        self.assert_rejected("SIGNAL_CONSTRUCTION_POPULATION_MISMATCH", seal)
+        seal = self.base_seal()
+        seal["evaluation_population_index_sha256"] = "wrong"
+        self.assert_rejected("EVALUATION_POPULATION_MISMATCH", seal)
 
     def test_script_hash_mismatch_rejected(self) -> None:
         seal = self.base_seal()
@@ -184,6 +229,110 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
         self.assertEqual(
             classification, "STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE"
         )
+
+    def test_signal_is_constructed_before_evaluation_projection(self) -> None:
+        construction = self.synthetic_index(["2024-01-02"], ["A", "B", "C", "D"])
+        evaluation = construction[:-1]
+        raw = {
+            "one": pd.DataFrame({"score": [1.0, 2.0, 3.0, 100.0]}, index=construction),
+            "two": pd.DataFrame({"score": [4.0, 1.0, 3.0, 2.0]}, index=construction),
+        }
+        full, corrected, projected, _ = runner.construct_then_project_ensemble(
+            raw, construction, evaluation, self.router
+        )
+        prohibited, _ = self.router.combine_session_local_nonconstant(projected)
+        assert_frame_equal(corrected, full.loc[evaluation])
+        self.assertFalse(np.allclose(corrected["score"], prohibited["score"]))
+
+    def test_constant_component_rankic_is_secondary_nan_without_imputation(self) -> None:
+        index = self.synthetic_index(
+            ["2024-01-02", "2024-01-03"], ["A", "B", "C"]
+        )
+        raw = {
+            "constant_then_active": pd.DataFrame(
+                {"score": [7.0, 7.0, 7.0, 1.0, 2.0, 3.0]}, index=index
+            ),
+            "alpha": pd.DataFrame(
+                {"score": [1.0, 2.0, 3.0, 1.0, 3.0, 2.0]}, index=index
+            ),
+            "beta": pd.DataFrame(
+                {"score": [3.0, 1.0, 2.0, 2.0, 1.0, 3.0]}, index=index
+            ),
+        }
+        _, ensemble, projected, _ = runner.construct_then_project_ensemble(
+            raw, index, index, self.router
+        )
+        label = pd.Series([1.0, 2.0, 3.0, 2.0, 1.0, 3.0], index=index)
+        component = runner.rank_ic(
+            projected["constant_then_active"]["score"], label, required=False
+        )
+        primary = runner.rank_ic(ensemble["score"], label, required=False)
+        summary = runner.summarize_component_rank_ic(component)
+        self.assertTrue(np.isnan(component.iloc[0]))
+        self.assertEqual(summary["finite_valid_session_count"], 1)
+        self.assertTrue(np.isfinite(primary).all())
+        stats = {
+            "spa": {"consistent": 0.05},
+            "walkforward": {"positive_fraction": 0.6, "median_mean_delta": 0.01},
+            "cpcv": {"positive_fraction": 0.6, "median_mean_delta": 0.01},
+        }
+        classification, _ = runner.classify(self.authorities.protocol, 0.01, stats)
+        self.assertEqual(classification, "STATIC_ENSEMBLE_RESEARCH_SUPPORTIVE")
+
+    def test_structural_nan_makes_mcs_unavailable_without_filtering(self) -> None:
+        index = pd.to_datetime(["2024-01-02", "2024-01-03"])
+        components = pd.DataFrame(
+            {"candidate": [np.nan, 0.1]}, index=index
+        )
+        ensemble = pd.Series([0.2, 0.3], index=index)
+        with tempfile.TemporaryDirectory() as directory:
+            with mock.patch.object(runner.subprocess, "check_output") as invoked:
+                result = runner.mcs_result(
+                    components, ensemble, self.authorities.protocol, Path(directory)
+                )
+        invoked.assert_not_called()
+        self.assertEqual(
+            result["status"], "NOT_AVAILABLE_SECONDARY_INCOMPLETE_LOSS_MATRIX"
+        )
+        self.assertEqual(result["primary_classification_effect"], "NONE")
+
+    def test_mcs_runtime_failure_is_secondary(self) -> None:
+        with mock.patch.object(
+            runner, "mcs_result", side_effect=RuntimeError("synthetic mcs failure")
+        ):
+            result = runner.run_mcs_secondary(
+                pd.DataFrame({"candidate": [0.1]}),
+                pd.Series([0.2]),
+                self.authorities.protocol,
+                Path("synthetic"),
+            )
+        self.assertEqual(result["status"], "FAILED_SECONDARY")
+        self.assertEqual(result["primary_classification_effect"], "NONE")
+
+    def test_portfolio_failure_is_secondary_after_primary_lock(self) -> None:
+        classification = "STATIC_ENSEMBLE_RESEARCH_SUPPORTIVE"
+        with mock.patch.object(
+            runner, "run_portfolio", side_effect=RuntimeError("synthetic portfolio")
+        ):
+            result = runner.run_portfolio_secondary(
+                pd.Series(dtype=float), {}, {}, Path("synthetic")
+            )
+        self.assertEqual(result["status"], "FAILED_SECONDARY")
+        self.assertEqual(result["primary_classification_effect"], "NONE")
+        self.assertEqual(classification, "STATIC_ENSEMBLE_RESEARCH_SUPPORTIVE")
+
+    def test_lineage_failure_is_secondary_after_primary_lock(self) -> None:
+        classification = "STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE"
+        with mock.patch.object(
+            runner, "record_lineage", side_effect=RuntimeError("synthetic lineage")
+        ):
+            result = runner.record_lineage_secondary(
+                Path("synthetic"), classification, 0.0, self.authorities
+            )
+        self.assertEqual(result["status"], "FAILED_SECONDARY")
+        self.assertIsNone(result["run_id"])
+        self.assertEqual(result["primary_classification_effect"], "NONE")
+        self.assertEqual(classification, "STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE")
 
 
 if __name__ == "__main__":

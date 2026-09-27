@@ -25,9 +25,14 @@ import pandas as pd
 
 
 TASK = "AUTONOMOUS-QUANT-P7-SUCCESSOR-ONE-SHOT-EXECUTION-001"
-PROTOCOL_SHA256 = "a4ca307c3e3a245bb211978d36f03d8a2552c81df28049ddb6b667231689a894"
-INPUT_CONTRACT_SHA256 = "b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee"
-POPULATION_SHA256 = "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0"
+PROTOCOL_SHA256 = "cb61628ed49ca0f9d9798f92567adedbeb533f6854da098ec3c945b38bdbd76a"
+INPUT_CONTRACT_SHA256 = "b9e0c447794c318d7ddc00803e0f2ea5468abc4c77a43752ead2910804b8a7b5"
+SIGNAL_CONSTRUCTION_POPULATION_SHA256 = (
+    "2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e"
+)
+EVALUATION_POPULATION_SHA256 = (
+    "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0"
+)
 LABEL_MASK_SHA256 = "2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf"
 QLIB_SOURCE_SHA = "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
 
@@ -145,28 +150,43 @@ def load_authorities(repo: Path) -> Authorities:
     protocol = read_json(protocol_path)
     contract = read_json(contract_path)
     frozen = protocol["input_contract"]
-    population = contract["successor_population"]
+    construction = contract["signal_construction_population"]
+    evaluation = contract["evaluation_population"]
     checks = {
         "protocol input contract": (
             frozen["successor_input_contract_sha256"],
             INPUT_CONTRACT_SHA256,
         ),
-        "protocol population": (frozen["population_index_sha256"], POPULATION_SHA256),
+        "protocol construction population": (
+            frozen["signal_construction_population_index_sha256"],
+            SIGNAL_CONSTRUCTION_POPULATION_SHA256,
+        ),
+        "protocol evaluation population": (
+            frozen["evaluation_population_index_sha256"],
+            EVALUATION_POPULATION_SHA256,
+        ),
         "protocol label mask": (frozen["label_validity_mask_sha256"], LABEL_MASK_SHA256),
-        "contract population": (population["ordered_index_sha256"], POPULATION_SHA256),
+        "contract construction population": (
+            construction["ordered_index_sha256"],
+            SIGNAL_CONSTRUCTION_POPULATION_SHA256,
+        ),
+        "contract evaluation population": (
+            evaluation["ordered_index_sha256"], EVALUATION_POPULATION_SHA256
+        ),
         "contract label mask": (
             contract["label_validity_mask"]["semantic_sha256"],
             LABEL_MASK_SHA256,
         ),
         "Candidate count": (contract["candidate_snapshot"]["candidate_count"], 17),
-        "row count": (population["row_count"], 374477),
-        "session count": (population["session_count"], 751),
-        "instrument count": (population["instrument_count"], 547),
+        "construction row count": (construction["row_count"], 374591),
+        "evaluation row count": (evaluation["row_count"], 374477),
+        "evaluation session count": (evaluation["session_count"], 751),
+        "evaluation instrument count": (evaluation["instrument_count"], 547),
     }
     for label, (actual, expected) in checks.items():
         if actual != expected:
             raise GateError("FROZEN_AUTHORITY_MISMATCH", label)
-    if protocol["protocol_status"] != "FROZEN_PRE_EXECUTION_CODE":
+    if protocol["protocol_status"] != "FROZEN_PRE_EXECUTION_CODE_REBASE_REQUIRED":
         raise GateError("PROTOCOL_STATUS_MISMATCH")
     return Authorities(protocol=protocol, input_contract=contract)
 
@@ -350,7 +370,16 @@ def validate_provenance_seal(
             seal.get("successor_input_contract_sha256"),
             INPUT_CONTRACT_SHA256,
         ),
-        ("POPULATION_MISMATCH", seal.get("successor_population_index_sha256"), POPULATION_SHA256),
+        (
+            "SIGNAL_CONSTRUCTION_POPULATION_MISMATCH",
+            seal.get("signal_construction_population_index_sha256"),
+            SIGNAL_CONSTRUCTION_POPULATION_SHA256,
+        ),
+        (
+            "EVALUATION_POPULATION_MISMATCH",
+            seal.get("evaluation_population_index_sha256"),
+            EVALUATION_POPULATION_SHA256,
+        ),
         ("LABEL_MASK_MISMATCH", seal.get("label_validity_mask_sha256"), LABEL_MASK_SHA256),
         ("QLIB_SOURCE_MISMATCH", seal.get("qlib_source_sha"), QLIB_SOURCE_SHA),
         ("SCRIPT_HASH_MISMATCH", seal.get("execution_script_sha256"), runtime.script_sha256),
@@ -392,14 +421,25 @@ def _validate_artifact_authority(
         raise GateError("CANDIDATE_ARTIFACT_BINDING_MISMATCH")
     control = artifacts.get("control", {})
     label = artifacts.get("label", {})
-    population = artifacts.get("population", {})
+    construction_population = artifacts.get("signal_construction_population", {})
+    evaluation_population = artifacts.get("evaluation_population", {})
     contract = authorities.input_contract
     if control.get("sha256") != contract["control"]["source_prediction_sha256"]:
         raise GateError("CONTROL_ARTIFACT_BINDING_MISMATCH")
     if label.get("sha256") != contract["label_authority"]["label_artifact_sha256"]:
         raise GateError("LABEL_ARTIFACT_BINDING_MISMATCH")
-    if population.get("sha256") != contract["successor_population"]["artifact_byte_sha256"]:
-        raise GateError("POPULATION_ARTIFACT_BINDING_MISMATCH")
+    construction_byte_sha = construction_population.get("sha256")
+    if (
+        not isinstance(construction_byte_sha, str)
+        or len(construction_byte_sha) != 64
+        or any(character not in "0123456789abcdef" for character in construction_byte_sha)
+    ):
+        raise GateError("SIGNAL_CONSTRUCTION_POPULATION_ARTIFACT_BINDING_MISSING")
+    if (
+        evaluation_population.get("sha256")
+        != contract["evaluation_population"]["artifact_byte_sha256"]
+    ):
+        raise GateError("EVALUATION_POPULATION_ARTIFACT_BINDING_MISMATCH")
 
 
 def verify_artifact_files(seal: Mapping[str, Any]) -> None:
@@ -407,7 +447,8 @@ def verify_artifact_files(seal: Mapping[str, Any]) -> None:
     items = list(artifacts["candidates"]) + [
         artifacts["control"],
         artifacts["label"],
-        artifacts["population"],
+        artifacts["signal_construction_population"],
+        artifacts["evaluation_population"],
     ]
     for item in items:
         path = Path(item["path"])
@@ -425,13 +466,22 @@ def pre_outcome_manifest(
         "created_at_utc": utc_now(),
         "protocol_sha256": PROTOCOL_SHA256,
         "input_contract_sha256": INPUT_CONTRACT_SHA256,
-        "population_index_sha256": POPULATION_SHA256,
+        "signal_construction_population_index_sha256": (
+            SIGNAL_CONSTRUCTION_POPULATION_SHA256
+        ),
+        "evaluation_population_index_sha256": EVALUATION_POPULATION_SHA256,
         "label_validity_mask_sha256": LABEL_MASK_SHA256,
         "candidate_artifact_hashes": {
             item["slot"]: item["sha256"] for item in artifacts["candidates"]
         },
         "ols_artifact_hash": artifacts["control"]["sha256"],
         "label_artifact_hash": artifacts["label"]["sha256"],
+        "signal_construction_population_artifact_hash": artifacts[
+            "signal_construction_population"
+        ]["sha256"],
+        "evaluation_population_artifact_hash": artifacts["evaluation_population"][
+            "sha256"
+        ],
         "qlib_source_sha": QLIB_SOURCE_SHA,
         "dependency_versions": runtime.dependency_versions,
         "execution_commit_sha": seal["execution_code_commit_sha"],
@@ -524,26 +574,28 @@ def ordered_index_sha256(index: pd.MultiIndex) -> str:
     return hashlib.sha256(hashed).hexdigest()
 
 
-def load_population(path: Path, contract: Mapping[str, Any]) -> pd.MultiIndex:
+def load_population(
+    path: Path, specification: Mapping[str, Any], name: str
+) -> pd.MultiIndex:
     frame = pd.read_parquet(path, columns=["datetime", "instrument"])
     frame["datetime"] = pd.to_datetime(frame["datetime"])
     index = pd.MultiIndex.from_frame(frame, names=["datetime", "instrument"])
-    expected = contract["successor_population"]
     if index.has_duplicates or not index.is_monotonic_increasing:
-        raise GateError("SUCCESSOR_POPULATION_ORDER_INVALID")
-    if ordered_index_sha256(index) != expected["ordered_index_sha256"]:
-        raise GateError("SUCCESSOR_POPULATION_SEMANTIC_IDENTITY_MISMATCH")
+        raise GateError(f"{name}_POPULATION_ORDER_INVALID")
+    if ordered_index_sha256(index) != specification["ordered_index_sha256"]:
+        raise GateError(f"{name}_POPULATION_SEMANTIC_IDENTITY_MISMATCH")
     dimensions = (
         len(index),
         index.get_level_values("datetime").nunique(),
         index.get_level_values("instrument").nunique(),
     )
-    if dimensions != (
-        expected["row_count"],
-        expected["session_count"],
-        expected["instrument_count"],
-    ):
-        raise GateError("SUCCESSOR_POPULATION_DIMENSION_MISMATCH")
+    expected_dimensions = [specification["row_count"]]
+    if "session_count" in specification:
+        expected_dimensions.append(specification["session_count"])
+    if "instrument_count" in specification:
+        expected_dimensions.append(specification["instrument_count"])
+    if tuple(expected_dimensions) != dimensions[: len(expected_dimensions)]:
+        raise GateError(f"{name}_POPULATION_DIMENSION_MISMATCH")
     return index
 
 
@@ -554,12 +606,25 @@ def normalize_score(value: Any, name: str, population: pd.MultiIndex) -> pd.Data
         raise GateError("PREDICTION_SHAPE_INVALID", name)
     frame = value.rename(columns={value.columns[0]: "score"})
     if frame.index.has_duplicates or not population.isin(frame.index).all():
-        raise GateError("PREDICTION_SUCCESSOR_COVERAGE_INVALID", name)
+        raise GateError("PREDICTION_POPULATION_COVERAGE_INVALID", name)
     frame = frame.loc[population]
     values = frame["score"].to_numpy(dtype=float, copy=False)
     if not frame.index.equals(population) or not np.isfinite(values).all():
-        raise GateError("PREDICTION_SUCCESSOR_PROJECTION_INVALID", name)
+        raise GateError("PREDICTION_POPULATION_PROJECTION_INVALID", name)
     return frame
+
+
+def project_score(
+    frame: pd.DataFrame, name: str, population: pd.MultiIndex
+) -> pd.DataFrame:
+    if frame.index.has_duplicates or not population.isin(frame.index).all():
+        raise GateError("PREDICTION_EVALUATION_COVERAGE_INVALID", name)
+    projected = frame.loc[population]
+    if not projected.index.equals(population) or not np.isfinite(
+        projected["score"].to_numpy(dtype=float, copy=False)
+    ).all():
+        raise GateError("PREDICTION_EVALUATION_PROJECTION_INVALID", name)
+    return projected
 
 
 def normalize_label(value: Any, population: pd.MultiIndex) -> pd.Series:
@@ -579,44 +644,120 @@ def normalize_label(value: Any, population: pd.MultiIndex) -> pd.Series:
     return label
 
 
-def rank_ic(prediction: pd.Series, label: pd.Series) -> pd.Series:
+def rank_ic(prediction: pd.Series, label: pd.Series, *, required: bool) -> pd.Series:
     from qlib.contrib.eva.alpha import calc_ic
 
     _, result = calc_ic(prediction, label, dropna=False)
-    if result.isna().any():
+    if required and (len(result) != 751 or result.isna().any()):
         raise GateError("RANKIC_REQUIRED_SESSION_INVALID")
     return result
 
 
-def statistics_result(frame_path: Path, protocol: dict[str, Any], output: Path) -> dict[str, Any]:
+def summarize_component_rank_ic(values: pd.Series) -> dict[str, float | int | None]:
+    finite = values[np.isfinite(values.to_numpy(dtype=float, copy=False))]
+    if finite.empty:
+        return {
+            "finite_valid_session_count": 0,
+            "mean_over_finite_sessions": None,
+            "median_over_finite_sessions": None,
+            "positive_fraction_over_finite_sessions": None,
+        }
+    return {
+        "finite_valid_session_count": int(len(finite)),
+        "mean_over_finite_sessions": float(finite.mean()),
+        "median_over_finite_sessions": float(finite.median()),
+        "positive_fraction_over_finite_sessions": float((finite > 0).mean()),
+    }
+
+
+def primary_statistics(
+    frame_path: Path, protocol: dict[str, Any], output: Path
+) -> dict[str, Any]:
     payload_path = output / "statistics-protocol.json"
     write_json(
         payload_path,
         {
             "classification": protocol["classification"],
-            "component_family": protocol["component_family_diagnostics"],
             "primary": protocol["primary_endpoint"],
             "temporal": protocol["temporal_robustness"],
         },
     )
     destination = output / "statistics-result.json"
     code = r'''import json,sys,numpy as np,pandas as pd,arch,skfolio
-from arch.bootstrap import MCS,SPA
+from arch.bootstrap import SPA
 from skfolio.model_selection import WalkForward,CombinatorialPurgedCV
-frame=pd.read_pickle(sys.argv[1]); p=json.load(open(sys.argv[2])); t=p['temporal']; primary=p['primary']; family=p['component_family']
+frame=pd.read_pickle(sys.argv[1]); p=json.load(open(sys.argv[2])); t=p['temporal']; primary=p['primary']
 delta=frame['ENSEMBLE_MINUS_OLS']; w=t['walkforward']; c=t['cpcv']
 wf=list(WalkForward(test_size=w['test_size'],train_size=w['train_size'],purged_size=w['purged_size'],expand_train=w['expand_train'],reduce_test=w['reduce_test']).split(frame.to_numpy()))
 cp=list(CombinatorialPurgedCV(n_folds=c['n_folds'],n_test_folds=c['n_test_folds'],purged_size=c['purged_size'],embargo_size=c['embargo_size']).split(frame.to_numpy()))
 wv=[float(delta.iloc[test].mean()) for _,test in wf]; cv=[float(delta.iloc[np.sort(np.concatenate(groups))].mean()) for _,groups in cp]
 s=primary['inference']['procedure_parameters']; spa=SPA(-frame['OLS_ALPHA158_CONTROL'],-frame[['STATIC_17_ENSEMBLE']],block_size=s['block_size'],reps=s['reps'],bootstrap=s['bootstrap'],studentize=s['studentize'],nested=s['nested'],seed=s['seed']); spa.compute()
-m=family['procedure_parameters']; cols=['STATIC_17_ENSEMBLE']+[c for c in frame if c.startswith('sha256:')]; mcs=MCS(-frame[cols],size=m['size'],reps=m['reps'],block_size=m['block_size'],method=m['method'],bootstrap=m['bootstrap'],seed=m['seed']); mcs.compute()
-result={'arch_version':arch.__version__,'skfolio_version':skfolio.__version__,'spa':{k:float(spa.pvalues.loc[k]) for k in ('lower','consistent','upper')},'walkforward':{'fold_count':len(wv),'positive_fraction':float(np.mean(np.array(wv)>0)),'median_mean_delta':float(np.median(wv))},'cpcv':{'split_count':len(cv),'positive_fraction':float(np.mean(np.array(cv)>0)),'median_mean_delta':float(np.median(cv))},'mcs':{'included_models':[str(x) for x in mcs.included],'excluded_models':[str(x) for x in mcs.excluded],'role':family['classification_role']}}
+result={'arch_version':arch.__version__,'skfolio_version':skfolio.__version__,'spa':{k:float(spa.pvalues.loc[k]) for k in ('lower','consistent','upper')},'walkforward':{'fold_count':len(wv),'positive_fraction':float(np.mean(np.array(wv)>0)),'median_mean_delta':float(np.median(wv))},'cpcv':{'split_count':len(cv),'positive_fraction':float(np.mean(np.array(cv)>0)),'median_mean_delta':float(np.median(cv))}}
 open(sys.argv[3],'w').write(json.dumps(result,indent=2,sort_keys=True)+'\n')'''
     subprocess.run(
         [str(STATS_PYTHON), "-c", code, str(frame_path), str(payload_path), str(destination)],
         check=True,
     )
     return read_json(destination)
+
+
+def mcs_result(
+    component_daily: pd.DataFrame,
+    ensemble_daily: pd.Series,
+    protocol: Mapping[str, Any],
+    output: Path,
+) -> dict[str, Any]:
+    loss_frame = pd.concat(
+        {"STATIC_17_ENSEMBLE": ensemble_daily, **component_daily.to_dict("series")},
+        axis=1,
+    )
+    if not np.isfinite(loss_frame.to_numpy(dtype=float, copy=False)).all():
+        return {
+            "status": "NOT_AVAILABLE_SECONDARY_INCOMPLETE_LOSS_MATRIX",
+            "primary_classification_effect": "NONE",
+        }
+    input_path = output / "mcs-input.pkl"
+    output_path = output / "mcs-result.json"
+    loss_frame.to_pickle(input_path)
+    parameters = protocol["component_family_diagnostics"]["procedure_parameters"]
+    code = r'''import json,sys,pandas as pd
+from arch.bootstrap import MCS
+frame=pd.read_pickle(sys.argv[1]); p=json.loads(sys.argv[2])
+mcs=MCS(-frame,size=p['size'],reps=p['reps'],block_size=p['block_size'],method=p['method'],bootstrap=p['bootstrap'],seed=p['seed']); mcs.compute()
+print(json.dumps({'status':'PASS','included_models':[str(x) for x in mcs.included],'excluded_models':[str(x) for x in mcs.excluded],'primary_classification_effect':'NONE'}))'''
+    try:
+        report = json.loads(
+            subprocess.check_output(
+                [str(STATS_PYTHON), "-c", code, str(input_path), json.dumps(parameters)],
+                text=True,
+            )
+        )
+    except BaseException as exc:
+        report = {
+            "status": "FAILED_SECONDARY",
+            "exception_type": type(exc).__name__,
+            "exception": str(exc),
+            "primary_classification_effect": "NONE",
+        }
+    write_json(output_path, report)
+    return report
+
+
+def run_mcs_secondary(
+    component_daily: pd.DataFrame,
+    ensemble_daily: pd.Series,
+    protocol: Mapping[str, Any],
+    output: Path,
+) -> dict[str, Any]:
+    try:
+        return mcs_result(component_daily, ensemble_daily, protocol, output)
+    except BaseException as exc:
+        return {
+            "status": "FAILED_SECONDARY",
+            "exception_type": type(exc).__name__,
+            "exception": str(exc),
+            "primary_classification_effect": "NONE",
+        }
 
 
 def classify(protocol: Mapping[str, Any], mean_delta: float, stats: Mapping[str, Any]) -> tuple[str, dict[str, bool]]:
@@ -666,7 +807,10 @@ def record_lineage(
             {
                 "protocol_sha256": PROTOCOL_SHA256,
                 "input_contract_sha256": INPUT_CONTRACT_SHA256,
-                "population_index_sha256": POPULATION_SHA256,
+                "signal_construction_population_index_sha256": (
+                    SIGNAL_CONSTRUCTION_POPULATION_SHA256
+                ),
+                "evaluation_population_index_sha256": EVALUATION_POPULATION_SHA256,
                 "candidate_count": authorities.protocol["candidate_snapshot"][
                     "candidate_count"
                 ],
@@ -675,6 +819,30 @@ def record_lineage(
         )
         mlflow.log_metric("mean_daily_rank_ic_delta", mean_delta)
         return run.info.run_id
+
+
+def record_lineage_secondary(
+    output: Path,
+    classification: str,
+    mean_delta: float,
+    authorities: Authorities,
+) -> dict[str, Any]:
+    try:
+        return {
+            "status": "PASS",
+            "run_id": record_lineage(
+                output, classification, mean_delta, authorities
+            ),
+            "primary_classification_effect": "NONE",
+        }
+    except BaseException as exc:
+        return {
+            "status": "FAILED_SECONDARY",
+            "run_id": None,
+            "exception_type": type(exc).__name__,
+            "exception": str(exc),
+            "primary_classification_effect": "NONE",
+        }
 
 
 def run_portfolio(
@@ -717,12 +885,55 @@ def run_portfolio(
     report.to_pickle(report_path)
     pd.to_pickle(positions, positions_path)
     return {
+        "status": "PASS",
         "executed": True,
         "report_rows": len(report),
         "report_sha256": file_sha256(report_path),
         "positions_sha256": file_sha256(positions_path),
         "classification_role": p["classification_role"],
+        "primary_classification_effect": "NONE",
     }
+
+
+def run_portfolio_secondary(
+    prediction: pd.Series,
+    protocol: Mapping[str, Any],
+    seal: Mapping[str, Any],
+    output: Path,
+) -> dict[str, Any]:
+    try:
+        return run_portfolio(prediction, protocol, seal, output)
+    except BaseException as exc:
+        return {
+            "status": "FAILED_SECONDARY",
+            "executed": False,
+            "exception_type": type(exc).__name__,
+            "exception": str(exc),
+            "primary_classification_effect": "NONE",
+        }
+
+
+def construct_then_project_ensemble(
+    raw_predictions: Mapping[str, Any],
+    construction_population: pd.MultiIndex,
+    evaluation_population: pd.MultiIndex,
+    router: Any,
+) -> tuple[
+    pd.DataFrame, pd.DataFrame, dict[str, pd.DataFrame], pd.DataFrame
+]:
+    predictions = {
+        name: normalize_score(value, name, construction_population)
+        for name, value in raw_predictions.items()
+    }
+    ensemble, qualification = router.combine_session_local_nonconstant(predictions)
+    evaluation_predictions = {
+        name: project_score(frame, name, evaluation_population)
+        for name, frame in predictions.items()
+    }
+    evaluation_ensemble = project_score(
+        ensemble, "STATIC_17_ENSEMBLE", evaluation_population
+    )
+    return ensemble, evaluation_ensemble, evaluation_predictions, qualification
 
 
 def real_outcome_runner(
@@ -732,48 +943,120 @@ def real_outcome_runner(
     seal: Mapping[str, Any],
 ) -> dict[str, Any]:
     artifacts = seal["artifacts"]
-    population = load_population(
-        Path(artifacts["population"]["path"]), authorities.input_contract
+    contract = authorities.input_contract
+    construction_population = load_population(
+        Path(artifacts["signal_construction_population"]["path"]),
+        contract["signal_construction_population"],
+        "SIGNAL_CONSTRUCTION",
     )
-    predictions = {
-        item["slot"]: normalize_score(
-            pd.read_pickle(item["path"]), item["slot"], population
-        )
+    evaluation_population = load_population(
+        Path(artifacts["evaluation_population"]["path"]),
+        contract["evaluation_population"],
+        "EVALUATION",
+    )
+    if not evaluation_population.isin(construction_population).all():
+        raise GateError("EVALUATION_POPULATION_NOT_CONTAINED_IN_CONSTRUCTION")
+    raw_predictions = {
+        item["slot"]: pd.read_pickle(item["path"])
         for item in artifacts["candidates"]
     }
     control = normalize_score(
-        pd.read_pickle(artifacts["control"]["path"]), "control", population
+        pd.read_pickle(artifacts["control"]["path"]),
+        "control",
+        evaluation_population,
     )
-    label = normalize_label(pd.read_pickle(artifacts["label"]["path"]), population)
+    label = normalize_label(
+        pd.read_pickle(artifacts["label"]["path"]), evaluation_population
+    )
     router = load_module(
         repo / "30-research-system/qlib/p7-native-ensemble/session_local_router.py",
         "p7_successor_real_router",
     )
-    ensemble, qualification = router.combine_session_local_nonconstant(predictions)
+    ensemble, evaluation_ensemble, evaluation_predictions, qualification = (
+        construct_then_project_ensemble(
+            raw_predictions,
+            construction_population,
+            evaluation_population,
+            router,
+        )
+    )
     ensemble_path = output / "ensemble-prediction.pkl"
     ensemble.to_pickle(ensemble_path)
     qualification.to_pickle(output / "active-component-qualification.pkl")
-    columns: dict[str, pd.Series] = {
-        "STATIC_17_ENSEMBLE": rank_ic(ensemble["score"], label),
-        "OLS_ALPHA158_CONTROL": rank_ic(control["score"], label),
-    }
+    primary_daily = pd.concat(
+        {
+        "STATIC_17_ENSEMBLE": rank_ic(
+            evaluation_ensemble["score"], label, required=True
+        ),
+        "OLS_ALPHA158_CONTROL": rank_ic(control["score"], label, required=True),
+        },
+        axis=1,
+    )
+    primary_daily["ENSEMBLE_MINUS_OLS"] = (
+        primary_daily["STATIC_17_ENSEMBLE"]
+        - primary_daily["OLS_ALPHA158_CONTROL"]
+    )
+    primary_columns = [
+        "STATIC_17_ENSEMBLE",
+        "OLS_ALPHA158_CONTROL",
+        "ENSEMBLE_MINUS_OLS",
+    ]
+    if not np.isfinite(
+        primary_daily[primary_columns].to_numpy(dtype=float, copy=False)
+    ).all():
+        raise GateError("PRIMARY_RANKIC_REQUIRED_SESSION_INVALID")
+    primary_daily_path = output / "primary-daily-rank-ic.pkl"
+    primary_daily.to_pickle(primary_daily_path)
+    stats = primary_statistics(primary_daily_path, authorities.protocol, output)
+    mean_delta = float(primary_daily["ENSEMBLE_MINUS_OLS"].mean())
+    classification, gates = classify(authorities.protocol, mean_delta, stats)
+    primary_classification_locked = True
+
     bindings = {
         item["slot"]: item["candidate_id"]
         for item in authorities.input_contract["candidate_snapshot"]["bindings"]
     }
-    for slot, frame in predictions.items():
-        columns[bindings[slot]] = rank_ic(frame["score"], label)
-    daily = pd.concat(columns, axis=1)
-    daily["ENSEMBLE_MINUS_OLS"] = (
-        daily["STATIC_17_ENSEMBLE"] - daily["OLS_ALPHA158_CONTROL"]
-    )
+    component_columns = list(bindings.values())
+    try:
+        component_daily = pd.concat(
+            {
+                bindings[slot]: rank_ic(frame["score"], label, required=False)
+                for slot, frame in evaluation_predictions.items()
+            },
+            axis=1,
+        )
+        component_summaries: dict[str, Any] = {
+            candidate_id: summarize_component_rank_ic(component_daily[candidate_id])
+            for candidate_id in component_columns
+        }
+        component_summary_status = "PASS"
+    except BaseException as exc:
+        component_summaries = {
+            "status": "FAILED_SECONDARY",
+            "exception_type": type(exc).__name__,
+            "exception": str(exc),
+        }
+        component_summary_status = "FAILED_SECONDARY"
+        component_daily = pd.DataFrame(index=primary_daily.index)
+    daily = pd.concat([primary_daily, component_daily], axis=1)
     daily_path = output / "daily-rank-ic.pkl"
     daily.to_pickle(daily_path)
-    stats = statistics_result(daily_path, authorities.protocol, output)
-    mean_delta = float(daily["ENSEMBLE_MINUS_OLS"].mean())
-    classification, gates = classify(authorities.protocol, mean_delta, stats)
-    portfolio = run_portfolio(ensemble["score"], authorities.protocol, seal, output)
-    mlflow_run_id = record_lineage(
+    if component_summary_status == "PASS":
+        mcs = run_mcs_secondary(
+            component_daily,
+            primary_daily["STATIC_17_ENSEMBLE"],
+            authorities.protocol,
+            output,
+        )
+    else:
+        mcs = {
+            "status": "NOT_AVAILABLE_SECONDARY_COMPONENT_RANKIC_FAILURE",
+            "primary_classification_effect": "NONE",
+        }
+    portfolio = run_portfolio_secondary(
+        ensemble["score"], authorities.protocol, seal, output
+    )
+    lineage = record_lineage_secondary(
         output, classification, mean_delta, authorities
     )
     return {
@@ -781,9 +1064,13 @@ def real_outcome_runner(
         "result_classification": classification,
         "primary_mean_daily_rank_ic_delta": mean_delta,
         "classification_gates": gates,
-        "statistics": stats,
+        "primary_statistics": stats,
+        "primary_classification_locked": primary_classification_locked,
+        "component_summary_status": component_summary_status,
+        "component_summaries": component_summaries,
+        "mcs": mcs,
         "portfolio": portfolio,
-        "mlflow_run_id": mlflow_run_id,
+        "run_lineage": lineage,
         "ensemble_prediction_sha256": file_sha256(ensemble_path),
         "daily_rank_ic_sha256": file_sha256(daily_path),
         "pristine_oos": False,

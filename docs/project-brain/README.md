@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor execution-code rebase after boundary correction**
+> Active Development: **P7 — Successor one-shot execution provenance seal**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor One-Shot Execution Code Rebase After Boundary Correction 001**
+> Development Next: **P7 — Successor One-Shot Execution Provenance Seal 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4950,6 +4950,47 @@ FINAL_CLASSIFICATION = PASS_SUCCESSOR_SIGNAL_CONSTRUCTION_EVALUATION_BOUNDARY_CO
 ```
 
 See [P7 successor signal-construction/evaluation boundary correction 001](p7-successor-signal-construction-evaluation-boundary-correction-001.md).
+
+---
+
+#### P7 successor execution code rebased after boundary correction (2026-09-27)
+
+PR #130 now consumes the PR #131 corrected authorities. Qlib
+`AverageEnsemble` runs on the complete 374,591-row signal-construction
+population before the 374,477-row label-observable evaluation projection.
+Portfolio signals remain on the full construction population. Primary
+ensemble/control RankIC and the six-gate SPA/WalkForward/CPCV evidence are
+strict; component-summary, MCS, portfolio, and post-primary lineage failures
+are secondary and cannot change a locked primary classification.
+
+The future provenance seal must bind separate construction/evaluation
+population artifact byte identities and both ordered-index semantic identities.
+The old PR #130 script SHA is retired; the corrected script SHA is
+`996a9fe439651ef377337405fac85449bd8abd1d82851b9fc79e69536a03267b`.
+No seal was created and no real outcome was opened.
+
+```text
+SUCCESSOR_INPUT_CONTRACT_SHA256 = b9e0c447794c318d7ddc00803e0f2ea5468abc4c77a43752ead2910804b8a7b5
+SUCCESSOR_PROTOCOL_SHA256 = cb61628ed49ca0f9d9798f92567adedbeb533f6854da098ec3c945b38bdbd76a
+SIGNAL_CONSTRUCTION_POPULATION_INDEX_SHA256 = 2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e
+EVALUATION_POPULATION_INDEX_SHA256 = 50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0
+LABEL_OBSERVABILITY_USED_BEFORE_AVERAGEENSEMBLE = NO
+PORTFOLIO_SIGNAL_POPULATION = V1_PREDICTION_CONTROL_POPULATION
+COMPONENT_CONSTANT_SESSION_RANKIC_POLICY = UNAVAILABLE_NAN_NOT_IMPUTED_NOT_ZERO
+MCS_INCOMPLETE_MATRIX_POLICY = NOT_AVAILABLE_SECONDARY_INCOMPLETE_LOSS_MATRIX
+PRIMARY_CLASSIFICATION_LOCK_POINT = AFTER_COMPLETE_VALID_SIX_GATE_PRIMARY_AND_ROBUSTNESS_EVIDENCE
+REAL_EXECUTION_PROVENANCE_SEAL_PRESENT = NO
+REAL_EXECUTION_READY = NO_PENDING_POST_MERGE_PROVENANCE_SEAL
+REAL_OUTCOME_ACCESS_STARTED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_SEAL_001
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_EXECUTION_CODE_REBASED_AFTER_BOUNDARY_CORRECTION
+```
+
+See [P7 successor execution-code rebase after boundary correction 001](p7-successor-one-shot-execution-code-precommit-and-preflight-freeze-001.md).
 
 ---
 
