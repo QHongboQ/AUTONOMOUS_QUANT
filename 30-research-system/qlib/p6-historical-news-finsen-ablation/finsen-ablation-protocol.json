@@ -1,0 +1,281 @@
+{
+  "schema": "AQ_P6_HISTORICAL_NEWS_FINSEN_ABLATION_PROTOCOL_V1",
+  "status": "FROZEN_PRE_EXECUTION",
+  "scientific_inventory": {
+    "hypothesis_count": 1,
+    "primary_surface_comparison_count": 1,
+    "planned_model_fit_count": 2,
+    "hypothesis_id": "H_FINSEN_SENTIMENT_V1",
+    "hypothesis": "Adding the exact frozen finsen_finbert_market_sentiment research factor to BASE_157 provides measurable incremental value over BASE_157 alone over the exact common-support historical research interval.",
+    "primary_direction": "M1_MINUS_M0",
+    "protocol_changing_rerun_authorized": false
+  },
+  "control": {
+    "surface": "BASE_157",
+    "feature_family": "P2_RAGGED_ALPHA158_OHLCV_157",
+    "feature_column_count": 157,
+    "feature_manifest_sha256": "7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463",
+    "dataset_identity": "P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135",
+    "p5_fundamentals_included": false,
+    "macro_v1_included": false
+  },
+  "surfaces": [
+    {
+      "id": "M0",
+      "identity": "BASE_157",
+      "feature_count": 157,
+      "increment_features": []
+    },
+    {
+      "id": "M1",
+      "identity": "BASE_157_PLUS_EXACT_FINSEN_SENTIMENT_1",
+      "feature_count": 158,
+      "increment_features": [
+        "finsen_finbert_market_sentiment"
+      ]
+    }
+  ],
+  "excluded_feature_families": {
+    "p5_fundamentals": true,
+    "macro_v1": true,
+    "gdelt": true,
+    "company_news": true,
+    "news_volume_or_counts": true,
+    "fingpt": true,
+    "deepseek": true,
+    "event_taxonomy": true,
+    "llm_features": true,
+    "alternate_sentiment_models": true,
+    "alternate_finbert_variants": true,
+    "rolling_or_lagged_sentiment": true
+  },
+  "finsen_input_authority": {
+    "root": "D:/AQ_DATA/P6/historical-news-finsen-bounded-factor-poc-001",
+    "private_evidence_checksum_sha256": "6e56cfd78213eef31b256a4362f70352cfc37afb5e6ba9517b7b4bf73ae5c2f5",
+    "factor_name": "finsen_finbert_market_sentiment",
+    "factor_sha256": "93bc6a62550accc0a4484e86d6f3af8242c69a6211a51ef40bb34d0c9bc60f48",
+    "canonical_grain": "SESSION_GLOBAL",
+    "finsen_source_sha": "8dc90aa6f1c5c12352bab6a17108f991114e386f",
+    "finsen_data_blob_sha": "594280f4d838313bd4ef37cfa33171979a22cda2",
+    "finbert_model_revision": "4556d13015211d73dccd3fdd39d39232506f3e43",
+    "sentiment_method_owner": "FINSEN_PROSUSAI_FINBERT",
+    "upstream_sentiment_semantics": "Content -> ProsusAI/FinBERT -> P_positive - P_negative -> arithmetic daily mean",
+    "session_projection_owner": "AQ_RESEARCH_POLICY",
+    "session_projection_policy": "FIRST_XNYS_SESSION_STRICTLY_AFTER_SOURCE_CALENDAR_DATE",
+    "collision_policy": "LATEST_SOURCE_CALENDAR_DATE_PER_EFFECTIVE_SESSION",
+    "effective_session_collision_count": 100,
+    "superseded_daily_signal_count": 106,
+    "session_with_signal_count": 2003,
+    "session_without_signal_count": 84,
+    "missing_value_policy": "NULL_NO_ZERO_FILL_NO_FORWARD_FILL_NO_BACKFILL_NO_ROW_DROP",
+    "rematerialize_alternative_semantics": false
+  },
+  "row_identity_policy": {
+    "m0_m1_datetime_rows_equal": true,
+    "m0_m1_instruments_equal": true,
+    "m0_m1_membership_episode_identity_equal": true,
+    "m0_m1_labels_equal": true,
+    "m0_m1_splits_equal": true,
+    "m0_m1_row_count_equal": true,
+    "row_drop_due_to_finsen_null": false,
+    "row_population_difference_classification": "IMPLEMENTATION_FAILURE",
+    "instrument_dependent_finsen_value_count_required": 0,
+    "manufactured_instrument_session_row_count_required": 0,
+    "broadcast_mechanism": "DUCKDB_MECHANICAL_SESSION_JOIN",
+    "permanent_per_instrument_finsen_artifact": false,
+    "entity_or_ticker_news_mapping": false
+  },
+  "splits": {
+    "train": ["2015-04-01", "2019-12-31"],
+    "validation": ["2020-01-01", "2021-12-31"],
+    "historical_research_test": ["2022-01-03", "2023-07-17"]
+  },
+  "upstream_identities": {
+    "qlib_version": "0.9.8.dev26",
+    "qlib_source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8",
+    "lightgbm_version": "4.7.0",
+    "skfolio_version": "1.0.6",
+    "arch_version": "8.0.0"
+  },
+  "model": {
+    "owner": "MICROSOFT_QLIB",
+    "class": "qlib.contrib.model.gbdt.LGBModel",
+    "config_source": "30-research-system/qlib/p5-h1-evaluation/evaluate_h1.py::MODEL_CONFIG",
+    "config_sha256": "f75355629e7ad6b85f100627dbc055712d7f72d1e1e31783736f1ce4cc10a61a",
+    "config": {
+      "bagging_freq": 0,
+      "bagging_seed": 3,
+      "colsample_bytree": 0.8879,
+      "data_random_seed": 1,
+      "deterministic": true,
+      "device_type": "cpu",
+      "drop_seed": 4,
+      "early_stopping_rounds": 50,
+      "extra_seed": 6,
+      "feature_fraction_seed": 2,
+      "force_col_wise": true,
+      "force_row_wise": false,
+      "lambda_l1": 205.6999,
+      "lambda_l2": 580.9768,
+      "learning_rate": 0.2,
+      "loss": "mse",
+      "max_depth": 8,
+      "num_boost_round": 1000,
+      "num_leaves": 210,
+      "num_threads": 8,
+      "objective_seed": 5,
+      "seed": 20260913,
+      "subsample": 0.8789,
+      "use_missing": true,
+      "zero_as_missing": false
+    },
+    "config_changed": false,
+    "hyperparameter_search": false
+  },
+  "label_and_processors": {
+    "label": "Ref($close, -2)/Ref($close, -1) - 1",
+    "shared_processors": [],
+    "infer_processors": [],
+    "learn_processors": [
+      {"class": "DropnaLabel", "kwargs": {"fields_group": "label"}},
+      {"class": "CSZScoreNorm", "kwargs": {"fields_group": "label"}}
+    ],
+    "feature_fillna_used": false,
+    "finsen_extra_normalization": false,
+    "finsen_clipping_or_winsorization": false
+  },
+  "prediction_metric": {
+    "primary": "QLIB_RANK_IC",
+    "delta": "M1_TEST_RANK_IC - M0_TEST_RANK_IC",
+    "positive_support_direction": "DELTA_GT_0",
+    "secondary_metrics_may_not_change_classification": true
+  },
+  "portfolio": {
+    "strategy": "TopkDropoutStrategy",
+    "topk": 30,
+    "n_drop": 3,
+    "open_cost": 0.0005,
+    "close_cost": 0.0015,
+    "deal_price": "close",
+    "m0_m1_assumptions_equal": true
+  },
+  "walkforward": {
+    "owner": "skfolio",
+    "test_size": 63,
+    "train_size": 504,
+    "purged_size": 2,
+    "expand_train": false,
+    "reduce_test": false,
+    "forward_gate": {
+      "positive_active_return_fraction_gte": 0.6,
+      "median_active_return_gt": 0.0
+    },
+    "reverse_direction_role": "DEGRADED_CLASSIFICATION_ONLY"
+  },
+  "cpcv": {
+    "owner": "skfolio",
+    "n_folds": 10,
+    "n_test_folds": 2,
+    "purged_size": 2,
+    "embargo_size": 2,
+    "forward_gate": {
+      "positive_active_return_fraction_gte": 0.6,
+      "median_active_return_gt": 0.0
+    },
+    "reverse_direction_role": "DEGRADED_CLASSIFICATION_ONLY"
+  },
+  "arch_tests": {
+    "owner": "arch",
+    "bootstrap": "stationary",
+    "block_size": 10,
+    "reps": 5000,
+    "seed": 20260913,
+    "alpha": 0.05,
+    "loss": "negative net daily return",
+    "directions": ["M1_MINUS_M0", "M0_MINUS_M1"],
+    "positive_support_gate": {
+      "spa_consistent_pvalue_lte": 0.05,
+      "reality_check_consistent_pvalue_lte": 0.05
+    }
+  },
+  "classifications": {
+    "INCREMENTAL_VALUE_SUPPORTED": {
+      "all_required": [
+        "M1_TEST_RANK_IC - M0_TEST_RANK_IC > 0",
+        "M1_MINUS_M0 WalkForward gate = TRUE",
+        "M1_MINUS_M0 CPCV gate = TRUE",
+        "M1_MINUS_M0 SPA consistent p-value <= 0.05",
+        "M1_MINUS_M0 RealityCheck consistent p-value <= 0.05"
+      ],
+      "retention": "RESEARCH_EVIDENCE_SUPPORTED_STRICT_PRODUCTION_PIT_REMAINS_NO"
+    },
+    "DEGRADED": {
+      "all_required": [
+        "M1_TEST_RANK_IC - M0_TEST_RANK_IC < 0",
+        "M0_MINUS_M1 WalkForward gate = TRUE",
+        "M0_MINUS_M1 CPCV gate = TRUE",
+        "M0_MINUS_M1 SPA consistent p-value <= 0.05",
+        "M0_MINUS_M1 RealityCheck consistent p-value <= 0.05"
+      ],
+      "retention": "REJECT_AND_CLOSE_EXACT_FINSEN_QUESTION"
+    },
+    "NO_MEASURABLE_INCREMENTAL_VALUE": {
+      "all_required": [
+        "PRIMARY_METRICS_FINITE",
+        "INCREMENTAL_VALUE_SUPPORTED gate is not fully satisfied",
+        "DEGRADED gate is not fully satisfied"
+      ],
+      "retention": "CLOSE_EXACT_FINSEN_QUESTION_RETAIN_MATERIALIZATION_AS_HISTORICAL_RESEARCH_EVIDENCE"
+    },
+    "INCONCLUSIVE": {
+      "any_required": [
+        "PRIMARY_RANK_IC_UNDEFINED_OR_NONFINITE",
+        "ROW_OR_LABEL_MISMATCH",
+        "CORRUPT_ARTIFACT",
+        "INCOMPLETE_REQUIRED_STATISTICAL_EVIDENCE",
+        "UNRECOVERABLE_RUNTIME_FAILURE"
+      ],
+      "weak_results_alone_are_inconclusive": false,
+      "retention": "ONLY_EXACT_NO_PROTOCOL_CHANGE_RECOVERY_MAY_BE_CONSIDERED"
+    }
+  },
+  "anti_p_hacking": {
+    "alternate_lags_or_rolling_windows": false,
+    "alternate_collision_policies": false,
+    "alternate_finbert_models_or_text_columns": false,
+    "news_count_or_threshold_features": false,
+    "winsorization_clipping_or_normalization_variants": false,
+    "missing_value_imputation": false,
+    "different_splits_or_model": false,
+    "hyperparameter_search": false,
+    "protocol_changing_rerun_authorized": false
+  },
+  "post_result_policy": {
+    "INCREMENTAL_VALUE_SUPPORTED": {
+      "research_evidence_supported": true,
+      "strict_production_pit_ready": false,
+      "production_admission_authorized": false,
+      "future_strict_pit_source_evaluation_may_be_considered": true
+    },
+    "NO_MEASURABLE_INCREMENTAL_VALUE": "CLOSE_EXACT_FINSEN_HISTORICAL_NEWS_RESEARCH_LANE",
+    "DEGRADED": "REJECT_AND_CLOSE_EXACT_FINSEN_HISTORICAL_NEWS_RESEARCH_LANE",
+    "INCONCLUSIVE": "ONLY_EXACT_NO_PROTOCOL_CHANGE_RECOVERY_MAY_BE_CONSIDERED"
+  },
+  "future_execution": {
+    "minimum_path": "REUSE_PROVEN_P5_AND_MACRO_V1_MECHANICS_WITHOUT_FRAMEWORK_GENERALIZATION",
+    "evaluation_framework_created": false,
+    "p5_or_macro_v1_authority_modified": false,
+    "retry_policy": "EXACT_IMPLEMENTATION_OR_RUNTIME_RECOVERY_ONLY",
+    "next_task": "P6_HISTORICAL_NEWS_FINSEN_FIRST_AUTHORIZED_ABLATION_001"
+  },
+  "safety": {
+    "aq_outcome_data_accessed": false,
+    "model_training_count": 0,
+    "prediction_count": 0,
+    "backtest_count": 0,
+    "ablation_count": 0,
+    "p2_v2_sealed_oos_accessed": false,
+    "new_production_loc": 0,
+    "aq_new_generic_engine_count": 0
+  }
+}

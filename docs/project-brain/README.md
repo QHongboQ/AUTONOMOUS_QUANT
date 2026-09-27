@@ -8,7 +8,7 @@
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P6 — Historical News FinSen Ablation Protocol Freeze 001**
+> Development Next: **P6 — Historical News FinSen First Authorized Ablation 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -3736,6 +3736,49 @@ NEW_PRODUCTION_LOC = 0
 CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_FINSEN_ABLATION_PROTOCOL_FREEZE_001
 FINAL_CLASSIFICATION = PASS_P6_HISTORICAL_NEWS_FINSEN_BOUNDED_FACTOR_POC
 ```
+
+---
+
+### P6 FinSen historical-news ablation protocol freeze (2026-09-26)
+
+The exact research-only FinSen factor now has one frozen comparison:
+`M0 = BASE_157` versus
+`M1 = BASE_157 + finsen_finbert_market_sentiment`. The common-support test ends
+on `2023-07-17`; the 84 supported-interval NULL sessions remain in both row
+populations and are not filled or dropped.
+
+The existing P5/Macro V1 Qlib LightGBM, label, processor, portfolio,
+WalkForward, CPCV, SPA, and RealityCheck authorities are reused unchanged. No
+training, prediction, backtest, ablation, outcome access, or sealed-OOS access
+occurred during this freeze.
+
+```text
+FINSEN_ABLATION_PROTOCOL = FROZEN_PRE_EXECUTION
+PROTOCOL_SHA256 = 63c69d4eb80a7d98ad4b846484ca14a0bc47e83b2fc5659a261098e7852d79b9
+CONTROL_SURFACE = BASE_157
+CONTROL_FEATURE_COUNT = 157
+CONTROL_FEATURE_MANIFEST_SHA256 = 7d5fbec1e775e8ff7f03b45ab966443c7774a4052b41cbf0a2116e9c96241463
+CONTROL_DATASET_IDENTITY = P5_CONTROL_DATASET_IDENTITY_V1:08786931dc72b12226d092877fa20c78dff5fb054384a3b1595c1bd1579f8135
+M0_FEATURE_COUNT = 157
+M1_FEATURE_COUNT = 158
+FINSEN_FACTOR_NAME = finsen_finbert_market_sentiment
+FINSEN_FACTOR_SHA256 = 93bc6a62550accc0a4484e86d6f3af8242c69a6211a51ef40bb34d0c9bc60f48
+TRAIN_RANGE = 2015-04-01..2019-12-31
+VALIDATION_RANGE = 2020-01-01..2021-12-31
+HISTORICAL_RESEARCH_TEST_RANGE = 2022-01-03..2023-07-17
+MODEL_OWNER = MICROSOFT_QLIB
+MODEL_CONFIG_SHA256 = f75355629e7ad6b85f100627dbc055712d7f72d1e1e31783736f1ce4cc10a61a
+PRIMARY_METRIC = QLIB_RANK_IC
+PROTOCOL_CHANGING_RERUN_AUTHORIZED = NO
+STRICT_PRODUCTION_PIT_READY = NO
+PRODUCTION_ADMISSION_AUTHORIZED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_DEVELOPMENT_NEXT = P6_HISTORICAL_NEWS_FINSEN_FIRST_AUTHORIZED_ABLATION_001
+FINAL_CLASSIFICATION = PASS_P6_HISTORICAL_NEWS_FINSEN_ABLATION_PROTOCOL_FROZEN
+```
+
+PR #106 remains open, unmerged, and unmodified stale closeout evidence.
 
 ---
 
