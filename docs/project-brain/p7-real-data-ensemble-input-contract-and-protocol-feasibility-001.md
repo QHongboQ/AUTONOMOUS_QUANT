@@ -33,13 +33,18 @@ reference proved to be zero.
 SELECTED_READ_ALLOWLIST_ENTRY_COUNT = 18
 SELECTED_READ_ALLOWLIST_SHA256 = bb23250cbd0edb803761c6f3660df2dbdaeb4694c684311a21ca71f57b4b6a68
 CONTROL_SELECTION_METADATA_SHA256 = 02fb274e65fe9b3f69d65037080969f800bb10cfb792963f11b3b77c7279dda7
-PREDICTION_ARTIFACT_HASH_VERIFIED_COUNT = 18
+SELECTED_CONTRACT_PREDICTION_ARTIFACT_HASH_VERIFIED_COUNT = 18
+TOTAL_UNIQUE_PREDICTION_ARTIFACTS_ACCESSED = 19
+REJECTED_POTENTIAL_CONTROL_ARTIFACT_COUNT = 1
 ORIGINAL_ARTIFACT_HASH_CHANGED_COUNT = 0
 LABEL_OR_RETURN_ARTIFACTS_OPENED = 0
 PERFORMANCE_ARTIFACTS_OPENED = 0
 ```
 
-Permitted inspection was limited to `score` object/schema, ordered index
+The 19 unique accesses comprise 17 candidates, the rejected P1 potential
+control, and the selected P2 control; only the latter 18-entry candidate/P2
+scope is the selected contract scope. Permitted inspection was limited to
+`score` object/schema, ordered index
 identity, key types, counts, missingness/non-finite checks, cross-sectional
 readiness and byte-hash revalidation. No score value was exported. The real
 `combine_complete_predictions()` boundary was not called.
