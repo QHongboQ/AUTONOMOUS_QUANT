@@ -9,21 +9,14 @@ import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype, is_numeric_dtype
 from qlib.model.ens.ensemble import AverageEnsemble
 
-
 QLIB_SOURCE_SHA = "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
 UPSTREAM_CLASS = "qlib.model.ens.ensemble.AverageEnsemble"
 
 
-def combine_complete_predictions(
-    predictions: Mapping[str, pd.DataFrame],
-) -> pd.DataFrame:
-    """Validate complete score panels, then delegate combination to Qlib.
-
-    The POC accepts at least two explicitly named, finite, nonconstant score
-    frames with the same sorted ``(datetime, instrument)`` index.  It neither
-    repairs nor reweights incomplete inputs.
-    """
-
+def validate_complete_predictions(
+    predictions: Mapping[str, pd.DataFrame], *, require_nonconstant: bool = True
+) -> tuple[dict[str, pd.DataFrame], pd.MultiIndex]:
+    """Validate complete, aligned prediction panels without combining them."""
     if not isinstance(predictions, Mapping) or len(predictions) < 2:
         raise ValueError("at least two named prediction components are required")
     if any(not isinstance(name, str) or not name.strip() for name in predictions):
@@ -58,17 +51,48 @@ def combine_complete_predictions(
         values = frame["score"].to_numpy(dtype=float, copy=False)
         if not np.isfinite(values).all():
             raise ValueError(f"{name}: score contains missing or non-finite values")
-        grouped = frame["score"].groupby(level="datetime", sort=False)
-        if (grouped.size() < 2).any():
-            raise ValueError(f"{name}: each session needs at least two instruments")
-        if (grouped.nunique(dropna=False) < 2).any():
-            raise ValueError(f"{name}: constant cross-sectional component")
+        for session, session_frame in frame.groupby(level="datetime", sort=False):
+            if len(session_frame) < 2:
+                raise ValueError(f"{name}: each session needs at least two instruments")
+            if session_frame["score"].nunique(dropna=False) < 2:
+                if require_nonconstant:
+                    raise ValueError(f"{name}: constant cross-sectional component")
+                continue
+            # Match AverageEnsemble's native per-session DataFrame reductions,
+            # including pandas' default sample-standard-deviation ddof.
+            mean = session_frame.mean()["score"]
+            std = session_frame.std()["score"]
+            if not np.isfinite(mean):
+                raise ValueError(
+                    f"{name}: non-finite standardization mean at {session}"
+                )
+            if not np.isfinite(std) or std <= 0:
+                raise ValueError(
+                    f"{name}: non-finite or nonpositive standardization std at {session}"
+                )
         validated[name] = frame
+
+    if reference_index is None:
+        raise RuntimeError("prediction validation produced no reference index")
+    return validated, reference_index
+
+
+def combine_complete_predictions(
+    predictions: Mapping[str, pd.DataFrame],
+) -> pd.DataFrame:
+    """Validate complete score panels, then delegate combination to Qlib.
+
+    The POC accepts at least two explicitly named, finite, nonconstant score
+    frames with the same sorted ``(datetime, instrument)`` index.  It neither
+    repairs nor reweights incomplete inputs.
+    """
+
+    validated, reference_index = validate_complete_predictions(predictions)
 
     result = AverageEnsemble()(validated)
     if not isinstance(result, pd.Series):
         raise RuntimeError("pinned Qlib AverageEnsemble returned an unsupported type")
-    if reference_index is None or not result.index.equals(reference_index):
+    if not result.index.equals(reference_index):
         raise RuntimeError("pinned Qlib AverageEnsemble changed row identities")
     if not np.isfinite(result.to_numpy(dtype=float, copy=False)).all():
         raise RuntimeError("pinned Qlib AverageEnsemble produced non-finite output")
