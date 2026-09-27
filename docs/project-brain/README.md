@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — Future Candidate Qlib-native producer handoff**
+> Active Development: **P7 — Historical static ensemble research protocol freeze**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — Future Candidate upstream path freeze 001**
+> Development Next: **P7 — Historical Static Ensemble Research Protocol Freeze 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4540,6 +4540,56 @@ FINAL_CLASSIFICATION = PASS_RD_AGENT_NATIVE_AND_ALPHAGEN_CONFIG_ONLY_HANDOFF
 ```
 
 See [P3 future Candidate Qlib-native handoff POC 001](p3-future-candidate-qlib-native-handoff-poc-001.md).
+
+---
+
+#### P3 future Candidate upstream path freeze (2026-09-27)
+
+P3 future-Candidate production architecture is closed. RD-Agent uses its
+native `qrun -> task_train` path; AlphaGen supplies immutable expression and
+materialized factor identities to native Qlib task configuration. Qlib owns
+training, Recorder model state and prediction runtime; Qlib/MLflow owns run
+lineage and DVC owns reproducibility. Candidate V3 already binds a persisted
+`params.pkl` content identity plus its existing Recorder identity, so neither a
+schema change nor Candidate V4 is required.
+
+The historical 17 Candidates remain immutable historical-prediction-only
+evidence. Their missing runtime model artifacts are not retrofitted, and any
+future retraining must create new model, Recorder, and Candidate identities.
+P2 certification, P4 lifecycle authority and P7 roster authorization remain
+external to Qlib Recorder/runtime state.
+
+```text
+RD_AGENT_FUTURE_CANDIDATE_HANDOFF = UPSTREAM_WHOLE_QRUN_TO_QLIB_TASK_TRAIN
+ALPHAGEN_FUTURE_CANDIDATE_HANDOFF = EXPRESSION_IDENTITY_PLUS_MATERIALIZED_FACTOR_PARQUET_TO_QLIB_TASK_CONFIG
+MODEL_TRAINING_OWNER = QLIB
+RUNTIME_MODEL_STATE_OWNER = QLIB_RECORDER
+PREDICTION_RUNTIME_OWNER = QLIB
+RUN_LINEAGE_OWNER = QLIB_MLFLOW
+REPRODUCIBILITY_OWNER = DVC
+CANDIDATE_V3_SCHEMA_CHANGE_REQUIRED = NO
+CANDIDATE_V4_REQUIRED = NO
+MANUAL_MODEL_FIT_FOR_REAL_CANDIDATE = PROHIBITED_BY_DEFAULT
+MANUAL_RECORDER_MODEL_PERSISTENCE = PROHIBITED_BY_DEFAULT
+MANUAL_PARAMS_PKL_WRITE = PROHIBITED_BY_DEFAULT
+AQ_TRAINING_ENGINE = NO
+AQ_MODEL_STORE = NO
+AQ_MODEL_SERIALIZER = NO
+AQ_RECORDER_BUILDER = NO
+AQ_MODEL_REGISTRY = NO
+AQ_PREDICTION_ENGINE = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+CURRENT_17_REFIT_COUNT = 0
+CURRENT_17_RECORDER_MUTATION_COUNT = 0
+CURRENT_17_CANDIDATE_IDENTITY_CHANGE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_FREEZE_001
+FINAL_CLASSIFICATION = PASS_FUTURE_CANDIDATE_UPSTREAM_PATH_FROZEN
+```
+
+See [P3 future Candidate upstream path freeze 001](p3-future-candidate-upstream-path-freeze-001.md).
 
 ---
 
