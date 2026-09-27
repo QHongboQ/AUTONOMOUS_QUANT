@@ -4,7 +4,7 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor one-shot execution provenance seal**
+> Active Development: **P7 — Successor Git-canonical text-byte identity correction**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
@@ -5005,6 +5005,45 @@ FINAL_CLASSIFICATION = PASS_NONRECURSIVE_PROVENANCE_AUTHORITY_FIXED
 ```
 
 See [P7 successor execution-code rebase after boundary correction 001](p7-successor-one-shot-execution-code-precommit-and-preflight-freeze-001.md).
+
+---
+
+#### P7 successor Git-canonical text-byte identity correction (2026-09-27)
+
+Tracked provenance text now uses `SHA256_OF_RAW_GIT_BLOB_BYTES` as its
+canonical byte identity. The Windows checkout hash is diagnostic only and no
+longer participates in authorization. Runtime verifies the execution script at
+both the sealed execution commit and current `HEAD` using raw Git blob bytes,
+then verifies the working-tree script and tracked seal through Git's native
+clean/filter-aware blob OIDs.
+
+The correction preserves the nonrecursive authority, clean-worktree,
+`HEAD == origin/main`, seal-last-change, execution-commit ancestry, dependency,
+Qlib-source, protocol, input, population, and label-mask gates. A realistic
+`core.autocrlf=true` regression proves that differing checkout bytes pass when
+Git-equivalent, while actual script/seal content mutation and a later unrelated
+commit remain rejected. No real seal or outcome was opened.
+
+```text
+TRACKED_TEXT_CANONICAL_IDENTITY = SHA256_OF_RAW_GIT_BLOB_BYTES
+RAW_WORKTREE_SHA_USED_FOR_AUTHORIZATION = NO
+EXECUTION_COMMIT_BLOB_SHA_VERIFIED = YES
+CURRENT_HEAD_BLOB_SHA_VERIFIED = YES
+WORKTREE_SCRIPT_GIT_EQUIVALENT_TO_HEAD = YES
+SEAL_RAW_BYTE_EQUALITY_REQUIRED = NO
+WORKTREE_SEAL_GIT_EQUIVALENT_TO_HEAD = YES
+AUTHORITY_COMMIT_SHA_STORED_INSIDE_SEAL = NO
+REAL_PROVENANCE_SEAL_CREATED = NO
+REAL_EXECUTE_INVOKED = NO
+REAL_OUTCOME_ACCESS_STARTED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_SEAL_001
+FINAL_CLASSIFICATION = PASS_GIT_CANONICAL_TEXT_BYTE_IDENTITY_CORRECTED
+```
+
+See [P7 successor Git-canonical text-byte identity correction 001](p7-successor-git-canonical-text-byte-identity-correction-001.md).
 
 ---
 

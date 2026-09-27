@@ -82,11 +82,13 @@ class RuntimeAuthority:
     origin_main_head: str
     worktree_clean: bool
     seal_last_change_commit: str
-    seal_worktree_matches_head: bool
+    seal_worktree_git_equivalent_to_head: bool
     execution_commit_on_current_head: bool
     execution_commit_on_origin_main: bool
     execution_commit_script_sha256: str
-    runtime_script_sha256: str
+    current_head_script_sha256: str
+    worktree_script_git_equivalent_to_head: bool
+    raw_worktree_script_sha256: str
     dependency_versions: dict[str, str]
 
 
@@ -329,24 +331,42 @@ def git_blob_sha256(repo: Path, commit: str, path: Path) -> str:
     return hashlib.sha256(result.stdout).hexdigest()
 
 
-def seal_worktree_matches_head(repo: Path) -> bool:
-    seal_path = repo / PROVENANCE_SEAL
+def git_blob_oid(repo: Path, commit: str, path: Path) -> str:
+    return git(repo, "rev-parse", f"{commit}:{path.as_posix()}")
+
+
+def worktree_filtered_blob_oid(repo: Path, path: Path) -> str:
     result = subprocess.run(
-        ["git", "-C", str(repo), "show", f"HEAD:{PROVENANCE_SEAL.as_posix()}"],
+        [
+            "git",
+            "-C",
+            str(repo),
+            "hash-object",
+            f"--path={path.as_posix()}",
+            str((repo / path).resolve()),
+        ],
         check=False,
         capture_output=True,
+        text=True,
     )
-    return (
-        result.returncode == 0
-        and seal_path.is_file()
-        and seal_path.read_bytes() == result.stdout
-    )
+    if result.returncode != 0:
+        raise GateError("WORKTREE_TRACKED_TEXT_HASH_FAILED", path.as_posix())
+    return result.stdout.strip()
+
+
+def worktree_git_equivalent_to_head(repo: Path, path: Path) -> bool:
+    if not (repo / path).is_file():
+        return False
+    try:
+        head_oid = git_blob_oid(repo, "HEAD", path)
+    except subprocess.CalledProcessError:
+        return False
+    return worktree_filtered_blob_oid(repo, path) == head_oid
 
 
 def runtime_authority(
     repo: Path,
     seal: Mapping[str, Any],
-    runtime_script_path: Path | None = None,
 ) -> RuntimeAuthority:
     import qlib
 
@@ -376,7 +396,9 @@ def runtime_authority(
         seal_last_change_commit=git(
             repo, "log", "-1", "--format=%H", "--", PROVENANCE_SEAL.as_posix()
         ),
-        seal_worktree_matches_head=seal_worktree_matches_head(repo),
+        seal_worktree_git_equivalent_to_head=worktree_git_equivalent_to_head(
+            repo, PROVENANCE_SEAL
+        ),
         execution_commit_on_current_head=commit_is_ancestor(
             repo, execution_commit, head
         ),
@@ -386,9 +408,11 @@ def runtime_authority(
         execution_commit_script_sha256=git_blob_sha256(
             repo, execution_commit, EXECUTION_SCRIPT
         ),
-        runtime_script_sha256=file_sha256(
-            (runtime_script_path or Path(__file__)).resolve()
+        current_head_script_sha256=git_blob_sha256(repo, "HEAD", EXECUTION_SCRIPT),
+        worktree_script_git_equivalent_to_head=worktree_git_equivalent_to_head(
+            repo, EXECUTION_SCRIPT
         ),
+        raw_worktree_script_sha256=file_sha256(repo / EXECUTION_SCRIPT),
         dependency_versions=versions,
     )
 
@@ -457,8 +481,8 @@ def validate_provenance_seal(
             seal.get("execution_script_sha256"),
         ),
         (
-            "RUNTIME_SCRIPT_HASH_MISMATCH",
-            runtime.runtime_script_sha256,
+            "CURRENT_HEAD_SCRIPT_HASH_MISMATCH",
+            runtime.current_head_script_sha256,
             seal.get("execution_script_sha256"),
         ),
     )
@@ -469,8 +493,10 @@ def validate_provenance_seal(
         raise GateError("HEAD_NOT_EXACT_ORIGIN_MAIN")
     if runtime.seal_last_change_commit != runtime.current_head:
         raise GateError("SEAL_LAST_CHANGE_NOT_CURRENT_HEAD")
-    if not runtime.seal_worktree_matches_head:
+    if not runtime.seal_worktree_git_equivalent_to_head:
         raise GateError("SEAL_WORKTREE_HEAD_MISMATCH")
+    if not runtime.worktree_script_git_equivalent_to_head:
+        raise GateError("WORKTREE_SCRIPT_HEAD_MISMATCH")
     if not runtime.worktree_clean:
         raise GateError("DIRTY_WORKTREE_FORBIDDEN")
     if not runtime.execution_commit_on_current_head:
@@ -562,7 +588,10 @@ def pre_outcome_manifest(
         "qlib_source_sha": QLIB_SOURCE_SHA,
         "dependency_versions": runtime.dependency_versions,
         "execution_commit_sha": seal["execution_code_commit_sha"],
-        "execution_script_sha256": runtime.runtime_script_sha256,
+        "execution_script_sha256": runtime.current_head_script_sha256,
+        "raw_worktree_script_sha256_diagnostic": (
+            runtime.raw_worktree_script_sha256
+        ),
         "seal_last_change_commit": runtime.seal_last_change_commit,
         "current_head": runtime.current_head,
         "clean_worktree": runtime.worktree_clean,
