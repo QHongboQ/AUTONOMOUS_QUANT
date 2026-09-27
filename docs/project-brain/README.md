@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor one-shot execution-code precommit and preflight freeze**
+> Active Development: **P7 — Successor execution-code rebase after boundary correction**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor One-Shot Execution Code Precommit and Preflight Freeze 001**
+> Development Next: **P7 — Successor One-Shot Execution Code Rebase After Boundary Correction 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4903,6 +4903,53 @@ FINAL_CLASSIFICATION = PASS_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_PROTOCOL_FROZEN
 ```
 
 See [P7 successor historical static-ensemble research protocol freeze 001](p7-successor-historical-static-ensemble-research-protocol-freeze-001.md).
+
+---
+
+#### P7 successor signal-construction/evaluation boundary correction (2026-09-27)
+
+A pre-outcome audit found that the first successor protocol applied the
+label-observable evaluation population before Qlib `AverageEnsemble`. Because
+Qlib standardizes each component cross-sectionally by session before equal
+averaging, that ordering would let future label observability alter signal
+construction. Corrected authorities now construct the signal on the complete
+374,591-row V1 prediction/control population and apply the 374,477-row
+label-observable population only afterward for primary evaluation.
+
+Secondary failure semantics are also explicit. Constant-session component
+RankIC remains unavailable without imputation. Incomplete MCS, portfolio, or
+post-primary lineage evidence is recorded separately and cannot change a
+complete six-gate primary classification. V1 remains terminal inconclusive and
+is not superseded. The open PR #130 script is not authorizable and must be
+rebased/regenerated against these corrected identities and semantics.
+
+```text
+SIGNAL_CONSTRUCTION_POPULATION = V1_PREDICTION_CONTROL_POPULATION
+SIGNAL_CONSTRUCTION_ROW_COUNT = 374591
+SIGNAL_CONSTRUCTION_POPULATION_INDEX_SHA256 = 2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e
+EVALUATION_POPULATION = SUCCESSOR_LABEL_OBSERVABLE_POPULATION
+EVALUATION_ROW_COUNT = 374477
+EVALUATION_POPULATION_INDEX_SHA256 = 50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0
+LABEL_OBSERVABILITY_USED_IN_SIGNAL_CONSTRUCTION = NO
+PORTFOLIO_SIGNAL_POPULATION = V1_PREDICTION_CONTROL_POPULATION
+COMPONENT_CONSTANT_SESSION_RANKIC_POLICY = UNAVAILABLE_NAN_NOT_IMPUTED_NOT_ZERO
+MCS_NON_GATING_FAILURE_POLICY = NOT_AVAILABLE_SECONDARY_INCOMPLETE_LOSS_MATRIX_NO_PRIMARY_CLASSIFICATION_EFFECT
+PORTFOLIO_NON_GATING_FAILURE_POLICY = RECORD_FAILURE_NO_PRIMARY_CLASSIFICATION_EFFECT
+PRIOR_SUCCESSOR_INPUT_CONTRACT_SHA256 = b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee
+CORRECTED_SUCCESSOR_INPUT_CONTRACT_SHA256 = b9e0c447794c318d7ddc00803e0f2ea5468abc4c77a43752ead2910804b8a7b5
+PRIOR_SUCCESSOR_PROTOCOL_SHA256 = a4ca307c3e3a245bb211978d36f03d8a2552c81df28049ddb6b667231689a894
+CORRECTED_SUCCESSOR_PROTOCOL_SHA256 = cb61628ed49ca0f9d9798f92567adedbeb533f6854da098ec3c945b38bdbd76a
+OLD_PR130_SCRIPT_AUTHORIZABLE = NO
+REAL_OUTCOME_ACCESS_STARTED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_CODE_REBASE_AFTER_BOUNDARY_CORRECTION_001
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_SIGNAL_CONSTRUCTION_EVALUATION_BOUNDARY_CORRECTED_PRE_OUTCOME
+```
+
+See [P7 successor signal-construction/evaluation boundary correction 001](p7-successor-signal-construction-evaluation-boundary-correction-001.md).
 
 ---
 

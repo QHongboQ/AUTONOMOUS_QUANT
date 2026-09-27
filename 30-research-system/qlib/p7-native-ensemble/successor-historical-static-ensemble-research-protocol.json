@@ -1,6 +1,15 @@
 {
+  "authority_correction": {
+    "corrected_successor_input_contract_sha256": "b9e0c447794c318d7ddc00803e0f2ea5468abc4c77a43752ead2910804b8a7b5",
+    "correction": "SIGNAL_CONSTRUCTION_EVALUATION_POPULATION_AND_SECONDARY_GATING_BOUNDARY",
+    "old_pr130_script_authorizable": false,
+    "prior_authority_status": "SUPERSEDED_PRE_OUTCOME_BY_SIGNAL_EVALUATION_BOUNDARY_CORRECTION",
+    "prior_successor_input_contract_sha256": "b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee",
+    "prior_successor_protocol_sha256": "a4ca307c3e3a245bb211978d36f03d8a2552c81df28049ddb6b667231689a894",
+    "real_outcome_access_before_correction": false
+  },
   "candidate_snapshot": {
-    "binding_owner": "SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT",
+    "binding_owner": "CORRECTED_SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT",
     "candidate_count": 17,
     "candidate_identities_and_source_hashes": "BOUND_BY_SUCCESSOR_INPUT_CONTRACT_SHA256",
     "candidate_signs": "UNCHANGED_FROM_V1_NO_SIGN_FLIPPING",
@@ -9,7 +18,21 @@
   },
   "classification": {
     "inconclusive_when": "REQUIRED_INPUT_OR_METHOD_INTEGRITY_FAILURE_PREVENTS_COMPLETE_VALID_PRIMARY_AND_ROBUSTNESS_EVIDENCE",
+    "nonrequired_secondary_evidence": [
+      "SEVENTEEN_COMPONENT_SUMMARIES",
+      "MCS",
+      "PORTFOLIO_PROJECTION"
+    ],
     "not_supportive_when": "COMPLETE_VALID_EXECUTION_AND_ANY_REQUIRED_SUPPORTIVE_GATE_IS_FALSE",
+    "required_primary_and_robustness_evidence": [
+      "FULL_PERIOD_ENSEMBLE_RANK_IC",
+      "FULL_PERIOD_OLS_RANK_IC",
+      "MEAN_RANK_IC_DELTA",
+      "SPA",
+      "WALKFORWARD",
+      "CPCV",
+      "EXACT_FROZEN_IDENTITIES_AND_INTEGRITY"
+    ],
     "result_classifications": [
       "STATIC_ENSEMBLE_RESEARCH_SUPPORTIVE",
       "STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE",
@@ -37,6 +60,9 @@
       "seed": 20260913,
       "size": 0.05
     },
+    "incomplete_loss_matrix_status": "NOT_AVAILABLE_SECONDARY_INCOMPLETE_LOSS_MATRIX",
+    "missing_nonfinite_loss_policy": "DO_NOT_FILTER_OR_IMPUTE_TO_FORCE_MCS_EXECUTION",
+    "primary_classification_effect": "NONE",
     "roster_selection_role": "NONE"
   },
   "control": {
@@ -48,19 +74,23 @@
     "recorder_id": "d6035e318a0640da876e52d587137e7c"
   },
   "ensemble": {
+    "construction_order": "PROJECT_CANDIDATES_TO_SIGNAL_CONSTRUCTION_POPULATION_THEN_SESSION_LOCAL_POLICY_THEN_QLIB_AVERAGEENSEMBLE_THEN_PROJECT_TO_EVALUATION_POPULATION",
+    "evaluation_population_applied_before_average_ensemble": false,
     "constant_session_policy": "EXACT_CONSTANT_COMPONENT_INACTIVE_FOR_CURRENT_SESSION_ONLY_NOT_A_ROSTER_CHANGE",
     "minimum_active_component_count": 2,
     "missing_nonfinite_misaligned_policy": "FAIL_CLOSED",
     "owner": "QLIB_AVERAGEENSEMBLE",
     "qlib_source_sha": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8",
     "upstream_class": "qlib.model.ens.ensemble.AverageEnsemble",
-    "weighting": "SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT"
+    "weighting": "SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT",
+    "signal_construction_population": "V1_PREDICTION_CONTROL_POPULATION"
   },
   "execution_provenance_firewall": {
     "attempt_manifest_must_bind": [
       "PROTOCOL_SHA256",
       "SUCCESSOR_INPUT_CONTRACT_SHA256",
-      "SUCCESSOR_POPULATION_INDEX_SHA256",
+      "SIGNAL_CONSTRUCTION_POPULATION_INDEX_SHA256",
+      "EVALUATION_POPULATION_INDEX_SHA256",
       "LABEL_VALIDITY_MASK_SHA256",
       "EXECUTION_COMMIT_SHA",
       "EXECUTION_SCRIPT_SHA256",
@@ -77,22 +107,26 @@
   },
   "input_contract": {
     "end": "2024-12-27",
+    "evaluation_population_index_sha256": "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0",
+    "evaluation_row_count": 374477,
     "instrument_count": 547,
     "label_validity_mask_sha256": "2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf",
-    "population_index_sha256": "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0",
+    "signal_construction_population_index_sha256": "2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e",
+    "signal_construction_row_count": 374591,
     "population_recomputation_at_execution": "PROHIBITED",
-    "row_count": 374477,
-    "row_policy": "EXACT_FROZEN_SUCCESSOR_POPULATION_AND_ORDER_NO_RUNTIME_DROP_INTERSECTION_OR_UNION",
+    "row_policy": "SIGNAL_CONSTRUCTION_ON_EXACT_V1_PREDICTION_CONTROL_POPULATION_THEN_PRIMARY_EVALUATION_ON_EXACT_FROZEN_SUCCESSOR_POPULATION_NO_RUNTIME_DROP_INTERSECTION_OR_UNION",
     "session_count": 751,
     "start": "2022-01-03",
-    "successor_input_contract_sha256": "b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee"
+    "successor_input_contract_sha256": "b9e0c447794c318d7ddc00803e0f2ea5468abc4c77a43752ead2910804b8a7b5"
   },
   "label": {
-    "execution_requirement": "EVERY_FROZEN_SUCCESSOR_ROW_KEY_PRESENT_AND_FINITE",
+    "evaluation_population_application": "AFTER_FULL_PREDICTION_VALID_ENSEMBLE_SIGNAL_CONSTRUCTION",
+    "execution_requirement": "EVERY_FROZEN_EVALUATION_ROW_KEY_PRESENT_AND_FINITE",
     "expression": "Ref($close, -2)/Ref($close, -1) - 1",
     "label_artifact_sha256": "c14c7c3f1e698126663b85dfcf436cf3258dc4609e8217e95ed188d9be7db35e",
     "label_validity_mask_sha256": "2d0c312c509625ebab0460f7024866b7f629e39e67384b907fef65373aaa59bf",
     "owner": "QLIB",
+    "signal_construction_use": "PROHIBITED",
     "runtime_dropping": "PROHIBITED",
     "runtime_imputation": "PROHIBITED",
     "runtime_intersection": "PROHIBITED"
@@ -103,6 +137,7 @@
     "p2_certification_evidence": false,
     "p7_exit_condition_evidence": false,
     "production_authorization": false,
+    "old_pr130_script_authorizable": false,
     "protocol_changing_rerun_authorized": false,
     "successor_execution_code_created": false
   },
@@ -114,6 +149,11 @@
     "run_lineage_owner": "QLIB_MLFLOW",
     "statistical_test_owner": "ARCH",
     "temporal_split_owner": "SKFOLIO"
+  },
+  "lineage": {
+    "failure_after_complete_primary_and_robustness_evidence_changes_primary_classification": false,
+    "owner": "QLIB_MLFLOW",
+    "status_field": "RUN_LINEAGE_STATUS"
   },
   "portfolio_projection": {
     "account": 100000000,
@@ -129,7 +169,10 @@
     },
     "n_drop": 3,
     "parameter_neighbor_tests": "PROHIBITED",
+    "failure_changes_primary_classification": false,
+    "label_observability_used_for_signal_selection": false,
     "status": "AUTHORIZED_SECONDARY_REUSE_FROZEN_V1_P2_V2_CONFIGURATION",
+    "signal_population": "V1_PREDICTION_CONTROL_POPULATION",
     "strategy_class": "qlib.contrib.strategy.signal_strategy.TopkDropoutStrategy",
     "topk": 30,
     "tuning_from_successor_outcomes": "PROHIBITED",
@@ -174,8 +217,8 @@
     "metric": "DAILY_CROSS_SECTIONAL_RANK_IC",
     "metric_owner": "QLIB_CALC_IC"
   },
-  "protocol_id": "P7_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_V1",
-  "protocol_status": "FROZEN_PRE_EXECUTION_CODE",
+  "protocol_id": "P7_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_RESEARCH_PROTOCOL_V2",
+  "protocol_status": "FROZEN_PRE_EXECUTION_CODE_REBASE_REQUIRED",
   "secondary_component_controls": {
     "allowed_descriptive_outputs": [
       "MEAN_DAILY_RANK_IC",
@@ -185,6 +228,8 @@
       "ENSEMBLE_LOCATION_RELATIVE_TO_COMPONENT_DISTRIBUTION"
     ],
     "component_count": 17,
+    "constant_session_rank_ic_policy": "UNAVAILABLE_NAN_NOT_IMPUTED_NOT_ZERO",
+    "summary_denominator": "FINITE_COMPONENT_DAILY_RANK_IC_SESSIONS_ONLY",
     "post_hoc_best_candidate_comparator": "PROHIBITED"
   },
   "study": {

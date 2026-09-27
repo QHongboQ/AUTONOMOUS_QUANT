@@ -1,4 +1,10 @@
 {
+  "authority_correction": {
+    "correction": "SIGNAL_CONSTRUCTION_EVALUATION_POPULATION_BOUNDARY",
+    "prior_authority_status": "SUPERSEDED_PRE_OUTCOME_BY_SIGNAL_EVALUATION_BOUNDARY_CORRECTION",
+    "prior_successor_input_contract_sha256": "b693f43b8dfab0fa04cb12a876fc32928bc5020592a2e137f1c0cbfdde0639ee",
+    "real_outcome_access_before_correction": false
+  },
   "candidate_snapshot": {
     "bindings": [
       {
@@ -93,7 +99,7 @@
     "coverage": "PASS_EXACT_V1_GRID_COVERAGE_IMPLIES_STRICT_SUCCESSOR_SUBSET_COVERAGE",
     "roster": "EXACT_V1_17_CANDIDATE_V3_IDENTITIES"
   },
-  "contract_status": "FROZEN_PRE_PROTOCOL",
+  "contract_status": "FROZEN_PRE_EXECUTION_BOUNDARY_CORRECTED",
   "control": {
     "control_id": "p2_certification_historical_rehearsal_linear_ols",
     "coverage": "PASS_EXACT_V1_GRID_COVERAGE_IMPLIES_STRICT_SUCCESSOR_SUBSET_COVERAGE",
@@ -119,7 +125,9 @@
     "ensemble_weighting": "SESSION_LOCAL_NONCONSTANT_COMPONENT_EQUAL_WEIGHT",
     "ols_control": "UNCHANGED_FROM_V1",
     "primary_comparator": "STATIC_17_ENSEMBLE_MINUS_OLS_ALPHA158_CONTROL",
-    "roster_membership": "UNCHANGED_FROM_V1"
+    "roster_membership": "UNCHANGED_FROM_V1",
+    "signal_construction_population": "V1_PREDICTION_CONTROL_POPULATION_BEFORE_LABEL_OBSERVABILITY_MASK",
+    "evaluation_population_application": "AFTER_FULL_PREDICTION_VALID_ENSEMBLE_SIGNAL_CONSTRUCTION"
   },
   "label_authority": {
     "expression": "Ref($close, -2)/Ref($close, -1) - 1",
@@ -158,6 +166,7 @@
     "performance_access": false,
     "research_protocol_created": false,
     "v1_repair": false,
+    "old_pr130_script_authorizable": false,
     "v1_rerun": false
   },
   "ownership": {
@@ -185,11 +194,14 @@
     "successor_population_artifact_byte_sha256": "5f240cb9d88a318047d597c2ed11c1356eebc60fe0b59ae982d347089dcf4c38"
   },
   "row_rules": {
+    "evaluation_population_application": "AFTER_AVERAGEENSEMBLE_SIGNAL_CONSTRUCTION_ONLY",
     "label_valid_row": "LABEL_KEY_PRESENT AND LABEL_FINITE",
+    "label_validity_used_in_signal_construction": false,
     "performance_independent": true,
-    "successor_row_eligible": "V1_PREDICTION_CONTROL_POPULATION_VALID AND LABEL_VALID_ROW"
+    "signal_construction_row_eligible": "V1_PREDICTION_CONTROL_POPULATION_VALID",
+    "successor_evaluation_row_eligible": "V1_PREDICTION_CONTROL_POPULATION_VALID AND LABEL_VALID_ROW"
   },
-  "schema": "AQ_P7_SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT_V1",
+  "schema": "AQ_P7_SUCCESSOR_LABEL_OBSERVABLE_INPUT_CONTRACT_V2",
   "study": {
     "classification": "NEW_RESEARCH_ONLY_POST_FAILURE_DISCLOSED_STATIC_ENSEMBLE",
     "estimand": "CONDITIONAL_ON_PREREGISTERED_LABEL_OBSERVABILITY",
@@ -198,7 +210,14 @@
     "new_label_validity_mask_identity": true,
     "new_population_index_identity": true
   },
-  "successor_population": {
+  "signal_construction_population": {
+    "label_observability_used": false,
+    "name": "V1_PREDICTION_CONTROL_POPULATION",
+    "ordered_index_sha256": "2328b932d853c978383d6e9c36dbb961951dfe597ee898c17f9aaa5edda8342e",
+    "row_count": 374591,
+    "source_input_contract_sha256": "92de81d0b8b7b7a29891bf523ae8519af44456f52fea3410ebf0ebd210d0f81f"
+  },
+  "evaluation_population": {
     "all_sessions_rankic_structurally_feasible": true,
     "artifact_byte_sha256": "5f240cb9d88a318047d597c2ed11c1356eebc60fe0b59ae982d347089dcf4c38",
     "end": "2024-12-27",
