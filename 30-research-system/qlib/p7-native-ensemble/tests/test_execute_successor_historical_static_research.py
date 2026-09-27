@@ -100,11 +100,13 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             "origin_main_head": "seal-commit",
             "worktree_clean": True,
             "seal_last_change_commit": "seal-commit",
-            "seal_worktree_matches_head": True,
+            "seal_worktree_git_equivalent_to_head": True,
             "execution_commit_on_current_head": True,
             "execution_commit_on_origin_main": True,
             "execution_commit_script_sha256": "script-sha",
-            "runtime_script_sha256": "script-sha",
+            "current_head_script_sha256": "script-sha",
+            "worktree_script_git_equivalent_to_head": True,
+            "raw_worktree_script_sha256": "diagnostic-only",
             "dependency_versions": dict(runner.EXPECTED_DEPENDENCIES),
         }
         values.update(overrides)
@@ -134,23 +136,34 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
         self.git(repo, "init", "-q")
         self.git(repo, "config", "user.name", "Synthetic Test")
         self.git(repo, "config", "user.email", "synthetic@example.invalid")
+        self.git(repo, "config", "core.autocrlf", "true")
         script_path = repo / runner.EXECUTION_SCRIPT
         script_path.parent.mkdir(parents=True)
-        script_path.write_text("print('synthetic execution code')\n", encoding="utf-8")
+        script_text = "print('synthetic execution code')\n"
+        script_path.write_bytes(script_text.encode("utf-8"))
         self.git(repo, "add", runner.EXECUTION_SCRIPT.as_posix())
         self.git(repo, "commit", "-q", "-m", "commit A execution code")
         execution_commit = self.git(repo, "rev-parse", "HEAD")
 
         seal = self.base_seal()
         seal["execution_code_commit_sha"] = execution_commit
-        seal["execution_script_sha256"] = runner.file_sha256(script_path)
+        seal["execution_script_sha256"] = runner.git_blob_sha256(
+            repo, execution_commit, runner.EXECUTION_SCRIPT
+        )
         seal_path = repo / runner.PROVENANCE_SEAL
         seal_path.parent.mkdir(parents=True, exist_ok=True)
-        seal_path.write_text(
-            json.dumps(seal, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-        )
+        seal_text = json.dumps(seal, indent=2, sort_keys=True) + "\n"
+        seal_path.write_bytes(seal_text.encode("utf-8"))
         self.git(repo, "add", runner.PROVENANCE_SEAL.as_posix())
         self.git(repo, "commit", "-q", "-m", "commit B tracked seal")
+        script_path.write_bytes(script_text.replace("\n", "\r\n").encode("utf-8"))
+        seal_path.write_bytes(seal_text.replace("\n", "\r\n").encode("utf-8"))
+        self.git(
+            repo,
+            "add",
+            runner.EXECUTION_SCRIPT.as_posix(),
+            runner.PROVENANCE_SEAL.as_posix(),
+        )
         seal_commit = self.git(repo, "rev-parse", "HEAD")
         self.git(repo, "update-ref", "refs/remotes/origin/main", seal_commit)
         return seal, execution_commit, seal_commit
@@ -228,11 +241,18 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             self.runtime(dependency_versions={"qlib": "wrong"}),
         )
 
-    def test_runtime_script_bytes_must_match_seal(self) -> None:
+    def test_current_head_script_blob_must_match_seal(self) -> None:
         self.assert_rejected(
-            "RUNTIME_SCRIPT_HASH_MISMATCH",
+            "CURRENT_HEAD_SCRIPT_HASH_MISMATCH",
             self.base_seal(),
-            self.runtime(runtime_script_sha256="wrong"),
+            self.runtime(current_head_script_sha256="wrong"),
+        )
+
+    def test_worktree_script_must_be_git_equivalent_to_head(self) -> None:
+        self.assert_rejected(
+            "WORKTREE_SCRIPT_HEAD_MISMATCH",
+            self.base_seal(),
+            self.runtime(worktree_script_git_equivalent_to_head=False),
         )
 
     def test_dirty_worktree_rejected(self) -> None:
@@ -256,11 +276,11 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             self.runtime(seal_last_change_commit="older-commit"),
         )
 
-    def test_seal_worktree_bytes_must_match_head(self) -> None:
+    def test_seal_worktree_must_be_git_equivalent_to_head(self) -> None:
         self.assert_rejected(
             "SEAL_WORKTREE_HEAD_MISMATCH",
             self.base_seal(),
-            self.runtime(seal_worktree_matches_head=False),
+            self.runtime(seal_worktree_git_equivalent_to_head=False),
         )
 
     def test_execution_commit_must_be_ancestor_of_head_and_origin_main(self) -> None:
@@ -281,9 +301,7 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             seal, _, seal_commit = self.create_realistic_seal_repository(repo)
             self.assertNotIn("authority_commit_sha", seal)
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(
-                repo, loaded, repo / runner.EXECUTION_SCRIPT
-            )
+            runtime = runner.runtime_authority(repo, loaded)
             runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(runtime.current_head, seal_commit)
             self.assertEqual(runtime.seal_last_change_commit, seal_commit)
@@ -292,7 +310,21 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
                 seal["execution_script_sha256"],
             )
             self.assertEqual(
-                runtime.runtime_script_sha256, seal["execution_script_sha256"]
+                runtime.current_head_script_sha256,
+                seal["execution_script_sha256"],
+            )
+            self.assertNotEqual(
+                runtime.raw_worktree_script_sha256,
+                seal["execution_script_sha256"],
+            )
+            self.assertTrue(runtime.worktree_script_git_equivalent_to_head)
+            self.assertTrue(runtime.seal_worktree_git_equivalent_to_head)
+            self.assertNotEqual(
+                runner.file_sha256(repo / runner.PROVENANCE_SEAL),
+                runner.git_blob_sha256(repo, "HEAD", runner.PROVENANCE_SEAL),
+            )
+            self.assertFalse(
+                self.git(repo, "status", "--porcelain", "--untracked-files=all")
             )
 
             unrelated = repo / "unrelated.txt"
@@ -302,9 +334,7 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             later_commit = self.git(repo, "rev-parse", "HEAD")
             self.git(repo, "update-ref", "refs/remotes/origin/main", later_commit)
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(
-                repo, loaded, repo / runner.EXECUTION_SCRIPT
-            )
+            runtime = runner.runtime_authority(repo, loaded)
             with self.assertRaises(runner.GateError) as raised:
                 runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(raised.exception.code, "SEAL_LAST_CHANGE_NOT_CURRENT_HEAD")
@@ -318,12 +348,25 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
                 seal_path.read_text(encoding="utf-8") + "\n", encoding="utf-8"
             )
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(
-                repo, loaded, repo / runner.EXECUTION_SCRIPT
-            )
+            runtime = runner.runtime_authority(repo, loaded)
             with self.assertRaises(runner.GateError) as raised:
                 runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(raised.exception.code, "SEAL_WORKTREE_HEAD_MISMATCH")
+
+    def test_realistic_script_content_mutation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo)
+            script_path = repo / runner.EXECUTION_SCRIPT
+            script_path.write_bytes(
+                script_path.read_bytes()
+                + b"print('real content mutation')\r\n"
+            )
+            loaded = runner.load_provenance_seal(repo)
+            runtime = runner.runtime_authority(repo, loaded)
+            with self.assertRaises(runner.GateError) as raised:
+                runner.validate_provenance_seal(self.authorities, loaded, runtime)
+            self.assertEqual(raised.exception.code, "WORKTREE_SCRIPT_HEAD_MISMATCH")
 
     def test_authorized_but_unbound_artifacts_reject(self) -> None:
         seal = self.base_seal()
