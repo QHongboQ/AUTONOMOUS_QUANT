@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor cross-Git runtime worktree cleanliness correction**
+> Active Development: **P7 — Successor one-shot execution provenance reseal 002**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor One-Shot Execution Provenance Reseal 002, gated on worktree-cleanliness correction merge**
+> Development Next: **P7 — Successor Historical Static Ensemble One-Shot Execution 003, gated on reseal PR merge**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5212,6 +5212,46 @@ FINAL_CLASSIFICATION = PASS_CROSS_GIT_RUNTIME_WORKTREE_CLEANLINESS_CORRECTED
 ```
 
 See [P7 successor cross-Git runtime worktree cleanliness correction 001](p7-successor-cross-git-runtime-worktree-cleanliness-correction-001.md).
+
+---
+
+#### P7 successor one-shot execution provenance reseal 002 (2026-09-27)
+
+The tracked execution seal is rebound to the deterministic worktree-cleanliness
+runner merged by PR #136 at
+`27a29c97a34e4da5883f4ff473419c5de30e2cea`. Exactly two seal fields changed:
+the execution-code commit and the execution script's canonical raw Git-blob
+SHA-256. The protocol, input, population, label-mask, dependency, Qlib,
+Candidate, control, label, and population-artifact authorities remain
+semantically identical. Raw-byte existence/hash checks matched all 21 artifact
+bindings without deserializing predictions or labels.
+
+```text
+PRIOR_SEAL_EXECUTION_CODE_COMMIT_SHA = 3c46824c2865a8b8f938e0ff75e840b6de03fa14
+NEW_SEAL_EXECUTION_CODE_COMMIT_SHA = 27a29c97a34e4da5883f4ff473419c5de30e2cea
+PRIOR_SEAL_EXECUTION_SCRIPT_SHA256 = 3349177fbff145111312819082ea2359a6b867e8419006abe6c0dfee2644bb70
+NEW_SEAL_EXECUTION_SCRIPT_SHA256 = 4db387dbfc2d2b800fdfb2e459ad88edb2b682539143f14a631e61117796b870
+TRACKED_TEXT_CANONICAL_IDENTITY = SHA256_OF_RAW_GIT_BLOB_BYTES
+DETERMINISTIC_GIT_STATUS_CONFIG = CORE_AUTOCRLF_INPUT_SAFECRLF_FALSE_PORCELAIN_V1_Z_UNTRACKED_ALL
+ACTUAL_RUNTIME_SCRIPT_PATH_BOUND = YES
+AUTHORITY_COMMIT_SHA_STORED_INSIDE_SEAL = NO
+RAW_WORKTREE_SHA_USED_FOR_AUTHORIZATION = NO
+REAL_EXECUTION_READY = NO_PENDING_RESEAL_PR_MERGE
+REAL_EXECUTE_INVOKED = NO
+REAL_OUTCOME_ACCESS_STARTED = NO
+EXECUTION_001_REJECTION = WORKTREE_SCRIPT_HEAD_MISMATCH
+EXECUTION_002_REJECTION = DIRTY_WORKTREE_FORBIDDEN
+PRIOR_SCIENTIFIC_ATTEMPT_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_ONE_SHOT_EXECUTION_003
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_RESEALED_002_PRE_MERGE
+```
+
+After this reseal merges, no other main commit may land before Execution 003.
+Any later main commit invalidates the seal-last-change-equals-HEAD gate and
+requires another reseal.
+
+See [P7 successor one-shot execution provenance reseal 002](p7-successor-one-shot-execution-provenance-reseal-002.md).
 
 ---
 

@@ -122,8 +122,8 @@
     }
   },
   "evaluation_population_index_sha256": "50a94028a8cd816cffd61f5113fc5f799ca84f4af4e504d02b7feb06e5dc10c0",
-  "execution_code_commit_sha": "3c46824c2865a8b8f938e0ff75e840b6de03fa14",
-  "execution_script_sha256": "3349177fbff145111312819082ea2359a6b867e8419006abe6c0dfee2644bb70",
+  "execution_code_commit_sha": "27a29c97a34e4da5883f4ff473419c5de30e2cea",
+  "execution_script_sha256": "4db387dbfc2d2b800fdfb2e459ad88edb2b682539143f14a631e61117796b870",
   "expected_dependency_versions": {
     "arch": "8.0.0",
     "qlib": "0.9.8.dev26",
