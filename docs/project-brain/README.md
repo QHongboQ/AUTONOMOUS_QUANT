@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor one-shot execution provenance seal**
+> Active Development: **P7 — Successor cross-Git runtime text equivalence correction**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor Historical Static Ensemble One-Shot Execution 001, gated on seal PR merge**
+> Development Next: **P7 — Successor One-Shot Execution Provenance Reseal 001, gated on runtime-correction PR merge**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5082,6 +5082,56 @@ FINAL_CLASSIFICATION = PASS_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_SEAL_FROZEN_
 ```
 
 See [P7 successor one-shot execution provenance seal 001](p7-successor-one-shot-execution-provenance-seal-001.md).
+
+---
+
+#### P7 successor cross-Git runtime text equivalence correction (2026-09-27)
+
+The first authorized successor invocation rejected before outcome access with
+`WORKTREE_SCRIPT_HEAD_MISMATCH`. Windows Git used `core.autocrlf=true`, while
+the WSL runtime had `core.autocrlf` unset. No marker, attempt manifest, output
+root, or scientific result was created.
+
+The runner now derives worktree text identity with native Git under explicit
+clean-side settings:
+
+```text
+git -c core.autocrlf=input -c core.safecrlf=false hash-object --path=<path> <worktree-path>
+```
+
+This produces the same canonical blob identity for CRLF and LF checkouts,
+without mutating repository or ambient Git configuration. The same rule covers
+the tracked runner and seal. Real content mutations still reject. The runner
+also requires `Path(__file__).resolve()` to equal the authorized repository
+script path, so an external copied runner is rejected even when its bytes are
+identical.
+
+The existing real seal is intentionally unchanged and will become ineligible
+when this correction is merged. A separate reseal must bind the correction
+merge commit and its new raw Git-blob script SHA before any new one-shot
+invocation.
+
+```text
+PRIOR_AUTHORIZED_MAIN_SHA = 16977fbf8ba62aa3b689cb94a0b56483c4c64739
+PRIOR_EXECUTION_REJECTION = WORKTREE_SCRIPT_HEAD_MISMATCH
+PRIOR_REAL_OUTCOME_ACCESS_STARTED = NO
+PRIOR_OUTCOME_ATTEMPT_CONSUMED = NO
+DETERMINISTIC_CLEAN_FILTER_MODE = GIT_CORE_AUTOCRLF_INPUT_SAFECRLF_FALSE
+TRACKED_TEXT_CANONICAL_IDENTITY = SHA256_OF_RAW_GIT_BLOB_BYTES
+ACTUAL_RUNTIME_SCRIPT_PATH_BOUND = YES
+RAW_WORKTREE_SHA_USED_FOR_AUTHORIZATION = NO
+AUTHORITY_COMMIT_SHA_STORED_INSIDE_SEAL = NO
+REAL_SEAL_MODIFIED = NO
+REAL_EXECUTE_INVOKED = NO
+REAL_OUTCOME_ACCESS_STARTED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_RESEAL_001
+FINAL_CLASSIFICATION = PASS_CROSS_GIT_RUNTIME_TEXT_EQUIVALENCE_CORRECTED
+```
+
+See [P7 successor cross-Git runtime text equivalence correction 001](p7-successor-cross-git-runtime-text-equivalence-correction-001.md).
 
 ---
 

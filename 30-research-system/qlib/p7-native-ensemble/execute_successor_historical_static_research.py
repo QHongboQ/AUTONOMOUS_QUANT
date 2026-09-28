@@ -88,6 +88,7 @@ class RuntimeAuthority:
     execution_commit_script_sha256: str
     current_head_script_sha256: str
     worktree_script_git_equivalent_to_head: bool
+    actual_runtime_script_path_bound: bool
     raw_worktree_script_sha256: str
     dependency_versions: dict[str, str]
 
@@ -341,6 +342,10 @@ def worktree_filtered_blob_oid(repo: Path, path: Path) -> str:
             "git",
             "-C",
             str(repo),
+            "-c",
+            "core.autocrlf=input",
+            "-c",
+            "core.safecrlf=false",
             "hash-object",
             f"--path={path.as_posix()}",
             str((repo / path).resolve()),
@@ -364,9 +369,17 @@ def worktree_git_equivalent_to_head(repo: Path, path: Path) -> bool:
     return worktree_filtered_blob_oid(repo, path) == head_oid
 
 
+def runtime_script_path_is_bound(
+    repo: Path, actual_runtime_script_path: Path | None = None
+) -> bool:
+    actual = (actual_runtime_script_path or Path(__file__)).resolve()
+    return actual == (repo / EXECUTION_SCRIPT).resolve()
+
+
 def runtime_authority(
     repo: Path,
     seal: Mapping[str, Any],
+    actual_runtime_script_path: Path | None = None,
 ) -> RuntimeAuthority:
     import qlib
 
@@ -411,6 +424,9 @@ def runtime_authority(
         current_head_script_sha256=git_blob_sha256(repo, "HEAD", EXECUTION_SCRIPT),
         worktree_script_git_equivalent_to_head=worktree_git_equivalent_to_head(
             repo, EXECUTION_SCRIPT
+        ),
+        actual_runtime_script_path_bound=runtime_script_path_is_bound(
+            repo, actual_runtime_script_path
         ),
         raw_worktree_script_sha256=file_sha256(repo / EXECUTION_SCRIPT),
         dependency_versions=versions,
@@ -491,6 +507,8 @@ def validate_provenance_seal(
             raise GateError(code)
     if runtime.current_head != runtime.origin_main_head:
         raise GateError("HEAD_NOT_EXACT_ORIGIN_MAIN")
+    if not runtime.actual_runtime_script_path_bound:
+        raise GateError("RUNTIME_SCRIPT_PATH_MISMATCH")
     if runtime.seal_last_change_commit != runtime.current_head:
         raise GateError("SEAL_LAST_CHANGE_NOT_CURRENT_HEAD")
     if not runtime.seal_worktree_git_equivalent_to_head:
@@ -589,6 +607,7 @@ def pre_outcome_manifest(
         "dependency_versions": runtime.dependency_versions,
         "execution_commit_sha": seal["execution_code_commit_sha"],
         "execution_script_sha256": runtime.current_head_script_sha256,
+        "actual_runtime_script_path_bound": runtime.actual_runtime_script_path_bound,
         "raw_worktree_script_sha256_diagnostic": (
             runtime.raw_worktree_script_sha256
         ),
