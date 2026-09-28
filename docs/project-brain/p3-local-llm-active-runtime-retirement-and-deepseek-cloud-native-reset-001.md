@@ -221,11 +221,70 @@ UPSTREAM_FIX_AVAILABLE = NO
 AQ_INTEGRATION_CLASSIFICATION = THIN_DATA_ADAPTER_ONLY
 ```
 
-The next valid capability benchmark should use the official runner, official
-RD2Bench alpha053, intended multi-instrument panel, unchanged
-`FactorImplementEval`, and `BenchmarkAnalyzer`. It should preserve the official
-default ten rounds, each of which invokes FactorCoSTEER development again. This
-task did not run that benchmark.
+The next valid capability benchmark was therefore defined to use the official
+runner, official RD2Bench alpha053, intended multi-instrument panel, unchanged
+`FactorImplementEval`, and `BenchmarkAnalyzer`, preserving the official default
+ten rounds and a fresh FactorCoSTEER `develop()` invocation for every round.
+
+## Official multi-instrument RD2Bench measurement
+
+That benchmark has now completed. Independent replay of the upstream debug-data
+selection against the immutable full AQ source showed that the old debug fixture
+was not exact: it had been built from the lexicographically first 100 identities,
+whereas upstream selects the first 100 identities encountered in the full sorted
+date-major panel. The old fixture was preserved and not reused. A private exact
+replay produced 38,467 rows and 78 actually observed instruments for
+2018-01-02 through 2019-12-31; no identity or row was substituted or filled.
+
+The pinned official `eval.py` completed all ten rounds. Each round invoked
+`FactorImplementEval.develop()` and therefore `FactorCoSTEER.develop()` again.
+RD-Agent's own pickle/workspace cache reused the same implementation bytes after
+the first generation; chat caching was disabled and was not added by AQ. This is
+the observed official upstream behavior, not an AQ cross-round policy.
+
+```text
+FULL_SOURCE_SHA256 = deacd04bad8f5321bd49cc63cf9be37d38e4ae7b33b5c223021c80dedad98b21
+OFFICIAL_SHAPE_EXISTING_DEBUG_REUSE = NO
+BENCHMARK_FIXTURE_SHA256 = ba1e82441d5fd2cebc1e6f82a2f1e2acf4b083795d04a9c29c06787c1946d63e
+TARGET_SELECTED_IDENTITY_COUNT = 100
+ACTUAL_DEBUG_DISTINCT_INSTRUMENTS = 78
+BENCHMARK_ROW_COUNT = 38467
+BENCHMARK_DATE_START = 2018-01-02
+BENCHMARK_DATE_END = 2019-12-31
+REQUESTED_BENCH_ROUNDS = 10
+COMPLETED_BENCH_ROUNDS = 10
+DEVELOP_INVOCATION_COUNT = 10
+UNIQUE_GENERATED_IMPLEMENTATION_SHA_COUNT = 1
+GENERATED_IMPLEMENTATION_SHA256 = 719f35e601859b6932a599ae45013fa587aa8ae36fab9aab0b943ac15ee55d29
+```
+
+All ten official evaluator rows were identical: no run error, single-column
+true, row-count ratio 1.0, index ratio 1.0, equal-value ratio 0.0, and official
+cross-sectional correlation `0.3975330719848187`. The zero Accuracy metrics are
+retained without patching the previously documented ground-truth/source label
+asymmetry. The correlation is the unchanged
+`FactorCorrelationEvaluator(hard_check=False)` measurement; AQ did not compute
+or substitute another statistic.
+
+```text
+AVG_RUN_SR = 1.0
+AVG_FORMAT_SR = 1.0
+AVG_CORRELATION = 0.3975330719848187
+MAX_CORRELATION = 0.3975330719848187
+MAX_ACCURACY = 0.0
+AVG_ACCURACY = 0.0
+TOTAL_DEEPSEEK_LLM_CALLS = 4
+TOTAL_INPUT_TOKENS = 8144
+TOTAL_OUTPUT_TOKENS = 492
+TOTAL_REASONING_TOKENS = NOT_EXPOSED_BY_RDAGENT_TOKEN_COST_TRACE
+TOTAL_ESTIMATED_COST_CNY = 0.020224
+COST_CAP_REACHED = NO
+```
+
+These are descriptive official upstream measurements. Neither RD-Agent nor AQ
+defines a binary admission threshold for this result, so it is not labelled
+DeepSeek PASS, FAIL, admitted, or rejected. The earlier raw single-stock 0/100
+remains preserved and remains invalid as a DeepSeek capability verdict.
 
 ## Evidence and safety
 
@@ -235,6 +294,7 @@ Private evidence is retained at:
 D:/AQ_DATA/P3/deepseek-alpha053-one-code-100-single-stock-benchmark-001
 D:/AQ_DATA/P3/official-single-stock-evaluator-oracle-sanity-audit-001
 D:/AQ_DATA/P3/official-factor-coder-evaluation-contract-upstream-resolution-001
+D:/AQ_DATA/P3/deepseek-official-multi-instrument-rd2bench-10-round-benchmark-001
 ```
 
 ```text
@@ -244,6 +304,8 @@ ORACLE_SUMMARY_SHA256 = 12a3a557bd649a60124acc393e7a0824920c74c2f2b86af5e9f295f5
 ORACLE_CHECKSUMS_SHA256 = 9624c86cceab6e97807466b72710713d69b4d6313a1de30989453a2b033ab3cb
 UPSTREAM_CONTRACT_SHA256 = a5814b661fd9eaed8dc0f5e0fc1079406d73ce1c8ce33c4125761169b5669a14
 UPSTREAM_CONTRACT_CHECKSUMS_SHA256 = 36efe16e5494745f5f601b8752fd2e0d5fe8da2ebef30489ef9fee9cc710c935
+OFFICIAL_MULTI_INSTRUMENT_SUMMARY_SHA256 = 1fae5a6c01847f2e3419400bf7206184354eb3043b4eca53e903ec0f060d0c05
+OFFICIAL_MULTI_INSTRUMENT_CHECKSUMS_SHA256 = 86c9099140ebceeab1ef25db1cfa7e0fbeef1780e75cb5c0194e7e0e2fe9af69
 NEW_PRODUCTION_LOC = 0
 FIN_QUANT_EXECUTED = NO
 REAL_CANDIDATE_CREATED = 0
@@ -257,17 +319,17 @@ P7_MODIFIED = NO
 
 ## Decision
 
-The raw benchmark result neither admits nor rejects DeepSeek Flash for
-autonomous Factor Coder use. The upstream contract is now resolved, but
-DeepSeek capability remains unresolved until the official multi-instrument,
-multi-round path is executed. No superseded single-stock, Qlib-replacement,
-73-stock blocker, or independent-generation path is reactivated.
+The official multi-instrument measurement neither admits nor rejects DeepSeek
+Flash for autonomous Factor Coder use. The upstream contract and measurement
+are now complete, but no official binary admission policy exists. No
+superseded single-stock, Qlib-replacement, 73-stock blocker, or independent-
+generation path is reactivated.
 
 ```text
 RAW_100_STOCK_RESULT = 0/100
 PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
-DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED
+DEEPSEEK_FACTOR_CODER_CAPABILITY = MEASURED_OFFICIAL_METRICS_NO_BINARY_ADMISSION_DECISION
 FIN_QUANT_NEXT_TASK_AUTHORIZED = NO
-CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_MULTI_INSTRUMENT_RD2BENCH_10_ROUND_BENCHMARK_001
-FINAL_CLASSIFICATION = PASS_OFFICIAL_FACTOR_CODER_UPSTREAM_CONTRACT_RESOLVED
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_RD2BENCH_BASELINE_COMPARISON_001
+FINAL_CLASSIFICATION = COMPLETE_OFFICIAL_RD2BENCH_MEASUREMENTS_RECORDED_NO_BINARY_ADMISSION_POLICY
 ```

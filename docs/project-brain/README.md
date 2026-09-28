@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — Official Factor Coder upstream contract resolved; valid multi-instrument benchmark pending**
+> Active Development: **P3 — Official DeepSeek multi-instrument RD2Bench measurements complete; no binary admission policy**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — DeepSeek official multi-instrument RD2Bench 10-round benchmark 001**
+> Development Next: **P3 — DeepSeek official RD2Bench baseline comparison 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5433,6 +5433,24 @@ and recovery feedback path, not the post-hoc benchmark evaluator or analyzer.
 AQ therefore requires only a thin approved-data adapter into the official
 multi-instrument shape, with no custom evaluator or benchmark engine.
 
+The official ten-round measurement is now complete. Replaying the literal
+upstream selection against the immutable full source showed that the prior
+debug fixture used lexicographic identities and was not exact, so it was
+preserved but not reused. The private benchmark-only replay contains 38,467
+rows, 78 actually observed instruments, and the upstream-required first 100
+identities from the full date-major panel. All ten `develop()` invocations
+completed. RD-Agent's native workspace/pickle cache reused one implementation
+identity after the first generation; AQ did not add cross-round knowledge.
+
+Official `BenchmarkAnalyzer` measurements are `Avg Run SR=1.0`, `Avg Format
+SR=1.0`, `Avg Correlation=0.3975330719848187`, `Max
+Correlation=0.3975330719848187`, `Max Accuracy=0.0`, and `Avg Accuracy=0.0`.
+The zero Accuracy values retain the known upstream label asymmetry unchanged.
+The route made four DeepSeek calls using 8,144 input and 492 output tokens;
+conservative peak-price cost is 0.020224 CNY. No official or AQ binary
+admission threshold exists, so these values are descriptive measurements, not
+a model PASS, FAIL, admission, or rejection.
+
 ```text
 PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
 PRIMARY_GENERATIVE_AI_MODEL = deepseek-flash
@@ -5456,12 +5474,28 @@ OFFICIAL_SINGLE_STOCK_ORACLE_PASS = NO
 ORACLE_EQUAL_VALUE_RATIO = 0.0
 ORACLE_CORRELATION = NAN
 PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
-DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED
+DEEPSEEK_FACTOR_CODER_CAPABILITY = MEASURED_OFFICIAL_METRICS_NO_BINARY_ADMISSION_DECISION
 OFFICIAL_FACTOR_BENCHMARK_EXPECTS_MULTI_INSTRUMENT_PANEL = YES
 FACTOR_IMPLEMENT_EVAL_NATIVE_BINARY_PASS_FAIL = NO
 OFFICIAL_BINARY_ADMISSION_POLICY_FOUND = NO
 DEFAULT_BENCH_TEST_ROUND = 10
 OFFICIAL_BENCH_ROUND_GENERATES_NEW_IMPLEMENTATION = YES
+OFFICIAL_MULTI_INSTRUMENT_BENCHMARK = COMPLETE_10_OF_10
+OFFICIAL_SHAPE_EXISTING_DEBUG_REUSE = NO
+BENCHMARK_ROW_COUNT = 38467
+ACTUAL_DEBUG_DISTINCT_INSTRUMENTS = 78
+UNIQUE_GENERATED_IMPLEMENTATION_SHA_COUNT = 1
+AVG_RUN_SR = 1.0
+AVG_FORMAT_SR = 1.0
+AVG_CORRELATION = 0.3975330719848187
+MAX_CORRELATION = 0.3975330719848187
+MAX_ACCURACY = 0.0
+AVG_ACCURACY = 0.0
+TOTAL_DEEPSEEK_LLM_CALLS = 4
+TOTAL_INPUT_TOKENS = 8144
+TOTAL_OUTPUT_TOKENS = 492
+TOTAL_ESTIMATED_COST_CNY = 0.020224
+COST_CAP_REACHED = NO
 AQ_INTEGRATION_CLASSIFICATION = THIN_DATA_ADAPTER_ONLY
 LOCAL_GENERATIVE_LLM_ACTIVE = NO
 LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
@@ -5470,8 +5504,8 @@ AQ_CUSTOM_LLM_BACKEND_COUNT = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 FIN_QUANT_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_MULTI_INSTRUMENT_RD2BENCH_10_ROUND_BENCHMARK_001
-FINAL_CLASSIFICATION = PASS_OFFICIAL_FACTOR_CODER_UPSTREAM_CONTRACT_RESOLVED
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_RD2BENCH_BASELINE_COMPARISON_001
+FINAL_CLASSIFICATION = COMPLETE_OFFICIAL_RD2BENCH_MEASUREMENTS_RECORDED_NO_BINARY_ADMISSION_POLICY
 ```
 
 See [P3 local LLM active-runtime retirement and DeepSeek cloud-native reset 001](p3-local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001.md).
