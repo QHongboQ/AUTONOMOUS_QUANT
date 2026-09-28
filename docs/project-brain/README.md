@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Static17 scaffold retirement and autonomous factor-factory rebase**
+> Active Development: **P3 — RD-Agent native handoff thin Candidate projection POC**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3/P7 — RD-Agent fin_quant thin-adapter POC**
+> Development Next: **P3 — RD-Agent fin_quant autonomous loop reactivation**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -4590,6 +4590,59 @@ FINAL_CLASSIFICATION = PASS_FUTURE_CANDIDATE_UPSTREAM_PATH_FROZEN
 ```
 
 See [P3 future Candidate upstream path freeze 001](p3-future-candidate-upstream-path-freeze-001.md).
+
+---
+
+#### P3 RD-Agent native handoff thin Candidate projection POC (2026-09-27)
+
+The existing native `fin_quant -> qrun -> task_train -> Recorder` path remains
+unchanged. Repository and private-evidence audit found no reusable RD-Agent
+Candidate V3 materializer: the historical private materializer is
+Formulaic-specific, while the prior native-handoff POC validated only the
+persisted-model union. A 99-line pure projection leaf now validates explicit
+RD-Agent/Qlib/AQ identities, hashes existing Recorder artifacts, delegates
+canonicalization to `rfc8785==0.1.4`, and validates the unchanged Candidate V3
+schema. It owns no training, prediction, Recorder lifecycle, registry, or loop.
+
+The bounded proof reused the existing `TEST_FIXTURE_NOT_REAL_CANDIDATE`
+Recorder produced earlier by native Qlib `task_train`; no training was rerun.
+Its `task`, `params.pkl`, `dataset`, and `pred.pkl` are present, and the full
+RD-Agent Candidate V3 projection passed schema validation and identity
+recomputation. The RD-Agent branch inherited from Candidate V1 represents a
+persisted model as its required `serialized_model_artifact` content identity
+rather than the Formulaic branch's literal `status` union; the POC records the
+equivalent `PERSISTED` state without changing the schema.
+
+```text
+RDAGENT_PROJECT_PIN_SHA = 32b3d395e73d9db5eee3fe9063d69aec0fdc83bd
+RDAGENT_CURRENT_UPSTREAM_SHA = 484776c211e4fbbeef03e0ec00d6bbee7362a4f4
+RDAGENT_PIN_BEHIND_BY_COMMITS = 5
+FIN_QUANT_RELEVANT_DIFF_COUNT = 0
+PIN_UPGRADE_REQUIRED = NO
+EXISTING_RDAGENT_CANDIDATE_MATERIALIZER_FOUND = NO
+MATERIALIZER_REUSE_CLASSIFICATION = MISSING
+THIN_PROJECTION_IMPLEMENTED = YES
+THIN_PROJECTION_NEW_LOC = 99
+QLIB_NATIVE_TASK_TRAIN_USED_FOR_FIXTURE = YES_REUSED_EXISTING_RECORDER
+CANDIDATE_V3_SCHEMA_VALID = YES
+CANDIDATE_V3_IDENTITY_VALID = YES
+PERSISTED_MODEL_BINDING_VALID = YES
+AQ_CUSTOM_CANONICALIZER = NO
+AQ_P3_AUTONOMOUS_LOOP_LOC = 0
+AQ_P3_TRAINING_ENGINE_LOC = 0
+AQ_P3_RECORDER_ENGINE_LOC = 0
+AQ_P3_MODEL_STORE_LOC = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+RD_AGENT_LLM_CALL_COUNT = 0
+REAL_AUTONOMOUS_LOOP_COUNT = 0
+REAL_MODEL_TRAINING_COUNT = 0
+REAL_CANDIDATE_CREATED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P3_RDAGENT_FIN_QUANT_AUTONOMOUS_LOOP_REACTIVATION_001
+FINAL_CLASSIFICATION = PASS_RDAGENT_NATIVE_HANDOFF_THIN_CANDIDATE_PROJECTION_POC
+```
+
+See [P3 RD-Agent native handoff thin Candidate projection POC 001](p3-rdagent-native-handoff-thin-candidate-projection-poc-001.md).
 
 ---
 
