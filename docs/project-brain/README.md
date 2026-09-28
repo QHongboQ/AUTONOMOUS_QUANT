@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — Official single-stock evaluator oracle audit complete; raw 0/100 is inconclusive**
+> Active Development: **P3 — Official Factor Coder upstream contract resolved; valid multi-instrument benchmark pending**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — Official Factor Coder evaluation contract upstream resolution 001**
+> Development Next: **P3 — DeepSeek official multi-instrument RD2Bench 10-round benchmark 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5422,6 +5422,17 @@ subtraction had zero non-NaN cells. Correlation was also NaN because each of the
 preserved but is not a valid DeepSeek capability verdict. `fin_quant` remains
 prohibited.
 
+The upstream contract audit established that RD-Agent intentionally generates
+a multi-instrument `(datetime, instrument)` panel and measures mean
+cross-sectional correlation by datetime. The runner defaults to ten rounds and
+invokes `FactorCoSTEER.develop()` anew for every round. Its analyzer reports
+continuous execution, format, correlation, and equal-value aggregates; neither
+`FactorImplementEval` nor `analysis.py` defines a binary model-admission rule.
+`FactorValueEvaluator` belongs only to the default FactorCoSTEER development
+and recovery feedback path, not the post-hoc benchmark evaluator or analyzer.
+AQ therefore requires only a thin approved-data adapter into the official
+multi-instrument shape, with no custom evaluator or benchmark engine.
+
 ```text
 PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
 PRIMARY_GENERATIVE_AI_MODEL = deepseek-flash
@@ -5445,7 +5456,13 @@ OFFICIAL_SINGLE_STOCK_ORACLE_PASS = NO
 ORACLE_EQUAL_VALUE_RATIO = 0.0
 ORACLE_CORRELATION = NAN
 PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
-DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED_EVALUATOR_CONTRACT_BLOCKER
+DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED
+OFFICIAL_FACTOR_BENCHMARK_EXPECTS_MULTI_INSTRUMENT_PANEL = YES
+FACTOR_IMPLEMENT_EVAL_NATIVE_BINARY_PASS_FAIL = NO
+OFFICIAL_BINARY_ADMISSION_POLICY_FOUND = NO
+DEFAULT_BENCH_TEST_ROUND = 10
+OFFICIAL_BENCH_ROUND_GENERATES_NEW_IMPLEMENTATION = YES
+AQ_INTEGRATION_CLASSIFICATION = THIN_DATA_ADAPTER_ONLY
 LOCAL_GENERATIVE_LLM_ACTIVE = NO
 LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
 P3_CANDIDATE_TO_P2_CONTRACT_V4 = DESIGNED_FORWARD_ONLY_NO_CANDIDATE_MATERIALIZED
@@ -5453,8 +5470,8 @@ AQ_CUSTOM_LLM_BACKEND_COUNT = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 FIN_QUANT_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-CURRENT_DEVELOPMENT_NEXT = P3_OFFICIAL_FACTOR_CODER_EVALUATION_CONTRACT_UPSTREAM_RESOLUTION_001
-FINAL_CLASSIFICATION = INCONCLUSIVE_SINGLE_STOCK_EVALUATOR_CONTRACT_DIAGNOSTIC
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_MULTI_INSTRUMENT_RD2BENCH_10_ROUND_BENCHMARK_001
+FINAL_CLASSIFICATION = PASS_OFFICIAL_FACTOR_CODER_UPSTREAM_CONTRACT_RESOLVED
 ```
 
 See [P3 local LLM active-runtime retirement and DeepSeek cloud-native reset 001](p3-local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001.md).

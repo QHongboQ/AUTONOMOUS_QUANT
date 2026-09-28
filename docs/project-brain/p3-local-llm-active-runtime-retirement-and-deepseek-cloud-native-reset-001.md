@@ -147,6 +147,86 @@ evaluator files relative to the project pin, so no existing upstream fix was
 available to adopt. No evaluator, factor engine, comparison rule, correlation
 rule, or threshold was implemented in AQ.
 
+## Official Factor Coder upstream contract resolution
+
+The official path starts at `rdagent/app/benchmark/factor/eval.py`. It loads
+`BenchmarkSettings`, converts RD2Bench JSON entries into `FactorTask` plus
+ground-truth `FactorFBWorkspace` objects, constructs the configured Developer
+(default `FactorCoSTEER`), and creates `FactorImplementEval`. For every benchmark
+round, `develop()` passes a fresh experiment to the Developer; default
+FactorCoSTEER performs its native generation and recovery. `eval()` then applies
+the deterministic five-evaluator sequence and saves a factor-keyed result
+object. `analysis.py` loads that object, calls `summarize_res()`, and aggregates
+continuous reporting metrics through `BenchmarkAnalyzer.analyze_data()`.
+
+```text
+OFFICIAL_BENCHMARK_ENTRYPOINT = python rdagent/app/benchmark/factor/eval.py
+OFFICIAL_ANALYSIS_ENTRYPOINT = python rdagent/app/benchmark/factor/analysis.py <log/path-to.pkl>
+FACTOR_IMPLEMENT_EVAL_EVALUATORS = FactorSingleColumnEvaluator,FactorRowCountEvaluator,FactorIndexEvaluator,FactorEqualValueRatioEvaluator,FactorCorrelationEvaluator(hard_check=False)
+FACTOR_IMPLEMENT_EVAL_NATIVE_BINARY_PASS_FAIL = NO
+FACTOR_VALUE_EVALUATOR_USED_BY_FACTOR_IMPLEMENT_EVAL = NO
+FACTOR_VALUE_EVALUATOR_USED_BY_DEFAULT_FACTORCOSTEER_DEVELOP = YES
+OFFICIAL_BINARY_ADMISSION_POLICY_FOUND = NO
+DEFAULT_BENCH_TEST_ROUND = 10
+OFFICIAL_BENCH_ROUND_GENERATES_NEW_IMPLEMENTATION = YES
+```
+
+The official Qlib data generator initializes
+`~/.qlib/qlib_data/cn_data`, uses `D.instruments()`, and requests `$open`,
+`$close`, `$high`, `$low`, `$volume`, and `$factor`. Qlib's initial
+instrument-first output is swapped and sorted to a date-first
+`(datetime, instrument)` MultiIndex. Full data begins at 2008-12-29 with no
+explicit end. Debug data covers 2018-01-01 through 2019-12-31 and retains the
+first 100 unique instruments encountered in the sorted full date-major panel.
+Both HDF outputs use key `data`.
+
+```text
+OFFICIAL_FACTOR_BENCHMARK_EXPECTS_MULTI_INSTRUMENT_PANEL = YES
+OFFICIAL_INDEX_NAMES = datetime,instrument
+OFFICIAL_INDEX_ORDER = DATETIME_THEN_INSTRUMENT_ASCENDING
+OFFICIAL_DEBUG_INSTRUMENT_SELECTION_METHOD = FIRST_100_UNIQUE_INSTRUMENTS_FROM_FULL_DATE_MAJOR_PANEL
+OFFICIAL_DEBUG_TARGET_INSTRUMENT_COUNT = 100
+OFFICIAL_HDF_KEY = data
+```
+
+The generated-code prompt requires a one-column pandas DataFrame whose column
+name is the factor name. The official alpha053 ground truth instead emits a
+Series named `result`; the benchmark evaluator accepts either pandas shape and
+normalizes Series internally. This label asymmetry explains why equal-value
+accuracy is not a viable single-stock oracle, while the intended multi-stock
+panel supplies the cross-section required by the official correlation metric.
+
+`analysis.py` semantics are descriptive rather than admission rules:
+
+```text
+AVG_RUN_SR = FRACTION_WITHOUT_RUN_LEVEL_CODERERROR
+AVG_FORMAT_SR = MEAN_OF_ROW_COUNT_RATIO_AND_INDEX_JACCARD_ACROSS_ROUNDS
+AVG_CORRELATION = MEAN_CROSS_SECTIONAL_PEARSON_CORRELATION_ACROSS_ROUNDS_WITH_MISSING_AS_ZERO
+MAX_CORRELATION = MAXIMUM_OF_THAT_CORRELATION_ACROSS_ROUNDS
+MAX_ACCURACY = MAXIMUM_EQUAL_VALUE_RATIO_ACROSS_ROUNDS
+AVG_ACCURACY = MEAN_FORMAT_WEIGHTED_EQUAL_VALUE_RATIO_ACROSS_ROUNDS
+```
+
+Current Microsoft RD-Agent HEAD
+`484776c211e4fbbeef03e0ec00d6bbee7362a4f4` is five commits ahead of the
+project pin, but none of the 16 relevant benchmark, evaluator, generator,
+prompt, loader, configuration, or documentation files changed. Targeted search
+found no matching Microsoft issue or PR. An upstream upgrade would therefore
+not alter this contract.
+
+```text
+RELEVANT_FILE_DIFF_COUNT = 0
+RELEVANT_BEHAVIOR_CHANGED = NO
+UPSTREAM_FIX_AVAILABLE = NO
+AQ_INTEGRATION_CLASSIFICATION = THIN_DATA_ADAPTER_ONLY
+```
+
+The next valid capability benchmark should use the official runner, official
+RD2Bench alpha053, intended multi-instrument panel, unchanged
+`FactorImplementEval`, and `BenchmarkAnalyzer`. It should preserve the official
+default ten rounds, each of which invokes FactorCoSTEER development again. This
+task did not run that benchmark.
+
 ## Evidence and safety
 
 Private evidence is retained at:
@@ -154,6 +234,7 @@ Private evidence is retained at:
 ```text
 D:/AQ_DATA/P3/deepseek-alpha053-one-code-100-single-stock-benchmark-001
 D:/AQ_DATA/P3/official-single-stock-evaluator-oracle-sanity-audit-001
+D:/AQ_DATA/P3/official-factor-coder-evaluation-contract-upstream-resolution-001
 ```
 
 ```text
@@ -161,6 +242,8 @@ SUMMARY_SHA256 = ca73efc3c9c310101079dd9eccb9b5273b3dd5de1bef086e3df1426826308fc
 CHECKSUMS_SHA256 = 53ca90c1a0ac06ad07998fd16c621e38a7d3a8ab52c3f27b9939d77aa590a584
 ORACLE_SUMMARY_SHA256 = 12a3a557bd649a60124acc393e7a0824920c74c2f2b86af5e9f295f5a86d6ecc
 ORACLE_CHECKSUMS_SHA256 = 9624c86cceab6e97807466b72710713d69b4d6313a1de30989453a2b033ab3cb
+UPSTREAM_CONTRACT_SHA256 = a5814b661fd9eaed8dc0f5e0fc1079406d73ce1c8ce33c4125761169b5669a14
+UPSTREAM_CONTRACT_CHECKSUMS_SHA256 = 36efe16e5494745f5f601b8752fd2e0d5fe8da2ebef30489ef9fee9cc710c935
 NEW_PRODUCTION_LOC = 0
 FIN_QUANT_EXECUTED = NO
 REAL_CANDIDATE_CREATED = 0
@@ -175,16 +258,16 @@ P7_MODIFIED = NO
 ## Decision
 
 The raw benchmark result neither admits nor rejects DeepSeek Flash for
-autonomous Factor Coder use because the unchanged single-stock evaluator cannot
-recognize an identical oracle implementation. It also does not reactivate any
-superseded semantic-audit, Qlib-replacement, 73-stock blocker, or
-100-independent-generation task.
+autonomous Factor Coder use. The upstream contract is now resolved, but
+DeepSeek capability remains unresolved until the official multi-instrument,
+multi-round path is executed. No superseded single-stock, Qlib-replacement,
+73-stock blocker, or independent-generation path is reactivated.
 
 ```text
 RAW_100_STOCK_RESULT = 0/100
 PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
-DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED_EVALUATOR_CONTRACT_BLOCKER
+DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED
 FIN_QUANT_NEXT_TASK_AUTHORIZED = NO
-CURRENT_DEVELOPMENT_NEXT = P3_OFFICIAL_FACTOR_CODER_EVALUATION_CONTRACT_UPSTREAM_RESOLUTION_001
-FINAL_CLASSIFICATION = INCONCLUSIVE_SINGLE_STOCK_EVALUATOR_CONTRACT_DIAGNOSTIC
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_MULTI_INSTRUMENT_RD2BENCH_10_ROUND_BENCHMARK_001
+FINAL_CLASSIFICATION = PASS_OFFICIAL_FACTOR_CODER_UPSTREAM_CONTRACT_RESOLVED
 ```
