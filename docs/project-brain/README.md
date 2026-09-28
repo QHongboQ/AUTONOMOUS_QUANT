@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — RD-Agent native handoff thin Candidate projection POC**
+> Active Development: **P3 — DeepSeek V4 Pro cloud admission (blocked pending secure API key)**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — RD-Agent fin_quant autonomous loop reactivation**
+> Development Next: **P3 — Resume DeepSeek V4 Pro cloud admission after secure key provisioning**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5389,6 +5389,67 @@ FINAL_CLASSIFICATION = PASS_STATIC17_SCAFFOLD_RETIRED_AUTONOMOUS_RD_DIRECTION_RE
 ```
 
 See [P7 Static17 scaffold retirement 001](p7-static17-scaffold-retirement-001.md).
+
+---
+
+#### P3 local-LLM retirement and DeepSeek V4 Pro cloud admission (2026-09-27)
+
+The user-authorized cloud pivot supersedes the secondary local factor-coder
+search. The already-stopped Phi run remains incomplete evidence: four complete
+full-admission recovery cycles ended `[False, False, False]`, and the fifth
+cycle was interrupted during generation before producing an atomic result.
+It is neither a pass nor a terminal scientific failure. All 643 evidence files
+(18,705,608 bytes) remain under the private historical evidence root.
+
+The three models introduced only for that search were removed by exact name
+after their identities were recorded. The WSL Ollama rollback chat model,
+local embedding model, and both aliases remain; no runner is loaded. The
+temporary Windows portable Ollama runtime/store had already been retired and
+is absent.
+
+Official DeepSeek documentation currently lists `deepseek-v4-pro` with a
+1,048,576-token context window, 393,216-token output limit, and
+`low`/`high`/`max` effort levels. Pinned LiteLLM 1.100.1 has a native
+`deepseek/deepseek-v4-pro` provider mapping with JSON response-format and
+thinking support. Its current mapping converts every non-`none`
+`reasoning_effort` to `thinking=enabled` rather than forwarding the selected
+level, so the strongest effective mode available through the pinned stack is
+the provider default `high`, not an asserted `max`.
+
+No `DEEPSEEK_API_KEY` exists in process, user, machine, WSL, or the existing
+approved local secret inventory. Consequently authenticated `GET /models`,
+chat/JSON/native-parse smoke, and the official FactorCoSTEER admission were
+not started. This is a credential blocker, not a model-admission result.
+
+```text
+BASE_MAIN = 29b8fe4302c89dc87da48829eaf9127b3adb9ef4
+PR_140_MERGED = YES
+P7_ACTIVE_RUNTIME_LOC = 352
+CANDIDATE_V3_THIN_RDAGENT_PROJECTION_LOC = 99
+LOCAL_MODEL_SEARCH_TERMINATION_REASON = USER_AUTHORIZED_CLOUD_PIVOT
+LOCAL_BENCHMARK_EVIDENCE_PRESERVED = YES
+LOCAL_MODELS_REMOVED = granite4.1:3b,phi4-mini:3.8b,gemma3:4b
+LOCAL_ROLLBACK_MODEL_RETAINED = qwen2.5-coder:7b
+LOCAL_EMBEDDING_RETAINED = qwen3-embedding:0.6b
+PINNED_LITELLM_DEEPSEEK_V4_PRO_SUPPORT = YES_STATIC_NATIVE_MAPPING_LIVE_UNVERIFIED
+LITELLM_UPGRADE_REQUIRED = NO
+DEEPSEEK_MODEL_DISCOVERY_PASS = NOT_RUN_BLOCKED_API_KEY
+DEEPSEEK_AUTH = NOT_RUN_BLOCKED_API_KEY
+DEEPSEEK_CHAT = NOT_RUN_BLOCKED_API_KEY
+DEEPSEEK_JSON_OUTPUT = NOT_RUN_BLOCKED_API_KEY
+RDAGENT_NATIVE_PARSE = NOT_RUN_BLOCKED_API_KEY
+PRIMARY_GENERATIVE_LLM = PROPOSED_DEEPSEEK_V4_PRO_NOT_ADMITTED
+EMBEDDING_EPOCH_CHANGED = NO
+FUTURE_DEEPSEEK_CANDIDATE_IDENTITY_EXTENSION_REQUIRED = YES
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+FIN_QUANT_EXECUTED = NO
+REAL_CANDIDATE_CREATED = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_DEEPSEEK_API_KEY_REQUIRED
+FINAL_CLASSIFICATION = BLOCKED_DEEPSEEK_API_KEY_REQUIRED
+```
+
+See [P3 local-LLM retirement and DeepSeek V4 Pro cloud admission 001](p3-local-llm-retirement-and-deepseek-v4-pro-cloud-admission-001.md).
 
 ---
 
