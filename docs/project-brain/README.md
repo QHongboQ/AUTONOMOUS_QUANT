@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor one-shot execution provenance reseal 002**
+> Active Development: **P7 — Successor historical static ensemble execution closeout**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor Historical Static Ensemble One-Shot Execution 003, gated on reseal PR merge**
+> Development Next: **P7 — Independent Alpha Family Acquisition and Admission**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5252,6 +5252,48 @@ Any later main commit invalidates the seal-last-change-equals-HEAD gate and
 requires another reseal.
 
 See [P7 successor one-shot execution provenance reseal 002](p7-successor-one-shot-execution-provenance-reseal-002.md).
+
+---
+
+#### P7 successor historical static ensemble execution closeout (2026-09-27)
+
+Execution 003 is the sole scientific outcome attempt for the frozen successor
+static-17 equal-weight study. The sealed classification is
+`STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE`: its mean daily RankIC delta versus
+the frozen OLS Alpha158 control was `-0.006600540893059081`, and zero of six
+preregistered gates passed. The result does not support superiority of this
+specific 17-Candidate Formulaic Alpha static equal-weight ensemble under the
+frozen protocol. It does not support broader claims about ensembles,
+individual alphas, AlphaGen, or Qlib AverageEnsemble.
+
+```text
+SCIENTIFIC_ATTEMPT_COUNT = 1
+RESULT_CLASSIFICATION = STATIC_ENSEMBLE_RESEARCH_NOT_SUPPORTIVE
+PASSED_GATE_COUNT = 0
+FAILED_GATE_COUNT = 6
+STATIC_17_EQUAL_WEIGHT_HISTORICAL_STUDY_RERUN_ALLOWED = NO
+POST_HOC_RESCUE_ALLOWED = NO
+PRISTINE_OOS = NO
+P2_CERTIFICATION_EVIDENCE = NO
+P7_DYNAMIC_ROSTER_EVIDENCE = NO
+P7_EXIT_CONDITION_EVIDENCE = NO
+PRODUCTION_AUTHORIZATION = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+P2_V2_COHORT_MODIFIED = NO
+SUCCESSOR_STATIC_17_EQUAL_WEIGHT_HISTORICAL_STUDY = CLOSED_NOT_SUPPORTIVE
+CURRENT_P7_STATUS = INCOMPLETE_REQUIRES_INDEPENDENT_ALPHA_FAMILIES
+NEXT_DEVELOPMENT_DIRECTION = P7_INDEPENDENT_ALPHA_FAMILY_ACQUISITION_AND_ADMISSION
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_EXECUTION_CLOSED_NOT_SUPPORTIVE
+```
+
+MCS and portfolio outputs are secondary and non-gating. The unavailable MCS
+loss matrix and the passing portfolio projection do not change the primary
+classification. Execution 001 and 002 remain pre-outcome authority rejections
+and consumed no scientific attempts. This exact study cannot be rerun or
+rescued post hoc; any future ensemble study requires a new scientific question,
+preregistered protocol, identity, and scientifically justified new information.
+
+See [P7 successor historical static ensemble execution closeout 001](p7-successor-historical-static-ensemble-execution-closeout-001.md).
 
 ---
 
