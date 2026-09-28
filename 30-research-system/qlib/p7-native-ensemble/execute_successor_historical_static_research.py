@@ -60,6 +60,12 @@ RFC8785_PYTHON = Path("/home/zhou/AQ_ENVS/p5-fundamental-intelligence/bin/python
 STATS_PYTHON = Path("/home/zhou/AQ_ENVS/p5-h1-statistics/bin/python")
 QLIB_SOURCE_ROOT = Path("/home/zhou/AQ_WORKSPACES/p0-poc-b-qlib-src")
 EXPECTED_DEPENDENCIES = {"arch": "8.0.0", "qlib": "0.9.8.dev26", "skfolio": "1.0.6"}
+DETERMINISTIC_TEXT_GIT_CONFIG = (
+    "-c",
+    "core.autocrlf=input",
+    "-c",
+    "core.safecrlf=false",
+)
 
 
 class GateError(RuntimeError):
@@ -342,10 +348,7 @@ def worktree_filtered_blob_oid(repo: Path, path: Path) -> str:
             "git",
             "-C",
             str(repo),
-            "-c",
-            "core.autocrlf=input",
-            "-c",
-            "core.safecrlf=false",
+            *DETERMINISTIC_TEXT_GIT_CONFIG,
             "hash-object",
             f"--path={path.as_posix()}",
             str((repo / path).resolve()),
@@ -374,6 +377,30 @@ def runtime_script_path_is_bound(
 ) -> bool:
     actual = (actual_runtime_script_path or Path(__file__)).resolve()
     return actual == (repo / EXECUTION_SCRIPT).resolve()
+
+
+def deterministic_worktree_status(repo: Path) -> bytes:
+    result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            *DETERMINISTIC_TEXT_GIT_CONFIG,
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=all",
+        ],
+        check=False,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        raise GateError("DETERMINISTIC_WORKTREE_STATUS_FAILED")
+    return result.stdout
+
+
+def deterministic_worktree_clean(repo: Path) -> bool:
+    return not deterministic_worktree_status(repo)
 
 
 def runtime_authority(
@@ -405,7 +432,7 @@ def runtime_authority(
     return RuntimeAuthority(
         current_head=head,
         origin_main_head=origin_main,
-        worktree_clean=not bool(git(repo, "status", "--porcelain", "--untracked-files=all")),
+        worktree_clean=deterministic_worktree_clean(repo),
         seal_last_change_commit=git(
             repo, "log", "-1", "--format=%H", "--", PROVENANCE_SEAL.as_posix()
         ),

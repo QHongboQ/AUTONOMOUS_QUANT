@@ -126,6 +126,18 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             )
         self.assertEqual(raised.exception.code, code)
 
+    def assert_runtime_dirty_rejected(self, repo: Path) -> None:
+        loaded = runner.load_provenance_seal(repo)
+        runtime = runner.runtime_authority(
+            repo,
+            loaded,
+            actual_runtime_script_path=repo / runner.EXECUTION_SCRIPT,
+        )
+        self.assertFalse(runtime.worktree_clean)
+        with self.assertRaises(runner.GateError) as raised:
+            runner.validate_provenance_seal(self.authorities, loaded, runtime)
+        self.assertEqual(raised.exception.code, "DIRTY_WORKTREE_FORBIDDEN")
+
     @staticmethod
     def git(repo: Path, *args: str) -> str:
         return subprocess.check_output(
@@ -173,7 +185,9 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
         seal_path.parent.mkdir(parents=True, exist_ok=True)
         seal_text = json.dumps(seal, indent=2, sort_keys=True) + "\n"
         seal_path.write_bytes(seal_text.encode("utf-8"))
-        self.git(repo, "add", runner.PROVENANCE_SEAL.as_posix())
+        tracked_path = repo / "tracked.txt"
+        tracked_path.write_text("tracked fixture\n", encoding="utf-8")
+        self.git(repo, "add", runner.PROVENANCE_SEAL.as_posix(), "tracked.txt")
         self.git(repo, "commit", "-q", "-m", "commit B tracked seal")
         script_path.write_bytes(script_text.replace("\n", "\r\n").encode("utf-8"))
         seal_path.write_bytes(seal_text.replace("\n", "\r\n").encode("utf-8"))
@@ -400,6 +414,56 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
                 self.assertEqual(
                     runner.worktree_filtered_blob_oid(repo, path), head_oid
                 )
+
+    def test_cross_git_ambient_false_dirty_is_clean_deterministically(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            ambient_status = self.git_without_ambient_config(
+                repo, "status", "--porcelain=v1", "--untracked-files=all"
+            )
+            self.assertTrue(ambient_status)
+            self.assertEqual(runner.deterministic_worktree_status(repo), b"")
+            self.assertTrue(runner.deterministic_worktree_clean(repo))
+            loaded = runner.load_provenance_seal(repo)
+            runtime = runner.runtime_authority(
+                repo,
+                loaded,
+                actual_runtime_script_path=repo / runner.EXECUTION_SCRIPT,
+            )
+            runner.validate_provenance_seal(self.authorities, loaded, runtime)
+
+    def test_deterministic_status_detects_real_content_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            (repo / "tracked.txt").write_text(
+                "real content mutation\n", encoding="utf-8"
+            )
+            self.assert_runtime_dirty_rejected(repo)
+
+    def test_deterministic_status_detects_staged_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            (repo / "tracked.txt").write_text("staged mutation\n", encoding="utf-8")
+            self.git(
+                repo,
+                "-c",
+                "core.autocrlf=input",
+                "-c",
+                "core.safecrlf=false",
+                "add",
+                "tracked.txt",
+            )
+            self.assert_runtime_dirty_rejected(repo)
+
+    def test_deterministic_status_detects_untracked_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            (repo / "untracked.txt").write_text("untracked\n", encoding="utf-8")
+            self.assert_runtime_dirty_rejected(repo)
 
     def test_lf_runtime_matches_head_deterministically(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

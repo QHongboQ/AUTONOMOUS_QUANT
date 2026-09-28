@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor one-shot execution provenance reseal**
+> Active Development: **P7 — Successor cross-Git runtime worktree cleanliness correction**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor Historical Static Ensemble One-Shot Execution 002, gated on reseal PR merge**
+> Development Next: **P7 — Successor One-Shot Execution Provenance Reseal 002, gated on worktree-cleanliness correction merge**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5167,6 +5167,51 @@ one-shot execution**. Any later commit makes the seal's last-change commit
 differ from HEAD and requires another reseal.
 
 See [P7 successor one-shot execution provenance reseal 001](p7-successor-one-shot-execution-provenance-reseal-001.md).
+
+---
+
+#### P7 successor cross-Git runtime worktree cleanliness correction (2026-09-27)
+
+Execution 002 rejected before outcome access with
+`DIRTY_WORKTREE_FORBIDDEN`. The deterministic blob checks and actual runner
+path gate passed, but the runtime cleanliness check still called ambient WSL
+`git status`. That command reported 385 false modifications for the Windows
+CRLF checkout, while the frozen deterministic Git configuration reported zero.
+No output root, marker, attempt manifest, or scientific result was created.
+
+The runner now shares one native-Git clean-side configuration between tracked
+text hashing and worktree status:
+
+```text
+git -c core.autocrlf=input -c core.safecrlf=false status --porcelain=v1 -z --untracked-files=all
+```
+
+Line-ending-only differences are clean. Real tracked content changes, staged
+changes, and untracked files remain dirty and reject with
+`DIRTY_WORKTREE_FORBIDDEN`. Ambient Git status is no longer authorization
+evidence.
+
+```text
+PRIOR_EXECUTION_001_REJECTION = WORKTREE_SCRIPT_HEAD_MISMATCH
+PRIOR_EXECUTION_002_REJECTION = DIRTY_WORKTREE_FORBIDDEN
+PRIOR_REAL_OUTCOME_ACCESS_STARTED = NO
+PRIOR_SCIENTIFIC_ATTEMPT_COUNT = 0
+AMBIENT_WSL_STATUS_ENTRY_COUNT = 385
+DETERMINISTIC_STATUS_ENTRY_COUNT = 0
+DETERMINISTIC_GIT_STATUS_CONFIG = CORE_AUTOCRLF_INPUT_SAFECRLF_FALSE_PORCELAIN_V1_Z
+DETERMINISTIC_WORKTREE_CLEAN = YES
+REAL_SEAL_MODIFIED = NO
+REAL_SEAL_GIT_BLOB_SHA = bfa8d0d510c09b4636820b5724cc0861eb9b6a32
+REAL_EXECUTE_INVOKED = NO
+REAL_OUTCOME_ACCESS_STARTED = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+NEW_PRODUCTION_LOC = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_RESEAL_002
+FINAL_CLASSIFICATION = PASS_CROSS_GIT_RUNTIME_WORKTREE_CLEANLINESS_CORRECTED
+```
+
+See [P7 successor cross-Git runtime worktree cleanliness correction 001](p7-successor-cross-git-runtime-worktree-cleanliness-correction-001.md).
 
 ---
 
