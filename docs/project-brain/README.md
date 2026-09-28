@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — DeepSeek one-code / 100-single-stock official benchmark complete; 0/100, route decision pending**
+> Active Development: **P3 — Official single-stock evaluator oracle audit complete; raw 0/100 is inconclusive**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — DeepSeek Factor Coder route decision 001**
+> Development Next: **P3 — Official Factor Coder evaluation contract upstream resolution 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5412,10 +5412,15 @@ lexicographically first eligible stock, froze the generated code, and ran that
 same code independently on 100 real single-stock slices from the immutable full
 P3 source. All 100 executions used the exact unchanged RD2Bench alpha053 ground
 truth and `FactorImplementEval` semantics. Structural checks passed on every
-stock, but the official value comparison failed on every stock, yielding 0/100.
-Official single-stock correlations were undefined because each datetime group
-contains one observation. No admission threshold was invented and `fin_quant`
-remains prohibited.
+stock, but the official value comparison failed on every stock, yielding a raw
+0/100. A subsequent no-LLM oracle audit compared the official alpha053 `gt_code`
+with the exact same implementation through the same single-stock path. The
+identical oracle also received `equal_value_ratio=0.0`: `_get_df` named its two
+Series columns `gt_factor` and `source_factor`, so pandas label-aligned
+subtraction had zero non-NaN cells. Correlation was also NaN because each of the
+2,516 datetime groups contained one instrument. Therefore the raw 0/100 is
+preserved but is not a valid DeepSeek capability verdict. `fin_quant` remains
+prohibited.
 
 ```text
 PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
@@ -5436,7 +5441,11 @@ PASS_COUNT = 0
 FAIL_COUNT = 100
 PASS_RATE = 0.0
 FAILURE_TAXONOMY = OFFICIAL_VALUE_COMPARISON_FAILURE:100
-DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED_BY_ONE_CODE_100_SINGLE_STOCK_BENCHMARK
+OFFICIAL_SINGLE_STOCK_ORACLE_PASS = NO
+ORACLE_EQUAL_VALUE_RATIO = 0.0
+ORACLE_CORRELATION = NAN
+PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
+DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED_EVALUATOR_CONTRACT_BLOCKER
 LOCAL_GENERATIVE_LLM_ACTIVE = NO
 LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
 P3_CANDIDATE_TO_P2_CONTRACT_V4 = DESIGNED_FORWARD_ONLY_NO_CANDIDATE_MATERIALIZED
@@ -5444,8 +5453,8 @@ AQ_CUSTOM_LLM_BACKEND_COUNT = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 FIN_QUANT_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_FACTOR_CODER_ROUTE_DECISION_001
-FINAL_CLASSIFICATION = FAIL_DEEPSEEK_ONE_CODE_100_SINGLE_STOCK_OFFICIAL_BENCHMARK_0_OF_100
+CURRENT_DEVELOPMENT_NEXT = P3_OFFICIAL_FACTOR_CODER_EVALUATION_CONTRACT_UPSTREAM_RESOLUTION_001
+FINAL_CLASSIFICATION = INCONCLUSIVE_SINGLE_STOCK_EVALUATOR_CONTRACT_DIAGNOSTIC
 ```
 
 See [P3 local LLM active-runtime retirement and DeepSeek cloud-native reset 001](p3-local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001.md).

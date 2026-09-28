@@ -106,17 +106,61 @@ The official correlation statistic groups by datetime; a single-stock fixture
 has one observation in each group, so all official per-date correlations are
 undefined. This does not replace or relax the official value gate.
 
+## Official single-stock evaluator oracle audit
+
+The raw 0/100 result was not promoted to a DeepSeek capability verdict. A
+no-LLM oracle audit reused the intact canary fixture and compared the exact
+official alpha053 ground-truth implementation with the same exact implementation
+through `FactorImplementEval.eval_case` and its unchanged evaluators.
+
+Both workspaces produced a Series named `result`. Official `_get_df` converted
+the ground-truth Series to column `gt_factor` and the source Series to column
+`source_factor`. The official `gen_df.sub(gt_df)` then produced two label-aligned
+columns containing no non-NaN differences. Consequently the identical oracle
+received an equal-value ratio of zero. Each datetime group contained exactly
+one instrument, so both Pearson and rank correlation were undefined.
+
+```text
+RDAGENT_PIN_SHA = 32b3d395e73d9db5eee3fe9063d69aec0fdc83bd
+UPSTREAM_CURRENT_HEAD_CHECKED = 484776c211e4fbbeef03e0ec00d6bbee7362a4f4
+UPSTREAM_FIX_AVAILABLE = NO
+ORACLE_IMPLEMENTATIONS_IDENTICAL = YES
+ORACLE_IMPLEMENTATION_SHA256 = bf790dcc951ec6f5fca41b33cb1626610eadf35eaf7f9363c002d5851a30722d
+ORACLE_SINGLE_COLUMN = TRUE
+ORACLE_ROW_COUNT_RATIO = 1.0
+ORACLE_INDEX_RATIO = 1.0
+ORACLE_GT_COLUMNS = gt_factor
+ORACLE_SOURCE_COLUMNS = source_factor
+ORACLE_SUBTRACTION_RESULT_COLUMNS = gt_factor,source_factor
+ORACLE_SUBTRACTION_NON_NAN_COUNT = 0
+ORACLE_EQUAL_VALUE_RATIO = 0.0
+ORACLE_DISTINCT_DATETIMES = 2516
+ORACLE_INSTRUMENTS_PER_DATETIME_MIN_MEDIAN_MAX = 1,1,1
+ORACLE_CORRELATION = NAN
+ORACLE_PASS = NO
+COLUMN_ALIGNMENT_EFFECT_CONFIRMED = YES
+SINGLE_STOCK_CORRELATION_UNDEFINED_CONFIRMED = YES
+```
+
+Microsoft RD-Agent current upstream HEAD retained byte-identical relevant
+evaluator files relative to the project pin, so no existing upstream fix was
+available to adopt. No evaluator, factor engine, comparison rule, correlation
+rule, or threshold was implemented in AQ.
+
 ## Evidence and safety
 
 Private evidence is retained at:
 
 ```text
 D:/AQ_DATA/P3/deepseek-alpha053-one-code-100-single-stock-benchmark-001
+D:/AQ_DATA/P3/official-single-stock-evaluator-oracle-sanity-audit-001
 ```
 
 ```text
 SUMMARY_SHA256 = ca73efc3c9c310101079dd9eccb9b5273b3dd5de1bef086e3df1426826308fc3
 CHECKSUMS_SHA256 = 53ca90c1a0ac06ad07998fd16c621e38a7d3a8ab52c3f27b9939d77aa590a584
+ORACLE_SUMMARY_SHA256 = 12a3a557bd649a60124acc393e7a0824920c74c2f2b86af5e9f295f5a86d6ecc
+ORACLE_CHECKSUMS_SHA256 = 9624c86cceab6e97807466b72710713d69b4d6313a1de30989453a2b033ab3cb
 NEW_PRODUCTION_LOC = 0
 FIN_QUANT_EXECUTED = NO
 REAL_CANDIDATE_CREATED = 0
@@ -130,13 +174,17 @@ P7_MODIFIED = NO
 
 ## Decision
 
-The benchmark result does not admit DeepSeek Flash to autonomous Factor Coder
-use. It also does not reactivate any superseded semantic-audit, Qlib-replacement,
-73-stock blocker, or 100-independent-generation task.
+The raw benchmark result neither admits nor rejects DeepSeek Flash for
+autonomous Factor Coder use because the unchanged single-stock evaluator cannot
+recognize an identical oracle implementation. It also does not reactivate any
+superseded semantic-audit, Qlib-replacement, 73-stock blocker, or
+100-independent-generation task.
 
 ```text
-DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED_BY_ONE_CODE_100_SINGLE_STOCK_BENCHMARK
+RAW_100_STOCK_RESULT = 0/100
+PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
+DEEPSEEK_FACTOR_CODER_CAPABILITY = UNRESOLVED_EVALUATOR_CONTRACT_BLOCKER
 FIN_QUANT_NEXT_TASK_AUTHORIZED = NO
-CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_FACTOR_CODER_ROUTE_DECISION_001
-FINAL_CLASSIFICATION = FAIL_DEEPSEEK_ONE_CODE_100_SINGLE_STOCK_OFFICIAL_BENCHMARK_0_OF_100
+CURRENT_DEVELOPMENT_NEXT = P3_OFFICIAL_FACTOR_CODER_EVALUATION_CONTRACT_UPSTREAM_RESOLUTION_001
+FINAL_CLASSIFICATION = INCONCLUSIVE_SINGLE_STOCK_EVALUATOR_CONTRACT_DIAGNOSTIC
 ```
