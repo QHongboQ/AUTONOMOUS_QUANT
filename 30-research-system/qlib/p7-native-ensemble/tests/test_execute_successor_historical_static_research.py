@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -106,6 +107,7 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             "execution_commit_script_sha256": "script-sha",
             "current_head_script_sha256": "script-sha",
             "worktree_script_git_equivalent_to_head": True,
+            "actual_runtime_script_path_bound": True,
             "raw_worktree_script_sha256": "diagnostic-only",
             "dependency_versions": dict(runner.EXPECTED_DEPENDENCIES),
         }
@@ -130,8 +132,25 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             ["git", "-C", str(repo), *args], text=True
         ).strip()
 
+    @staticmethod
+    def git_without_ambient_config(repo: Path, *args: str) -> str:
+        home = repo / ".isolated-git-home"
+        home.mkdir(exist_ok=True)
+        env = os.environ.copy()
+        env.update(
+            {
+                "GIT_CONFIG_NOSYSTEM": "1",
+                "HOME": str(home),
+                "USERPROFILE": str(home),
+                "XDG_CONFIG_HOME": str(home),
+            }
+        )
+        return subprocess.check_output(
+            ["git", "-C", str(repo), *args], text=True, env=env
+        ).strip()
+
     def create_realistic_seal_repository(
-        self, repo: Path
+        self, repo: Path, *, unset_autocrlf: bool = False
     ) -> tuple[dict[str, object], str, str]:
         self.git(repo, "init", "-q")
         self.git(repo, "config", "user.name", "Synthetic Test")
@@ -166,6 +185,8 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
         )
         seal_commit = self.git(repo, "rev-parse", "HEAD")
         self.git(repo, "update-ref", "refs/remotes/origin/main", seal_commit)
+        if unset_autocrlf:
+            self.git(repo, "config", "--unset", "core.autocrlf")
         return seal, execution_commit, seal_commit
 
     def test_frozen_authorities_are_bound_without_outcome_access(self) -> None:
@@ -255,6 +276,21 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             self.runtime(worktree_script_git_equivalent_to_head=False),
         )
 
+    def test_actual_runtime_script_path_must_be_bound(self) -> None:
+        self.assertTrue(runner.runtime_script_path_is_bound(REPO, MODULE_PATH))
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            copied = repo / "copied-runner.py"
+            copied.write_bytes((repo / runner.EXECUTION_SCRIPT).read_bytes())
+            loaded = runner.load_provenance_seal(repo)
+            runtime = runner.runtime_authority(
+                repo, loaded, actual_runtime_script_path=copied
+            )
+            with self.assertRaises(runner.GateError) as raised:
+                runner.validate_provenance_seal(self.authorities, loaded, runtime)
+            self.assertEqual(raised.exception.code, "RUNTIME_SCRIPT_PATH_MISMATCH")
+
     def test_dirty_worktree_rejected(self) -> None:
         self.assert_rejected(
             "DIRTY_WORKTREE_FORBIDDEN",
@@ -301,7 +337,11 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             seal, _, seal_commit = self.create_realistic_seal_repository(repo)
             self.assertNotIn("authority_commit_sha", seal)
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(repo, loaded)
+            runtime = runner.runtime_authority(
+                repo,
+                loaded,
+                actual_runtime_script_path=repo / runner.EXECUTION_SCRIPT,
+            )
             runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(runtime.current_head, seal_commit)
             self.assertEqual(runtime.seal_last_change_commit, seal_commit)
@@ -319,6 +359,7 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             )
             self.assertTrue(runtime.worktree_script_git_equivalent_to_head)
             self.assertTrue(runtime.seal_worktree_git_equivalent_to_head)
+            self.assertTrue(runtime.actual_runtime_script_path_bound)
             self.assertNotEqual(
                 runner.file_sha256(repo / runner.PROVENANCE_SEAL),
                 runner.git_blob_sha256(repo, "HEAD", runner.PROVENANCE_SEAL),
@@ -334,10 +375,45 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
             later_commit = self.git(repo, "rev-parse", "HEAD")
             self.git(repo, "update-ref", "refs/remotes/origin/main", later_commit)
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(repo, loaded)
+            runtime = runner.runtime_authority(
+                repo,
+                loaded,
+                actual_runtime_script_path=repo / runner.EXECUTION_SCRIPT,
+            )
             with self.assertRaises(runner.GateError) as raised:
                 runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(raised.exception.code, "SEAL_LAST_CHANGE_NOT_CURRENT_HEAD")
+
+    def test_cross_git_crlf_checkout_matches_head_deterministically(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            for path in (runner.EXECUTION_SCRIPT, runner.PROVENANCE_SEAL):
+                head_oid = runner.git_blob_oid(repo, "HEAD", path)
+                ambient_oid = self.git_without_ambient_config(
+                    repo,
+                    "hash-object",
+                    f"--path={path.as_posix()}",
+                    str((repo / path).resolve()),
+                )
+                self.assertNotEqual(ambient_oid, head_oid)
+                self.assertEqual(
+                    runner.worktree_filtered_blob_oid(repo, path), head_oid
+                )
+
+    def test_lf_runtime_matches_head_deterministically(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            self.create_realistic_seal_repository(repo, unset_autocrlf=True)
+            for path in (runner.EXECUTION_SCRIPT, runner.PROVENANCE_SEAL):
+                worktree_path = repo / path
+                worktree_path.write_bytes(
+                    worktree_path.read_bytes().replace(b"\r\n", b"\n")
+                )
+                self.assertEqual(
+                    runner.worktree_filtered_blob_oid(repo, path),
+                    runner.git_blob_oid(repo, "HEAD", path),
+                )
 
     def test_realistic_seal_worktree_mutation_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -351,7 +427,11 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
                 encoding="utf-8",
             )
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(repo, loaded)
+            runtime = runner.runtime_authority(
+                repo,
+                loaded,
+                actual_runtime_script_path=repo / runner.EXECUTION_SCRIPT,
+            )
             with self.assertRaises(runner.GateError) as raised:
                 runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(raised.exception.code, "SEAL_WORKTREE_HEAD_MISMATCH")
@@ -366,7 +446,11 @@ class SuccessorOneShotExecutionTests(unittest.TestCase):
                 + b"print('real content mutation')\r\n"
             )
             loaded = runner.load_provenance_seal(repo)
-            runtime = runner.runtime_authority(repo, loaded)
+            runtime = runner.runtime_authority(
+                repo,
+                loaded,
+                actual_runtime_script_path=repo / runner.EXECUTION_SCRIPT,
+            )
             with self.assertRaises(runner.GateError) as raised:
                 runner.validate_provenance_seal(self.authorities, loaded, runtime)
             self.assertEqual(raised.exception.code, "WORKTREE_SCRIPT_HEAD_MISMATCH")
