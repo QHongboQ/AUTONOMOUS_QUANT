@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor Git-canonical text-byte identity correction**
+> Active Development: **P7 — Successor one-shot execution provenance seal**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Successor One-Shot Execution Provenance Seal 001**
+> Development Next: **P7 — Successor Historical Static Ensemble One-Shot Execution 001, gated on seal PR merge**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5044,6 +5044,44 @@ FINAL_CLASSIFICATION = PASS_GIT_CANONICAL_TEXT_BYTE_IDENTITY_CORRECTED
 ```
 
 See [P7 successor Git-canonical text-byte identity correction 001](p7-successor-git-canonical-text-byte-identity-correction-001.md).
+
+---
+
+#### P7 successor one-shot execution provenance seal (2026-09-27)
+
+The successor one-shot execution seal is frozen on the Git-canonical execution
+script merged at `e7f3a64fb4b0178bd7f21a886b591ef20d2d48db`. It binds the exact
+corrected protocol/input/population/mask identities, Qlib source and dependency
+versions, the 17 Candidate artifacts, OLS control, Qlib label, and separate
+construction/evaluation population artifacts. All 21 artifact hashes passed
+raw-byte verification; population verification inspected only ordered
+`datetime/instrument` keys.
+
+The seal is nonrecursive and does not store its containing commit SHA. While
+its PR remains open it is not real-execution eligible. After merge, the seal's
+last-change commit must be the exact `origin/main` tip and **no other main
+commit may land before the one-shot execution**. Any later main commit requires
+a new seal authority commit.
+
+```text
+EXECUTION_CODE_COMMIT_SHA = e7f3a64fb4b0178bd7f21a886b591ef20d2d48db
+EXECUTION_SCRIPT_GIT_BLOB_SHA256 = 0f11cba636d2db5849d7caf327c73f1063d0c053dcb35884406287344d714f3a
+CANDIDATE_ARTIFACT_COUNT = 17
+CANDIDATE_ARTIFACT_HASH_VERIFIED_COUNT = 17
+SIGNAL_CONSTRUCTION_POPULATION_ARTIFACT_SHA256 = c2677441b7ce4d4b001f5cb9f51c032fbb85d7a2163e0d80feaaf65e8e160dc6
+EVALUATION_POPULATION_ARTIFACT_SHA256 = 5f240cb9d88a318047d597c2ed11c1356eebc60fe0b59ae982d347089dcf4c38
+TRACKED_TEXT_CANONICAL_IDENTITY = SHA256_OF_RAW_GIT_BLOB_BYTES
+RAW_WORKTREE_SCRIPT_SHA_IN_SEAL = NO
+AUTHORITY_COMMIT_SHA_STORED_INSIDE_SEAL = NO
+REAL_EXECUTION_READY = NO_PENDING_SEAL_PR_MERGE
+REAL_EXECUTE_INVOKED = NO
+REAL_OUTCOME_ACCESS_STARTED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P7_SUCCESSOR_HISTORICAL_STATIC_ENSEMBLE_ONE_SHOT_EXECUTION_001
+FINAL_CLASSIFICATION = PASS_SUCCESSOR_ONE_SHOT_EXECUTION_PROVENANCE_SEAL_FROZEN_PRE_MERGE
+```
+
+See [P7 successor one-shot execution provenance seal 001](p7-successor-one-shot-execution-provenance-seal-001.md).
 
 ---
 
