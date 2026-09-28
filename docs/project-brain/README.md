@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P7 — Successor historical static ensemble execution closeout**
+> Active Development: **P7 — Static17 scaffold retirement and autonomous factor-factory rebase**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P7 — Independent Alpha Family Acquisition and Admission**
+> Development Next: **P3/P7 — RD-Agent fin_quant thin-adapter POC**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5294,6 +5294,48 @@ rescued post hoc; any future ensemble study requires a new scientific question,
 preregistered protocol, identity, and scientifically justified new information.
 
 See [P7 successor historical static ensemble execution closeout 001](p7-successor-historical-static-ensemble-execution-closeout-001.md).
+
+---
+
+#### P7 Static17 scaffold retirement and autonomous factor-factory rebase (2026-09-27)
+
+The terminal Static17 one-shot runners, their dedicated runner test, and the
+spent real-execution seal are removed from the active tree. Git history at
+`3da8c79d617eca0263f1e6c5dcae61f235d58338` plus the immutable protocol,
+contract, result-reference, and closeout records remain the scientific
+authority. Deletion from the active tree does not delete scientific history.
+
+The active P7 Python runtime contracts from 2,230 to 352 physical LOC and now
+contains only the time-effective authorization handoff, session-local
+fail-closed routing, and thin Qlib AverageEnsemble boundary. The reusable
+skfolio split-feasibility test remains because it tests public WalkForward and
+CombinatorialPurgedCV boundary behavior independently of the retired runners.
+
+Current official-source inspection selects Microsoft RD-Agent(Q) as the
+primary autonomous research owner. RD-Agent owns hypothesis generation,
+factor/model proposal and coding iteration, experiment feedback, and joint
+factor/model orchestration. Qlib continues to own dataset, training,
+prediction, Recorder, backtest, signal evaluation, and workflow mechanics.
+AlphaGen remains the Formulaic Alpha / RL alpha-pool owner, with its optional
+LLM iterative generation surface. AQ retains only PIT data authority,
+Candidate normalization and identity, P2 certification, P4 lifecycle, P7
+cross-family authorization/ensemble policy, and P8+ capital/risk authority.
+
+```text
+SUCCESSOR_STATIC_17_EQUAL_WEIGHT_HISTORICAL_STUDY = CLOSED_NOT_SUPPORTIVE
+STATIC_17_RERUN_ALLOWED = NO
+PRIMARY_AUTONOMOUS_RD_OWNER = MICROSOFT_RD_AGENT_Q
+AUTONOMOUS_RESEARCH_FEEDBACK_SURFACE = TRAIN_VALID_RESEARCH_ONLY
+P2_V2_SEALED_OOS_FEEDBACK_TO_AUTONOMOUS_RD = PROHIBITED
+AQ_CUSTOM_RESEARCH_LOOP_PRESENT = NO
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_P7_STATUS = INCOMPLETE_REQUIRES_INDEPENDENT_ALPHA_FAMILIES
+CURRENT_DEVELOPMENT_NEXT = AUTONOMOUS_QUANT_P3_P7_RDAGENT_FIN_QUANT_THIN_ADAPTER_POC_001
+FINAL_CLASSIFICATION = PASS_STATIC17_SCAFFOLD_RETIRED_AUTONOMOUS_RD_DIRECTION_REBASED
+```
+
+See [P7 Static17 scaffold retirement 001](p7-static17-scaffold-retirement-001.md).
 
 ---
 
