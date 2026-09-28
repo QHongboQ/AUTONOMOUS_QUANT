@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/candidate-contract-v4.schema.json",
+  "title": "AUTONOMOUS_QUANT P3 Candidate-to-P2 Contract V4",
+  "description": "Forward-only producer-neutral Candidate identity with truthful DeepSeek cloud runtime identity for RD-Agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_contract_version",
+    "candidate_id",
+    "research_producer_identity",
+    "qlib_recorder_identity",
+    "artifact_identity_bundle",
+    "dataset_identity_bundle",
+    "runtime_identity_bundle",
+    "p2_target_and_eligibility_boundary"
+  ],
+  "properties": {
+    "candidate_contract_version": {
+      "const": "P3_CANDIDATE_TO_P2_CONTRACT_V4"
+    },
+    "candidate_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "research_producer_identity": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/researchProducerIdentity"
+    },
+    "qlib_recorder_identity": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/qlibRecorderIdentity"
+    },
+    "artifact_identity_bundle": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/artifactIdentityBundle"
+    },
+    "dataset_identity_bundle": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/datasetIdentityBundle"
+    },
+    "runtime_identity_bundle": {
+      "$ref": "#/$defs/runtimeIdentityBundle"
+    },
+    "p2_target_and_eligibility_boundary": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/p2TargetAndEligibilityBoundary"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "research_producer_identity": {
+            "properties": {
+              "producer_kind": {
+                "const": "RD_AGENT"
+              }
+            },
+            "required": [
+              "producer_kind"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifact_identity_bundle": {
+            "$ref": "candidate-contract-v3.schema.json#/$defs/rdAgentArtifactIdentityBundle"
+          },
+          "runtime_identity_bundle": {
+            "$ref": "#/$defs/rdAgentRuntimeIdentityBundle"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "research_producer_identity": {
+            "properties": {
+              "producer_kind": {
+                "const": "FORMULAIC_ALPHA"
+              }
+            },
+            "required": [
+              "producer_kind"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "artifact_identity_bundle": {
+            "$ref": "candidate-contract-v3.schema.json#/$defs/formulaicArtifactIdentityBundle"
+          },
+          "runtime_identity_bundle": {
+            "$ref": "candidate-contract-v3.schema.json#/$defs/formulaicRuntimeIdentityBundle"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "chatResolutionV4": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "requested_model",
+        "resolved_model",
+        "provider_model_identity_kind",
+        "provider_model_identity",
+        "reasoning_mode",
+        "reasoning_effort",
+        "max_output_tokens",
+        "call_count"
+      ],
+      "properties": {
+        "provider": {
+          "const": "deepseek"
+        },
+        "requested_model": {
+          "const": "deepseek/deepseek-flash"
+        },
+        "resolved_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider_model_identity_kind": {
+          "const": "RESPONSE_MODEL_ONLY"
+        },
+        "provider_model_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reasoning_mode": {
+          "const": "THINKING_ENABLED"
+        },
+        "reasoning_effort": {
+          "const": "high"
+        },
+        "max_output_tokens": {
+          "const": 65536
+        },
+        "call_count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "llmExecutionIdentityV4": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "litellm_version",
+        "llm_configuration_sha256",
+        "native_trace_artifact_sha256",
+        "chat_route_mode",
+        "chat_resolution",
+        "fallback_occurred",
+        "fallback_reason_counts",
+        "embedding_logical_slot",
+        "embedding_resolution",
+        "embedding_epoch_sha256"
+      ],
+      "properties": {
+        "litellm_version": {
+          "const": "1.100.1"
+        },
+        "llm_configuration_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "native_trace_artifact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chat_route_mode": {
+          "const": "DEEPSEEK_ONLY"
+        },
+        "chat_resolution": {
+          "$ref": "#/$defs/chatResolutionV4"
+        },
+        "fallback_occurred": {
+          "const": false
+        },
+        "fallback_reason_counts": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "embedding_logical_slot": {
+          "const": "aq-embedding-local"
+        },
+        "embedding_resolution": {
+          "$ref": "candidate-contract-v2.schema.json#/$defs/embeddingResolution"
+        },
+        "embedding_epoch_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "rdAgentRuntimeIdentityV4": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rdagent_source_git_sha",
+        "rdagent_installed_wheel_sha256",
+        "rdagent_environment_freeze_sha256",
+        "qlib_source_git_sha",
+        "llm_execution_identity"
+      ],
+      "properties": {
+        "rdagent_source_git_sha": {
+          "const": "32b3d395e73d9db5eee3fe9063d69aec0fdc83bd"
+        },
+        "rdagent_installed_wheel_sha256": {
+          "const": "6d4b78037016951d21879249152fee21df90e5dca0a752e233026a41afe64395"
+        },
+        "rdagent_environment_freeze_sha256": {
+          "const": "1d60835745fad44b917eff46918719f8c1c392fb05747f06fb4dde8cb8c1f67e"
+        },
+        "qlib_source_git_sha": {
+          "const": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
+        },
+        "llm_execution_identity": {
+          "$ref": "#/$defs/llmExecutionIdentityV4"
+        }
+      }
+    },
+    "runtimeIdentityBundle": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/rdAgentRuntimeIdentityBundle"
+        },
+        {
+          "$ref": "candidate-contract-v3.schema.json#/$defs/formulaicRuntimeIdentityBundle"
+        }
+      ]
+    },
+    "rdAgentRuntimeIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_kind",
+        "rdagent_runtime_identity"
+      ],
+      "properties": {
+        "producer_kind": {
+          "const": "RD_AGENT"
+        },
+        "rdagent_runtime_identity": {
+          "$ref": "#/$defs/rdAgentRuntimeIdentityV4"
+        }
+      }
+    }
+  }
+}

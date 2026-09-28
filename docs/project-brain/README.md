@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — RD-Agent native handoff thin Candidate projection POC**
+> Active Development: **P3 — DeepSeek cloud-native generative runtime reset; admission blocked at the valid alpha053 correctness screen**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — RD-Agent fin_quant autonomous loop reactivation**
+> Development Next: **Blocked — DeepSeek Flash model-capability decision after valid alpha053 screen failure**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5389,6 +5389,54 @@ FINAL_CLASSIFICATION = PASS_STATIC17_SCAFFOLD_RETIRED_AUTONOMOUS_RD_DIRECTION_RE
 ```
 
 See [P7 Static17 scaffold retirement 001](p7-static17-scaffold-retirement-001.md).
+
+---
+
+#### P3 local generative runtime retirement and DeepSeek cloud-native reset (2026-09-28)
+
+The local generative path is retired. The active DVC chat route now uses the
+upstream `rdagent.oai.backend.LiteLLMAPIBackend` with LiteLLM's native
+`deepseek/deepseek-flash` provider route, thinking enabled through
+`reasoning_effort=high`, and a 65,536-token output ceiling. The project-owned
+Ollama compatibility backend and its dedicated tests were deleted. The local
+Ollama capability remains only for the independently owned embedding slot.
+
+The cloud preflight passed official model discovery, native LiteLLM chat,
+high-reasoning mapping, JSON output, and RD-Agent native parsing. The earlier
+4,096-token screen is retained only as an invalid inherited-runtime diagnostic
+and is not a model or scientific result. The first valid cloud-native alpha053
+screen produced executable output but failed the frozen correctness gate:
+equal-value ratio `0.0`, correlation `0.40474220115578846`, and rank correlation
+`0.423337`. Therefore round 1 and round 2 were not run, admission is not
+granted, and `fin_quant` remains prohibited.
+
+```text
+PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
+PRIMARY_GENERATIVE_AI_MODEL = deepseek-flash
+MODEL_VERSION_FAMILY = DeepSeek-V4.1-Flash
+DEEPSEEK_4096_SCREEN = INVALID_LEGACY_LOCAL_RUNTIME_CONFIGURATION_DIAGNOSTIC
+DEEPSEEK_AUTH = PASS
+DEEPSEEK_MODEL_DISCOVERY = PASS
+DEEPSEEK_CHAT = PASS
+DEEPSEEK_REASONING_HIGH = PASS
+DEEPSEEK_JSON_OUTPUT = PASS
+RDAGENT_NATIVE_PARSE = PASS
+VALID_ALPHA053_SCREEN = FAIL_FACTOR_CORRECTNESS
+ROUND_1 = NOT_RUN_SCREEN_FAIL
+ROUND_2 = NOT_RUN_SCREEN_FAIL
+DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED
+LOCAL_GENERATIVE_LLM_ACTIVE = NO
+LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
+P3_CANDIDATE_TO_P2_CONTRACT_V4 = DESIGNED_FORWARD_ONLY_NO_CANDIDATE_MATERIALIZED
+AQ_CUSTOM_LLM_BACKEND_COUNT = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+FIN_QUANT_EXECUTED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = BLOCKED_DEEPSEEK_FLASH_ALPHA053_SCREEN_CORRECTNESS
+FINAL_CLASSIFICATION = PASS_ARCHITECTURE_RESET_DEEPSEEK_ADMISSION_BLOCKED_MODEL_CAPABILITY
+```
+
+See [P3 local LLM active-runtime retirement and DeepSeek cloud-native reset 001](p3-local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001.md).
 
 ---
 

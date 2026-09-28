@@ -128,14 +128,11 @@ stages:
       PICKLE_CACHE_FOLDER_PATH_STR=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/pickle-cache
       LOG_TRACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/trace
       QLIB_MLFLOW_URI=sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/mlflow.db
-      OLLAMA_API_BASE=http://127.0.0.1:11434
-      BACKEND=aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
-      LITELLM_CHAT_MODEL=ollama_chat/aq-brain-local
+      BACKEND=rdagent.oai.backend.LiteLLMAPIBackend
+      LITELLM_CHAT_MODEL=deepseek/deepseek-flash
       LITELLM_EMBEDDING_MODEL=ollama/aq-embedding-local
-      LITELLM_CHAT_TOKEN_LIMIT=28672
-      LITELLM_CHAT_MAX_TOKENS=4096
-      LITELLM_CHAT_TEMPERATURE=0.2
-      LITELLM_REASONING_THINK_RM=true
+      LITELLM_CHAT_MAX_TOKENS=65536
+      LITELLM_REASONING_EFFORT=high
       LITELLM_MAX_RETRY=1
       QLIB_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibFactorHypothesis2Experiment
       QLIB_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibModelHypothesis2Experiment
@@ -166,7 +163,7 @@ stages:
       /home/zhou/AQ_ENVS/rdagent/bin/rdagent fin_quant --loop-n 1
     deps:
       - 30-research-system/rd-agent/binding/aq_rdagent_us_binding
-      - 30-research-system/rd-agent/config/p3-local-logical-llm-slots-v1.json
+      - 30-research-system/rd-agent/config/p3-deepseek-cloud-chat-local-embedding-v1.json
       - 30-research-system/rd-agent/templates/p3-us-ragged
       - docs/project-brain/p3-rdagent-runtime-provenance-alignment-001.md
       - docs/project-brain/p3-rdagent-runtime-dependency-alignment-001.md
