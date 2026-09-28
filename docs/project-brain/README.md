@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — DeepSeek cloud-native generative runtime reset; admission blocked at the valid alpha053 correctness screen**
+> Active Development: **P3 — DeepSeek one-code / 100-single-stock official benchmark complete; 0/100, route decision pending**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **Blocked — DeepSeek Flash model-capability decision after valid alpha053 screen failure**
+> Development Next: **P3 — DeepSeek Factor Coder route decision 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5392,7 +5392,7 @@ See [P7 Static17 scaffold retirement 001](p7-static17-scaffold-retirement-001.md
 
 ---
 
-#### P3 local generative runtime retirement and DeepSeek cloud-native reset (2026-09-28)
+#### P3 local generative runtime retirement and DeepSeek one-code benchmark (2026-09-28)
 
 The local generative path is retired. The active DVC chat route now uses the
 upstream `rdagent.oai.backend.LiteLLMAPIBackend` with LiteLLM's native
@@ -5403,12 +5403,19 @@ Ollama capability remains only for the independently owned embedding slot.
 
 The cloud preflight passed official model discovery, native LiteLLM chat,
 high-reasoning mapping, JSON output, and RD-Agent native parsing. The earlier
-4,096-token screen is retained only as an invalid inherited-runtime diagnostic
-and is not a model or scientific result. The first valid cloud-native alpha053
-screen produced executable output but failed the frozen correctness gate:
-equal-value ratio `0.0`, correlation `0.40474220115578846`, and rank correlation
-`0.423337`. Therefore round 1 and round 2 were not run, admission is not
-granted, and `fin_quant` remains prohibited.
+4,096-token screen is retained only as an invalid inherited-runtime diagnostic.
+The later multi-instrument alpha053 result is a superseded diagnostic and has
+no active PASS/FAIL authority.
+
+The replacement benchmark used one official FactorCoSTEER generation on the
+lexicographically first eligible stock, froze the generated code, and ran that
+same code independently on 100 real single-stock slices from the immutable full
+P3 source. All 100 executions used the exact unchanged RD2Bench alpha053 ground
+truth and `FactorImplementEval` semantics. Structural checks passed on every
+stock, but the official value comparison failed on every stock, yielding 0/100.
+Official single-stock correlations were undefined because each datetime group
+contains one observation. No admission threshold was invented and `fin_quant`
+remains prohibited.
 
 ```text
 PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
@@ -5421,10 +5428,15 @@ DEEPSEEK_CHAT = PASS
 DEEPSEEK_REASONING_HIGH = PASS
 DEEPSEEK_JSON_OUTPUT = PASS
 RDAGENT_NATIVE_PARSE = PASS
-VALID_ALPHA053_SCREEN = FAIL_FACTOR_CORRECTNESS
-ROUND_1 = NOT_RUN_SCREEN_FAIL
-ROUND_2 = NOT_RUN_SCREEN_FAIL
-DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED
+SUPERSEDED_MULTI_INSTRUMENT_BENCHMARK = DIAGNOSTIC_ONLY_NO_ACTIVE_VERDICT
+ONE_CODE_100_SINGLE_STOCK_BENCHMARK = COMPLETE
+GENERATED_IMPLEMENTATION_SHA256 = d4832e0bf8479a0e4368fcabc317367e5601a25a73fee4eb8dfdc17ecd7a82de
+STOCK_EVALUATION_COUNT = 100
+PASS_COUNT = 0
+FAIL_COUNT = 100
+PASS_RATE = 0.0
+FAILURE_TAXONOMY = OFFICIAL_VALUE_COMPARISON_FAILURE:100
+DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED_BY_ONE_CODE_100_SINGLE_STOCK_BENCHMARK
 LOCAL_GENERATIVE_LLM_ACTIVE = NO
 LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
 P3_CANDIDATE_TO_P2_CONTRACT_V4 = DESIGNED_FORWARD_ONLY_NO_CANDIDATE_MATERIALIZED
@@ -5432,8 +5444,8 @@ AQ_CUSTOM_LLM_BACKEND_COUNT = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 FIN_QUANT_EXECUTED = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-CURRENT_DEVELOPMENT_NEXT = BLOCKED_DEEPSEEK_FLASH_ALPHA053_SCREEN_CORRECTNESS
-FINAL_CLASSIFICATION = PASS_ARCHITECTURE_RESET_DEEPSEEK_ADMISSION_BLOCKED_MODEL_CAPABILITY
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_FACTOR_CODER_ROUTE_DECISION_001
+FINAL_CLASSIFICATION = FAIL_DEEPSEEK_ONE_CODE_100_SINGLE_STOCK_OFFICIAL_BENCHMARK_0_OF_100
 ```
 
 See [P3 local LLM active-runtime retirement and DeepSeek cloud-native reset 001](p3-local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001.md).

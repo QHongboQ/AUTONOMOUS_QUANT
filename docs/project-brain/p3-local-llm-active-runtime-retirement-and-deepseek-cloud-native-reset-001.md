@@ -1,65 +1,32 @@
-# P3 Local LLM Active-Runtime Retirement and DeepSeek Cloud-Native Reset 001
+# P3 Local Runtime Retirement and DeepSeek One-Code Benchmark 001
 
 Task date: 2026-09-28
 
-## Decision and scope
+## Current authority
 
-This task retires the local Ollama generative path from active P3 production
-routing and moves the single generative route to the upstream-native chain:
-
-```text
-DeepSeek Flash
-  -> LiteLLM 1.100.1
-  -> RD-Agent
-  -> Qlib
-  -> future Candidate V4
-```
-
-This is not a Candidate admission, `fin_quant` run, scientific factor result,
-or P2 certification event. Historical local-model reports remain unchanged.
-PR #141 was closed as superseded; none of its draft work was merged.
-
-## Active runtime contraction
-
-The active DVC stage now binds:
+The local Ollama generative route is retired. P3 uses the upstream-native
+`rdagent.oai.backend.LiteLLMAPIBackend` and LiteLLM DeepSeek provider route with
+`deepseek/deepseek-flash`, thinking enabled, `reasoning_effort=high`, and a
+65,536-token output ceiling. The separately owned local embedding slot remains.
+No AQ cloud client, parser, retry system, or generic benchmark engine was added.
 
 ```text
-BACKEND = rdagent.oai.backend.LiteLLMAPIBackend
-LITELLM_CHAT_MODEL = deepseek/deepseek-flash
-LITELLM_CHAT_MAX_TOKENS = 65536
-LITELLM_REASONING_EFFORT = high
-CHAT_ROUTE_MODE = DEEPSEEK_ONLY
-```
-
-It no longer binds an Ollama chat base URL, local chat alias/digest, 28,672
-input budget, 4,096 output budget, or local temperature override. DeepSeek
-credentials are supplied only through the process environment and no secret,
-secret hash, secret path, or key fragment is tracked.
-
-The project-owned `USLocalOllamaLiteLLMAPIBackend` had no non-local
-responsibility. Its 76 production LOC and 126 dedicated test LOC were deleted
-without replacement. Upstream RD-Agent and LiteLLM own the cloud connection,
-retry, parsing, reasoning, and provider mapping.
-
-```text
-LOCAL_LLM_ACTIVE_PRODUCTION_LOC_BEFORE = 76
-LOCAL_LLM_ACTIVE_PRODUCTION_LOC_AFTER = 0
-LOCAL_ONLY_TEST_LOC_BEFORE = 126
-LOCAL_ONLY_TEST_LOC_AFTER = 0
-NEW_CLOUD_PROVIDER_PRODUCTION_LOC = 0
+LOCAL_GENERATIVE_LLM_ACTIVE = NO
+LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
 AQ_CUSTOM_LLM_BACKEND_COUNT = 0
+AQ_CUSTOM_EVALUATOR = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ```
 
-Active local-chat references were removed. Remaining local-chat strings are
-either immutable Candidate V2/V3 or historical configuration/evidence, plus a
-V4 negative-validation test proving that the retired route is rejected.
+PR #141 remains superseded and closed. PR #142 was returned to clean architecture
+head `973e4962e6536d8f447e715792a44b32eb8f2563` before this benchmark; the confused
+unmerged head `457e3d35b86e5825bbbf4dbddf03ed30f6bfabb6` has no authority.
 
-## Cloud-native preflight
+## Valid cloud preflight
 
-The official model list returned `deepseek-flash`. LiteLLM mapped
-`reasoning_effort=high` to `thinking={"type":"enabled"}` and RD-Agent's native
-backend executed and parsed a JSON response with the 65,536-token ceiling.
+The official model list, native LiteLLM chat, high-reasoning mapping, JSON
+output, and RD-Agent native parsing passed. The earlier 4,096-token screen is
+only an invalid inherited local-runtime-budget diagnostic.
 
 ```text
 DEEPSEEK_AUTH = PASS
@@ -69,117 +36,107 @@ DEEPSEEK_REASONING_HIGH = PASS
 DEEPSEEK_JSON_OUTPUT = PASS
 RDAGENT_NATIVE_PARSE = PASS
 EFFECTIVE_MODEL = deepseek/deepseek-flash
-EFFECTIVE_PROVIDER_MODEL = deepseek-flash
 EFFECTIVE_REASONING_EFFORT = high
 EFFECTIVE_THINKING = enabled
 EFFECTIVE_MAX_TOKENS = 65536
-```
-
-The earlier screen that inherited `LITELLM_CHAT_MAX_TOKENS=4096` stopped before
-the next recovery loop and is classified only as:
-
-```text
 DEEPSEEK_4096_SCREEN = INVALID_LEGACY_LOCAL_RUNTIME_CONFIGURATION_DIAGNOSTIC
-MODEL_FAIL = NO_FOR_4096_DIAGNOSTIC
-SCIENTIFIC_FACTOR_FAIL = NO_FOR_4096_DIAGNOSTIC
 ```
 
-## First valid admission screen
+The previous multi-instrument alpha053 result, including its `0.404742...`
+correlation, is now only `SUPERSEDED_MULTI_INSTRUMENT_BENCHMARK_DIAGNOSTIC`.
+It is neither a DeepSeek capability PASS nor FAIL and is not current authority.
 
-One fresh alpha053 screen used the frozen fixture, official RD-Agent
-`FactorCoSTEER`, `FactorImplementEval`, prompt, evaluator, feedback path, and
-10-loop ceiling. It used the DeepSeek-native configuration above. The generated
-implementation executed and passed the single-column, row-count, and index
-checks, but it grouped the delta by instrument while the frozen ground truth
-did not. The resulting value checks failed:
+## One-code / 100-single-stock official benchmark
+
+The immutable full source was verified before use:
 
 ```text
-VALID_ALPHA053_SCREEN = FAIL_FACTOR_CORRECTNESS
-FACTOR_COSTEER_RECOVERY_LOOPS_USED = 1
-NATIVE_LLM_CALL_COUNT = 4
-SINGLE_COLUMN = TRUE
-ROW_COUNT_RATIO = 1.0
-INDEX_RATIO = 1.0
-EQUAL_VALUE_RATIO = 0.0
-CORRELATION = 0.40474220115578846
-RANK_CORRELATION = 0.423337
-ROUND_1 = NOT_RUN_SCREEN_FAIL
-ROUND_2 = NOT_RUN_SCREEN_FAIL
-FINAL_ADMISSION_PASS_COUNT = 0/6
-DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED
-FAILURE_CLASS = MODEL_CAPABILITY_FACTOR_CORRECTNESS
-INFRASTRUCTURE_FAILURE = NO
+SOURCE = D:/AQ_DATA/P3/rdagent-us-ragged/factor-source/full/daily_pv.h5
+SOURCE_SHA256 = deacd04bad8f5321bd49cc63cf9be37d38e4ae7b33b5c223021c80dedad98b21
+DISTINCT_INSTRUMENT_COUNT = 730
+ELIGIBLE_INSTRUMENT_COUNT = 726
+SELECTED_INSTRUMENT_COUNT = 100
+SELECTION = LEXICOGRAPHIC_FIRST_100_WITH_ROW_COUNT_AT_LEAST_10
+CANARY_INSTRUMENT = P2SEC00087FD1DC9463C008A58ABC120BDBA4F9FF2F67952DD09DC6D729B71BD66F09
 ```
 
-This valid screen failure is not confused with the prior 4,096-token
-diagnostic. It terminates admission exactly at the frozen screen gate. No
-alternate prompt, evaluator, fixture, factor source, fallback model, or retry
-system was introduced.
-
-## Local capability inventory
-
-After the cloud smoke passed, the chat-only `aq-brain-local:latest` and
-`qwen2.5-coder:7b` tags (shared digest prefix `dae161e27b0e`) were removed from
-the existing WSL Ollama store. The separately owned embedding model remains:
+Each fixture contains only the selected stock and preserves every original row,
+value, missing value, column, index name, and HDF key. One official alpha053
+FactorCoSTEER screen ran on the canary. Its final code was frozen and no further
+successful LLM calls occurred during the 100-stock stage.
 
 ```text
-OLLAMA_RUNTIME = /home/zhou/.local/ollama-v0.34.0/bin/ollama
-LOCAL_GENERATIVE_LLM_ACTIVE = NO
-LOCAL_CHAT_MODEL_COUNT_AFTER = 0
-LOCAL_EMBEDDING_ACTIVE = YES
-EMBEDDING_ALIAS = aq-embedding-local:latest
-EMBEDDING_MODEL = qwen3-embedding:0.6b
-EMBEDDING_DIGEST = ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d
-LOADED_OLLAMA_MODEL_COUNT_AFTER = 0
+DEEPSEEK_GENERATION_SCREEN_COUNT = 1
+GENERATED_IMPLEMENTATION_SHA256 = d4832e0bf8479a0e4368fcabc317367e5601a25a73fee4eb8dfdc17ecd7a82de
+TOTAL_DEEPSEEK_LLM_CALLS = 4
+TOTAL_INPUT_TOKENS = 8423
+TOTAL_OUTPUT_TOKENS = 400
+TOTAL_ESTIMATED_COST_USD = 0.0030069
+SAME_IMPLEMENTATION_USED_FOR_ALL_100 = YES
+OFFICIAL_ALPHA053_UNCHANGED = YES
+OFFICIAL_GT_CODE_UNCHANGED = YES
+OFFICIAL_EVALUATOR_UNCHANGED = YES
 ```
 
-## Candidate V4 boundary
-
-`P3_CANDIDATE_TO_P2_CONTRACT_V4` is a forward-only design. It preserves the
-eight top-level fields, reuses the immutable V3 Formulaic Alpha branch, and
-changes only the future RD-Agent runtime identity so it can truthfully bind
-DeepSeek provider/model resolution, high reasoning, native trace identity,
-call count, and the 65,536-token ceiling. Candidate V1/V2/V3 are unchanged.
-No V4 Candidate was materialized because admission did not pass.
+All 100 independent fixture executions completed. Every output passed the
+single-column, row-count, and index checks, while every official equal-value
+comparison failed. The generated DataFrame retained the `alpha053` column name
+while the official evaluator names the ground-truth Series `gt_factor`; its
+unchanged column-aligned subtraction therefore produced no equal values. The
+generated implementation also replaces infinities with missing values while the
+official ground truth does not. The exam and evaluator were not changed.
 
 ```text
-CANDIDATE_V4_SCHEMA_SHA256 = fbb9d22a3d18aa0f559d156efbae48eb237a09e79e4e0a8fe28897198a2aacbc
-DEEPSEEK_CONFIGURATION_SHA256 = bfc352734eb75183a6de0f47228918806fce5e6ee0298ea08102959b3b276f8c
-CANDIDATE_TOP_LEVEL_FIELD_COUNT = 8
-RFC8785 = 0.1.4_UPSTREAM
-CANDIDATE_V4_INSTANCE_CREATED = NO
+STOCK_EVALUATION_COUNT = 100
+SINGLE_COLUMN_PASS_COUNT = 100
+ROW_COUNT_RATIO_ONE_COUNT = 100
+INDEX_RATIO_ONE_COUNT = 100
+EQUAL_VALUE_RATIO_ONE_COUNT = 0
+PASS_COUNT = 0
+FAIL_COUNT = 100
+PASS_RATE = 0.0
+FAILURE_TAXONOMY = OFFICIAL_VALUE_COMPARISON_FAILURE:100
+MIN_CORRELATION = UNDEFINED_ALL_OFFICIAL_SINGLE_STOCK_CORRELATIONS_NAN
+MEDIAN_CORRELATION = UNDEFINED_ALL_OFFICIAL_SINGLE_STOCK_CORRELATIONS_NAN
+MEAN_CORRELATION = UNDEFINED_ALL_OFFICIAL_SINGLE_STOCK_CORRELATIONS_NAN
+MAX_CORRELATION = UNDEFINED_ALL_OFFICIAL_SINGLE_STOCK_CORRELATIONS_NAN
 ```
 
-## Validation and safety
+The official correlation statistic groups by datetime; a single-stock fixture
+has one observation in each group, so all official per-date correlations are
+undefined. This does not replace or relax the official value gate.
+
+## Evidence and safety
+
+Private evidence is retained at:
 
 ```text
-RD_AGENT_BINDING_TESTS = 20/20_PASS
-CANDIDATE_V4_TESTS = 9/9_PASS
-CHANGED_PYTHON_RUFF = PASS
-COMPILEALL = PASS
-DIFF_CHECK = PASS
+D:/AQ_DATA/P3/deepseek-alpha053-one-code-100-single-stock-benchmark-001
+```
+
+```text
+SUMMARY_SHA256 = ca73efc3c9c310101079dd9eccb9b5273b3dd5de1bef086e3df1426826308fc3
+CHECKSUMS_SHA256 = 53ca90c1a0ac06ad07998fd16c621e38a7d3a8ab52c3f27b9939d77aa590a584
+NEW_PRODUCTION_LOC = 0
 FIN_QUANT_EXECUTED = NO
+REAL_CANDIDATE_CREATED = 0
+MODEL_TRAINING = NO
+NEW_RESEARCH_PREDICTION = NO
+BACKTEST = NO
 P2_V2_SEALED_OOS_ACCESSED = NO
-P1_MODIFIED = NO
-P2_MODIFIED = NO
 P4_MODIFIED = NO
 P7_MODIFIED = NO
 ```
 
-Private runtime evidence is retained under:
+## Decision
+
+The benchmark result does not admit DeepSeek Flash to autonomous Factor Coder
+use. It also does not reactivate any superseded semantic-audit, Qlib-replacement,
+73-stock blocker, or 100-independent-generation task.
 
 ```text
-D:\AQ_DATA\P3\local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001
-```
-
-## Current authority
-
-```text
-PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
-PRIMARY_GENERATIVE_AI_MODEL = deepseek-flash
-MODEL_VERSION_FAMILY = DeepSeek-V4.1-Flash
-PRODUCTION_CHAT_ROUTE = DEEPSEEK_ONLY_NOT_ADMITTED_FOR_AUTONOMOUS_FACTOR_RUNS
-CURRENT_DEVELOPMENT_NEXT = BLOCKED_DEEPSEEK_FLASH_ALPHA053_SCREEN_CORRECTNESS
+DEEPSEEK_GENERATIVE_RUNTIME = NOT_ADMITTED_BY_ONE_CODE_100_SINGLE_STOCK_BENCHMARK
 FIN_QUANT_NEXT_TASK_AUTHORIZED = NO
-FINAL_CLASSIFICATION = PASS_ARCHITECTURE_RESET_DEEPSEEK_ADMISSION_BLOCKED_MODEL_CAPABILITY
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_FACTOR_CODER_ROUTE_DECISION_001
+FINAL_CLASSIFICATION = FAIL_DEEPSEEK_ONE_CODE_100_SINGLE_STOCK_OFFICIAL_BENCHMARK_0_OF_100
 ```
