@@ -291,9 +291,31 @@ Current ownership is:
 - **FinRL-X — challenger/fallback only:** `UPSTREAM_WHOLE` if a future audit
   selects it; AQ must not mimic it.
 
-The four operating rules and simplified future-task ownership preamble are
+The root operating rules and upstream-task ownership preamble are
 defined in [Upstream Ownership Model](upstream-ownership-model.md). A task that
 skips that ownership check is architecturally invalid.
+
+### Official upstream authority contract
+
+The Tree is a responsibility map, not a mandate to self-write every leaf.
+Selected mature upstreams own generic capabilities, and one capability has one
+production owner. For upstream-owned work:
+
+```text
+UPSTREAM_AUTHORITY = OFFICIAL_DOCUMENTATION + PINNED_OFFICIAL_SOURCE
+```
+
+Official documentation governs supported installation, configuration,
+deployment, testing, and operation. The pinned official source/runtime is the
+immutable executable authority. AQ does not modify upstream source,
+`site-packages`, or internal semantics; it writes only the smallest external
+adapter/configuration/contract/policy boundary needed for AQ-specific behavior.
+The official native baseline must be proven before AQ integration, and each
+capability uses one authoritative upstream runtime/launch contract.
+
+Current P3 illustrates the split: Microsoft RD-Agent(Q) owns autonomous
+research, Microsoft Qlib owns the quant runtime, and AQ owns only the US/PIT
+thin binding and governance. AQ must not repair RD-Agent or Qlib internals.
 
 ### Information intelligence candidates
 - TradingAgents
