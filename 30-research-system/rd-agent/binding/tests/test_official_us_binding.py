@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import yaml
+from jinja2 import Environment
+
 
 TEST_FILE = Path(__file__).resolve()
 RDAGENT_ROOT = TEST_FILE.parents[2]
@@ -30,7 +33,42 @@ REPLACEMENTS = (
     ("market: &market csi300", "market: &market {{ market }}"),
     ("benchmark: &benchmark SH000300", "benchmark: &benchmark {{ benchmark }}"),
     ("limit_threshold: 0.095", "limit_threshold: {{ limit_threshold }}"),
+    (
+        "    region: {{ region }}\n",
+        """    region: {{ region }}
+    {% if calendar_provider_uri %}
+    calendar_provider:
+        class: LocalCalendarProvider
+        module_path: qlib.data.data
+        kwargs:
+            backend:
+                class: FileCalendarStorage
+                module_path: qlib.data.storage.file_storage
+                kwargs:
+                    provider_uri: "{{ calendar_provider_uri }}"
+    {% endif %}
+""",
+    ),
 )
+
+CALENDAR_PROVIDER_URI = "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime"
+RENDER_CONTEXT = {
+    "provider_uri": "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data",
+    "region": "us",
+    "market": "p2_pit",
+    "benchmark": {"market": "p2_pit", "filter_pipe": []},
+    "limit_threshold": 0.095,
+    "feature_expressions": ["$close"],
+    "feature_names": ["CLOSE0"],
+    "n_epochs": 1,
+    "lr": 0.001,
+    "early_stop": 1,
+    "batch_size": 8,
+    "weight_decay": 0.0,
+    "num_features": 1,
+    "num_timesteps": 1,
+    "dataset_cls": "DatasetH",
+}
 
 
 class OfficialUSBindingTests(unittest.TestCase):
@@ -118,7 +156,7 @@ class OfficialUSBindingTests(unittest.TestCase):
             (binding._TEMPLATES / "model_template" / "conf_baseline_factors_model.yaml").read_text(),
         )
 
-    def test_overlays_are_exact_official_templates_with_five_authorized_deltas(self) -> None:
+    def test_overlays_are_exact_official_templates_with_six_authorized_deltas(self) -> None:
         pairs = (
             (binding._FACTOR_BASE, binding._TEMPLATES / "factor_template"),
             (binding._MODEL_BASE, binding._TEMPLATES / "model_template"),
@@ -130,6 +168,32 @@ class OfficialUSBindingTests(unittest.TestCase):
                     self.assertEqual(expected.count(original), 1)
                     expected = expected.replace(original, replacement)
                 self.assertEqual(target.read_text(), expected)
+
+    def test_calendar_provider_is_optional_and_uses_qlib_native_configuration(self) -> None:
+        environment = Environment(keep_trailing_newline=True)
+        for target in sorted(binding._TEMPLATES.rglob("*.yaml")):
+            template = environment.from_string(target.read_text())
+
+            without_calendar = yaml.safe_load(template.render(**RENDER_CONTEXT))
+            self.assertNotIn("calendar_provider", without_calendar["qlib_init"])
+
+            with_calendar = yaml.safe_load(
+                template.render(**RENDER_CONTEXT, calendar_provider_uri=CALENDAR_PROVIDER_URI)
+            )
+            self.assertEqual(
+                with_calendar["qlib_init"]["calendar_provider"],
+                {
+                    "class": "LocalCalendarProvider",
+                    "module_path": "qlib.data.data",
+                    "kwargs": {
+                        "backend": {
+                            "class": "FileCalendarStorage",
+                            "module_path": "qlib.data.storage.file_storage",
+                            "kwargs": {"provider_uri": CALENDAR_PROVIDER_URI},
+                        }
+                    },
+                },
+            )
 
     def test_official_non_yaml_template_files_remain_the_workspace_base(self) -> None:
         workspace = binding._workspace(binding._FACTOR_BASE, binding._TEMPLATES / "factor_template")
