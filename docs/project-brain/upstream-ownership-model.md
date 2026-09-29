@@ -19,12 +19,65 @@ reimplemented to mirror AQ's logical tree. A naturally monolithic upstream is
 used as a whole and AQ exposes only the necessary interfaces and policy
 boundaries.
 
-## Four operating rules
+## Upstream authority contract
 
-These are the four root operating rules. They are one consolidated authority,
-not a stack of independent governance frameworks.
+For an upstream-owned capability, authority is:
 
-### 1. `UPSTREAM_FIRST`
+```text
+UPSTREAM_AUTHORITY = OFFICIAL_DOCUMENTATION + PINNED_OFFICIAL_SOURCE
+```
+
+Official documentation is the first authority for supported installation,
+configuration, deployment, testing, and operation. The pinned official
+source/runtime is the final executable authority for the implementation's
+actual semantics.
+
+If official documentation and pinned source disagree, record:
+
+```text
+DOCUMENTATION_DRIFT = YES
+```
+
+AQ must not patch the upstream or silently invent replacement semantics. Use
+the safely supported behavior implemented by the pinned upstream, evaluate a
+newer official release, or fail closed/replace the upstream when the drift
+prevents safe use.
+
+## Root operating rules
+
+These root rules are one consolidated authority, not independent governance
+frameworks.
+
+### 1. `OFFICIAL_DOCS_FIRST`
+
+Every task involving a selected upstream's installation, dependency setup,
+deployment, configuration, startup, testing, health checks, CLI/API usage,
+runtime environment, upgrade, migration, or integration must first inspect
+the official documentation corresponding to the selected release, commit, or
+supported version.
+
+Do not invent a deployment or test procedure when an official one exists.
+Prefer official examples, commands, configuration seams, environment
+variables, and health checks over AQ-created substitutes. The required order
+is:
+
+```text
+official documentation
+        ↓
+official installation procedure
+        ↓
+official native smoke/test
+        ↓
+official native runtime behavior
+        ↓
+AQ thin integration
+```
+
+An upstream-owned implementation task must not proceed with
+`OFFICIAL_DOCS_READ = NO` unless the absence of official documentation is
+explicitly recorded.
+
+### 2. `UPSTREAM_FIRST`
 
 Use a mature upstream capability directly. AQ does not reimplement a
 capability already owned by a mature selected upstream.
@@ -69,7 +122,7 @@ The default decision order is:
 An upstream edge case or incomplete coverage alone does not authorize custom
 AQ repair code.
 
-### 2. `THIN_INTERFACE_ONLY`
+### 3. `THIN_INTERFACE_ONLY`
 
 AQ may connect upstreams through the smallest required project-specific
 boundary. Allowed scope includes configuration, input/output shape conversion,
@@ -85,17 +138,129 @@ A thin interface may apply AQ-owned project semantics. It must not alter or
 - Not allowed: a custom AQ semantic correction table that overrides an
   upstream accounting classification.
 
-### 3. `FAIL_CLOSED_NOT_FIX_EVERYTHING`
+Valid thin boundaries include US-market or `p2_pit` selection, provider URI
+binding, date/visibility policy, column mapping, identity projection,
+Candidate/certification/risk contracts, secret process-boundary injection,
+and configuration overlays. They belong in an AQ-owned `adapter/`, `config/`,
+`contract/`, `policy/`, or equivalently explicit thin boundary and should use
+supported public/configuration seams.
+
+An adapter is not thin if it copies an upstream engine, reimplements an
+upstream algorithm, replaces unsupported internal semantics through
+subclassing, rewrites upstream results to pass tests, post-hoc corrects
+scientific output, or creates a parallel implementation. If such behavior
+would be required, evaluate an official newer version or another mature
+upstream, exclude/defer the capability, or obtain separate explicit human
+authorization for genuinely AQ-specific implementation.
+
+### 4. `FAIL_CLOSED_NOT_FIX_EVERYTHING`
 
 Unsupported, ambiguous, unavailable, or unverifiable upstream cases default
 to `MISSING`, `EXCLUDED`, `DEFERRED`, or `UPSTREAM_REPLACEMENT`. They do not
 automatically authorize custom AQ repair code.
 
-### 4. `ONE_PRODUCTION_OWNER_PER_CAPABILITY`
+### 5. `ONE_PRODUCTION_OWNER_PER_CAPABILITY`
 
 One capability has one production owner. A pipeline may compose multiple
 upstreams only when each owns a distinct capability. AQ must not retain a
 second production implementation of an upstream-owned capability.
+
+### 6. `IMMUTABLE_LOCAL_UPSTREAM_AUTHORITY`
+
+Every selected `UPSTREAM_WHOLE` or `UPSTREAM_LEAF` runtime owner must have an
+identifiable `LOCAL_PINNED_UPSTREAM_AUTHORITY` containing:
+
+- official repository identity;
+- official release and/or commit SHA;
+- local source/runtime identity and path;
+- clean-source verification where a checkout exists;
+- installed package/runtime version identity; and
+- the documented official installation method.
+
+AQ treats that local authority as immutable. It must not edit an upstream
+checkout or installed `site-packages`, monkeypatch upstream classes/functions,
+vendor and modify upstream code, maintain a hidden AQ fork, copy upstream
+internal algorithms as repairs, or rewrite upstream parser, runner, training,
+evaluation, accounting, or statistical semantics.
+
+```text
+UPSTREAM_SOURCE_MODIFICATION_ALLOWED = NO
+```
+
+Third-party source should remain in a separate clean checkout and/or official
+installed runtime. The authoritative AQ repository records ownership,
+version/SHA, configuration, thin adapters, contracts, tests, and project
+policy; it does not require upstream source to be copied into AQ. Any exception
+requires a future explicit human decision.
+
+### 7. `OFFICIAL_BASELINE_BEFORE_AQ_INTEGRATION`
+
+Before adding an AQ adapter or project configuration, prove the upstream's
+native official path whenever practical:
+
+```text
+STAGE 0 = official documented installation
+STAGE 1 = official native smoke/example/health test
+STAGE 2 = official native target-market capability, when supported
+STAGE 3 = AQ thin adapter or project-specific data binding
+STAGE 4 = AQ policy or certification boundary
+```
+
+When behavior fails, identify the first stage that diverges from the native
+baseline. Do not introduce integration changes before the relevant native
+behavior is understood.
+
+### 8. `ONE_UPSTREAM_RUNTIME_CONTRACT_PER_CAPABILITY`
+
+One selected production/research upstream path has one authoritative launch
+contract. Diagnostic probes may be smaller, but must inherit its runtime,
+environment, dependency versions, provider configuration, upstream settings,
+and process-boundary semantics. A smoke must not reconstruct a second partial
+environment by hand.
+
+```text
+ONE_UPSTREAM_RUNTIME_CONTRACT_PER_CAPABILITY = REQUIRED
+```
+
+## Upstream maturity gate
+
+Before a new project can own a production/research capability, audit its
+official repository, license, release/version history, maintenance activity,
+observable independent/community adoption, documentation completeness,
+installation reproducibility, dependency closure, native smoke/test
+availability, API/CLI stability, and fit for AQ's required capability. GitHub
+stars alone are insufficient.
+
+Classify each candidate as exactly one of:
+
+```text
+MATURE_SELECTED_UPSTREAM
+SPECIALIST_CHALLENGER
+BENCHMARK_REFERENCE_ONLY
+REJECTED_OR_DEFERRED
+```
+
+Only `MATURE_SELECTED_UPSTREAM` may become the sole production owner of a
+generic capability without additional justification.
+
+## Upstream failure policy
+
+An upstream failure is not patch authorization:
+
+```text
+UPSTREAM_FAILURE != AQ_PATCH_AUTHORIZATION
+```
+
+Required response order:
+
+1. verify AQ followed the official documentation;
+2. verify pinned source/runtime identity;
+3. reproduce through the official native path;
+4. evaluate an official newer release;
+5. evaluate another mature upstream when necessary;
+6. narrow, exclude, or defer the unsupported case; and
+7. only then consider AQ-specific implementation with explicit human
+   authorization.
 
 ## Correctness and coverage
 
@@ -185,6 +350,56 @@ CUSTOM_ENGINE_REQUIRED:
 YES/NO
 ```
 
+For every upstream-owned implementation task, append:
+
+```text
+OFFICIAL_UPSTREAM:
+<repository/project>
+
+UPSTREAM_ROLE:
+<capability>
+
+UPSTREAM_VERSION:
+<release/version>
+
+UPSTREAM_SHA:
+<commit SHA if applicable>
+
+OFFICIAL_DOCS_READ:
+YES/NO
+
+OFFICIAL_DOC_REFERENCES:
+<exact official docs/pages relevant to this task>
+
+OFFICIAL_INSTALL_METHOD:
+<official method>
+
+OFFICIAL_TEST_OR_SMOKE_METHOD:
+<official method>
+
+LOCAL_UPSTREAM_AUTHORITY_PATH:
+<local checkout/runtime path>
+
+LOCAL_UPSTREAM_AUTHORITY_CLEAN:
+YES/NO/NOT_APPLICABLE
+
+OFFICIAL_NATIVE_BASELINE_PROVEN:
+YES/NO/NOT_REQUIRED
+
+AQ_ADAPTER_REQUIRED:
+YES/NO
+
+AQ_ADAPTER_SCOPE:
+<minimal project-specific scope>
+
+UPSTREAM_SOURCE_MODIFICATION_ALLOWED:
+NO
+```
+
+If official documentation does not exist, record that absence explicitly in
+`OFFICIAL_DOC_REFERENCES`; otherwise an upstream-owned task with
+`OFFICIAL_DOCS_READ = NO` must not proceed.
+
 If `CUSTOM_ENGINE_REQUIRED = YES`, also provide:
 
 ```text
@@ -218,6 +433,12 @@ capabilities. AQ must not create duplicate engines for them.
 RD-Agent owns automated factor proposal and implementation, automated model
 proposal, iterative factor/model research, and research-loop automation. AQ
 owns only policy, budget, and permission boundaries around it.
+
+Current P3 is an explanatory example: Microsoft RD-Agent(Q) owns autonomous
+research, Microsoft Qlib owns the quant runtime, and AQ owns only the US/PIT
+thin binding and governance boundary. AQ must not repair RD-Agent or Qlib
+internals. US-specific adjustments belong only in the existing thin AQ
+binding/configuration layer through supported seams.
 
 ### Portfolio and statistical tooling
 
