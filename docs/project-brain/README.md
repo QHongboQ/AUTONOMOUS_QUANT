@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — RD-Agent native handoff thin Candidate projection POC**
+> Active Development: **P3 — Official DeepSeek multi-instrument RD2Bench measurements complete; no binary admission policy**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — RD-Agent fin_quant autonomous loop reactivation**
+> Development Next: **P3 — DeepSeek official RD2Bench baseline comparison 001**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -5411,6 +5411,126 @@ FINAL_CLASSIFICATION = PASS_STATIC17_SCAFFOLD_RETIRED_AUTONOMOUS_RD_DIRECTION_RE
 ```
 
 See [P7 Static17 scaffold retirement 001](p7-static17-scaffold-retirement-001.md).
+
+---
+
+#### P3 local generative runtime retirement and DeepSeek one-code benchmark (2026-09-28)
+
+The local generative path is retired. The active DVC chat route now uses the
+upstream `rdagent.oai.backend.LiteLLMAPIBackend` with LiteLLM's native
+`deepseek/deepseek-flash` provider route, thinking enabled through
+`reasoning_effort=high`, and a 65,536-token output ceiling. The project-owned
+Ollama compatibility backend and its dedicated tests were deleted. The local
+Ollama capability remains only for the independently owned embedding slot.
+
+The cloud preflight passed official model discovery, native LiteLLM chat,
+high-reasoning mapping, JSON output, and RD-Agent native parsing. The earlier
+4,096-token screen is retained only as an invalid inherited-runtime diagnostic.
+The later multi-instrument alpha053 result is a superseded diagnostic and has
+no active PASS/FAIL authority.
+
+The replacement benchmark used one official FactorCoSTEER generation on the
+lexicographically first eligible stock, froze the generated code, and ran that
+same code independently on 100 real single-stock slices from the immutable full
+P3 source. All 100 executions used the exact unchanged RD2Bench alpha053 ground
+truth and `FactorImplementEval` semantics. Structural checks passed on every
+stock, but the official value comparison failed on every stock, yielding a raw
+0/100. A subsequent no-LLM oracle audit compared the official alpha053 `gt_code`
+with the exact same implementation through the same single-stock path. The
+identical oracle also received `equal_value_ratio=0.0`: `_get_df` named its two
+Series columns `gt_factor` and `source_factor`, so pandas label-aligned
+subtraction had zero non-NaN cells. Correlation was also NaN because each of the
+2,516 datetime groups contained one instrument. Therefore the raw 0/100 is
+preserved but is not a valid DeepSeek capability verdict. `fin_quant` remains
+prohibited.
+
+The upstream contract audit established that RD-Agent intentionally generates
+a multi-instrument `(datetime, instrument)` panel and measures mean
+cross-sectional correlation by datetime. The runner defaults to ten rounds and
+invokes `FactorCoSTEER.develop()` anew for every round. Its analyzer reports
+continuous execution, format, correlation, and equal-value aggregates; neither
+`FactorImplementEval` nor `analysis.py` defines a binary model-admission rule.
+`FactorValueEvaluator` belongs only to the default FactorCoSTEER development
+and recovery feedback path, not the post-hoc benchmark evaluator or analyzer.
+AQ therefore requires only a thin approved-data adapter into the official
+multi-instrument shape, with no custom evaluator or benchmark engine.
+
+The official ten-round measurement is now complete. Replaying the literal
+upstream selection against the immutable full source showed that the prior
+debug fixture used lexicographic identities and was not exact, so it was
+preserved but not reused. The private benchmark-only replay contains 38,467
+rows, 78 actually observed instruments, and the upstream-required first 100
+identities from the full date-major panel. All ten `develop()` invocations
+completed. RD-Agent's native workspace/pickle cache reused one implementation
+identity after the first generation; AQ did not add cross-round knowledge.
+
+Official `BenchmarkAnalyzer` measurements are `Avg Run SR=1.0`, `Avg Format
+SR=1.0`, `Avg Correlation=0.3975330719848187`, `Max
+Correlation=0.3975330719848187`, `Max Accuracy=0.0`, and `Avg Accuracy=0.0`.
+The zero Accuracy values retain the known upstream label asymmetry unchanged.
+The route made four DeepSeek calls using 8,144 input and 492 output tokens;
+conservative peak-price cost is 0.020224 CNY. No official or AQ binary
+admission threshold exists, so these values are descriptive measurements, not
+a model PASS, FAIL, admission, or rejection.
+
+```text
+PRIMARY_GENERATIVE_AI_PROVIDER = DEEPSEEK
+PRIMARY_GENERATIVE_AI_MODEL = deepseek-flash
+MODEL_VERSION_FAMILY = DeepSeek-V4.1-Flash
+DEEPSEEK_4096_SCREEN = INVALID_LEGACY_LOCAL_RUNTIME_CONFIGURATION_DIAGNOSTIC
+DEEPSEEK_AUTH = PASS
+DEEPSEEK_MODEL_DISCOVERY = PASS
+DEEPSEEK_CHAT = PASS
+DEEPSEEK_REASONING_HIGH = PASS
+DEEPSEEK_JSON_OUTPUT = PASS
+RDAGENT_NATIVE_PARSE = PASS
+SUPERSEDED_MULTI_INSTRUMENT_BENCHMARK = DIAGNOSTIC_ONLY_NO_ACTIVE_VERDICT
+ONE_CODE_100_SINGLE_STOCK_BENCHMARK = COMPLETE
+GENERATED_IMPLEMENTATION_SHA256 = d4832e0bf8479a0e4368fcabc317367e5601a25a73fee4eb8dfdc17ecd7a82de
+STOCK_EVALUATION_COUNT = 100
+PASS_COUNT = 0
+FAIL_COUNT = 100
+PASS_RATE = 0.0
+FAILURE_TAXONOMY = OFFICIAL_VALUE_COMPARISON_FAILURE:100
+OFFICIAL_SINGLE_STOCK_ORACLE_PASS = NO
+ORACLE_EQUAL_VALUE_RATIO = 0.0
+ORACLE_CORRELATION = NAN
+PRIOR_0_OF_100_DEEPSEEK_CAPABILITY_VERDICT_VALID = NO
+DEEPSEEK_FACTOR_CODER_CAPABILITY = MEASURED_OFFICIAL_METRICS_NO_BINARY_ADMISSION_DECISION
+OFFICIAL_FACTOR_BENCHMARK_EXPECTS_MULTI_INSTRUMENT_PANEL = YES
+FACTOR_IMPLEMENT_EVAL_NATIVE_BINARY_PASS_FAIL = NO
+OFFICIAL_BINARY_ADMISSION_POLICY_FOUND = NO
+DEFAULT_BENCH_TEST_ROUND = 10
+OFFICIAL_BENCH_ROUND_GENERATES_NEW_IMPLEMENTATION = YES
+OFFICIAL_MULTI_INSTRUMENT_BENCHMARK = COMPLETE_10_OF_10
+OFFICIAL_SHAPE_EXISTING_DEBUG_REUSE = NO
+BENCHMARK_ROW_COUNT = 38467
+ACTUAL_DEBUG_DISTINCT_INSTRUMENTS = 78
+UNIQUE_GENERATED_IMPLEMENTATION_SHA_COUNT = 1
+AVG_RUN_SR = 1.0
+AVG_FORMAT_SR = 1.0
+AVG_CORRELATION = 0.3975330719848187
+MAX_CORRELATION = 0.3975330719848187
+MAX_ACCURACY = 0.0
+AVG_ACCURACY = 0.0
+TOTAL_DEEPSEEK_LLM_CALLS = 4
+TOTAL_INPUT_TOKENS = 8144
+TOTAL_OUTPUT_TOKENS = 492
+TOTAL_ESTIMATED_COST_CNY = 0.020224
+COST_CAP_REACHED = NO
+AQ_INTEGRATION_CLASSIFICATION = THIN_DATA_ADAPTER_ONLY
+LOCAL_GENERATIVE_LLM_ACTIVE = NO
+LOCAL_EMBEDDING_ACTIVE = YES_SEPARATE_CAPABILITY
+P3_CANDIDATE_TO_P2_CONTRACT_V4 = DESIGNED_FORWARD_ONLY_NO_CANDIDATE_MATERIALIZED
+AQ_CUSTOM_LLM_BACKEND_COUNT = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+FIN_QUANT_EXECUTED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+CURRENT_DEVELOPMENT_NEXT = P3_DEEPSEEK_OFFICIAL_RD2BENCH_BASELINE_COMPARISON_001
+FINAL_CLASSIFICATION = COMPLETE_OFFICIAL_RD2BENCH_MEASUREMENTS_RECORDED_NO_BINARY_ADMISSION_POLICY
+```
+
+See [P3 local LLM active-runtime retirement and DeepSeek cloud-native reset 001](p3-local-llm-active-runtime-retirement-and-deepseek-cloud-native-reset-001.md).
 
 ---
 

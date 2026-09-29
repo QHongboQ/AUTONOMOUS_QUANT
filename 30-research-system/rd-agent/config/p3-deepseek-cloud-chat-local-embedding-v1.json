@@ -1,0 +1,37 @@
+{
+  "configuration_version": "P3_DEEPSEEK_CLOUD_CHAT_LOCAL_EMBEDDING_V1",
+  "litellm_version": "1.100.1",
+  "route_mode": "DEEPSEEK_ONLY",
+  "chat": {
+    "backend": "rdagent.oai.backend.LiteLLMAPIBackend",
+    "litellm_model": "deepseek/deepseek-flash",
+    "provider": "deepseek",
+    "provider_model": "deepseek-flash",
+    "model_version_family": "DeepSeek-V4.1-Flash",
+    "thinking": "enabled",
+    "reasoning_effort": "high",
+    "max_output_tokens": 65536,
+    "provider_context_window": 1048576,
+    "provider_max_output_tokens": 393216,
+    "temperature_policy": "PROVIDER_DEFAULT_THINKING_MODE_SEMANTICS",
+    "automatic_fallback": false,
+    "secret_source": "PROCESS_ENVIRONMENT_ONLY"
+  },
+  "embedding": {
+    "migration_status": "SEPARATE_FOLLOW_UP",
+    "logical_slot": "aq-embedding-local",
+    "litellm_model": "ollama/aq-embedding-local",
+    "provider": "ollama",
+    "resolved_model": "qwen3-embedding:0.6b",
+    "resolved_digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+    "dimensions": 1024,
+    "epoch_identity": "e63389904f57782a645d2f9d79ec5f028b8a7ef99aa051a2cdb0ca2e55dbf6db",
+    "cross_model_fallback": false
+  },
+  "native_trace": {
+    "owner": "RD_AGENT",
+    "root_environment_variable": "LOG_TRACE_PATH",
+    "required_under_dvc_run_root": true,
+    "content_sha256_required_by_candidate_v4": true
+  }
+}
