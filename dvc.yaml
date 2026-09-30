@@ -1,5 +1,5 @@
 vars:
-  - P3_RUN_NAMESPACE: p3-fin-quant-004
+  - P3_RUN_NAMESPACE: p3-fin-quant-upstream-consolidated-001
 
 stages:
   p2_certification_historical_rehearsal:
@@ -118,9 +118,9 @@ stages:
       - 10-data-system/dataset-snapshot/pit-universe/data
   p3_rdagent_us_quant_research:
     cmd: >-
-      cd ../AQ_DATA/P3/rdagent-us-ragged &&
+      cd /mnt/d/AQ_DATA/P3/rdagent-us-ragged &&
       env
-      PATH=/home/zhou/miniforge3/bin:/home/zhou/AQ_ENVS/rdagent/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH=/home/zhou/miniforge3/bin:/home/zhou/AQ_ENVS/rdagent-v1.0.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       PYTHONPATH=/mnt/d/AUTONOMOUS_QUANT/30-research-system/rd-agent/binding
       CONDA_DEFAULT_ENV=rdagent4qlib
       FACTOR_COSTEER_PYTHON_BIN=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python
@@ -129,20 +129,19 @@ stages:
       LOG_TRACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/trace
       QLIB_MLFLOW_URI=sqlite:////mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/mlflow.db
       OLLAMA_API_BASE=http://127.0.0.1:11434
-      BACKEND=aq_rdagent_us_binding.llm_backend.USLocalOllamaLiteLLMAPIBackend
-      LITELLM_CHAT_MODEL=ollama_chat/aq-brain-local
-      LITELLM_EMBEDDING_MODEL=ollama/aq-embedding-local
-      LITELLM_CHAT_TOKEN_LIMIT=28672
-      LITELLM_CHAT_MAX_TOKENS=4096
-      LITELLM_CHAT_TEMPERATURE=0.2
-      LITELLM_REASONING_THINK_RM=true
-      LITELLM_MAX_RETRY=1
-      QLIB_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibFactorHypothesis2Experiment
-      QLIB_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibModelHypothesis2Experiment
-      QLIB_QUANT_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibFactorHypothesis2Experiment
-      QLIB_QUANT_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_us_binding.USQlibModelHypothesis2Experiment
-      QLIB_FACTOR_SCEN=aq_rdagent_us_binding.USQlibFactorScenario
-      QLIB_QUANT_SCEN=aq_rdagent_us_binding.USQlibQuantScenario
+      BACKEND=rdagent.oai.backend.LiteLLMAPIBackend
+      LITELLM_CHAT_MODEL=deepseek/deepseek-flash
+      LITELLM_EMBEDDING_MODEL=ollama/qwen3-embedding:0.6b
+      LITELLM_CHAT_MAX_TOKENS=65536
+      LITELLM_REASONING_EFFORT=high
+      LITELLM_MAX_RETRY=0
+      USE_CHAT_CACHE=false
+      LITELLM_USE_CHAT_CACHE=false
+      LITELLM_EMBEDDING_USE_CACHE=false
+      QLIB_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment
+      QLIB_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment
+      QLIB_QUANT_FACTOR_HYPOTHESIS2EXPERIMENT=aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment
+      QLIB_QUANT_MODEL_HYPOTHESIS2EXPERIMENT=aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment
       FACTOR_COSTEER_DATA_FOLDER=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source/full
       FACTOR_COSTEER_DATA_FOLDER_DEBUG=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source/debug
       QLIB_FACTOR_TRAIN_START=2015-01-02
@@ -163,18 +162,16 @@ stages:
       QLIB_QUANT_VALID_END=2021-12-31
       QLIB_QUANT_TEST_START=2022-01-03
       QLIB_QUANT_TEST_END=2024-12-31
-      /home/zhou/AQ_ENVS/rdagent/bin/rdagent fin_quant --loop-n 1
+      /home/zhou/AQ_ENVS/rdagent-v1.0.0/bin/rdagent fin_quant --loop-n 1
     deps:
-      - 30-research-system/rd-agent/binding/aq_rdagent_us_binding
-      - 30-research-system/rd-agent/config/p3-local-logical-llm-slots-v1.json
-      - 30-research-system/rd-agent/templates/p3-us-ragged
-      - docs/project-brain/p3-rdagent-runtime-provenance-alignment-001.md
-      - docs/project-brain/p3-rdagent-runtime-dependency-alignment-001.md
-      - docs/project-brain/p3-rdagent-conda-discovery-path-configuration-resolution-001.md
-      - ../AQ_DATA/P3/rdagent-us-ragged/factor-source
-      - ../AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+      - 30-research-system/rd-agent/binding/aq_rdagent_official_us_binding.py
+      - 30-research-system/rd-agent/config/p3-deepseek-cloud-local-embedding-runtime-v1.json
+      - 30-research-system/rd-agent/templates/p3-official-us
+      - docs/project-brain/p3-official-upstream-thin-runtime-consolidation-001.md
+      - /mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source
+      - /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
     outs:
-      - ../AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
+      - /mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
           cache: false
   p3_formulaic_alpha_reproducibility_seal:
     cmd: >-
