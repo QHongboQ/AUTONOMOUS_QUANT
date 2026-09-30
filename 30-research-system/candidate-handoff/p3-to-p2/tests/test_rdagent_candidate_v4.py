@@ -66,7 +66,7 @@ def candidate_source() -> dict[str, object]:
                 "selected_static_templates": [
                     {
                         "relative_name": "factor_template/conf_baseline.yaml",
-                        "sha256": "ddfb7dd65875636db4cc0acb2471ae1c48d07a30b88b60380ef2a355fdf3d73c",
+                        "sha256": "e3fa90de82f79d2d372cb6aab287cb117712a76c684bf3b8c415aef0f86273f2",
                     }
                 ],
                 "rendered_qlib_execution_config_sha256": digest("5"),
@@ -170,6 +170,14 @@ class RDagentCandidateV4ProjectionTest(unittest.TestCase):
             "32b3d395e73d9db5eee3fe9063d69aec0fdc83bd"
         )
         with self.assertRaisesRegex(ValueError, "rdagent_release_git_sha"):
+            self.project(source)
+
+    def test_old_v1_template_identity_is_rejected(self) -> None:
+        source = candidate_source()
+        source["artifact_identity_bundle"]["rdagent_artifact_identity"]["selected_static_templates"][0][
+            "sha256"
+        ] = "ddfb7dd65875636db4cc0acb2471ae1c48d07a30b88b60380ef2a355fdf3d73c"
+        with self.assertRaisesRegex(ValueError, "schema rejection"):
             self.project(source)
 
     def test_deepseek_cannot_be_mislabeled_as_openai(self) -> None:
