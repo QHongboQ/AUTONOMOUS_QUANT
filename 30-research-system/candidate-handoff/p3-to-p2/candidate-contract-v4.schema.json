@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/candidate-contract-v4.schema.json",
+  "title": "AUTONOMOUS_QUANT P3 Candidate-to-P2 Contract V4",
+  "description": "Producer-neutral Candidate handoff contract with the official RD-Agent 1.0.0 native-runtime identity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_contract_version",
+    "candidate_id",
+    "research_producer_identity",
+    "qlib_recorder_identity",
+    "artifact_identity_bundle",
+    "dataset_identity_bundle",
+    "runtime_identity_bundle",
+    "p2_target_and_eligibility_boundary"
+  ],
+  "properties": {
+    "candidate_contract_version": { "const": "P3_CANDIDATE_TO_P2_CONTRACT_V4" },
+    "candidate_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "research_producer_identity": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/researchProducerIdentity"
+    },
+    "qlib_recorder_identity": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/qlibRecorderIdentity"
+    },
+    "artifact_identity_bundle": { "type": "object" },
+    "dataset_identity_bundle": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/datasetIdentityBundle"
+    },
+    "runtime_identity_bundle": { "type": "object" },
+    "p2_target_and_eligibility_boundary": {
+      "$ref": "candidate-contract-v3.schema.json#/$defs/p2TargetAndEligibilityBoundary"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "research_producer_identity": { "properties": { "producer_kind": { "const": "RD_AGENT" } }, "required": ["producer_kind"] } }
+      },
+      "then": {
+        "properties": {
+          "artifact_identity_bundle": { "$ref": "#/$defs/rdAgentArtifactIdentityBundle" },
+          "runtime_identity_bundle": { "$ref": "#/$defs/rdAgentRuntimeIdentityBundle" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "research_producer_identity": { "properties": { "producer_kind": { "const": "FORMULAIC_ALPHA" } }, "required": ["producer_kind"] } }
+      },
+      "then": {
+        "properties": {
+          "artifact_identity_bundle": { "$ref": "candidate-contract-v3.schema.json#/$defs/formulaicArtifactIdentityBundle" },
+          "runtime_identity_bundle": { "$ref": "candidate-contract-v3.schema.json#/$defs/formulaicRuntimeIdentityBundle" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "contentIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logical_role", "sha256"],
+      "properties": {
+        "logical_role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "contentArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logical_role", "sha256"],
+      "properties": {
+        "logical_role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "post_run_dvc_output_identity": {
+          "$ref": "candidate-contract-v3.schema.json#/$defs/dvcIdentity"
+        }
+      }
+    },
+    "postRunDvcSeal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage_name", "lock_file_sha256", "stage_lock_entry_sha256", "run_root_output_identity"],
+      "properties": {
+        "stage_name": { "type": "string", "minLength": 1 },
+        "lock_file_sha256": { "$ref": "#/$defs/sha256" },
+        "stage_lock_entry_sha256": { "$ref": "#/$defs/sha256" },
+        "run_root_output_identity": { "$ref": "candidate-contract-v3.schema.json#/$defs/dvcIdentity" }
+      }
+    },
+    "rdAgentArtifactIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected_static_templates",
+        "rendered_qlib_execution_config_sha256",
+        "generated_research_code_artifacts",
+        "serialized_model_artifact",
+        "prediction_artifact"
+      ],
+      "properties": {
+        "selected_static_templates": {
+          "type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true,
+          "items": { "$ref": "candidate-contract-v1.schema.json#/$defs/staticTemplateIdentity" }
+        },
+        "rendered_qlib_execution_config_sha256": { "$ref": "#/$defs/sha256" },
+        "generated_research_code_artifacts": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/contentArtifact" }
+        },
+        "serialized_model_artifact": { "$ref": "#/$defs/contentArtifact" },
+        "prediction_artifact": { "$ref": "#/$defs/contentArtifact" },
+        "post_run_dvc_seal": { "$ref": "#/$defs/postRunDvcSeal" }
+      }
+    },
+    "rdAgentArtifactIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer_kind", "rdagent_artifact_identity"],
+      "properties": {
+        "producer_kind": { "const": "RD_AGENT" },
+        "rdagent_artifact_identity": { "$ref": "#/$defs/rdAgentArtifactIdentity" }
+      }
+    },
+    "chatExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "requested_model", "resolved_model", "provider_model_identity_kind", "provider_model_identity", "call_count", "fallback_occurred", "fallback_reason_counts"],
+      "properties": {
+        "provider": { "const": "deepseek" },
+        "requested_model": { "const": "deepseek/deepseek-chat" },
+        "resolved_model": { "const": "deepseek/deepseek-chat" },
+        "provider_model_identity_kind": { "enum": ["PROVIDER_SNAPSHOT", "RESPONSE_MODEL_ONLY", "UNAVAILABLE"] },
+        "provider_model_identity": { "type": "string", "minLength": 1 },
+        "call_count": { "type": "integer", "minimum": 1 },
+        "fallback_occurred": { "type": "boolean" },
+        "fallback_reason_counts": { "type": "array", "uniqueItems": true, "items": { "$ref": "candidate-contract-v2.schema.json#/$defs/fallbackReasonCount" } }
+      }
+    },
+    "configuredEmbedding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "requested_model", "resolved_model", "configuration_sha256"],
+      "properties": {
+        "provider": { "const": "ollama" },
+        "requested_model": { "const": "ollama/qwen3-embedding:0.6b" },
+        "resolved_model": { "const": "ollama/qwen3-embedding:0.6b" },
+        "configuration_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "embeddingExecution": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["executed"],
+          "properties": { "executed": { "const": false } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["executed", "provider_model_identity_kind", "provider_model_identity", "dimensions", "call_count"],
+          "properties": {
+            "executed": { "const": true },
+            "provider_model_identity_kind": { "enum": ["LOCAL_DIGEST", "RESPONSE_MODEL_ONLY", "UNAVAILABLE"] },
+            "provider_model_identity": { "type": "string", "minLength": 1 },
+            "dimensions": { "type": "integer", "minimum": 1 },
+            "call_count": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "llmExecutionIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["litellm_version", "llm_configuration_sha256", "native_trace_artifact_sha256", "chat_route_mode", "chat_execution", "configured_embedding", "embedding_execution"],
+      "properties": {
+        "litellm_version": { "const": "1.103.1" },
+        "llm_configuration_sha256": { "$ref": "#/$defs/sha256" },
+        "native_trace_artifact_sha256": { "$ref": "#/$defs/sha256" },
+        "chat_route_mode": { "const": "CLOUD_ONLY" },
+        "chat_execution": { "$ref": "#/$defs/chatExecution" },
+        "configured_embedding": { "$ref": "#/$defs/configuredEmbedding" },
+        "embedding_execution": { "$ref": "#/$defs/embeddingExecution" }
+      }
+    },
+    "rdagentNativeRuntimeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rdagent_version", "rdagent_release_git_sha", "qlib_source_git_sha", "backend", "llm_execution_identity"],
+      "properties": {
+        "rdagent_version": { "const": "1.0.0" },
+        "rdagent_release_git_sha": { "const": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4" },
+        "qlib_source_git_sha": { "const": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8" },
+        "backend": { "const": "rdagent.oai.backend.LiteLLMAPIBackend" },
+        "llm_execution_identity": { "$ref": "#/$defs/llmExecutionIdentity" }
+      }
+    },
+    "rdAgentRuntimeIdentityBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer_kind", "rdagent_runtime_identity"],
+      "properties": {
+        "producer_kind": { "const": "RD_AGENT" },
+        "rdagent_runtime_identity": { "$ref": "#/$defs/rdagentNativeRuntimeIdentity" }
+      }
+    }
+  }
+}
