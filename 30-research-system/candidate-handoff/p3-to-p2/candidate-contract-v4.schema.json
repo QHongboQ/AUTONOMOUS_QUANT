@@ -80,6 +80,50 @@
         }
       }
     },
+    "staticTemplateIdentityV4": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["relative_name", "sha256"],
+          "properties": {
+            "relative_name": { "const": "factor_template/conf_baseline.yaml" },
+            "sha256": { "const": "e3fa90de82f79d2d372cb6aab287cb117712a76c684bf3b8c415aef0f86273f2" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["relative_name", "sha256"],
+          "properties": {
+            "relative_name": { "const": "factor_template/conf_combined_factors.yaml" },
+            "sha256": { "const": "f75d7118bc047a6b17645d1bfff209627be89c0fdfa4826a442e4ce2b9f13707" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["relative_name", "sha256"],
+          "properties": {
+            "relative_name": { "const": "factor_template/conf_combined_factors_sota_model.yaml" },
+            "sha256": { "const": "7bd976a6f30921f6df5299344da65f0467b87fcbacb5ce0a362d025bd1426419" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["relative_name", "sha256"],
+          "properties": {
+            "relative_name": { "const": "model_template/conf_baseline_factors_model.yaml" },
+            "sha256": { "const": "1f04ba42e0282e5c18283bf7ff6a91b8f41c8fa8f46cb4469cbc7836225aa66b" }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["relative_name", "sha256"],
+          "properties": {
+            "relative_name": { "const": "model_template/conf_sota_factors_model.yaml" },
+            "sha256": { "const": "7bd976a6f30921f6df5299344da65f0467b87fcbacb5ce0a362d025bd1426419" }
+          }
+        }
+      ]
+    },
     "postRunDvcSeal": {
       "type": "object",
       "additionalProperties": false,
@@ -104,7 +148,7 @@
       "properties": {
         "selected_static_templates": {
           "type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true,
-          "items": { "$ref": "candidate-contract-v1.schema.json#/$defs/staticTemplateIdentity" }
+          "items": { "$ref": "#/$defs/staticTemplateIdentityV4" }
         },
         "rendered_qlib_execution_config_sha256": { "$ref": "#/$defs/sha256" },
         "generated_research_code_artifacts": {

@@ -37,6 +37,10 @@ bytes; it does not serialize a model or operate Qlib.
 DVC is optional post-run sealing evidence.  It is not a `fin_quant` launcher
 and V4 does not require the retired `p3_rdagent_us_quant_research` stage.
 
+V4 freezes the current upstream-native US/PIT static-template identities used
+by Smoke-006.  V1, V2, and V3 static-template identities remain historical
+and immutable.
+
 ## P2 boundary
 
 V4 records provenance only.  A new RD-Agent V4 Candidate is
