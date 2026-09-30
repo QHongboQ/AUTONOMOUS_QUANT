@@ -1,7 +1,6 @@
 qlib_init:
-    provider_uri: "{{ provider_uri }}"
-    region: {{ region }}
-    {% if calendar_provider_uri %}
+    provider_uri: /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+    region: us
     calendar_provider:
         class: LocalCalendarProvider
         module_path: qlib.data.data
@@ -10,11 +9,10 @@ qlib_init:
                 class: FileCalendarStorage
                 module_path: qlib.data.storage.file_storage
                 kwargs:
-                    provider_uri: "{{ calendar_provider_uri }}"
-    {% endif %}
+                    provider_uri: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
 
-market: &market {{ market }}
-benchmark: &benchmark {{ benchmark }}
+market: &market p2_pit
+benchmark: &benchmark SPY
 
 data_handler_config: &data_handler_config
     start_time: {{ train_start | default("2008-01-01", true) }}
@@ -67,7 +65,7 @@ port_analysis_config: &port_analysis_config
         account: 100000000
         benchmark: *benchmark
         exchange_kwargs:
-            limit_threshold: {{ limit_threshold }}
+            limit_threshold: null
             deal_price: close
             open_cost: 0.0005
             close_cost: 0.0015

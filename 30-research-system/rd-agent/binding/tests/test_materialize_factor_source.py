@@ -13,7 +13,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from aq_rdagent_us_binding.materialize_factor_source import FIELDS, attach_frozen_factors, debug_subset
+from aq_rdagent_official_us_factor_source import FIELDS, attach_frozen_factors, debug_subset
 
 
 class MaterializeFactorSourceTests(unittest.TestCase):

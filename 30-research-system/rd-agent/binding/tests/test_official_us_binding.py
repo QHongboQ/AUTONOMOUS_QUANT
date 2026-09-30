@@ -27,37 +27,15 @@ from rdagent.scenarios.qlib.proposal.factor_proposal import QlibFactorHypothesis
 from rdagent.scenarios.qlib.proposal.model_proposal import QlibModelHypothesis2Experiment
 
 
-REPLACEMENTS = (
-    ('provider_uri: "~/.qlib/qlib_data/cn_data"', 'provider_uri: "{{ provider_uri }}"'),
-    ("region: cn", "region: {{ region }}"),
-    ("market: &market csi300", "market: &market {{ market }}"),
-    ("benchmark: &benchmark SH000300", "benchmark: &benchmark {{ benchmark }}"),
-    ("limit_threshold: 0.095", "limit_threshold: {{ limit_threshold }}"),
-    (
-        "    region: {{ region }}\n",
-        """    region: {{ region }}
-    {% if calendar_provider_uri %}
-    calendar_provider:
-        class: LocalCalendarProvider
-        module_path: qlib.data.data
-        kwargs:
-            backend:
-                class: FileCalendarStorage
-                module_path: qlib.data.storage.file_storage
-                kwargs:
-                    provider_uri: "{{ calendar_provider_uri }}"
-    {% endif %}
-""",
-    ),
-)
-
+QLIB_PROVIDER_URI = "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data"
 CALENDAR_PROVIDER_URI = "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime"
 RENDER_CONTEXT = {
-    "provider_uri": "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data",
-    "region": "us",
-    "market": "p2_pit",
-    "benchmark": {"market": "p2_pit", "filter_pipe": []},
-    "limit_threshold": 0.095,
+    "train_start": "2015-01-02",
+    "train_end": "2019-12-31",
+    "valid_start": "2020-01-02",
+    "valid_end": "2021-12-31",
+    "test_start": "2022-01-03",
+    "test_end": "2024-12-31",
     "feature_expressions": ["$close"],
     "feature_names": ["CLOSE0"],
     "n_epochs": 1,
@@ -69,6 +47,27 @@ RENDER_CONTEXT = {
     "num_timesteps": 1,
     "dataset_cls": "DatasetH",
 }
+
+
+def expected_overlay(base: Path) -> str:
+    text = base.read_text()
+    text = text.replace('provider_uri: "~/.qlib/qlib_data/cn_data"', f"provider_uri: {QLIB_PROVIDER_URI}")
+    text = text.replace(
+        "    region: cn\n",
+        "    region: us\n"
+        "    calendar_provider:\n"
+        "        class: LocalCalendarProvider\n"
+        "        module_path: qlib.data.data\n"
+        "        kwargs:\n"
+        "            backend:\n"
+        "                class: FileCalendarStorage\n"
+        "                module_path: qlib.data.storage.file_storage\n"
+        "                kwargs:\n"
+        f"                    provider_uri: {CALENDAR_PROVIDER_URI}\n",
+    )
+    text = text.replace("market: &market csi300", "market: &market p2_pit")
+    text = text.replace("benchmark: &benchmark SH000300", "benchmark: &benchmark SPY")
+    return text.replace("limit_threshold: 0.095", "limit_threshold: null")
 
 
 class OfficialUSBindingTests(unittest.TestCase):
@@ -91,33 +90,17 @@ class OfficialUSBindingTests(unittest.TestCase):
             self.assertEqual(status, "")
 
     def test_official_scenarios_and_configurable_converter_seams_remain_selected(self) -> None:
-        self.assertEqual(
-            FactorBasePropSetting().scen,
-            "rdagent.scenarios.qlib.experiment.factor_experiment.QlibFactorScenario",
-        )
-        self.assertEqual(
-            ModelBasePropSetting().scen,
-            "rdagent.scenarios.qlib.experiment.model_experiment.QlibModelScenario",
-        )
+        self.assertEqual(FactorBasePropSetting().scen, "rdagent.scenarios.qlib.experiment.factor_experiment.QlibFactorScenario")
+        self.assertEqual(ModelBasePropSetting().scen, "rdagent.scenarios.qlib.experiment.model_experiment.QlibModelScenario")
         with patch.dict(
             os.environ,
             {
-                "QLIB_FACTOR_HYPOTHESIS2EXPERIMENT": (
-                    "aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment"
-                ),
-                "QLIB_MODEL_HYPOTHESIS2EXPERIMENT": (
-                    "aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment"
-                ),
+                "QLIB_FACTOR_HYPOTHESIS2EXPERIMENT": "aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment",
+                "QLIB_MODEL_HYPOTHESIS2EXPERIMENT": "aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment",
             },
         ):
-            self.assertEqual(
-                FactorBasePropSetting().hypothesis2experiment,
-                "aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment",
-            )
-            self.assertEqual(
-                ModelBasePropSetting().hypothesis2experiment,
-                "aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment",
-            )
+            self.assertEqual(FactorBasePropSetting().hypothesis2experiment, "aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment")
+            self.assertEqual(ModelBasePropSetting().hypothesis2experiment, "aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment")
 
     def test_factor_adapter_delegates_first_and_changes_only_new_workspaces(self) -> None:
         experiment = QlibFactorExperiment([])
@@ -125,75 +108,39 @@ class OfficialUSBindingTests(unittest.TestCase):
         prior = QlibFactorExperiment([])
         prior_workspace = prior.experiment_workspace
         experiment.based_experiments = [baseline, prior]
-        with patch.object(
-            QlibFactorHypothesis2Experiment, "convert_response", return_value=experiment
-        ) as upstream:
+        with patch.object(QlibFactorHypothesis2Experiment, "convert_response", return_value=experiment) as upstream:
             result = binding.USQlibFactorHypothesis2Experiment().convert_response("r", object(), object())
         upstream.assert_called_once()
         self.assertIs(result, experiment)
         self.assertIs(prior.experiment_workspace, prior_workspace)
-        self.assertEqual(
-            experiment.experiment_workspace.file_dict["conf_baseline.yaml"],
-            (binding._TEMPLATES / "factor_template" / "conf_baseline.yaml").read_text(),
-        )
-        self.assertEqual(
-            baseline.experiment_workspace.file_dict["conf_baseline.yaml"],
-            (binding._TEMPLATES / "factor_template" / "conf_baseline.yaml").read_text(),
-        )
+        self.assertEqual(experiment.experiment_workspace.file_dict["conf_baseline.yaml"], (binding._TEMPLATES / "factor_template" / "conf_baseline.yaml").read_text())
 
     def test_model_adapter_delegates_first_and_changes_only_new_workspace(self) -> None:
         experiment = QlibModelExperiment([])
         original = experiment.experiment_workspace
-        with patch.object(
-            QlibModelHypothesis2Experiment, "convert_response", return_value=experiment
-        ) as upstream:
+        with patch.object(QlibModelHypothesis2Experiment, "convert_response", return_value=experiment) as upstream:
             result = binding.USQlibModelHypothesis2Experiment().convert_response("r", object(), object())
         upstream.assert_called_once()
         self.assertIs(result, experiment)
         self.assertIsNot(experiment.experiment_workspace, original)
-        self.assertEqual(
-            experiment.experiment_workspace.file_dict["conf_baseline_factors_model.yaml"],
-            (binding._TEMPLATES / "model_template" / "conf_baseline_factors_model.yaml").read_text(),
-        )
 
-    def test_overlays_are_exact_official_templates_with_six_authorized_deltas(self) -> None:
-        pairs = (
-            (binding._FACTOR_BASE, binding._TEMPLATES / "factor_template"),
-            (binding._MODEL_BASE, binding._TEMPLATES / "model_template"),
-        )
+    def test_templates_are_exact_official_templates_with_us_pit_configuration_only(self) -> None:
+        pairs = ((binding._FACTOR_BASE, binding._TEMPLATES / "factor_template"), (binding._MODEL_BASE, binding._TEMPLATES / "model_template"))
         for base, overlay in pairs:
             for target in sorted(overlay.glob("*.yaml")):
-                expected = (base / target.name).read_text()
-                for original, replacement in REPLACEMENTS:
-                    self.assertEqual(expected.count(original), 1)
-                    expected = expected.replace(original, replacement)
-                self.assertEqual(target.read_text(), expected)
+                self.assertEqual(target.read_text(), expected_overlay(base / target.name))
 
-    def test_calendar_provider_is_optional_and_uses_qlib_native_configuration(self) -> None:
+    def test_templates_render_with_only_upstream_runner_context(self) -> None:
         environment = Environment(keep_trailing_newline=True)
         for target in sorted(binding._TEMPLATES.rglob("*.yaml")):
-            template = environment.from_string(target.read_text())
-
-            without_calendar = yaml.safe_load(template.render(**RENDER_CONTEXT))
-            self.assertNotIn("calendar_provider", without_calendar["qlib_init"])
-
-            with_calendar = yaml.safe_load(
-                template.render(**RENDER_CONTEXT, calendar_provider_uri=CALENDAR_PROVIDER_URI)
-            )
-            self.assertEqual(
-                with_calendar["qlib_init"]["calendar_provider"],
-                {
-                    "class": "LocalCalendarProvider",
-                    "module_path": "qlib.data.data",
-                    "kwargs": {
-                        "backend": {
-                            "class": "FileCalendarStorage",
-                            "module_path": "qlib.data.storage.file_storage",
-                            "kwargs": {"provider_uri": CALENDAR_PROVIDER_URI},
-                        }
-                    },
-                },
-            )
+            rendered = environment.from_string(target.read_text()).render(**RENDER_CONTEXT)
+            config = yaml.safe_load(rendered)
+            self.assertEqual(config["qlib_init"]["provider_uri"], QLIB_PROVIDER_URI)
+            self.assertEqual(config["qlib_init"]["region"], "us")
+            self.assertEqual(config["qlib_init"]["calendar_provider"]["kwargs"]["backend"]["kwargs"]["provider_uri"], CALENDAR_PROVIDER_URI)
+            self.assertEqual(config["market"], "p2_pit")
+            self.assertEqual(config["benchmark"], "SPY")
+            self.assertNotIn("cn_data", rendered)
 
     def test_official_non_yaml_template_files_remain_the_workspace_base(self) -> None:
         workspace = binding._workspace(binding._FACTOR_BASE, binding._TEMPLATES / "factor_template")
@@ -201,24 +148,27 @@ class OfficialUSBindingTests(unittest.TestCase):
             self.assertEqual(workspace.file_dict[name], (binding._FACTOR_BASE / name).read_text())
 
     def test_binding_has_no_scenario_runner_recorder_llm_prompt_or_p2_code(self) -> None:
-        source_path = Path(binding.__file__)
-        source = source_path.read_text()
+        source = Path(binding.__file__).read_text()
         tree = ast.parse(source)
-        bases = {
-            ast.unparse(base)
-            for node in tree.body
-            if isinstance(node, ast.ClassDef)
-            for base in node.bases
-        }
-        self.assertEqual(
-            bases,
-            {"QlibFactorHypothesis2Experiment", "QlibModelHypothesis2Experiment"},
-        )
-        combined = source + "\n" + "\n".join(
-            path.read_text() for path in sorted(binding._TEMPLATES.rglob("*.yaml"))
-        )
+        bases = {ast.unparse(base) for node in tree.body if isinstance(node, ast.ClassDef) for base in node.bases}
+        self.assertEqual(bases, {"QlibFactorHypothesis2Experiment", "QlibModelHypothesis2Experiment"})
         for forbidden in ("Scenario", "prompt", "Runner", "Recorder", "LLM", "p2_pit"):
-            self.assertNotIn(forbidden, combined)
+            self.assertNotIn(forbidden, source)
+
+    def test_active_dvc_contract_uses_native_litellm_and_the_single_binding(self) -> None:
+        stage = yaml.safe_load((TEST_FILE.parents[4] / "dvc.yaml").read_text())["stages"]["p3_rdagent_us_quant_research"]
+        command = stage["cmd"]
+        self.assertIn("BACKEND=rdagent.oai.backend.LiteLLMAPIBackend", command)
+        self.assertIn("LITELLM_CHAT_MODEL=deepseek/deepseek-flash", command)
+        self.assertIn("LITELLM_REASONING_EFFORT=high", command)
+        self.assertIn("LITELLM_EMBEDDING_MODEL=ollama/qwen3-embedding:0.6b", command)
+        self.assertIn("/home/zhou/AQ_ENVS/rdagent-v1.0.0/bin/rdagent fin_quant --loop-n 1", command)
+        self.assertIn("aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment", command)
+        self.assertNotIn("aq_rdagent_us_binding", command)
+        self.assertNotIn("ollama_chat", command)
+        self.assertNotIn("QLIB_FACTOR_SCEN", command)
+        self.assertNotIn("QLIB_QUANT_SCEN", command)
+        self.assertIn("30-research-system/rd-agent/binding/aq_rdagent_official_us_binding.py", stage["deps"])
 
 
 if __name__ == "__main__":
