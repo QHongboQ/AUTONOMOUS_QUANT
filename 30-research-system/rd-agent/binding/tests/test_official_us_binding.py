@@ -29,6 +29,7 @@ from rdagent.scenarios.qlib.proposal.model_proposal import QlibModelHypothesis2E
 
 QLIB_PROVIDER_URI = "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data"
 CALENDAR_PROVIDER_URI = "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime"
+QLIB_MLFLOW_URI = "sqlite:////tmp/aq-p3-qlib-recorder-preflight/mlflow.db"
 RENDER_CONTEXT = {
     "train_start": "2015-01-02",
     "train_end": "2019-12-31",
@@ -46,6 +47,7 @@ RENDER_CONTEXT = {
     "num_features": 1,
     "num_timesteps": 1,
     "dataset_cls": "DatasetH",
+    "QLIB_MLFLOW_URI": QLIB_MLFLOW_URI,
 }
 
 
@@ -55,6 +57,12 @@ def expected_overlay(base: Path) -> str:
     text = text.replace(
         "    region: cn\n",
         "    region: us\n"
+        "    exp_manager:\n"
+        "        class: MLflowExpManager\n"
+        "        module_path: qlib.workflow.expm\n"
+        "        kwargs:\n"
+        '            uri: "{{ QLIB_MLFLOW_URI }}"\n'
+        "            default_exp_name: Experiment\n"
         "    calendar_provider:\n"
         "        class: LocalCalendarProvider\n"
         "        module_path: qlib.data.data\n"
@@ -137,10 +145,19 @@ class OfficialUSBindingTests(unittest.TestCase):
             config = yaml.safe_load(rendered)
             self.assertEqual(config["qlib_init"]["provider_uri"], QLIB_PROVIDER_URI)
             self.assertEqual(config["qlib_init"]["region"], "us")
+            self.assertEqual(
+                config["qlib_init"]["exp_manager"],
+                {
+                    "class": "MLflowExpManager",
+                    "module_path": "qlib.workflow.expm",
+                    "kwargs": {"uri": QLIB_MLFLOW_URI, "default_exp_name": "Experiment"},
+                },
+            )
             self.assertEqual(config["qlib_init"]["calendar_provider"]["kwargs"]["backend"]["kwargs"]["provider_uri"], CALENDAR_PROVIDER_URI)
             self.assertEqual(config["market"], "p2_pit")
             self.assertEqual(config["benchmark"], "SPY")
             self.assertNotIn("cn_data", rendered)
+            self.assertNotIn("file:", rendered)
 
     def test_official_non_yaml_template_files_remain_the_workspace_base(self) -> None:
         workspace = binding._workspace(binding._FACTOR_BASE, binding._TEMPLATES / "factor_template")
