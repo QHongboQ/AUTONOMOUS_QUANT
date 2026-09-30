@@ -18,7 +18,10 @@ qlib_init:
                     provider_uri: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
 
 market: &market p2_pit
-benchmark: &benchmark SPY
+# Research-only matched-universe equal-weight benchmark from frozen P2 PIT membership; not a P2 certification market benchmark.
+benchmark: &benchmark
+    market: p2_pit
+    filter_pipe: []
 
 data_handler_config: &data_handler_config
     start_time: {{ train_start | default("2008-01-01", true) }}
