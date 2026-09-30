@@ -1,5 +1,5 @@
 vars:
-  - P3_RUN_NAMESPACE: p3-fin-quant-upstream-consolidated-001
+  - 30-research-system/rd-agent/config/p3-runtime-params.yaml
 
 stages:
   p2_certification_historical_rehearsal:
@@ -171,6 +171,9 @@ stages:
       - docs/project-brain/p3-official-upstream-thin-runtime-consolidation-001.md
       - /mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source
       - /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+    params:
+      - 30-research-system/rd-agent/config/p3-runtime-params.yaml:
+          - P3_RUN_NAMESPACE
     outs:
       - /mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}:
           cache: false

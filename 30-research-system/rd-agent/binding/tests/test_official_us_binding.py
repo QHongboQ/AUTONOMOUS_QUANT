@@ -156,8 +156,17 @@ class OfficialUSBindingTests(unittest.TestCase):
             self.assertNotIn(forbidden, source)
 
     def test_active_dvc_contract_uses_native_litellm_and_the_single_binding(self) -> None:
-        stage = yaml.safe_load((TEST_FILE.parents[4] / "dvc.yaml").read_text())["stages"]["p3_rdagent_us_quant_research"]
+        repo_root = TEST_FILE.parents[4]
+        stage = yaml.safe_load((repo_root / "dvc.yaml").read_text())["stages"]["p3_rdagent_us_quant_research"]
+        runtime_params = yaml.safe_load(
+            (repo_root / "30-research-system" / "rd-agent" / "config" / "p3-runtime-params.yaml").read_text()
+        )
         command = stage["cmd"]
+        self.assertEqual(runtime_params, {"P3_RUN_NAMESPACE": "p3-fin-quant-upstream-consolidated-001"})
+        self.assertEqual(
+            stage["params"],
+            [{"30-research-system/rd-agent/config/p3-runtime-params.yaml": ["P3_RUN_NAMESPACE"]}],
+        )
         self.assertIn("BACKEND=rdagent.oai.backend.LiteLLMAPIBackend", command)
         self.assertIn("LITELLM_CHAT_MODEL=deepseek/deepseek-flash", command)
         self.assertIn("LITELLM_REASONING_EFFORT=high", command)
