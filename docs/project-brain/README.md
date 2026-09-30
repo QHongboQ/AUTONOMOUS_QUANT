@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — RD-Agent native handoff thin Candidate projection POC**
+> Active Development: **P3 — direct official RD-Agent runtime with post-run DVC reproducibility registration**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — RD-Agent fin_quant autonomous loop reactivation**
+> Development Next: **P3 — direct official RD-Agent `fin_quant` smoke, followed only after completion by native DVC registration**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
@@ -1015,6 +1015,10 @@ P3_DVC_STAGE_ACTIVATION = PASS
 P3_DVC_STAGE_NAME = p3_rdagent_us_quant_research
 P3_DVC_STAGE = ACTIVATED_DEFINITION_ONLY
 P3_DVC_LOCK_ENTRY = PENDING_FIRST_AUTHORIZED_AUTONOMOUS_RUN
+P3_DIRECT_RUNTIME_POSTRUN_DVC_AUTHORITY = FROZEN
+P3_DVC_RUNTIME_LAUNCHER = NO
+P3_DVC_TEMP_EXECUTOR_FOR_P3_RUNTIME = RETIRED
+P3_DVC_POSTRUN_SEQUENCE = DIRECT_RUN_THEN_COMMIT_FORCE_THEN_EXP_SAVE
 RUN_SCOPED_MLFLOW_DB_IS_DVC_OUTPUT = YES
 OLD_SHARED_MLFLOW_DB_IS_DVC_OUTPUT = NO
 MLFLOW_ARTIFACTS_UNDER_DVC_OUTPUT = YES

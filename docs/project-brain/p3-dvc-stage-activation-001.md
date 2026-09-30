@@ -6,6 +6,13 @@ Task:
 Status:
 `COMPLETE — DEFINITION ONLY / FIRST AUTONOMOUS RUN NOT STARTED`
 
+> Historical-scope notice: this document records the prior DVC execution-stage
+> configuration. Its temporary-executor launch interpretation is superseded as
+> current P3 runtime authority by
+> [P3 Direct Runtime and Post-Run DVC Experiment Authority Freeze 001](p3-direct-runtime-postrun-dvc-experiment-authority-freeze-001.md).
+> The preserved stage and its identity fields remain authoritative evidence;
+> DVC no longer starts the P3 RD-Agent process.
+
 ## 1. Scope and ownership
 
 The minimum legitimate DVC boundary is activated around the official

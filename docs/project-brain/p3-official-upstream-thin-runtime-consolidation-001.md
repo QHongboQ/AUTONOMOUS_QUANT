@@ -32,11 +32,17 @@ US/PIT evidence-to-`daily_pv.h5` projection needed to reproduce the frozen
 FactorCoSTEER input. It performs no factor search, model evaluation, benchmark
 admission, or runtime selection.
 
-The authoritative P3 DVC stage calls official `rdagent fin_quant --loop-n 1`
-with `rdagent.oai.backend.LiteLLMAPIBackend`,
+The authoritative P3 DVC stage is a declarative reproducibility definition;
+it does not launch the P3 runtime. The only authorized research path starts
+the official `rdagent fin_quant --loop-n N` directly in the WSL-native clean
+AQ checkout, with `rdagent.oai.backend.LiteLLMAPIBackend`,
 `deepseek/deepseek-flash`, `reasoning_effort=high`, no model fallback, and a
-separately owned native LiteLLM/Ollama embedding route. Secrets remain
-process-bound and outside Git. The historical local-Ollama chat backend and
-the superseded RD2Bench admission framing are not active runtime authority.
+separately owned native LiteLLM/Ollama embedding route. After a completed
+immutable run, DVC records reproducibility through `dvc commit --force` and
+`dvc exp save`; it does not start RD-Agent. Secrets remain process-bound and
+outside Git. The historical local-Ollama chat backend and the superseded
+RD2Bench admission framing are not active runtime authority. The normative
+post-run procedure is frozen in
+[P3 Direct Runtime and Post-Run DVC Experiment Authority Freeze 001](p3-direct-runtime-postrun-dvc-experiment-authority-freeze-001.md).
 
 P2 sealed OOS remains prohibited for P3 runtime integration smokes.
