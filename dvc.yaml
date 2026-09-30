@@ -118,10 +118,11 @@ stages:
       - 10-data-system/dataset-snapshot/pit-universe/data
   p3_rdagent_us_quant_research:
     cmd: >-
+      AQ_REPO_ROOT="$(git rev-parse --show-toplevel)" &&
       cd /mnt/d/AQ_DATA/P3/rdagent-us-ragged &&
       env
       PATH=/home/zhou/miniforge3/bin:/home/zhou/AQ_ENVS/rdagent-v1.0.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      PYTHONPATH=/mnt/d/AUTONOMOUS_QUANT/30-research-system/rd-agent/binding
+      PYTHONPATH="$AQ_REPO_ROOT/30-research-system/rd-agent/binding"
       CONDA_DEFAULT_ENV=rdagent4qlib
       FACTOR_COSTEER_PYTHON_BIN=/home/zhou/miniforge3/envs/rdagent4qlib/bin/python
       WORKSPACE_PATH=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/dvc-runs/${P3_RUN_NAMESPACE}/workspaces
