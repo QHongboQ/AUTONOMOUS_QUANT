@@ -70,6 +70,8 @@ Docker container, custom launcher, or DPAPI bridge is part of this proven
 research runtime. DVC remains available for post-run reproducibility and
 sealing only.
 
+Legacy factor-coder admission fixtures used during superseded local-model experiments are retired and must not be reused as future capability or admission benchmarks. Future capability evaluation requires a new unseen benchmark design.
+
 Smoke-006 completed proposal, CoSTEER coding, Qlib dataset/training/prediction,
 native dynamic-market backtest and portfolio analysis, SQLite Recorder, and
 RD-Agent feedback. Docker, Compose, and systemd may be evaluated later for

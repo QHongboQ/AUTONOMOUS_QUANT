@@ -368,46 +368,12 @@ AQ_FACTOR_SOURCE_SCHEMA_DRIFT_FROM_UPSTREAM = NO
 AQ_MATERIALIZER_FIX_REQUIRED = NO
 ```
 
-## Admission gap and factor-blocker classification
+## Historical factor-admission audit
 
-The original local-brain admission benchmark proved valid Python syntax and
-presence of a requested function/artifact. It expressly did not prove
-mathematical or production correctness. It did not test the RD-Agent factor
-interface, the daily-PV MultiIndex contract, semantic execution, or CoSTEER's
-ability to recover from evaluator feedback.
-
-The same pinned RD-Agent checkout contains the official factor benchmark at
-`rdagent/app/benchmark/factor/eval.py`, `BenchmarkSettings`,
-`FactorImplementEval`, and the RD2Bench data. `FactorImplementEval` already
-uses upstream single-column, row-count, index, equal-value-ratio, and factor-
-correlation evaluators. It is usable as the owner of a bounded admission
-benchmark; AQ does not need a new benchmark engine.
-
-```text
-ORIGINAL_LOCAL_BRAIN_BENCHMARK_SUFFICIENT_FOR_FACTOR_CODER = NO
-PRIMARY_FACTOR_BLOCKER_CLASSIFICATION = MODEL_INSTRUCTION_NONCOMPLIANCE
-SECONDARY_FACTOR_CONTRIBUTORS = UPSTREAM_PROMPT_CONTRACT_GAP; COSTEER_EVALUATOR_FEEDBACK_GAP; MISSING_SUCCESS_KNOWLEDGE
-```
-
-The primary classification is not a generic judgment about model size. It is
-based on explicit trace evidence: the model saw the field and index contract,
-had abundant token headroom, repeatedly used the wrong field, then generated
-three syntactically invalid revisions and a terminal invalid index conversion.
-
-Resolution option audit:
-
-| Option | Finding |
-|---|---|
-| A — native knowledge seeding | Technically available, but no accepted correct example currently exists. It may be reconsidered only after the admission benchmark produces and verifies one; unvetted seeding is not selected. |
-| B — thin Scenario description | Selected. Expose the already-loaded upstream `qlib_factor_strategy` through the existing public Scenario description seam; do not copy or patch upstream prompt/coder code. |
-| C — bounded admission benchmark | Selected. Use pinned RD-Agent `FactorImplementEval`/RD2Bench interfaces and the approved daily-PV source to require syntax, semantic execution, single-column output, row/index correctness and successful correction behavior before another autonomous attempt. |
-| D — another local model | Not selected before B/C evidence. No model download or switch is justified yet. |
-| E — more retries | Rejected; ten iterations already exposed a deterministic compliance failure. |
-| F — patch upstream | Rejected absent upstream-rejection evidence. |
-
-```text
-SELECTED_FACTOR_RESOLUTION_OPTION = B+C
-```
+The local factor-coder admission evidence and its fixtures are retired. RD2Bench
+and `FactorImplementEval` remain historical upstream references, but no
+retired fixture or local-model admission result is current or future P3
+authority. No benchmark successor is selected in this document.
 
 ## RD-Agent workspace links and Windows DVC reproduction
 
@@ -492,15 +458,11 @@ AQ_NEW_GENERIC_ENGINE_COUNT = 0
 
 ## Authority and next step
 
-Attempt 003 is consumed and immutable. The next implementation task is
-bounded to the two selected paths: expose existing upstream factor strategy
-plus run the official bounded factor admission gate, and align the P3 DVC
-stage with a pinned WSL DVC runtime plus portable P3 paths. It must not execute
-another autonomous attempt. The next eligible real run namespace after those
-fixes independently pass is `p3-fin-quant-004`.
+Attempt 003 is consumed and immutable. Its local factor-coder admission branch
+is retired and authorizes neither another admission run nor an autonomous
+attempt. The DVC history in this document is preserved as historical context.
 
 ```text
-NEXT_AUTONOMOUS_RUN_NAMESPACE = p3-fin-quant-004
-CURRENT_NEXT = P3_ATTEMPT_003_BLOCKER_RESOLUTION_IMPLEMENTATION_001
-FINAL_CLASSIFICATION = PASS_ATTEMPT_003_BLOCKERS_ROOT_CAUSED_AND_RESOLUTION_PATHS_SELECTED
+CURRENT_NEXT = LEGACY_LOCAL_FACTOR_CODER_ADMISSION_RETIRED
+FINAL_CLASSIFICATION = HISTORICAL_ATTEMPT_003_CONTEXT_RETAINED
 ```

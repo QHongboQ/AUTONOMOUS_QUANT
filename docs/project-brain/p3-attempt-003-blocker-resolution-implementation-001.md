@@ -27,51 +27,12 @@ CODER_OVERRIDE_REQUIRED = NO
 RD_LOOP_OVERRIDE_REQUIRED = NO
 ```
 
-## Official factor-coder admission
+## Retired factor-coder admission evidence
 
-The admission fixture was derived deterministically from the pinned Microsoft
-RD-Agent RD2Bench JSON. The first three eligible, successfully ground-truth-
-validated cases by difficulty and name were:
-
-```text
-alpha053 = Easy
-alpha053_15 = Easy
-alpha053_5 = Easy
-```
-
-The approved local-only coder was then exercised through the official pinned
-`rdagent.app.benchmark.factor.eval` and `FactorImplementEval` path, configured
-for two rounds. The upstream strategy text was visible in the live coding
-prompt. The model returned Markdown-fenced JSON repeatedly for one task;
-RD-Agent exhausted its ten built-in parse retries and raised
-`RuntimeError: Failed to create chat completion after 10 retries.` before the
-official evaluator could score any of the six required implementations.
-
-This is an admission failure. Parse retries are not counted as CoSTEER
-self-correction because evaluator feedback was never reached. No cloud or paid
-inference route was used, no model was switched, and no retry outside the one
-official benchmark invocation was attempted.
-
-Private evidence is retained under
-`D:\AQ_DATA\P3\factor-coder-admission-001`.
-
-```text
-RD2BENCH_SOURCE_SHA256 = dc293fe6b6ea4ce2df67226569cbf2c04e7d14fcfc13451b0cd293b085747f99
-ADMISSION_FIXTURE_SHA256 = cf4c71c3e1758664082bbd45e06cfb78ca71e625fbf5f45d7a5acbf2587b2b49
-GROUND_TRUTH_VALIDATION_SHA256 = 674a9a05dfbe0648ffb8db47b8a7623fff9c968a1e3bbe1f4bc2af1909b5d5f5
-ADMISSION_REPORT_SHA256 = 3623fbb52b1d7b25f7c3889784302787176e6cc976a322233778caafbbf774be
-FACTOR_CODER_ADMISSION_CASES = alpha053; alpha053_15; alpha053_5
-FACTOR_CODER_ADMISSION_ROUNDS = 2
-FACTOR_CODER_ADMISSION_TOTAL_REQUIRED = 6
-FACTOR_CODER_ADMISSION_COMPLETED = 0
-FACTOR_CODER_ADMISSION_PASSES = 0
-FACTOR_CODER_ADMISSION_FAILURES = 6
-FACTOR_CODER_SELF_CORRECTION_OBSERVED = NO
-FACTOR_CODER_ADMISSION = FAIL
-LOCAL_LLM_COMPLETION_CALLS = 18
-CLOUD_INFERENCE_REQUESTS = 0
-PAID_LLM_REQUESTS = 0
-```
+The local factor-coder admission evidence recorded by this historical
+implementation is retired. It is not an authority for future capability or
+admission decisions. The preserved DVC and upstream strategy-exposure facts in
+this document remain historical implementation context only.
 
 ## WSL DVC alignment
 
@@ -117,14 +78,12 @@ RESOURCE_RECOVERY = PASS
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ```
 
-The DVC blocker is resolved, and the upstream strategy-exposure fix is valid.
-The official local factor-coder admission is not. Consequently this task does
-not authorize autonomous attempt-004.
+The DVC blocker was resolved, and the upstream strategy-exposure fix was
+validated. The superseded local factor-coder admission evidence does not
+authorize a future autonomous attempt.
 
 ```text
 P3_ATTEMPT_003_DVC_BLOCKER_RESOLVED = YES
 P3_ATTEMPT_003_FACTOR_STRATEGY_GAP_RESOLVED = YES
-P3_ATTEMPT_003_FACTOR_CODER_ADMISSION = FAIL
-P3_ATTEMPT_003_BLOCKERS_RESOLVED = NO
-CURRENT_NEXT = P3_LOCAL_FACTOR_CODER_MODEL_REEVALUATION_001
+LEGACY_FACTOR_CODER_ADMISSION_EVIDENCE = RETIRED
 ```

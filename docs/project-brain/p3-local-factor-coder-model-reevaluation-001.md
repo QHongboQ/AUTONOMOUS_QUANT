@@ -72,58 +72,18 @@ CANDIDATE_V2_SCHEMA_CHANGE_REQUIRED = NO
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
 ```
 
-## Official factor-coder re-admission
+## Retired factor-coder re-admission evidence
 
-Admission-002 reused the immutable admission-001 fixture, case ordering,
-ground-truth validation, two-round requirement, P3 debug source, model digest,
-and CoSTEER maximum of ten loops. The only intentional difference was the
-corrected official structured-output path.
-
-Structured parsing remained healthy throughout the official run. The model
-nevertheless failed all three factor tasks after ten native CoSTEER feedback
-loops. `alpha053` and `alpha053_5` ended with index-construction failures;
-`alpha053_15` executed but retained multiple source columns and an invalid
-non-MultiIndex output. The official `FactorImplementEval.develop()` path then
-raised `CoderError: All tasks are failed` during the first configured round,
-before any of the six required evaluator slots could satisfy the hard gate.
-
-The six required admission slots therefore fail closed as
-`COSTEER_RECOVERY`. The terminal causal evidence is retained separately as
-`INDEX` and `SOURCE_SCHEMA`; it is not represented as completed evaluator
-scoring.
-
-Private evidence is retained under
-`D:\AQ_DATA\P3\factor-coder-admission-002`.
-
-```text
-PRIOR_ADMISSION_REPORT_SHA256 = 3623fbb52b1d7b25f7c3889784302787176e6cc976a322233778caafbbf774be
-ADMISSION_FIXTURE_SHA256 = cf4c71c3e1758664082bbd45e06cfb78ca71e625fbf5f45d7a5acbf2587b2b49
-GROUND_TRUTH_VALIDATION_SHA256 = 674a9a05dfbe0648ffb8db47b8a7623fff9c968a1e3bbe1f4bc2af1909b5d5f5
-ADMISSION_002_REPORT_SHA256 = b963e550197ae12850991ed1e673b68d2f34850d7e511aca93bc7cc5bfca98cb
-FACTOR_CODER_ADMISSION_CASES = alpha053; alpha053_15; alpha053_5
-FACTOR_CODER_ADMISSION_ROUNDS = 2
-FACTOR_CODER_ADMISSION_TOTAL_REQUIRED = 6
-FACTOR_CODER_ADMISSION_COMPLETED = 0
-FACTOR_CODER_ADMISSION_PASSES = 0
-FACTOR_CODER_ADMISSION_FAILURES = 6
-FAILURE_TAXONOMY = COSTEER_RECOVERY:6
-TERMINAL_CAUSAL_EVIDENCE = INDEX; SOURCE_SCHEMA
-ADMISSION_LOCAL_LLM_CALLS = 90
-PROTOCOL_PROBE_LOCAL_LLM_CALLS = 4
-CLOUD_INFERENCE_REQUESTS = 0
-PAID_LLM_REQUESTS = 0
-QWEN2_5_CODER_7B_FACTOR_ADMISSION = FAIL
-MODEL_REPLACEMENT_REQUIRED = YES
-ALTERNATE_MODEL_DOWNLOADED = NO
-```
+The local factor-coder re-admission evidence recorded here is retired. Its
+historical structured-output diagnosis remains useful implementation context,
+but the evaluation fixtures, scores, and outcomes must not be used for a
+future capability or admission decision.
 
 ## Validation and decision
 
-The route mismatch fully explains the prior Markdown-fence parsing failure,
-but it was not sufficient to admit the current model. With protocol behavior
-corrected, the remaining blocker is factor-coding capability under the fixed
-official benchmark. Another prompt/parser fix, extra retry, or autonomous
-attempt is not authorized.
+The route mismatch diagnosis remains historical evidence. This document does
+not authorize any future benchmark reuse, prompt/parser change, retry, or
+autonomous attempt.
 
 ```text
 LLM_BACKEND_TESTS = 8/8_PASS
@@ -139,7 +99,5 @@ MODEL_TRAINING = NO
 NEW_PREDICTIONS = NO
 BACKTEST = NO
 SEALED_OOS_ACCESSED = NO
-NEXT_AUTONOMOUS_ATTEMPT_AUTHORIZED = NO
-CURRENT_NEXT = P3_LOCAL_FACTOR_CODER_CANDIDATE_MODEL_BENCHMARK_001
-FINAL_CLASSIFICATION = BLOCKED_CURRENT_MODEL_FACTOR_CAPABILITY_INSUFFICIENT
+LEGACY_FACTOR_CODER_ADMISSION_EVIDENCE = RETIRED
 ```
