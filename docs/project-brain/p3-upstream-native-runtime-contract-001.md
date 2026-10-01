@@ -77,3 +77,48 @@ native dynamic-market backtest and portfolio analysis, SQLite Recorder, and
 RD-Agent feedback. Docker, Compose, and systemd may be evaluated later for
 deployment supervision after functional construction is complete; they are not
 part of the proven current P3 research runtime.
+
+## Operational interface freeze
+
+```text
+P3_STATUS = CLOSED_OPERATIONAL
+P3_INTERFACE_STATUS = FROZEN
+P3_PRIMARY_ENGINE_OWNER = UPSTREAM_RD_AGENT_AND_QLIB
+P3_AQ_OWNERSHIP = US_PIT_BINDING / GOVERNANCE / PERMISSIONS / BUDGET / CANDIDATE_HANDOFF_CONTRACT
+P3_REOPEN_POLICY = ONLY_IF_UPSTREAM_MIGRATION_OR_PROVEN_INTERFACE_CONTRACT_DEFICIENCY
+```
+
+Upstream-first remains authoritative. AQ ownership remains limited to the
+US/PIT binding, governance, permissions, budget, and the Candidate V4 handoff
+contract. AQ has no custom generic research engine and does not replace the
+upstream factor or model research loops.
+
+The frozen operational evidence is RD-Agent `1.0.0` at release commit
+`484776c211e4fbbeef03e0ec00d6bbee7362a4f4`, Qlib `0.9.8.dev26` at
+`2fb9380b342556ddb50a4b24e4fe8655d548b2b8`, Smoke-006
+`PASS_UPSTREAM_NATIVE_US_PIT_FINQUANT_SMOKE`, Candidate V4 real
+materialization `PASS`, and P3 closeout `PASS_P3_RDAGENT_ROUTE_COMPLETE`.
+The P2 firewall remains intact and sealed OOS was not accessed.
+
+RD2Bench is non-blocking diagnostic evidence only. One bounded official
+Volume&Price Medium+Hard diagnostic was executed; it is neither a P3 admission
+gate nor a production-readiness gate. No further RD2Bench testing is required
+for P3 closure, and retired fixtures remain retired.
+
+The frozen system boundary is:
+
+```text
+UPSTREAM DATA / FEATURES
+        -> P3 RD-Agent / Qlib research
+        -> Candidate V4 handoff
+        -> P2 certification
+```
+
+Future P5, P6, and other integrations must use thin interfaces or
+feature/data contracts. They must not reopen P3 internals unless an upstream
+migration or a proven frozen-interface contract deficiency requires it.
+
+Prohibited future drift includes a new AQ generic factor or model research
+engine, a duplicate RD-Agent loop, a duplicate Qlib workflow, DVC as a P3
+runtime launcher, benchmark-driven P3 reopening, revival of local-model
+admission fixtures, and package/runtime changes without a proven future need.

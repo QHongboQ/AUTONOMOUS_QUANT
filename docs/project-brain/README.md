@@ -4,11 +4,11 @@
 >
 > Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
 >
-> Active Development: **P3 — RD-Agent native handoff thin Candidate projection POC**
+> P3 Status: **CLOSED / OPERATIONAL / FROZEN INTERFACE**
 >
 > P5 V1 scope: **complete; Attempt 005 found no measurable incremental value from the exact ten PIT fundamentals under the frozen H1 protocol.**
 >
-> Development Next: **P3 — RD-Agent fin_quant autonomous loop reactivation**
+> P3 Reopen Policy: **only for an upstream migration or a proven frozen-interface contract deficiency**
 >
 > Core Principle: **Upstream-first; thin interfaces; fail-closed gaps; one production owner per capability.** See the [Upstream Ownership Model](upstream-ownership-model.md).
 
