@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://qhongboq.github.io/AUTONOMOUS_QUANT/target-portfolio-v1.schema.json",
+  "title": "AUTONOMOUS_QUANT TargetPortfolio V1",
+  "description": "Broker-neutral target weights with provenance and fail-closed Certified/Champion and human risk-envelope references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_version",
+    "target_portfolio_id",
+    "effective_time",
+    "provenance",
+    "input_references",
+    "target_weights",
+    "cash_target_weight",
+    "risk_envelope"
+  ],
+  "properties": {
+    "contract_version": { "const": "AQ_TARGET_PORTFOLIO_V1" },
+    "target_portfolio_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "effective_time": { "type": "string", "format": "date-time" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "input_references": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/eligibleInput" }
+    },
+    "target_weights": {
+      "type": "object",
+      "patternProperties": {
+        "^P2SEC[0-9A-F]{64}$": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "cash_target_weight": { "type": "number" },
+    "risk_envelope": { "$ref": "#/$defs/humanRiskEnvelopeReference" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "contentReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference", "sha256"],
+      "properties": {
+        "reference": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "humanRiskEnvelopeReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_version", "status"],
+      "properties": {
+        "contract_version": { "const": "AQ_HUMAN_RISK_ENVELOPE_REFERENCE_V1" },
+        "status": { "enum": ["UNSET", "HUMAN_APPROVED"] },
+        "risk_envelope_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "effective_from": { "type": "string", "format": "date-time" },
+        "effective_until": { "type": "string", "format": "date-time" },
+        "human_authority_record": { "$ref": "#/$defs/contentReference" },
+        "risk_limit_set": { "$ref": "#/$defs/contentReference" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "UNSET" } }, "required": ["status"] },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["risk_envelope_id"] },
+                { "required": ["effective_from"] },
+                { "required": ["effective_until"] },
+                { "required": ["human_authority_record"] },
+                { "required": ["risk_limit_set"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "HUMAN_APPROVED" } }, "required": ["status"] },
+          "then": {
+            "required": ["risk_envelope_id", "effective_from", "effective_until", "human_authority_record", "risk_limit_set"]
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "producer_version", "method_id", "output_artifact"],
+      "properties": {
+        "producer": { "enum": ["QLIB", "SKFOLIO"] },
+        "producer_version": { "type": "string", "minLength": 1 },
+        "method_id": { "type": "string", "minLength": 1 },
+        "output_artifact": { "$ref": "#/$defs/contentReference" }
+      }
+    },
+    "p2CertificationReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decision"],
+      "properties": {
+        "status": { "const": "CERTIFIED" },
+        "decision": { "$ref": "#/$defs/contentReference" }
+      }
+    },
+    "eligibleInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_kind", "candidate_id", "strategy_artifact", "p2_certification"],
+      "properties": {
+        "input_kind": { "enum": ["P2_CERTIFIED_CANDIDATE", "P4_CHAMPION"] },
+        "candidate_id": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "strategy_artifact": { "$ref": "#/$defs/contentReference" },
+        "p2_certification": { "$ref": "#/$defs/p2CertificationReference" },
+        "p4_champion_decision": { "$ref": "#/$defs/contentReference" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "input_kind": { "const": "P4_CHAMPION" } }, "required": ["input_kind"] },
+          "then": { "required": ["p4_champion_decision"] }
+        },
+        {
+          "if": { "properties": { "input_kind": { "const": "P2_CERTIFIED_CANDIDATE" } }, "required": ["input_kind"] },
+          "then": { "not": { "required": ["p4_champion_decision"] } }
+        }
+      ]
+    }
+  }
+}
