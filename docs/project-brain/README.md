@@ -5369,3 +5369,48 @@ See [P7 Static17 scaffold retirement 001](p7-static17-scaffold-retirement-001.md
 > **Do not let autonomous research directly control unrestricted real capital.**
 >
 > **Build the smallest runnable system first, while preserving interfaces for the complete tree.**
+
+## 28. P8 Engineering Foundation Closeout (2026-10-13)
+
+The P8 engineering exit condition is met: TargetPortfolio V1 and the human
+risk-envelope reference V1 were frozen and merged by PR #147 at
+`487cd5c6d3299e37b6df008cd8bde6f9fec8bc73`. The retained native verification
+confirms Qlib's native portfolio strategy capability and skfolio's native
+portfolio optimization and risk capabilities. Qlib remains the research
+portfolio/backtest owner; skfolio remains the generic optimizer owner. AQ
+requires no duplicate portfolio or risk engine.
+
+This closes only the engineering foundation. A real portfolio tournament is
+deferred, no human risk-limit set is approved, and production risk activation
+is not authorized. Future use fails closed unless inputs have P2-issued
+`CERTIFIED` decisions, any claimed Champion has its P4 decision, and a current
+human-approved risk-envelope reference is applicable and verifiable. P2
+sealed OOS remains sealed; synthetic examples and schema-valid fixtures are
+not investment or authorization evidence.
+
+P9 may use official LEAN for isolated simulation or paper-capability work under
+its own authority. Robinhood Trading MCP remains the original P0 primary live
+broker candidate for P10. No LEAN-to-Robinhood connector is asserted. Account
+authorization, brokerage access, order submission, and production activation
+require separate owner approval.
+
+```text
+P8_CONTRACT_V1 = FROZEN_AND_MERGED
+P8_SKFOLIO_NATIVE_CAPABILITIES = VERIFIED
+P8_QLIB_NATIVE_PORTFOLIO_CAPABILITY = VERIFIED
+P8_GENERIC_OPTIMIZER_OWNER = SKFOLIO
+P8_RESEARCH_PORTFOLIO_OWNER = QLIB
+AQ_CUSTOM_PORTFOLIO_ENGINE_REQUIRED = NO
+AQ_CUSTOM_RISK_ENGINE_REQUIRED = NO
+P8_ENGINEERING_FOUNDATION = CLOSED
+P8_REAL_PORTFOLIO_TOURNAMENT = DEFERRED
+P8_HUMAN_RISK_LIMIT_SET = NOT_YET_APPROVED
+P8_PRODUCTION_RISK_ACTIVATION = NOT_AUTHORIZED
+P2_V2_SEALED_OOS_ACCESSED = NO
+BROKER_ACTION_COUNT = 0
+```
+
+See [P8 Engineering Foundation Closeout 001](p8-engineering-foundation-closeout-001.md),
+the [frozen contract record](p8-targetportfolio-and-risk-contract-freeze-001.md),
+and the retained external verification at
+`E:\AQ\RESEARCH\P8\upstream-native-portfolio-capability-001\verification.md`.
