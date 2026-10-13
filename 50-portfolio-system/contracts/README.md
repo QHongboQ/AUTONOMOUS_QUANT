@@ -26,15 +26,26 @@ orders, quantities, fills, fees, reconciliation, and broker state.
 - producer/method and output-artifact provenance;
 - exact P2-certified candidate references, optionally with a P4 Champion
   decision reference;
-- an asset-keyed instrument-weight map and a separate explicit cash weight;
+- an asset-keyed P2 equity instrument-weight map (which may be empty) and a
+  separate explicit cash weight;
 - a reference to the human-owned risk envelope.
 
 The identity is `sha256:` plus SHA-256 of RFC 8785/JCS canonical UTF-8 JSON for
 the complete object with only `target_portfolio_id` omitted. `target_weights`
-is an object keyed by canonical P1/P2 provider/episode `asset_id` (not a
-current-ticker inference), so an asset has at most one weight; JSON object
-keys are canonicalized by JCS. `CASH` is reserved for `cash_target_weight`.
-This is an identity rule, not an AQ hashing implementation.
+is keyed only by the `qlib_instrument_id()` output from the accepted P2
+security identity: `P2SEC` followed by 64 uppercase hexadecimal characters.
+This matches the authoritative implementation in
+`30-research-system/qlib/dataset-adapter/aq_qlib_handoff/ragged_panel.py` and
+does not admit ticker aliases such as `AAPL`. An empty map is valid when the
+explicit `cash_target_weight` is present. A future asset class or identity
+scheme requires a separately versioned contract. JSON object keys are
+canonicalized by JCS. This is an identity rule, not an AQ hashing
+implementation.
+
+The retained synthetic suite is `tests/Test-P8Contracts.ps1`; it uses the
+installed PowerShell `Test-Json` validator and keeps all evidence references
+under `fixture://`. A successful synthetic validation is never real
+certification, human approval, or trading permission.
 
 Weights are fractions of portfolio NAV. The schema deliberately does not
 choose long-only, leverage, net/gross exposure, normalization, concentration,

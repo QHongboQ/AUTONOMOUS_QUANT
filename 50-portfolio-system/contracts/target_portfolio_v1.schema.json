@@ -28,9 +28,8 @@
     },
     "target_weights": {
       "type": "object",
-      "minProperties": 1,
       "patternProperties": {
-        "^(?!CASH$)[A-Z0-9][A-Z0-9._:-]*$": { "type": "number" }
+        "^P2SEC[0-9A-F]{64}$": { "type": "number" }
       },
       "additionalProperties": false
     },

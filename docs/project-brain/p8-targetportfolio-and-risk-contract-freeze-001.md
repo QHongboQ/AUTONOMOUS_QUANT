@@ -31,11 +31,14 @@ functionality is duplicated.
 
 `AQ_TARGET_PORTFOLIO_V1` contains deterministic identity, timezone-qualified
 effective time, producer and output provenance, P2 certification references
-(and a P4 decision reference for any Champion input), provider/episode asset
-weights, explicit cash target weight, and a human risk-envelope reference.
-Identity is RFC 8785/JCS SHA-256 over the complete object with the identity
-field omitted. The schema carries no broker, account, order, quantity,
-notional, fill, or reconciliation state.
+(and a P4 decision reference for any Champion input), P2 equity weights keyed
+by the frozen `qlib_instrument_id()` output, explicit cash target weight
+(including cash-only targets), and a human risk-envelope reference. Ordinary
+ticker aliases are not accepted as verified P2 identities. Future identity
+schemes require a separately versioned contract. Identity is RFC 8785/JCS
+SHA-256 over the complete object with the identity field omitted. The schema
+carries no broker, account, order, quantity, notional, fill, or reconciliation
+state.
 
 `AQ_HUMAN_RISK_ENVELOPE_REFERENCE_V1` is either `UNSET` or points to a
 human-authorized immutable risk-limit set and authority record over a bounded
@@ -54,12 +57,14 @@ continues to block any multi-family portfolio claim.
 
 ## Validation and non-actions
 
-Bounded synthetic JSON-schema fixtures validated: a structurally valid
-non-authorized target is accepted; broker fields, a Champion without P4
-decision, and an approved risk reference without its authority/limit-set
-references are rejected. A fully referenced synthetic approved-risk envelope
-validates structurally; the fixture carries no numeric limits or permissions
-and proves no real human authority.
+The retained PowerShell suite at
+`50-portfolio-system/contracts/tests/Test-P8Contracts.ps1` uses the installed
+`Test-Json` validator. It covers valid P2 identity, rejection of ticker alias,
+cash-only output, broker/order exclusion, P2 certification, P4 Champion
+reference, risk authority and limit-set references, and the rule that
+synthetic schema validity is not real authorization. Fully referenced
+synthetic risk fixtures contain no numeric limits or permissions and prove no
+real human authority.
 
 ```text
 P2_V2_SEALED_OOS_ACCESSED = NO
