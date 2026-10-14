@@ -145,5 +145,8 @@ P9_PRODUCTION_AUTHORIZED = NO
 
 ## Next single action
 
-Owner review the selection/supersession PR; then separately decide whether to
-close PR #150. Do not merge, close, submit orders, or deploy automatically.
+Complete the remaining offline acceptance using only Lumibot's official
+native components and tests: an end-to-end 100%-cash liquidation, pending and
+partially filled order/cancellation handling during rebalance, and restart
+position/order recovery. Do not connect to Alpaca or submit orders. Keep PR
+#150's close/retire decision separate; this task does not close it.

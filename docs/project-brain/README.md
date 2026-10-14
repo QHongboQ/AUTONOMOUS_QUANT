@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **Review the P9 Lumibot execution-upstream selection record; runtime readiness remains blocked**
+> Current Next: **Complete Lumibot's remaining offline native acceptance: full cash liquidation, partial-fill/cancel handling, and restart recovery; no broker connection**
 >
 > P3 Status: **CLOSED / OPERATIONAL / FROZEN INTERFACE**
 >
