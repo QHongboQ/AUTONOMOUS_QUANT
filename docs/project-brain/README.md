@@ -5465,3 +5465,47 @@ BROKER_ACTION_COUNT = 0
 
 See [P9 upstream direction and Qlib native paper POC 001](p9-upstream-pivot-qlib-native-paper-poc-001.md)
 for the pinned APIs, test scope, limitations, and preserved native output summary.
+
+## 30. P9 Alpaca Paper thin integration (2026-10-13)
+
+The owner has now selected the existing Alpaca Paper account/API as a bounded
+P9 broker candidate. This is a scoped follow-on to PR #149, not a rewrite of
+its historical Alpaca-inactive decision or a change to P9/P10 roadmap exit
+conditions. The installed `alpaca-py 0.44.0` client safely read the Paper
+account, market clock, positions, and orders with no mutation. A synthetic-only
+P8 TargetPortfolio preview preserves P2SEC identity, requires external
+certification/risk/identity authorities, and exposes no submit path. Tests
+prove only interface mechanics; there is still no real certified portfolio,
+approved human risk envelope, verified P2SEC-to-Alpaca mapping, or verified
+market-data entitlement. Qlib's historical simulation remains the existing
+research result; Alpaca Paper is not forward- or continuous-paper-ready.
+Preview regressions now fail closed when a nonzero existing holding is omitted
+from the target because no complete liquidation plan exists. Account margin
+capability is distinguished from actual target leverage and available cash;
+buying power does not substitute for cash absent leverage authority. The public
+preview requires the existing `rfc8785` JCS package for P8 content identity,
+but it is absent from the checked P9 development runtimes, so that identity
+gate currently blocks rather than falling back to local canonicalization. An
+isolated, separately authorized Paper API engineering test may use synthetic
+fixtures labeled `ENGINEERING_TEST_ONLY`; this does not assert real P2/P4
+certification or waive real-strategy admission and risk gates.
+
+```text
+P9_ALPACA_PAPER_ACCOUNT_CANDIDATE = SELECTED_BOUNDED_CANDIDATE
+ALPACA_READ_ONLY_ACCOUNT_CLOCK_POSITIONS_ORDERS = PASS
+P8_CONTRACT_MODIFIED = NO
+P9_REALTIME_DATA_PERMISSION = UNKNOWN
+P9_FORWARD_PAPER_READY = NO
+P9_CONTINUOUS_PAPER_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+PAPER_ORDERS_SUBMITTED = 0
+BROKER_MUTATION_ACTIONS = 0
+AQ_NEW_GENERIC_ENGINE_COUNT = 0
+OMITTED_EXISTING_POSITIONS = FAIL_CLOSED_WITHOUT_LIQUIDATION_PLAN
+P8_JCS_CONTENT_IDENTITY = BLOCKED_RFC8785_NOT_INSTALLED
+ENGINEERING_TEST_ONLY_FIXTURES = NOT_REAL_CERTIFICATION
+```
+
+See [P9 Alpaca Paper thin integration 001](p9-alpaca-paper-thin-integration-001.md)
+for credential boundary, SDK evidence, tests, limitations, and re-entry gates.
