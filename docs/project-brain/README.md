@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P9 — review the Qlib-native daily simulation direction and its paper-readiness gaps**
+> Current Next: **Complete Lumibot's remaining offline native acceptance: full cash liquidation, partial-fill/cancel handling, and restart recovery; no broker connection**
 >
 > P3 Status: **CLOSED / OPERATIONAL / FROZEN INTERFACE**
 >
@@ -272,9 +272,11 @@ Current ownership is:
 - **Qlib + skfolio — `UPSTREAM_WHOLE` / `UPSTREAM_LEAF`:** generic portfolio,
   optimization, WalkForward, CombinatorialPurgedCV, MeanRisk, and compatible
   statistical tooling; AQ owns portfolio policy and risk limits.
-- **QuantConnect LEAN — `UPSTREAM_WHOLE` if adopted:** preferred execution
-  candidate, not yet production authority. A later execution audit must close
-  runtime prerequisites before adoption.
+- **Lumibot 4.6.18 — selected P9 execution integration candidate:** its pinned
+  official runtime owns generic rebalance/order mechanics if the remaining
+  integration gates pass. Selection is not runtime readiness or production
+  authority. LEAN remains an alternate/reference; the historical P9 direction
+  reset in Section 29 is preserved as prior authority.
 - **OpenBB — `UPSTREAM_WHOLE`, provider-gateway role:** provider access for
   market data, fundamentals, macro, and news where it is the cleanest owner;
   it is not mandatory when another selected upstream owns the path directly.
@@ -614,7 +616,7 @@ Default rules:
 | **P6 News / Macro / Skills** | Add news, macro, sentiment and LLM extraction | OpenBB + TradingAgents/FinGPT/FinBERT challengers | factor ablation proves value or module rejected |
 | **P7 Multi-Alpha Ensemble** | Combine independent alpha families | Qlib | ensemble beats component controls on certification criteria |
 | **P8 Portfolio / Risk** | Portfolio tournament and production risk overlay | Qlib + skfolio | TargetPortfolio contract stable |
-| **P9 Paper Production** | Real event-driven paper execution | LEAN or selected execution upstream | stable broker reconciliation |
+| **P9 Paper Production** | Real event-driven paper execution | Qlib research + Lumibot 4.6.18 execution candidate | stable broker reconciliation |
 | **P10 Small Live** | Tightly capped real-money deployment | broker + execution engine | live behavior matches certified expectations within tolerance |
 | **P11 Multi-Asset** | Add crypto / futures / expanded ETF books | adapters + execution upstream | each new book independently certified |
 | **P12 Autonomous Ops** | Low-touch operation | scheduler / monitoring | normal operation requires no manual action |
@@ -5465,3 +5467,73 @@ BROKER_ACTION_COUNT = 0
 
 See [P9 upstream direction and Qlib native paper POC 001](p9-upstream-pivot-qlib-native-paper-poc-001.md)
 for the pinned APIs, test scope, limitations, and preserved native output summary.
+
+## 30. P9 Lumibot execution-upstream selection (2026-10-13)
+
+The owner selected official Lumibot v4.6.18 as the sole P9 stock-execution
+integration candidate. This is a later decision than the Qlib-first technical
+direction recorded in Section 29 and PR #149; Section 29 remains historical
+evidence and is not rewritten. Qlib remains the research/prediction and
+historical-simulation owner. Alpaca Paper remains the intended paper broker,
+but no live-data route, P2SEC-to-broker identity mapping, or safe order-submit
+path is admitted by this selection. P10's Robinhood Trading MCP candidate is
+unchanged.
+
+```text
+P9_RESEARCH_OWNER = QLIB
+P9_EXECUTION_UPSTREAM = LUMIBOT_4.6.18
+P9_EXECUTION_UPSTREAM_STATUS = SELECTED_FOR_INTEGRATION_NOT_RUNTIME_READY
+P9_PAPER_BROKER = ALPACA_PAPER
+P9_FORWARD_PAPER_READY = NO
+P9_CONTINUOUS_PAPER_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+BROKER_MUTATION_ACTIONS = 0
+```
+
+The selected official source is pinned at
+`730d5608f3ee625f0a30dc15e8cc512205dd2a2b` (Lumibot 4.6.18). The isolated
+full dependency installation and prior native evidence are retained outside
+the repository at
+`E:\AQ\RESEARCH\P9\lumibot-v4.6.18-full-install-003\verification.md`.
+Supplemental official offline checks in this selection task passed 16 focused
+tests, including target calculation with existing holdings, full-sale order
+generation, shorting-disabled behavior, and BacktestingBroker order lifecycle
+tests. A direct official `DriftCalculationLogic` probe with an existing
+non-zero equity holding and a 100% USD target produced a zero target and full
+sell drift for the omitted equity without submitting an order. This was not an
+end-to-end simulated liquidation/fill, so that complete scenario remains
+unverified.
+
+The pinned upstream source orders sell-side rebalance work before buys and
+defaults `shorting=False`; its buy sizing respects available cash. Existing
+offline order-lifecycle tests do not establish behavior for partial fills,
+rejected orders during a rebalance, cancellation races, or process-restart
+reconciliation. Startup source calls broker position synchronization and
+open-order retrieval, but restart reconciliation is not functionally tested.
+No AQ replacement order planner or submit-capable adapter is added here.
+
+PR #150 remains open and unchanged. Its self-written target-drift, quantity,
+cash/buying-power, liquidation, and duplicate-intent preview logic is proposed
+for retirement after review of a successor integration. Its Paper read-only
+probe may be retained only if a later approved design still needs that
+diagnostic; this change does not import or merge PR #150 code. P8 TargetPortfolio
+V1, identity rules, P2/P4 certification gates, and the human risk-envelope
+contract remain frozen. There are currently no eligible real P2 Certified
+strategy inputs, P4 Champions, or approved human risk limits, so any eventual
+order-capable path must fail closed until those authorities and the broker
+instrument mapping are verified.
+
+```text
+LUMIBOT_UPSTREAM_SELECTED = YES
+NATIVE_CASH_ONLY_LIQUIDATION = NOT_VERIFIED_END_TO_END
+NATIVE_PARTIAL_FILL_AND_CANCEL_HANDLING = NOT_VERIFIED
+NATIVE_RESTART_RECONCILIATION = SOURCE_ONLY_NOT_VERIFIED
+P8_CONTRACT_PRESERVED = YES
+AQ_GENERIC_EXECUTION_ENGINE_CREATED = NO
+PR150_MERGED = NO
+PAPER_FORWARD_OR_CONTINUOUS_RUNTIME_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+```
+
+See [P9 Lumibot execution-upstream selection and PR #150 supersession 001](p9-lumibot-execution-upstream-selection-001.md).
