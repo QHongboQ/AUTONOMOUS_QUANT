@@ -2,7 +2,7 @@
 
 > Status: **PLANNING / NO PRODUCTION TRADING**
 >
-> Current Next: **P2 — Formulaic Alpha Sealed OOS Accumulation 001**
+> Current Next: **P9 — review the Qlib-native daily simulation direction and its paper-readiness gaps**
 >
 > P3 Status: **CLOSED / OPERATIONAL / FROZEN INTERFACE**
 >
@@ -5414,3 +5414,54 @@ See [P8 Engineering Foundation Closeout 001](p8-engineering-foundation-closeout-
 the [frozen contract record](p8-targetportfolio-and-risk-contract-freeze-001.md),
 and the retained external verification at
 `E:\AQ\RESEARCH\P8\upstream-native-portfolio-capability-001\verification.md`.
+
+## 29. P9 upstream direction reset and Qlib native daily feasibility (2026-10-13)
+
+The owner selected the existing official Qlib runtime as P9's primary
+candidate for bounded historical daily simulation. NautilusTrader Sandbox is
+an alternate candidate only if Qlib lacks a required capability; LEAN remains
+an alternate/reference engine. The prior Alpaca plugin exploration is not on
+the active P9 path. Robinhood Trading MCP remains the preferred P10 live
+brokerage interface, without an asserted LEAN connector.
+
+The pinned Qlib runtime (`0.9.8.dev26`, source SHA
+`2fb9380b342556ddb50a4b24e4fe8655d548b2b8`) completed one eight-session
+historical daily simulation on the approved non-sealed P1 US provider, with
+AAPL, MSFT and SPY. Qlib's native `TopkDropoutStrategy`, `SimulatorExecutor`,
+`Exchange`, `Account` and portfolio metrics produced virtual trade
+indicators, cash, holdings and daily account values. The existing source
+prices are normalized research data and the window is only a plumbing
+fixture; this result is not a financial-performance claim or paper-trading
+evidence. Transaction-cost parameters were enabled as demonstration fixtures,
+not approved policy; exact aggregate cost was not retained.
+
+The attempt to disable Qlib's benchmark by passing `benchmark=None` failed
+during account initialization: in this pinned release, the empty benchmark
+configuration falls through to the Chinese CSI300 default. The bounded run
+therefore used the existing US `SPY` series explicitly. No Qlib source change
+or AQ workaround was made. The official pinned Online Serving documentation
+supports daily next-trading-day prediction but states that next-day order
+generation is not supported because of public-data limitations. Further,
+the pinned contrib online Operator path cannot be used as an alternate
+paper-broker path in the installed runtime because its imported dependencies
+are absent. Native Account/UserManager save/load functions exist in source,
+but a save/restore continuation was not tested.
+
+```text
+P9_PRIMARY_CANDIDATE = QLIB_NATIVE_DAILY_SIMULATION
+P9_REALTIME_SANDBOX_ALTERNATE_CANDIDATE = NAUTILUSTRADER
+P9_LEAN_ROLE = ALTERNATE_REFERENCE
+P9_ALPACA_PLUGIN_ACTIVE = NO
+P9_REAL_MARKET_DATA_ROUTE = UNRESOLVED
+P9_CONTINUOUS_PAPER_TRADING = NOT_READY
+P10_PREFERRED_LIVE_BROKER = ROBINHOOD_TRADING_MCP
+QLIB_NATIVE_DAILY_SIMULATION = PASS
+QLIB_FORWARD_DAILY_PAPER_READY = NO
+QLIB_CONTINUOUS_REALTIME_PAPER_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+BROKER_ACTION_COUNT = 0
+```
+
+See [P9 upstream direction and Qlib native paper POC 001](p9-upstream-pivot-qlib-native-paper-poc-001.md)
+for the pinned APIs, test scope, limitations, and preserved native output summary.
