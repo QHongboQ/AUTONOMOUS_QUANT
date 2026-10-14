@@ -80,19 +80,38 @@ mapping is supplied by this change. Missing authority fails closed.
 
 The preview requires a Paper endpoint, an order-state-known assertion,
 non-duplicate target identity, effective-time-valid P2 mapping, usable USD
-quotes within the caller-resolved risk policy's age limit, account status and
-buying-power checks, and explicit risk-policy permissions for shorting or
-leverage. It returns in-memory preview lines with `executable=false`; it does
-not submit requests or maintain durable intent/reconciliation state. A
-synthetic test constructs the installed SDK's `MarketOrderRequest` only to
-validate static field compatibility; it never calls an order method. The
-existing P0 POC-D ExecutionPlan evidence is reused as prior synthetic planning
-evidence; its planner is not copied.
+quotes within the caller-resolved risk policy's age limit, account status,
+available cash and broker buying-power checks, and explicit risk-policy
+permissions for shorting or leverage. The TargetPortfolio ID is checked as
+SHA-256 over RFC 8785/JCS bytes with only `target_portfolio_id` omitted, using
+the existing upstream `rfc8785` package when available; there is deliberately
+no local canonicalization fallback. The checked development runtimes did not
+have `rfc8785` installed, so the public preview now fails closed with
+`RFC8785_VALIDATOR_UNAVAILABLE`; complete P8 content-identity validation is
+not yet available in this runtime.
 
-All successful authority/identity paths in tests use fixture-only verifiers,
-mapping, prices, account state, and references. They prove interface mechanics,
-not authorization, identity truth, market-data permission, or an investable
-portfolio.
+Existing nonzero holdings omitted from `target_weights` are rejected because
+this thin boundary cannot infer their P2SEC identity or create a complete
+liquidation plan. A cash-only target with no positions remains a valid empty
+preview; an explicit zero target for a mapped asset produces a sell preview.
+Account margin capability (`multiplier`) is not treated as evidence that the
+strategy uses leverage. Actual strategy leverage is identified from gross
+target exposure or purchases that exceed current cash, and broker buying power
+is checked separately. When leverage is not authorized, buying beyond cash is
+rejected even if broker buying power is higher. The preview returns in-memory
+lines with `executable=false`; it does not submit requests or maintain durable
+intent/reconciliation state. A synthetic test constructs the installed SDK's
+`MarketOrderRequest` only to validate static field compatibility; it never
+calls an order method. The existing P0 POC-D ExecutionPlan evidence is reused
+as prior synthetic planning evidence; its planner is not copied.
+
+All successful authority/identity paths in downstream preview-mechanics tests
+use fixture-only verifiers, mapping, prices, account state, and references;
+those tests bypass the unavailable JCS package only to exercise unrelated
+preview rules. A separate public-path regression verifies that missing
+`rfc8785` fails closed. These tests prove neither successful P8 identity
+verification nor authorization, identity truth, market-data permission, or an
+investable portfolio.
 
 ## Market-data limits and remaining blockers
 
@@ -143,7 +162,12 @@ Qlib/skfolio target computation
     -> official alpaca-py Paper API
 ```
 
-No production P9 adapter is ready. A limited order-engineering test requires
-separate owner authorization and resolution of the real-input blockers above;
-it must remain Paper-only and still would not authorize continuous operation
-or live trading.
+An isolated, explicitly authorized Paper Broker API engineering test may use
+synthetic inputs without a real P2 Certified strategy, provided all fixtures
+are labeled `ENGINEERING_TEST_ONLY` and are never represented as certification
+or a real strategy. This classification does not waive separate owner
+authorization for any order submission. Real strategy integration still
+requires actual P2/P4 decisions, human risk authority, verified identity and
+market-data inputs. No Paper order is submitted by this change. No production
+P9 adapter is ready; forward and continuous operation remain separately
+blocked by the real-input and operational blockers above.

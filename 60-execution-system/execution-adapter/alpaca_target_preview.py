@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import hashlib
+import importlib
 import math
 import re
 from typing import Mapping, Protocol
@@ -67,6 +69,7 @@ class AccountState:
     multiplier: float
     trading_blocked: bool
     account_blocked: bool
+    cash_usd: float
 
 
 class AuthorityResolver(Protocol):
@@ -93,6 +96,7 @@ class Preview:
     target_portfolio_id: str
     executable: bool
     lines: tuple[PreviewLine, ...]
+    strategy_uses_leverage: bool
 
 
 class PreviewRejected(ValueError):
@@ -109,6 +113,27 @@ def _parse_datetime(value: object) -> datetime | None:
     except (TypeError, ValueError):
         return None
     return parsed if _aware(parsed) else None
+
+
+def _verify_target_identity(target: Mapping, portfolio_id: str) -> None:
+    """Verify the frozen P8 content identity with the upstream JCS library.
+
+    There is deliberately no canonicalization fallback: identity validation is
+    unavailable unless the project's approved ``rfc8785`` package is installed.
+    """
+    try:
+        jcs = importlib.import_module("rfc8785")
+    except ImportError:
+        raise PreviewRejected("RFC8785_VALIDATOR_UNAVAILABLE") from None
+    identity_fields_omitted = dict(target)
+    identity_fields_omitted.pop("target_portfolio_id", None)
+    try:
+        canonical = jcs.dumps(identity_fields_omitted)
+    except Exception:
+        raise PreviewRejected("TARGET_IDENTITY_NOT_CANONICALIZABLE") from None
+    expected = "sha256:" + hashlib.sha256(canonical).hexdigest()
+    if portfolio_id != expected:
+        raise PreviewRejected("TARGET_IDENTITY_MISMATCH")
 
 
 def build_offline_preview(
@@ -134,6 +159,7 @@ def build_offline_preview(
         "input_references", "target_weights", "cash_target_weight", "risk_envelope",
     } or target.get("contract_version") != "AQ_TARGET_PORTFOLIO_V1":
         raise PreviewRejected("FROZEN_P8_CONTRACT_SHAPE_REQUIRED")
+    _verify_target_identity(target, portfolio_id)
     if portfolio_id in prior_intent_ids:
         raise PreviewRejected("DUPLICATE_EXECUTION_INTENT")
     effective = _parse_datetime(target.get("effective_time"))
@@ -149,6 +175,8 @@ def build_offline_preview(
         raise PreviewRejected("INVALID_ACCOUNT_EQUITY")
     if not math.isfinite(account.buying_power_usd) or account.buying_power_usd < 0:
         raise PreviewRejected("INVALID_ACCOUNT_BUYING_POWER")
+    if not math.isfinite(account.cash_usd):
+        raise PreviewRejected("INVALID_ACCOUNT_CASH")
     if not math.isfinite(account.multiplier) or account.multiplier < 1.0:
         raise PreviewRejected("INVALID_ACCOUNT_MULTIPLIER")
 
@@ -242,16 +270,22 @@ def build_offline_preview(
         raise PreviewRejected("SHORTING_NOT_AUTHORIZED")
     if gross > 1.0 + 1e-12 and not policy.leverage_permitted:
         raise PreviewRejected("LEVERAGE_NOT_AUTHORIZED")
-    if account.multiplier > 1.0 and not policy.leverage_permitted:
-        raise PreviewRejected("ACCOUNT_LEVERAGE_NOT_AUTHORIZED")
-
-    if identities is None:
+    if weights and identities is None:
         raise PreviewRejected("P2SEC_IDENTITY_RESOLVER_UNAVAILABLE")
     lines: list[PreviewLine] = []
     buy_notional = 0.0
     seen_symbols: set[str] = set()
+    for symbol, position in positions.items():
+        if (
+            not isinstance(symbol, str)
+            or not symbol
+            or not isinstance(position, Position)
+            or not math.isfinite(position.quantity)
+            or not math.isfinite(position.market_value_usd)
+        ):
+            raise PreviewRejected("POSITION_STATE_INVALID")
     for instrument_id, raw_weight in sorted(weights.items()):
-        identity = identities.resolve_p2sec(instrument_id, effective)
+        identity = identities.resolve_p2sec(instrument_id, effective) if identities is not None else None
         if identity is None or not identity.verified or not identity.episode_id:
             raise PreviewRejected("P2SEC_IDENTITY_UNVERIFIED")
         if not _aware(identity.effective_from) or (identity.effective_until is not None and not _aware(identity.effective_until)):
@@ -282,6 +316,20 @@ def build_offline_preview(
             buy_notional += notional
         lines.append(PreviewLine(symbol, side, round(notional, 2), quote.price_usd, notional / quote.price_usd))
 
+    unrepresented_positions = {
+        symbol for symbol, position in positions.items()
+        if (abs(position.quantity) > 1e-12 or abs(position.market_value_usd) > 1e-9)
+        and symbol not in seen_symbols
+    }
+    if unrepresented_positions:
+        # Omitted assets cannot be mapped back to P2SEC here, and this module
+        # intentionally does not own a full liquidation/execution planner.
+        raise PreviewRejected("UNREPRESENTED_POSITION_REQUIRES_LIQUIDATION_PLAN")
+    cash_shortfall = buy_notional > account.cash_usd + 1e-9
+    gross_leverage = gross > 1.0 + 1e-12
+    if cash_shortfall and not policy.leverage_permitted:
+        raise PreviewRejected("INSUFFICIENT_CASH_WITHOUT_LEVERAGE")
     if buy_notional > account.buying_power_usd + 1e-9:
         raise PreviewRejected("INSUFFICIENT_BUYING_POWER")
-    return Preview(portfolio_id, False, tuple(lines))
+    uses_leverage = gross_leverage or cash_shortfall
+    return Preview(portfolio_id, False, tuple(lines), uses_leverage)

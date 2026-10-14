@@ -5479,6 +5479,16 @@ prove only interface mechanics; there is still no real certified portfolio,
 approved human risk envelope, verified P2SEC-to-Alpaca mapping, or verified
 market-data entitlement. Qlib's historical simulation remains the existing
 research result; Alpaca Paper is not forward- or continuous-paper-ready.
+Preview regressions now fail closed when a nonzero existing holding is omitted
+from the target because no complete liquidation plan exists. Account margin
+capability is distinguished from actual target leverage and available cash;
+buying power does not substitute for cash absent leverage authority. The public
+preview requires the existing `rfc8785` JCS package for P8 content identity,
+but it is absent from the checked P9 development runtimes, so that identity
+gate currently blocks rather than falling back to local canonicalization. An
+isolated, separately authorized Paper API engineering test may use synthetic
+fixtures labeled `ENGINEERING_TEST_ONLY`; this does not assert real P2/P4
+certification or waive real-strategy admission and risk gates.
 
 ```text
 P9_ALPACA_PAPER_ACCOUNT_CANDIDATE = SELECTED_BOUNDED_CANDIDATE
@@ -5492,6 +5502,9 @@ P2_V2_SEALED_OOS_ACCESSED = NO
 PAPER_ORDERS_SUBMITTED = 0
 BROKER_MUTATION_ACTIONS = 0
 AQ_NEW_GENERIC_ENGINE_COUNT = 0
+OMITTED_EXISTING_POSITIONS = FAIL_CLOSED_WITHOUT_LIQUIDATION_PLAN
+P8_JCS_CONTENT_IDENTITY = BLOCKED_RFC8785_NOT_INSTALLED
+ENGINEERING_TEST_ONLY_FIXTURES = NOT_REAL_CERTIFICATION
 ```
 
 See [P9 Alpaca Paper thin integration 001](p9-alpaca-paper-thin-integration-001.md)
