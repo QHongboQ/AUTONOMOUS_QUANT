@@ -5558,3 +5558,28 @@ NEXT_P9_TECHNICAL_ACTION = REMAINING_LUMIBOT_OFFLINE_NATIVE_ACCEPTANCE
 ```
 
 See [P9 supervised Paper lifecycle acceptance 001](p9-supervised-paper-lifecycle-acceptance-001.md).
+
+## 32. P9 execution-safety evidence and safe-write review (2026-10-16)
+
+The later offline evidence rollup preserves the distinction between simulated
+cash liquidation, cancel-race failure, Conservative Execution V1 policy/DAY
+tests, the read-only Paper preflight, the blocked public SDK write path, and
+the isolated upstream patch prototype. The independent patch review is
+`REVISION_REQUIRED`: unresolved post-send error paths can still appear as
+ordinary Lumibot errors, and pre-submit intent persistence/restart restoration
+are not integrated. The test prototype remains isolated and uninstalled.
+
+```text
+P9_SUPERVISED_PAPER_LIFECYCLE = PASS (ENGINEERING_TEST_ONLY; PR #153)
+P9_SAFE_WRITE_PUBLIC_PATH = BLOCKED_UPSTREAM
+ISOLATED_SAFE_WRITE_POC = PASS (LOCAL ONLY; NOT UPSTREAM ACCEPTED)
+SAFE_WRITE_PATCH_REVIEW = REVISION_REQUIRED
+P9_FORWARD_PAPER_READY = NO
+P9_CONTINUOUS_PAPER_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+BROKER_MUTATIONS = 0
+```
+
+See [P9 execution-safety evidence rollup 001](p9-execution-safety-evidence-rollup-001.md)
+and [P9 safe-write upstream patch review 001](p9-safe-write-upstream-review-001.md).
