@@ -5537,3 +5537,24 @@ P9_PRODUCTION_AUTHORIZED = NO
 ```
 
 See [P9 Lumibot execution-upstream selection and PR #150 supersession 001](p9-lumibot-execution-upstream-selection-001.md).
+
+## 31. P9 supervised Paper lifecycle acceptance (2026-10-16)
+
+The supervised, bounded Alpaca Paper lifecycle acceptance passed: read-only
+cross-process sync (Stage A), one test BUY followed by fresh-process Lumibot
+order/ownership/position recovery (Stage B), and one authorized cleanup SELL
+(Stage C). At closeout, the test position was zero and no open orders remained.
+This is `ENGINEERING_TEST_ONLY`; it does not certify a strategy or authorize
+forward Paper, continuous Paper, or production trading. The raw `filled` vs
+Lumibot `fill` string comparison is preserved and adjudicated using the pinned
+Lumibot status alias; local evidence files are not committed.
+
+```text
+P9_SUPERVISED_PAPER_LIFECYCLE = PASS
+P9_FORWARD_PAPER_READY = NO
+P9_CONTINUOUS_PAPER_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+NEXT_P9_TECHNICAL_ACTION = REMAINING_LUMIBOT_OFFLINE_NATIVE_ACCEPTANCE
+```
+
+See [P9 supervised Paper lifecycle acceptance 001](p9-supervised-paper-lifecycle-acceptance-001.md).
