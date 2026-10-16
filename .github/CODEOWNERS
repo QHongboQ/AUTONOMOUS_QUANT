@@ -1,0 +1,6 @@
+# AUTONOMOUS_QUANT ownership for code review.
+# All pull requests are assigned to the repository owner for review.
+* @QHongboQ
+
+# Protect this ownership policy as well.
+/.github/ @QHongboQ
