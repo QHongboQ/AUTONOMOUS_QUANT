@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$RepoRoot,
     [Parameter(Mandatory = $true)][string]$RequestPath,
+    [Parameter(Mandatory = $true)][string]$PolicyPath,
     [Parameter(Mandatory = $true)][string]$StateDirectory
 )
 
@@ -20,9 +21,10 @@ function ConvertTo-WslPath {
 
 $repo = ConvertTo-WslPath $RepoRoot
 $request = ConvertTo-WslPath $RequestPath
+$policy = ConvertTo-WslPath $PolicyPath
 $state = ConvertTo-WslPath $StateDirectory
 $entry = "$repo/70-operations-system/research-handoff/p12_research_handoff.py"
 
 & $wslExe -d Ubuntu-24.04 -u zhou -- env "PYTHONPATH=$rfc8785Lib" $python $entry process `
-    --request $request --state-dir $state --synthetic-only
+    --request $request --policy $policy --state-dir $state --synthetic-only
 exit $LASTEXITCODE

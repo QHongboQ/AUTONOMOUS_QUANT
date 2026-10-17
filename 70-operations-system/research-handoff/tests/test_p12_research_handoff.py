@@ -4,13 +4,16 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 HANDOFF_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HANDOFF_DIR))
 import p12_research_handoff as handoff  # noqa: E402
+import standing_policy as policy_gate  # noqa: E402
 
 TEST_ROOT = Path(
     os.environ.get(
@@ -27,6 +30,7 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.run_dir = TEST_ROOT / f"{self._testMethodName}-{uuid.uuid4().hex}"
         self.run_dir.mkdir(parents=True, exist_ok=False)
         self.request_file = self.run_dir / "request.json"
+        self.policy_file = self.run_dir / "test-policy.json"
         self.state_dir = self.run_dir / "state"
         self.assertTrue(str(self.run_dir).startswith(str(TEST_ROOT)))
 
@@ -49,6 +53,14 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
     def _make_request(self) -> dict[str, object]:
         result = self._run("create-synthetic-request", "--output", str(self.request_file))
         self.assertEqual(result.returncode, 0, result.stderr)
+        policy = self._run(
+            "create-synthetic-test-policy",
+            "--request",
+            str(self.request_file),
+            "--output",
+            str(self.policy_file),
+        )
+        self.assertEqual(policy.returncode, 0, policy.stderr)
         return json.loads(self.request_file.read_text(encoding="utf-8"))
 
     def _process_at(self, state_dir: Path, *extra: str) -> subprocess.CompletedProcess[str]:
@@ -56,6 +68,8 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             "process",
             "--request",
             str(self.request_file),
+            "--policy",
+            str(self.policy_file),
             "--state-dir",
             str(state_dir),
             "--synthetic-only",
@@ -65,14 +79,28 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
     def _process(self, *extra: str) -> subprocess.CompletedProcess[str]:
         return self._process_at(self.state_dir, *extra)
 
+    def test_missing_policy_is_denied_before_durable_claim(self) -> None:
+        self._run("create-synthetic-request", "--output", str(self.request_file))
+        result = self._run(
+            "process",
+            "--request",
+            str(self.request_file),
+            "--state-dir",
+            str(self.state_dir),
+            "--synthetic-only",
+        )
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(json.loads(result.stdout)["classification"], "DENIED_POLICY_MISSING")
+        self.assertFalse(self.state_dir.exists())
+
     def _dispatch_lines(self) -> list[dict[str, object]]:
         files = list(self.state_dir.glob("*.dispatch.jsonl")) if self.state_dir.exists() else []
         return [json.loads(line) for path in files for line in path.read_text().splitlines()]
 
-    def _record_path(self, kind: str) -> Path:
+    def _record_path(self, kind: str, state_dir: Path | None = None) -> Path:
         request_id = json.loads(self.request_file.read_text(encoding="utf-8"))[
             "research_request"]["request_id"]
-        return self.state_dir / f"{request_id.removeprefix('sha256:')}.{kind}.json"
+        return (state_dir or self.state_dir) / f"{request_id.removeprefix('sha256:')}.{kind}.json"
 
     def test_p4_factory_creates_bootstrap_request_without_champion(self) -> None:
         envelope = handoff.create_synthetic_request()
@@ -97,11 +125,56 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(result["real_dispatch_permission"], "DENIED")
         self.assertEqual(result["candidate_count"], 0)
         self.assertEqual(result["status"]["request_id"], envelope["research_request"]["request_id"])
+        policy_id = json.loads(self.policy_file.read_text(encoding="utf-8"))["policy_id"]
+        self.assertEqual(result["status"]["standing_policy_id"], policy_id)
+        for record_kind in ("claim", "dispatching", "terminal"):
+            self.assertEqual(json.loads(self._record_path(record_kind).read_text())["standing_policy_id"], policy_id)
 
         replay = self._process()
         self.assertEqual(replay.returncode, 0, replay.stderr)
         self.assertEqual(json.loads(replay.stdout)["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
         self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_different_valid_policy_for_same_request_blocks_replay(self) -> None:
+        self._make_request()
+        first = self._process()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        alternate_policy = json.loads(self.policy_file.read_text(encoding="utf-8"))
+        alternate_policy.pop("policy_id")
+        alternate_policy["maximum_run_spend_usd"] = "0.24"
+        alternate_policy["policy_id"] = policy_gate.policy_identity(alternate_policy)
+        self.policy_file.write_text(json.dumps(alternate_policy), encoding="utf-8")
+
+        replay = self._process()
+        self.assertEqual(replay.returncode, 3, replay.stderr)
+        self.assertEqual(
+            json.loads(replay.stdout)["classification"],
+            "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+        )
+        self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_policy_identity_tampering_in_any_persisted_marker_blocks_replay(self) -> None:
+        self._make_request()
+        for marker_kind in ("claim", "dispatching", "terminal"):
+            state_dir = self.run_dir / f"state-{marker_kind}"
+            first = self._process_at(state_dir)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            marker_path = self._record_path(marker_kind, state_dir)
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            marker["standing_policy_id"] = "sha256:" + "f" * 64
+            marker_path.write_text(json.dumps(marker), encoding="utf-8")
+
+            replay = self._process_at(state_dir)
+            self.assertEqual(replay.returncode, 3, replay.stderr)
+            self.assertEqual(
+                json.loads(replay.stdout)["classification"],
+                "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+            )
+            self.assertEqual(
+                len(list(state_dir.glob("*.dispatch.jsonl"))),
+                1,
+                f"marker={marker_kind}",
+            )
 
     def test_real_dispatch_defaults_to_denied(self) -> None:
         self._make_request()
@@ -120,6 +193,8 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             "process",
             "--request",
             str(self.request_file),
+            "--policy",
+            str(self.policy_file),
             "--state-dir",
             str(self.state_dir),
             "--synthetic-only",
@@ -137,7 +212,11 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(sum(1 for _, _, code in outputs if code == 3), 1, outputs)
         classes = [json.loads(stdout)["classification"] for stdout, _, _ in outputs]
         self.assertEqual(classes.count("SUCCEEDED_SYNTHETIC"), 1, classes)
-        self.assertEqual(classes.count("BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS"), 1, classes)
+        blocked = {
+            "BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS",
+            "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
+        }
+        self.assertEqual(sum(classification in blocked for classification in classes), 1, classes)
         self.assertEqual(len(self._dispatch_lines()), 1)
 
     def test_crash_after_claim_is_not_retried_on_process_restart(self) -> None:
