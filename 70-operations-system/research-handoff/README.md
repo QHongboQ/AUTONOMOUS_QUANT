@@ -5,13 +5,61 @@
 This is a thin, test-only P12 adapter. P4 owns lifecycle meaning and creates
 `LifecycleDecisionEvidenceV1` and `ResearchRequestV1`; RD-Agent owns autonomous
 research; Qlib owns training and Recorder outputs; P2 alone owns certification.
-This adapter does not run RD-Agent, Qlib, DVC, MLflow, a provider, or a broker.
-Its only dispatch target is a local inert executable that records a synthetic
-invocation and reports zero Candidates.
+The default P12 dispatch target is an inert local synthetic executable. One
+explicit `TEST_ONLY` option runs a bounded official RD-Agent chat/embedding
+backend smoke through the existing Docker Compose/LiteLLM Proxy/mock pattern.
+The Docker target does not start a research loop, Qlib, DVC, MLflow, a real
+provider, or a broker.
 
 P3's documented future native command remains
-`rdagent fin_quant --loop-n 1`. The real command is not present as a dispatch
-option here. Real dispatch permission is always `DENIED`.
+`rdagent fin_quant --loop-n 1`. That research loop is not present as a dispatch
+option here. The Docker target calls only RD-Agent 1.0.0's native chat and
+embedding backend methods. Real dispatch permission is always `DENIED`.
+
+### Opt-in Docker RD-Agent native smoke
+
+The default target remains `INERT_LOCAL_EXECUTABLE`. A caller must explicitly
+select `DOCKER_RDAGENT_PROXY_MOCK_SMOKE` and supply a runtime directory outside
+the repository. The existing P12 intake validates the synthetic P4 request and
+TEST_ONLY policy, creates the same exclusive durable claim, then invokes the
+specific Compose target. Claim, dispatch, and terminal records all bind the
+selected target identity; an inert-target result cannot replay as Docker
+success. A valid terminal replay returns without invoking Compose again. A
+worker failure becomes a failed terminal result. If dispatch or cleanup is
+ambiguous, P12 returns nonzero and blocks replay without redispatch.
+
+The AQ-owned Compose template pins the verified LiteLLM Proxy v1.105.1 image,
+Postgres/Redis and the RD-Agent 1.0.0 worker. Native Compose healthchecks and
+`depends_on: service_healthy` gates start. Each claim receives a unique
+Compose project and a fresh test database. The controller creates an ephemeral
+Proxy admin key and a virtual key scoped only to `deepseek-chat` and
+`qwen3-embedding:0.6b` in process memory. The worker receives only the scoped
+test key and Proxy URL. It runs as UID 10001 with a read-only root, bounded
+tmpfs/resources, no host mounts or Docker socket, and only an internal network
+shared with the Proxy. The Proxy routes both model aliases to the local mock.
+The smoke verifies one mock chat and one mock embedding call, then tears down
+the isolated Compose project and verifies its containers, networks and
+volumes are gone. The worker image may remain cached; no credentials are stored
+in the repository or runtime directory.
+
+The temporary host command is:
+
+```bash
+export PYTHONPATH=/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs
+/home/zhou/AQ_ENVS/rdagent/bin/python \
+  70-operations-system/research-handoff/p12_research_handoff.py process \
+  --request /mnt/d/AQ/OPERATIONS/P12/<run>/request.json \
+  --policy /mnt/d/AQ/OPERATIONS/P12/<run>/test-policy.json \
+  --state-dir /mnt/d/AQ/OPERATIONS/P12/<run>/state \
+  --synthetic-only \
+  --target DOCKER_RDAGENT_PROXY_MOCK_SMOKE \
+  --docker-runtime-dir /mnt/d/AQ/OPERATIONS/P12/<run>/runtime
+```
+
+`Invoke-SyntheticResearchHandoff.ps1` accepts the same explicit target and
+runtime-directory parameters for a one-shot Task Scheduler invocation. The
+existing health tasks and any permanent research schedule are not changed.
+TEST_ONLY admission keeps real research spending and dispatch denied.
 
 ## Synthetic request and intake
 
