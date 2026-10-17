@@ -195,6 +195,8 @@ def evaluate_policy_admission(
     *,
     p4_is_test_fixture: bool,
     evidence: AdmissionEvidence,
+    signed_approval: dict[str, Any] | None = None,
+    trusted_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return an admission classification; this gate can never permit real P3."""
     if policy_value is None:
@@ -207,6 +209,33 @@ def evaluate_policy_admission(
         )
     except (ValidationError, TypeError, ValueError):
         return {"classification": "DENIED_POLICY_INVALID"}
+
+    signature_result: dict[str, Any] | None = None
+    if signed_approval is not None:
+        if not isinstance(trusted_authority, dict):
+            return {"classification": "DENIED_TRUSTED_SOURCE_UNAVAILABLE"}
+        # Import lazily so the existing TEST_ONLY synthetic handoff does not
+        # require signature material or change its stable baseline.
+        try:
+            import owner_signed_authority
+
+            signature_result = owner_signed_authority.verify_signed_research_policy(
+                signed_approval,
+                policy,
+                request,
+                trusted_public_key_b64=trusted_authority.get("trusted_public_key_b64"),
+                trusted_key_id=trusted_authority.get("trusted_key_id"),
+                revocation_snapshot=trusted_authority.get("revocation_snapshot"),
+                minimum_trusted_epoch=trusted_authority.get("minimum_trusted_epoch"),
+                trusted_source_available=trusted_authority.get("trusted_source_available") is True,
+            )
+        except (ImportError, TypeError, ValueError):
+            return {"classification": "DENIED_SIGNATURE_VERIFIER_UNAVAILABLE"}
+        if signature_result["classification"] != "VERIFIED_TEST_ONLY_SIGNATURE":
+            return {
+                "classification": signature_result["classification"],
+                "real_dispatch_permission": "DENIED",
+            }
 
     if policy.authorization_status != "APPROVED":
         return {"classification": "DENIED_POLICY_NOT_APPROVED", "policy_id": policy.policy_id}
@@ -289,6 +318,14 @@ def evaluate_policy_admission(
     return {
         "classification": "ADMITTED_SYNTHETIC_TEST_ONLY",
         "policy_id": policy.policy_id,
+        "policy_signature_verification": (
+            signature_result["classification"] if signature_result is not None else "NOT_PROVIDED"
+        ),
+        "owner_approval_evidence_identity": (
+            signature_result.get("owner_approval_evidence_identity")
+            if signature_result is not None
+            else None
+        ),
         "real_dispatch_permission": "DENIED",
         "spending_enforcement": "SIMULATED_ONLY_NOT_NATIVE_ENFORCEMENT",
         "hard_worst_case_exposure_guarantee": False,

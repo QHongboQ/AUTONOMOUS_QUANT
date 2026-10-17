@@ -55,6 +55,86 @@ path. Therefore an otherwise well-formed `HUMAN_APPROVED` policy is denied,
 and real dispatch remains unavailable. See the installed-runtime findings
 below before treating any future provider allowlist or limit as effective.
 
+### TEST_ONLY signed-policy verification POC
+
+`owner_signed_authority.py` is a thin verifier for the existing
+`P12StandingResearchPolicyV1`. Because that policy intentionally has no
+signature field, the verifier receives a separate, minimal
+`{payload, signature}` evidence envelope; the signed payload binds the exact
+policy identity, purpose/domain, key identity, approval-evidence identity,
+policy version, effective/expiry times, scope, provenance, research families,
+budget identity, and authority epoch. It uses PyCA `cryptography`'s supported
+Ed25519 public-key verification API and the already available RFC 8785 0.1.4
+implementation. It contains no signing operation or private key.
+
+The P12 admission function accepts this envelope only alongside an explicit
+trusted-authority snapshot. The snapshot includes a signed revocation view and
+an externally supplied minimum epoch. Missing authority, invalid signatures,
+purpose reuse, changed policy/request binding, revoked or expired approvals,
+and stale/rolled-back epochs fail closed. The checked-in tests create
+ephemeral keys in memory and label all evidence `TEST_ONLY`; successful
+verification is not human approval and still reports real dispatch `DENIED`.
+The synthetic policy gate still denies `HUMAN_APPROVED` policies. The optional
+`--test-signed-approval` and `--test-trusted-authority` intake inputs are only
+for this offline POC; both are required together, and a request replay must
+present the same currently valid approval evidence to match the durable claim.
+
+This is not production rollback protection: this host has no independent,
+owner-controlled monotonic epoch source. A signed old revocation snapshot can
+be replayed if the independent epoch floor is unavailable or controlled by
+the worker. Production owner approval therefore remains untrusted and real
+dispatch remains denied. The minimum future authority design is an owner-held
+signing key and revocation/epoch source outside the research worker, with only
+verification keys and authenticated current snapshots available to P12. The
+worker must not control the key configuration, approval evidence, revocation
+state, verifier executable, or rollback floor.
+
+### Host identity and provider-bypass findings (2026-10-17)
+
+The current Windows user is `DESKTOP-IG1RJUJ\1`; the existing P12 scheduled
+tasks run as that same account. The WSL P3 user is `zhou` (`uid=1000`) and is
+in the `sudo` and `docker` groups. The P3 `.env` is mode `0600` and owned by
+`zhou`, so this worker identity can read it. It contains a
+`DEEPSEEK_API_KEY` entry (the value was not read); the current WSL shell did
+not inherit that variable. No RD-Agent dotenv auto-loader was found in the
+installed package/startup paths inspected, but a worker running as `zhou` can
+read and explicitly load the file, and RD-Agent's LiteLLM backend supports
+direct provider credentials. Removing one inherited environment variable
+would not close this file-based bypass. Proxy-only worker routing is therefore
+not established. Before any real research worker is considered, the owner
+must revoke/rotate the P3 DeepSeek credential and provision a worker that can
+read only restricted Proxy credentials and approved Proxy URLs.
+
+The prior LiteLLM POC still has `.env` (environment/configuration type),
+`virtual-key.txt` and `p3-virtual-key.txt` (token text type). Their contents
+were not read. The POC Proxy and database/Redis volumes were removed, so the
+test virtual keys have no current backing database. The POC `.env` test
+master/salt credentials are not believed to be active against a service now;
+the owner should rotate them before restoring that POC service or its data.
+The POC directory ACL includes the same Windows account, SYSTEM, and
+Administrators, and its WSL `/mnt/d` view is not a worker-isolation boundary.
+Deletion was previously rejected by automatic safety review; this task did not
+retry or work around that rejection.
+
+No production signing private key was generated. The Windows and WSL users
+are not separate security principals for this deployment, and the WSL user
+can modify the checked-out verifier. ACLs and Unix modes alone therefore do
+not establish owner/worker separation. Owner approval remains untrusted until
+code integrity, authority configuration, credential paths, and rollback state
+are protected from a dedicated research-worker identity.
+
+Official API references: [PyCA Ed25519 signing and verification](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/)
+and [RFC 8785 JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785).
+
+Focused verification test command (uses the already installed P3 runtime and
+RFC 8785 library; no dependency install):
+
+```bash
+export PYTHONPATH=/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs
+/home/zhou/miniforge3/envs/rdagent-official-v1/bin/python -m unittest \
+  70-operations-system/research-handoff/tests/test_owner_signed_authority.py -v
+```
+
 ### P3 provider-path findings
 
 The installed P3 runtime inspected for this change is RD-Agent 1.0.0 with
@@ -192,7 +272,7 @@ binding, provider/model allowlists, unknown or exceeded simulated spend,
 negative/non-finite/invalid spend representations, concurrency, and resource
 caps. Replay tests cover same-policy replay, changed valid policy, and
 tampered policy identity in persisted records. Together the offline suite
-contains 27 tests. Its budget checks are synthetic admission tests only: they
+contained 38 tests after adding the signed-authority POC cases. Its budget checks are synthetic admission tests only: they
 do not prove pre-call provider charging enforcement or a race-safe real
 concurrency limit.
 

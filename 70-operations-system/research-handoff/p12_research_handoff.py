@@ -183,6 +183,7 @@ def _replay_result(
     request_id: str,
     request_digest: str,
     standing_policy_id: str,
+    owner_approval_evidence_identity: str | None,
 ) -> dict[str, Any]:
     try:
         claim = _read_json_nofollow(claim_path)
@@ -199,6 +200,7 @@ def _replay_result(
         or not _valid_attempt_id(claim.get("attempt_id"))
         or claim.get("standing_policy_id") != standing_policy_id
         or claim.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
+        or claim.get("owner_approval_evidence_identity") != owner_approval_evidence_identity
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -226,6 +228,7 @@ def _replay_result(
         or dispatch_marker.get("dispatch_mode") != "SYNTHETIC_ONLY"
         or dispatch_marker.get("standing_policy_id") != standing_policy_id
         or dispatch_marker.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
+        or dispatch_marker.get("owner_approval_evidence_identity") != owner_approval_evidence_identity
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -251,6 +254,7 @@ def _replay_result(
         or status.get("attempt_id") != claim.get("attempt_id")
         or status.get("standing_policy_id") != standing_policy_id
         or status.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
+        or status.get("owner_approval_evidence_identity") != owner_approval_evidence_identity
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -302,6 +306,8 @@ def process_synthetic_request(
     target_mode: str = "success",
     test_interrupt_after: str | None = None,
     test_before_claim_delay_ms: int = 0,
+    signed_approval: dict[str, Any] | None = None,
+    trusted_authority: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], int]:
     if target_mode not in {"success", "failure"}:
         raise ValueError("synthetic target mode must be success or failure")
@@ -330,6 +336,16 @@ def process_synthetic_request(
             },
             _EXIT_BLOCKED,
         )
+    if (signed_approval is None) != (trusted_authority is None):
+        return (
+            {
+                "classification": "DENIED_SIGNED_AUTHORITY_INCOMPLETE",
+                "request_id": request.request_id,
+                "real_dispatch_permission": "DENIED",
+                "dispatch_count_added": 0,
+            },
+            _EXIT_BLOCKED,
+        )
     try:
         policy_value = _read_json_nofollow(policy_path)
     except Exception as exc:
@@ -351,6 +367,8 @@ def process_synthetic_request(
         evidence=policy_gate.synthetic_admission_evidence(
             approval_source_identity=test_policy.approval_source_identity
         ),
+        signed_approval=signed_approval,
+        trusted_authority=trusted_authority,
     )
     if admission["classification"] != "ADMITTED_SYNTHETIC_TEST_ONLY":
         return (
@@ -364,6 +382,7 @@ def process_synthetic_request(
         )
 
     request_digest = _canonical_digest(envelope)
+    owner_approval_evidence_identity = admission.get("owner_approval_evidence_identity")
     state_dir.mkdir(parents=True, exist_ok=True)
     claim_path = _claim_file(state_dir, request.request_id)
     dispatch_path = _dispatch_file(state_dir, request.request_id)
@@ -378,6 +397,10 @@ def process_synthetic_request(
         "spending_permission": "NOT_PROVEN_DENIED",
         "standing_policy_id": test_policy.policy_id,
         "policy_admission": admission["classification"],
+        "policy_signature_verification": admission.get(
+            "policy_signature_verification", "NOT_PROVIDED"
+        ),
+        "owner_approval_evidence_identity": owner_approval_evidence_identity,
     }
     if test_before_claim_delay_ms:
         import time
@@ -394,6 +417,7 @@ def process_synthetic_request(
             request.request_id,
             request_digest,
             test_policy.policy_id,
+            owner_approval_evidence_identity,
         )
         if replay["classification"] == "REPLAY_TERMINAL_NO_DISPATCH":
             return replay, 0
@@ -505,6 +529,8 @@ def main(argv: list[str] | None = None) -> int:
     process_parser.add_argument("--policy", type=Path)
     process_parser.add_argument("--state-dir", type=Path, required=True)
     process_parser.add_argument("--synthetic-only", action="store_true")
+    process_parser.add_argument("--test-signed-approval", type=Path)
+    process_parser.add_argument("--test-trusted-authority", type=Path)
     process_parser.add_argument("--target-mode", choices=("success", "failure"), default="success")
     process_parser.add_argument(
         "--test-interrupt-after", choices=("claim", "dispatch-start"), help=argparse.SUPPRESS
@@ -565,6 +591,16 @@ def main(argv: list[str] | None = None) -> int:
             target_mode=args.target_mode,
             test_interrupt_after=args.test_interrupt_after,
             test_before_claim_delay_ms=args.test_before_claim_delay_ms,
+            signed_approval=(
+                _read_json_nofollow(args.test_signed_approval)
+                if args.test_signed_approval is not None
+                else None
+            ),
+            trusted_authority=(
+                _read_json_nofollow(args.test_trusted_authority)
+                if args.test_trusted_authority is not None
+                else None
+            ),
         )
         print(json.dumps(result, sort_keys=True))
         return exit_code
