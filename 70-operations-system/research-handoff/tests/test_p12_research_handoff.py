@@ -4,13 +4,16 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 HANDOFF_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HANDOFF_DIR))
 import p12_research_handoff as handoff  # noqa: E402
+import standing_policy as policy_gate  # noqa: E402
 
 TEST_ROOT = Path(
     os.environ.get(
@@ -94,10 +97,10 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         files = list(self.state_dir.glob("*.dispatch.jsonl")) if self.state_dir.exists() else []
         return [json.loads(line) for path in files for line in path.read_text().splitlines()]
 
-    def _record_path(self, kind: str) -> Path:
+    def _record_path(self, kind: str, state_dir: Path | None = None) -> Path:
         request_id = json.loads(self.request_file.read_text(encoding="utf-8"))[
             "research_request"]["request_id"]
-        return self.state_dir / f"{request_id.removeprefix('sha256:')}.{kind}.json"
+        return (state_dir or self.state_dir) / f"{request_id.removeprefix('sha256:')}.{kind}.json"
 
     def test_p4_factory_creates_bootstrap_request_without_champion(self) -> None:
         envelope = handoff.create_synthetic_request()
@@ -122,11 +125,56 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(result["real_dispatch_permission"], "DENIED")
         self.assertEqual(result["candidate_count"], 0)
         self.assertEqual(result["status"]["request_id"], envelope["research_request"]["request_id"])
+        policy_id = json.loads(self.policy_file.read_text(encoding="utf-8"))["policy_id"]
+        self.assertEqual(result["status"]["standing_policy_id"], policy_id)
+        for record_kind in ("claim", "dispatching", "terminal"):
+            self.assertEqual(json.loads(self._record_path(record_kind).read_text())["standing_policy_id"], policy_id)
 
         replay = self._process()
         self.assertEqual(replay.returncode, 0, replay.stderr)
         self.assertEqual(json.loads(replay.stdout)["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
         self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_different_valid_policy_for_same_request_blocks_replay(self) -> None:
+        self._make_request()
+        first = self._process()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        alternate_policy = json.loads(self.policy_file.read_text(encoding="utf-8"))
+        alternate_policy.pop("policy_id")
+        alternate_policy["maximum_run_spend_usd"] = "0.24"
+        alternate_policy["policy_id"] = policy_gate.policy_identity(alternate_policy)
+        self.policy_file.write_text(json.dumps(alternate_policy), encoding="utf-8")
+
+        replay = self._process()
+        self.assertEqual(replay.returncode, 3, replay.stderr)
+        self.assertEqual(
+            json.loads(replay.stdout)["classification"],
+            "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+        )
+        self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_policy_identity_tampering_in_any_persisted_marker_blocks_replay(self) -> None:
+        self._make_request()
+        for marker_kind in ("claim", "dispatching", "terminal"):
+            state_dir = self.run_dir / f"state-{marker_kind}"
+            first = self._process_at(state_dir)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            marker_path = self._record_path(marker_kind, state_dir)
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            marker["standing_policy_id"] = "sha256:" + "f" * 64
+            marker_path.write_text(json.dumps(marker), encoding="utf-8")
+
+            replay = self._process_at(state_dir)
+            self.assertEqual(replay.returncode, 3, replay.stderr)
+            self.assertEqual(
+                json.loads(replay.stdout)["classification"],
+                "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+            )
+            self.assertEqual(
+                len(list(state_dir.glob("*.dispatch.jsonl"))),
+                1,
+                f"marker={marker_kind}",
+            )
 
     def test_real_dispatch_defaults_to_denied(self) -> None:
         self._make_request()

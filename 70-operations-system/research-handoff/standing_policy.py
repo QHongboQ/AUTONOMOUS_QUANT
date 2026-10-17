@@ -263,6 +263,12 @@ def evaluate_policy_admission(
         return {"classification": "DENIED_REAL_SPENDING_ENFORCEMENT_NOT_PROVEN", "policy_id": policy.policy_id}
     if evidence.period_spend_usd is None or evidence.estimated_run_spend_usd is None:
         return {"classification": "DENIED_SPEND_UNKNOWN", "policy_id": policy.policy_id}
+    spend_values = (evidence.period_spend_usd, evidence.estimated_run_spend_usd)
+    if any(
+        not isinstance(value, Decimal) or not value.is_finite() or value < 0
+        for value in spend_values
+    ):
+        return {"classification": "DENIED_SPEND_EVIDENCE_INVALID", "policy_id": policy.policy_id}
     if evidence.estimated_run_spend_usd > policy.maximum_run_spend_usd:
         return {"classification": "DENIED_PER_RUN_SPEND_LIMIT", "policy_id": policy.policy_id}
     if evidence.period_spend_usd + evidence.estimated_run_spend_usd > policy.maximum_period_spend_usd:

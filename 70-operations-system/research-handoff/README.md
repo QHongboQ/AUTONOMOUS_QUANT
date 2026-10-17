@@ -40,10 +40,12 @@ an already synthetic P4 request. It is never an owner approval record.
 
 The intake evaluates expiry, revocation, request scope, provider/model
 allowlists, simulated period/per-run spend, concurrency snapshot, and
-runtime/memory/storage bounds before creating a durable request claim. The
-synthetic fixture's example numeric limits exist only to exercise validation;
-they are not proposed or approved real spending amounts. A `research_budget_identity`
-or policy hash does not enforce a charge ceiling. The admission result
+runtime/memory/storage bounds before creating a durable request claim.
+Simulated spend evidence must be present, Decimal-typed, finite, and
+nonnegative before budget comparisons; invalid evidence is denied before any
+claim is written. The synthetic fixture's example numeric limits exist only to exercise validation;
+they are not proposed or approved real spending amounts. A
+`research_budget_identity` or policy hash does not enforce a charge ceiling. The admission result
 explicitly identifies spending enforcement as simulation-only and keeps real
 dispatch permission denied.
 
@@ -90,7 +92,10 @@ leave an unknown outcome; P12 deliberately does not infer success or retry.
 Only a fully consistent `SUCCEEDED_SYNTHETIC` replay exits zero. A failed
 terminal replay exits 4; blocked, corrupt, mismatched, and ambiguous replay
 states exit 3. Success requires matching request and attempt identities across
-all markers and a terminal return code consistent with the terminal state.
+all markers, the same currently admitted `standing_policy_id` and policy
+admission across claim/dispatch/terminal records, and a terminal return code
+consistent with the terminal state. A policy change or persisted identity
+mismatch blocks replay without redispatch or record replacement.
 This is durable at the host filesystem/process level tested here; it is not an
 exactly-once guarantee across arbitrary power loss, device failure, or external
 side effects.
@@ -169,7 +174,7 @@ On the actual host D: path through WSL's `/mnt/d` 9P/DrvFS mount:
 
 - 24 concurrent `O_CREAT | O_EXCL` attempts produced one durable claim winner;
 - file and directory `fsync` succeeded for immutable claim and terminal markers;
-- the 14-case durable handoff suite passed twice, covering same-ID replay, same-ID concurrent intake,
+- the 16-case durable handoff suite passed twice, covering same-ID replay, same-ID concurrent intake,
   post-claim process interruption, unknown post-dispatch state, failed target,
   failed terminal replay, terminal return-code consistency, mismatched attempt
   identity, corrupt records, and malformed/tampered requests;
@@ -181,13 +186,15 @@ On the actual host D: path through WSL's `/mnt/d` 9P/DrvFS mount:
 - no P3 command, LLM/provider, Qlib, certification, broker, or production
   action was invoked. The synthetic terminal record has zero Candidates.
 
-The standing-policy tests add nine focused cases for policy hash tampering,
+The standing-policy tests add eleven focused cases for policy hash tampering,
 untrusted owner approval, expiry/revocation, P4 scope/provenance/budget
 binding, provider/model allowlists, unknown or exceeded simulated spend,
-concurrency, and resource caps. Together the current offline suite contains
-23 tests. Its budget checks are synthetic admission tests only: they do not
-prove pre-call provider charging enforcement or a race-safe real concurrency
-limit.
+negative/non-finite/invalid spend representations, concurrency, and resource
+caps. Replay tests cover same-policy replay, changed valid policy, and
+tampered policy identity in persisted records. Together the offline suite
+contains 27 tests. Its budget checks are synthetic admission tests only: they
+do not prove pre-call provider charging enforcement or a race-safe real
+concurrency limit.
 
 The acceptance record proves process-level durable replay on this host file
 path. It does not prove recovery from power loss, disk/controller failure, or

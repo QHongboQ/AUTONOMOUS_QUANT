@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 HANDOFF_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HANDOFF_DIR))
@@ -165,6 +168,59 @@ class StandingResearchPolicyTests(unittest.TestCase):
             )),
             "DENIED_SPEND_UNKNOWN",
         )
+
+    def test_negative_nonfinite_and_invalid_spend_evidence_are_denied(self) -> None:
+        invalid_values = (
+            Decimal("-0.01"),
+            Decimal("NaN"),
+            Decimal("Infinity"),
+            Decimal("-Infinity"),
+            "0.01",
+            0.01,
+            1,
+        )
+        for invalid_value in invalid_values:
+            for field in ("period_spend_usd", "estimated_run_spend_usd"):
+                with self.subTest(field=field, value=repr(invalid_value)):
+                    evidence = gate.synthetic_admission_evidence(
+                        now=self.now,
+                        approval_source_identity=self.policy.approval_source_identity,
+                    )
+                    evidence = evidence.__class__(
+                        **{**evidence.__dict__, field: invalid_value}
+                    )
+                    self.assertEqual(
+                        self.evaluate(evidence=evidence),
+                        "DENIED_SPEND_EVIDENCE_INVALID",
+                    )
+
+    def test_invalid_spend_evidence_returns_nonzero_from_intake(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            request_path = root / "request.json"
+            policy_path = root / "policy.json"
+            request_path.write_text(
+                json.dumps(handoff.create_synthetic_request()), encoding="utf-8"
+            )
+            policy_path.write_text(
+                json.dumps(self.policy.model_dump(mode="json")), encoding="utf-8"
+            )
+            invalid_evidence = gate.synthetic_admission_evidence(
+                now=self.now,
+                approval_source_identity=self.policy.approval_source_identity,
+                estimated_run_spend_usd=Decimal("NaN"),
+            )
+            with patch.object(
+                handoff.policy_gate,
+                "synthetic_admission_evidence",
+                return_value=invalid_evidence,
+            ):
+                result, exit_code = handoff.process_synthetic_request(
+                    request_path, root / "state", policy_path
+                )
+            self.assertEqual(result["classification"], "DENIED_SPEND_EVIDENCE_INVALID")
+            self.assertEqual(exit_code, 3)
+            self.assertFalse((root / "state").exists())
 
 
 if __name__ == "__main__":

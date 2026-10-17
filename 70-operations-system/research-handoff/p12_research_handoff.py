@@ -182,6 +182,7 @@ def _replay_result(
     status_path: Path,
     request_id: str,
     request_digest: str,
+    standing_policy_id: str,
 ) -> dict[str, Any]:
     try:
         claim = _read_json_nofollow(claim_path)
@@ -196,6 +197,8 @@ def _replay_result(
         or claim.get("request_id") != request_id
         or claim.get("request_digest") != request_digest
         or not _valid_attempt_id(claim.get("attempt_id"))
+        or claim.get("standing_policy_id") != standing_policy_id
+        or claim.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -221,6 +224,8 @@ def _replay_result(
         or dispatch_marker.get("request_digest") != request_digest
         or dispatch_marker.get("attempt_id") != claim.get("attempt_id")
         or dispatch_marker.get("dispatch_mode") != "SYNTHETIC_ONLY"
+        or dispatch_marker.get("standing_policy_id") != standing_policy_id
+        or dispatch_marker.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -244,6 +249,8 @@ def _replay_result(
         status.get("request_id") != request_id
         or status.get("request_digest") != request_digest
         or status.get("attempt_id") != claim.get("attempt_id")
+        or status.get("standing_policy_id") != standing_policy_id
+        or status.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -386,6 +393,7 @@ def process_synthetic_request(
             status_path,
             request.request_id,
             request_digest,
+            test_policy.policy_id,
         )
         if replay["classification"] == "REPLAY_TERMINAL_NO_DISPATCH":
             return replay, 0
