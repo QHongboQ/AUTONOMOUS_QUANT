@@ -78,6 +78,6 @@ roster is created. `P7_TO_P8=SCHEMA_ONLY` validates a fixture with RFC 8785
 
 Validation: Candidate V4 projection 19/19 in the LF-canonical test worktree;
 P4 policy 53/53; P7 roster contract/handoff 7/7 and 6/6 in their existing
-dependency environments; P8 contract 12/12; the integration suite 3/3 on two
+dependency environments; P8 contract 12/12; the integration suite 4/4 on two
 consecutive runs, with identical synthetic CLI output on replay. No sealed OOS
 data, training, broker endpoint, or order is accessed by this test entry point.
