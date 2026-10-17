@@ -28,6 +28,7 @@ P4_POLICY_DIR = (
 sys.path.insert(0, str(P4_POLICY_DIR))
 
 import aq_p4_policy as p4  # noqa: E402
+import standing_policy as policy_gate  # noqa: E402
 
 _REQUEST_ID_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TERMINAL_STATES = {"SUCCEEDED_SYNTHETIC", "FAILED_SYNTHETIC"}
@@ -71,6 +72,16 @@ def write_synthetic_request(output_path: Path) -> dict[str, Any]:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     _durable_json_create(output_path, envelope)
     return envelope
+
+
+def write_synthetic_test_policy(request_path: Path, output_path: Path) -> dict[str, Any]:
+    _, decision, request = _validate_envelope(request_path)
+    if decision.evidence_classification != "TEST_FIXTURE_NOT_REAL_EVIDENCE":
+        raise ValueError("synthetic TEST_ONLY policy requires a P4 test fixture")
+    policy = policy_gate.create_synthetic_test_policy(request)
+    payload = policy.model_dump(mode="json")
+    _durable_json_create(output_path, payload)
+    return payload
 
 
 def _canonical_digest(value: dict[str, Any]) -> str:
@@ -279,6 +290,7 @@ def _replay_result(
 def process_synthetic_request(
     request_path: Path,
     state_dir: Path,
+    policy_path: Path | None,
     *,
     target_mode: str = "success",
     test_interrupt_after: str | None = None,
@@ -301,6 +313,49 @@ def process_synthetic_request(
             _EXIT_BLOCKED,
         )
 
+    if policy_path is None:
+        return (
+            {
+                "classification": "DENIED_POLICY_MISSING",
+                "request_id": request.request_id,
+                "real_dispatch_permission": "DENIED",
+                "dispatch_count_added": 0,
+            },
+            _EXIT_BLOCKED,
+        )
+    try:
+        policy_value = _read_json_nofollow(policy_path)
+    except Exception as exc:
+        return (
+            {
+                "classification": "DENIED_POLICY_UNAVAILABLE_OR_INVALID",
+                "error": type(exc).__name__,
+                "request_id": request.request_id,
+                "real_dispatch_permission": "DENIED",
+                "dispatch_count_added": 0,
+            },
+            _EXIT_BLOCKED,
+        )
+    test_policy = policy_gate.P12StandingResearchPolicyV1.model_validate(policy_value)
+    admission = policy_gate.evaluate_policy_admission(
+        request,
+        test_policy,
+        p4_is_test_fixture=True,
+        evidence=policy_gate.synthetic_admission_evidence(
+            approval_source_identity=test_policy.approval_source_identity
+        ),
+    )
+    if admission["classification"] != "ADMITTED_SYNTHETIC_TEST_ONLY":
+        return (
+            {
+                "classification": admission["classification"],
+                "request_id": request.request_id,
+                "real_dispatch_permission": "DENIED",
+                "dispatch_count_added": 0,
+            },
+            _EXIT_BLOCKED,
+        )
+
     request_digest = _canonical_digest(envelope)
     state_dir.mkdir(parents=True, exist_ok=True)
     claim_path = _claim_file(state_dir, request.request_id)
@@ -314,6 +369,8 @@ def process_synthetic_request(
         "dispatch_mode": "SYNTHETIC_ONLY",
         "real_dispatch_permission": "DENIED",
         "spending_permission": "NOT_PROVEN_DENIED",
+        "standing_policy_id": test_policy.policy_id,
+        "policy_admission": admission["classification"],
     }
     if test_before_claim_delay_ms:
         import time
@@ -432,8 +489,12 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     create_parser = subparsers.add_parser("create-synthetic-request")
     create_parser.add_argument("--output", type=Path, required=True)
+    policy_parser = subparsers.add_parser("create-synthetic-test-policy")
+    policy_parser.add_argument("--request", type=Path, required=True)
+    policy_parser.add_argument("--output", type=Path, required=True)
     process_parser = subparsers.add_parser("process")
     process_parser.add_argument("--request", type=Path, required=True)
+    process_parser.add_argument("--policy", type=Path)
     process_parser.add_argument("--state-dir", type=Path, required=True)
     process_parser.add_argument("--synthetic-only", action="store_true")
     process_parser.add_argument("--target-mode", choices=("success", "failure"), default="success")
@@ -461,6 +522,22 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
             return 0
+        if args.command == "create-synthetic-test-policy":
+            payload = write_synthetic_test_policy(args.request, args.output)
+            print(
+                json.dumps(
+                    {
+                        "classification": "TEST_ONLY_STANDING_POLICY_CREATED",
+                        "policy_id": payload["policy_id"],
+                        "authorization_status": payload["authorization_status"],
+                        "evidence_classification": payload["evidence_classification"],
+                        "real_dispatch_permission": "DENIED",
+                        "real_spending_enforcement": "NOT_PROVEN",
+                    },
+                    sort_keys=True,
+                )
+            )
+            return 0
         if not args.synthetic_only:
             print(
                 json.dumps(
@@ -476,6 +553,7 @@ def main(argv: list[str] | None = None) -> int:
         result, exit_code = process_synthetic_request(
             args.request,
             args.state_dir,
+            args.policy,
             target_mode=args.target_mode,
             test_interrupt_after=args.test_interrupt_after,
             test_before_claim_delay_ms=args.test_before_claim_delay_ms,

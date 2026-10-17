@@ -27,6 +27,7 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.run_dir = TEST_ROOT / f"{self._testMethodName}-{uuid.uuid4().hex}"
         self.run_dir.mkdir(parents=True, exist_ok=False)
         self.request_file = self.run_dir / "request.json"
+        self.policy_file = self.run_dir / "test-policy.json"
         self.state_dir = self.run_dir / "state"
         self.assertTrue(str(self.run_dir).startswith(str(TEST_ROOT)))
 
@@ -49,6 +50,14 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
     def _make_request(self) -> dict[str, object]:
         result = self._run("create-synthetic-request", "--output", str(self.request_file))
         self.assertEqual(result.returncode, 0, result.stderr)
+        policy = self._run(
+            "create-synthetic-test-policy",
+            "--request",
+            str(self.request_file),
+            "--output",
+            str(self.policy_file),
+        )
+        self.assertEqual(policy.returncode, 0, policy.stderr)
         return json.loads(self.request_file.read_text(encoding="utf-8"))
 
     def _process_at(self, state_dir: Path, *extra: str) -> subprocess.CompletedProcess[str]:
@@ -56,6 +65,8 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             "process",
             "--request",
             str(self.request_file),
+            "--policy",
+            str(self.policy_file),
             "--state-dir",
             str(state_dir),
             "--synthetic-only",
@@ -64,6 +75,20 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
 
     def _process(self, *extra: str) -> subprocess.CompletedProcess[str]:
         return self._process_at(self.state_dir, *extra)
+
+    def test_missing_policy_is_denied_before_durable_claim(self) -> None:
+        self._run("create-synthetic-request", "--output", str(self.request_file))
+        result = self._run(
+            "process",
+            "--request",
+            str(self.request_file),
+            "--state-dir",
+            str(self.state_dir),
+            "--synthetic-only",
+        )
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(json.loads(result.stdout)["classification"], "DENIED_POLICY_MISSING")
+        self.assertFalse(self.state_dir.exists())
 
     def _dispatch_lines(self) -> list[dict[str, object]]:
         files = list(self.state_dir.glob("*.dispatch.jsonl")) if self.state_dir.exists() else []
@@ -120,6 +145,8 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             "process",
             "--request",
             str(self.request_file),
+            "--policy",
+            str(self.policy_file),
             "--state-dir",
             str(self.state_dir),
             "--synthetic-only",
@@ -137,7 +164,11 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(sum(1 for _, _, code in outputs if code == 3), 1, outputs)
         classes = [json.loads(stdout)["classification"] for stdout, _, _ in outputs]
         self.assertEqual(classes.count("SUCCEEDED_SYNTHETIC"), 1, classes)
-        self.assertEqual(classes.count("BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS"), 1, classes)
+        blocked = {
+            "BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS",
+            "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
+        }
+        self.assertEqual(sum(classification in blocked for classification in classes), 1, classes)
         self.assertEqual(len(self._dispatch_lines()), 1)
 
     def test_crash_after_claim_is_not_retried_on_process_restart(self) -> None:

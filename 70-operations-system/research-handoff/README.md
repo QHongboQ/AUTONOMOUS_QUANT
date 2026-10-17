@@ -28,6 +28,49 @@ authorization as `UNVERIFIED_DENIED` and spending permission as
 identity; it does not prove or enforce a spending limit. A structurally valid
 request cannot grant real authority.
 
+## Standing policy admission boundary
+
+`P12StandingResearchPolicyV1` is an AQ-specific policy record shape, not a
+new scheduler, budget service, or trusted approval store. Its RFC 8785
+`policy_id` binds the scope, P4 provenance, research families, explicit
+provider/model and local/paid classifications, budget identity and limits,
+effective/expiry/revocation fields, concurrency, and resource ceilings.
+`create-synthetic-test-policy` can produce only a `TEST_ONLY` fixture for
+an already synthetic P4 request. It is never an owner approval record.
+
+The intake evaluates expiry, revocation, request scope, provider/model
+allowlists, simulated period/per-run spend, concurrency snapshot, and
+runtime/memory/storage bounds before creating a durable request claim. The
+synthetic fixture's example numeric limits exist only to exercise validation;
+they are not proposed or approved real spending amounts. A `research_budget_identity`
+or policy hash does not enforce a charge ceiling. The admission result
+explicitly identifies spending enforcement as simulation-only and keeps real
+dispatch permission denied.
+
+There is no trusted owner-approval/revocation source connected to this adapter,
+and there is no fail-closed native spending boundary on P3's direct provider
+path. Therefore an otherwise well-formed `HUMAN_APPROVED` policy is denied,
+and real dispatch remains unavailable. See the installed-runtime findings
+below before treating any future provider allowlist or limit as effective.
+
+### P3 provider-path findings
+
+The installed P3 runtime inspected for this change is RD-Agent 1.0.0 with
+LiteLLM 1.103.1 at
+`/home/zhou/miniforge3/envs/rdagent-official-v1`. Its pinned
+`rdagent/oai/backend/litellm.py` calls `litellm.completion()` and
+`litellm.embedding()` directly. It accounts for cost after receiving the
+response and accumulates it in process-local state; if cost calculation fails,
+the code logs the error and records `NaN`. There is no P12 policy lookup,
+pre-call spend reservation, provider admission check, or durable cost ledger
+on this P3 path. A P12 preflight estimate cannot close that gap.
+
+LiteLLM's Proxy virtual-key model/provider allowlists, persistent budgets, and
+spend reservation require its Proxy and database-backed configuration; the
+current direct SDK route does not use them. LiteLLM documentation also warns
+that DB-less global spend budgets do not enforce spend. A Proxy migration would
+be a separate upstream/P3 deployment change and is not part of this adapter.
+
 ## Durable claim and recovery behavior
 
 The request-ID-specific claim and subsequent dispatching/terminal state markers
@@ -64,7 +107,7 @@ used for acceptance and then removed; existing P12 tasks are not changed.
 Example action arguments (substitute the current worktree and request paths):
 
 ```text
--NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File "<repo>\70-operations-system\research-handoff\Invoke-SyntheticResearchHandoff.ps1" -RepoRoot "<repo>" -RequestPath "D:\AQ\OPERATIONS\P12\research-handoff-synthetic-poc-001\request.json" -StateDirectory "D:\AQ\OPERATIONS\P12\research-handoff-synthetic-poc-001\scheduler-run"
+-NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File "<repo>\70-operations-system\research-handoff\Invoke-SyntheticResearchHandoff.ps1" -RepoRoot "<repo>" -RequestPath "D:\AQ\OPERATIONS\P12\research-handoff-synthetic-poc-001\request.json" -PolicyPath "D:\AQ\OPERATIONS\P12\research-handoff-synthetic-poc-001\test-policy.json" -StateDirectory "D:\AQ\OPERATIONS\P12\research-handoff-synthetic-poc-001\scheduler-run"
 ```
 
 The scheduled action does not include credentials and cannot enable real P3
@@ -107,12 +150,12 @@ gap. No P2 or P4 downstream decision is fabricated by the P12 test.
 
 ## Local validation
 
-Use the already installed WSL runtime and RFC 8785 0.1.4 distribution; do not
-install dependencies for this adapter:
+Use the already installed pinned RD-Agent WSL runtime and RFC 8785 0.1.4
+distribution; do not install dependencies for this adapter:
 
 ```bash
 export PYTHONPATH=/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs
-/home/zhou/AQ_ENVS/rdagent/bin/python -m unittest discover \
+/home/zhou/miniforge3/envs/rdagent-official-v1/bin/python -m unittest discover \
   -s 70-operations-system/research-handoff/tests -p 'test_*.py' -v
 ```
 
@@ -126,7 +169,7 @@ On the actual host D: path through WSL's `/mnt/d` 9P/DrvFS mount:
 
 - 24 concurrent `O_CREAT | O_EXCL` attempts produced one durable claim winner;
 - file and directory `fsync` succeeded for immutable claim and terminal markers;
-- the 13-case suite passed twice, covering same-ID replay, same-ID concurrent intake,
+- the 14-case durable handoff suite passed twice, covering same-ID replay, same-ID concurrent intake,
   post-claim process interruption, unknown post-dispatch state, failed target,
   failed terminal replay, terminal return-code consistency, mismatched attempt
   identity, corrupt records, and malformed/tampered requests;
@@ -137,6 +180,14 @@ On the actual host D: path through WSL's `/mnt/d` 9P/DrvFS mount:
   0 and 4 respectively. Temporary tasks were removed;
 - no P3 command, LLM/provider, Qlib, certification, broker, or production
   action was invoked. The synthetic terminal record has zero Candidates.
+
+The standing-policy tests add nine focused cases for policy hash tampering,
+untrusted owner approval, expiry/revocation, P4 scope/provenance/budget
+binding, provider/model allowlists, unknown or exceeded simulated spend,
+concurrency, and resource caps. Together the current offline suite contains
+23 tests. Its budget checks are synthetic admission tests only: they do not
+prove pre-call provider charging enforcement or a race-safe real concurrency
+limit.
 
 The acceptance record proves process-level durable replay on this host file
 path. It does not prove recovery from power loss, disk/controller failure, or
