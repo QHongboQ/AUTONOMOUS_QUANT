@@ -156,6 +156,15 @@ def _dispatch_file(state_dir: Path, request_id: str) -> Path:
     return state_dir / f"{request_id.removeprefix('sha256:')}.dispatching.json"
 
 
+def _valid_attempt_id(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        return str(uuid.UUID(value)) == value
+    except ValueError:
+        return False
+
+
 def _replay_result(
     claim_path: Path,
     dispatch_path: Path,
@@ -175,6 +184,7 @@ def _replay_result(
         claim.get("state") != "CLAIMED"
         or claim.get("request_id") != request_id
         or claim.get("request_digest") != request_digest
+        or not _valid_attempt_id(claim.get("attempt_id"))
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -198,6 +208,8 @@ def _replay_result(
         dispatch_marker.get("state") != "DISPATCHING_SYNTHETIC"
         or dispatch_marker.get("request_id") != request_id
         or dispatch_marker.get("request_digest") != request_digest
+        or dispatch_marker.get("attempt_id") != claim.get("attempt_id")
+        or dispatch_marker.get("dispatch_mode") != "SYNTHETIC_ONLY"
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
@@ -220,13 +232,24 @@ def _replay_result(
     if (
         status.get("request_id") != request_id
         or status.get("request_digest") != request_digest
+        or status.get("attempt_id") != claim.get("attempt_id")
     ):
         return {
             "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
             "dispatch_count_added": 0,
         }
+    terminal_state = status.get("state")
+    return_code = status.get("target_return_code")
+    return_code_consistent = (
+        type(return_code) is int
+        and (
+            (terminal_state == "SUCCEEDED_SYNTHETIC" and return_code == 0)
+            or (terminal_state == "FAILED_SYNTHETIC" and return_code != 0)
+        )
+    )
     if (
-        status.get("state") not in _TERMINAL_STATES
+        terminal_state not in _TERMINAL_STATES
+        or not return_code_consistent
         or status.get("dispatch_mode") != "SYNTHETIC_ONLY"
         or status.get("real_dispatch_permission") != "DENIED"
         or status.get("candidate_count") != 0
@@ -238,9 +261,14 @@ def _replay_result(
             "state": status.get("state", "UNKNOWN"),
             "dispatch_count_added": 0,
         }
+    successful = terminal_state == "SUCCEEDED_SYNTHETIC"
     return {
-        "classification": "REPLAY_TERMINAL_NO_DISPATCH",
-        "state": status["state"],
+        "classification": (
+            "REPLAY_TERMINAL_NO_DISPATCH"
+            if successful
+            else "REPLAY_TERMINAL_FAILED_NO_DISPATCH"
+        ),
+        "state": terminal_state,
         "request_id": status["request_id"],
         "dispatch_count_added": 0,
         "candidate_count": 0,
@@ -295,16 +323,18 @@ def process_synthetic_request(
     try:
         fd = os.open(claim_path, flags, 0o600)
     except FileExistsError:
-        return (
-            _replay_result(
-                claim_path,
-                dispatch_path,
-                status_path,
-                request.request_id,
-                request_digest,
-            ),
-            0,
+        replay = _replay_result(
+            claim_path,
+            dispatch_path,
+            status_path,
+            request.request_id,
+            request_digest,
         )
+        if replay["classification"] == "REPLAY_TERMINAL_NO_DISPATCH":
+            return replay, 0
+        if replay["classification"] == "REPLAY_TERMINAL_FAILED_NO_DISPATCH":
+            return replay, _EXIT_FAILED
+        return replay, _EXIT_BLOCKED
     try:
         encoded = json.dumps(claim, sort_keys=True, separators=(",", ":")).encode("utf-8")
         offset = 0

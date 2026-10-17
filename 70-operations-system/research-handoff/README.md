@@ -44,6 +44,10 @@ An existing claim with a terminal status is replayed without another dispatch.
 A claim without status, corrupt claim/status, or nonterminal `DISPATCHING`
 state is blocked without retry. An interruption after the target starts can
 leave an unknown outcome; P12 deliberately does not infer success or retry.
+Only a fully consistent `SUCCEEDED_SYNTHETIC` replay exits zero. A failed
+terminal replay exits 4; blocked, corrupt, mismatched, and ambiguous replay
+states exit 3. Success requires matching request and attempt identities across
+all markers and a terminal return code consistent with the terminal state.
 This is durable at the host filesystem/process level tested here; it is not an
 exactly-once guarantee across arbitrary power loss, device failure, or external
 side effects.
@@ -122,11 +126,15 @@ On the actual host D: path through WSL's `/mnt/d` 9P/DrvFS mount:
 
 - 24 concurrent `O_CREAT | O_EXCL` attempts produced one durable claim winner;
 - file and directory `fsync` succeeded for immutable claim and terminal markers;
-- the 10-case suite passed, covering same-ID replay, same-ID concurrent intake,
+- the 13-case suite passed twice, covering same-ID replay, same-ID concurrent intake,
   post-claim process interruption, unknown post-dispatch state, failed target,
-  terminal replay, and malformed/tampered requests;
+  failed terminal replay, terminal return-code consistency, mismatched attempt
+  identity, corrupt records, and malformed/tampered requests;
 - a temporary Windows Task Scheduler task invoked the PowerShell-to-WSL entry
   point and recorded `SUCCEEDED_SYNTHETIC`; the task was then removed;
+- a separate temporary task replayed an interrupted claim and reported
+  `LastTaskResult=3`; successful and failed terminal wrapper replays returned
+  0 and 4 respectively. Temporary tasks were removed;
 - no P3 command, LLM/provider, Qlib, certification, broker, or production
   action was invoked. The synthetic terminal record has zero Candidates.
 

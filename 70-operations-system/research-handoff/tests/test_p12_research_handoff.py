@@ -51,20 +51,28 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(self.request_file.read_text(encoding="utf-8"))
 
-    def _process(self, *extra: str) -> subprocess.CompletedProcess[str]:
+    def _process_at(self, state_dir: Path, *extra: str) -> subprocess.CompletedProcess[str]:
         return self._run(
             "process",
             "--request",
             str(self.request_file),
             "--state-dir",
-            str(self.state_dir),
+            str(state_dir),
             "--synthetic-only",
             *extra,
         )
 
+    def _process(self, *extra: str) -> subprocess.CompletedProcess[str]:
+        return self._process_at(self.state_dir, *extra)
+
     def _dispatch_lines(self) -> list[dict[str, object]]:
         files = list(self.state_dir.glob("*.dispatch.jsonl")) if self.state_dir.exists() else []
         return [json.loads(line) for path in files for line in path.read_text().splitlines()]
+
+    def _record_path(self, kind: str) -> Path:
+        request_id = json.loads(self.request_file.read_text(encoding="utf-8"))[
+            "research_request"]["request_id"]
+        return self.state_dir / f"{request_id.removeprefix('sha256:')}.{kind}.json"
 
     def test_p4_factory_creates_bootstrap_request_without_champion(self) -> None:
         envelope = handoff.create_synthetic_request()
@@ -125,9 +133,11 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             for _ in range(2)
         ]
         outputs = [process.communicate(timeout=30) + (process.returncode,) for process in processes]
-        self.assertEqual(sum(1 for _, _, code in outputs if code == 0), 2, outputs)
+        self.assertEqual(sum(1 for _, _, code in outputs if code == 0), 1, outputs)
+        self.assertEqual(sum(1 for _, _, code in outputs if code == 3), 1, outputs)
         classes = [json.loads(stdout)["classification"] for stdout, _, _ in outputs]
         self.assertEqual(classes.count("SUCCEEDED_SYNTHETIC"), 1, classes)
+        self.assertEqual(classes.count("BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS"), 1, classes)
         self.assertEqual(len(self._dispatch_lines()), 1)
 
     def test_crash_after_claim_is_not_retried_on_process_restart(self) -> None:
@@ -135,7 +145,7 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         interrupted = self._process("--test-interrupt-after", "claim")
         self.assertEqual(interrupted.returncode, 86)
         restarted = self._process()
-        self.assertEqual(restarted.returncode, 0, restarted.stderr)
+        self.assertEqual(restarted.returncode, 3, restarted.stderr)
         result = json.loads(restarted.stdout)
         self.assertEqual(result["classification"], "BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS")
         self.assertEqual(len(self._dispatch_lines()), 0)
@@ -145,6 +155,7 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         interrupted = self._process("--test-interrupt-after", "dispatch-start")
         self.assertEqual(interrupted.returncode, 86)
         restarted = self._process()
+        self.assertEqual(restarted.returncode, 3, restarted.stderr)
         result = json.loads(restarted.stdout)
         self.assertEqual(result["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
         self.assertEqual(result["state"], "DISPATCHING_SYNTHETIC")
@@ -157,8 +168,42 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         status = json.loads(failed.stdout)["status"]
         self.assertEqual(status["state"], "FAILED_SYNTHETIC")
         replay = self._process()
+        self.assertEqual(replay.returncode, 4, replay.stderr)
         self.assertEqual(json.loads(replay.stdout)["state"], "FAILED_SYNTHETIC")
         self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_success_state_with_nonzero_return_code_is_blocked(self) -> None:
+        self._make_request()
+        self.assertEqual(self._process().returncode, 0)
+        status_path = self._record_path("terminal")
+        status = json.loads(status_path.read_text(encoding="utf-8"))
+        status["target_return_code"] = 17
+        status_path.write_text(json.dumps(status), encoding="utf-8")
+
+        replay = self._process()
+        self.assertEqual(replay.returncode, 3, replay.stderr)
+        self.assertEqual(json.loads(replay.stdout)["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+        self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_mismatched_attempt_identity_is_blocked(self) -> None:
+        self._make_request()
+        for kind in ("claim", "dispatching", "terminal"):
+            with self.subTest(record=kind):
+                state_dir = self.run_dir / kind
+                self.assertEqual(self._process_at(state_dir).returncode, 0)
+                request_id = json.loads(self.request_file.read_text(encoding="utf-8"))[
+                    "research_request"]["request_id"]
+                record_path = state_dir / f"{request_id.removeprefix('sha256:')}.{kind}.json"
+                record = json.loads(record_path.read_text(encoding="utf-8"))
+                record["attempt_id"] = str(uuid.uuid4())
+                record_path.write_text(json.dumps(record), encoding="utf-8")
+
+                replay = self._process_at(state_dir)
+                self.assertEqual(replay.returncode, 3, replay.stderr)
+                self.assertEqual(
+                    json.loads(replay.stdout)["classification"],
+                    "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+                )
 
     def test_tampered_request_identity_fails_before_claim(self) -> None:
         envelope = self._make_request()
@@ -175,8 +220,33 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.state_dir.mkdir()
         (self.state_dir / f"{request_id}.claim.json").write_text("{", encoding="utf-8")
         replay = self._process()
+        self.assertEqual(replay.returncode, 3, replay.stderr)
         self.assertEqual(json.loads(replay.stdout)["classification"], "BLOCKED_CORRUPT_OR_INCOMPLETE_CLAIM")
         self.assertEqual(len(self._dispatch_lines()), 0)
+
+    def test_corrupt_dispatch_and_terminal_records_exit_nonzero(self) -> None:
+        self._make_request()
+        self.assertEqual(self._process().returncode, 0)
+        terminal_path = self._record_path("terminal")
+        terminal_record = terminal_path.read_bytes()
+        terminal_path.write_text("{", encoding="utf-8")
+        corrupt_terminal_replay = self._process()
+        self.assertEqual(corrupt_terminal_replay.returncode, 3)
+        self.assertEqual(
+            json.loads(corrupt_terminal_replay.stdout)["classification"],
+            "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
+        )
+
+        terminal_path.write_bytes(terminal_record)
+        dispatch_path = self._record_path("dispatching")
+        dispatch_path.write_text("{", encoding="utf-8")
+        corrupt_dispatch_replay = self._process()
+        self.assertEqual(corrupt_dispatch_replay.returncode, 3)
+        self.assertEqual(
+            json.loads(corrupt_dispatch_replay.stdout)["classification"],
+            "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
+        )
+        self.assertEqual(len(self._dispatch_lines()), 1)
 
     def test_actual_host_filesystem_exclusive_claim_and_immutable_status_marker(self) -> None:
         probe_dir = self.run_dir / "filesystem-proof"
