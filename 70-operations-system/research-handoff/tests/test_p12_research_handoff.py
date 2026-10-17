@@ -1,0 +1,204 @@
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import unittest
+import uuid
+from pathlib import Path
+
+HANDOFF_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(HANDOFF_DIR))
+import p12_research_handoff as handoff  # noqa: E402
+
+TEST_ROOT = Path(
+    os.environ.get(
+        "AQ_P12_HANDOFF_TEST_ROOT",
+        "/mnt/d/AQ/OPERATIONS/P12/research-handoff-synthetic-poc-001/acceptance-runs",
+    )
+)
+PYTHON = sys.executable
+SCRIPT = HANDOFF_DIR / "p12_research_handoff.py"
+
+
+class DurableSyntheticHandoffTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.run_dir = TEST_ROOT / f"{self._testMethodName}-{uuid.uuid4().hex}"
+        self.run_dir.mkdir(parents=True, exist_ok=False)
+        self.request_file = self.run_dir / "request.json"
+        self.state_dir = self.run_dir / "state"
+        self.assertTrue(str(self.run_dir).startswith(str(TEST_ROOT)))
+
+    def _run(self, *args: str) -> subprocess.CompletedProcess[str]:
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = ":".join(
+            [
+                "/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs",
+                environment.get("PYTHONPATH", ""),
+            ]
+        ).rstrip(":")
+        return subprocess.run(
+            [PYTHON, str(SCRIPT), *args],
+            capture_output=True,
+            text=True,
+            env=environment,
+            check=False,
+        )
+
+    def _make_request(self) -> dict[str, object]:
+        result = self._run("create-synthetic-request", "--output", str(self.request_file))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(self.request_file.read_text(encoding="utf-8"))
+
+    def _process(self, *extra: str) -> subprocess.CompletedProcess[str]:
+        return self._run(
+            "process",
+            "--request",
+            str(self.request_file),
+            "--state-dir",
+            str(self.state_dir),
+            "--synthetic-only",
+            *extra,
+        )
+
+    def _dispatch_lines(self) -> list[dict[str, object]]:
+        files = list(self.state_dir.glob("*.dispatch.jsonl")) if self.state_dir.exists() else []
+        return [json.loads(line) for path in files for line in path.read_text().splitlines()]
+
+    def test_p4_factory_creates_bootstrap_request_without_champion(self) -> None:
+        envelope = handoff.create_synthetic_request()
+        decision = envelope["p4_decision"]
+        request = envelope["research_request"]
+        self.assertEqual(decision["evidence_classification"], "TEST_FIXTURE_NOT_REAL_EVIDENCE")
+        self.assertEqual(decision["decision_kind"], "CHALLENGER_NEEDED")
+        self.assertIsNone(decision["current_state"])
+        self.assertEqual(request["reason"], "NO_CHAMPION")
+        self.assertEqual(request["request_provenance"], handoff._identity("p12-synthetic-fixture-provenance-v1"))
+        parsed = handoff.p4.ResearchRequestV1.model_validate(request)
+        self.assertEqual(parsed.request_id, request["request_id"])
+
+    def test_valid_synthetic_handoff_and_terminal_replay(self) -> None:
+        envelope = self._make_request()
+        first = self._process()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        result = json.loads(first.stdout)
+        self.assertEqual(result["classification"], "SUCCEEDED_SYNTHETIC")
+        self.assertEqual(result["external_authorization"], "UNVERIFIED_DENIED")
+        self.assertEqual(result["spending_permission"], "NOT_PROVEN_DENIED")
+        self.assertEqual(result["real_dispatch_permission"], "DENIED")
+        self.assertEqual(result["candidate_count"], 0)
+        self.assertEqual(result["status"]["request_id"], envelope["research_request"]["request_id"])
+
+        replay = self._process()
+        self.assertEqual(replay.returncode, 0, replay.stderr)
+        self.assertEqual(json.loads(replay.stdout)["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
+        self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_real_dispatch_defaults_to_denied(self) -> None:
+        self._make_request()
+        result = self._run(
+            "process", "--request", str(self.request_file), "--state-dir", str(self.state_dir)
+        )
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(json.loads(result.stdout)["real_dispatch_permission"], "DENIED")
+        self.assertEqual(len(self._dispatch_lines()), 0)
+
+    def test_same_request_concurrent_claims_dispatch_once(self) -> None:
+        self._make_request()
+        command = [
+            PYTHON,
+            str(SCRIPT),
+            "process",
+            "--request",
+            str(self.request_file),
+            "--state-dir",
+            str(self.state_dir),
+            "--synthetic-only",
+            "--test-before-claim-delay-ms",
+            "250",
+        ]
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = "/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs"
+        processes = [
+            subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=environment)
+            for _ in range(2)
+        ]
+        outputs = [process.communicate(timeout=30) + (process.returncode,) for process in processes]
+        self.assertEqual(sum(1 for _, _, code in outputs if code == 0), 2, outputs)
+        classes = [json.loads(stdout)["classification"] for stdout, _, _ in outputs]
+        self.assertEqual(classes.count("SUCCEEDED_SYNTHETIC"), 1, classes)
+        self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_crash_after_claim_is_not_retried_on_process_restart(self) -> None:
+        self._make_request()
+        interrupted = self._process("--test-interrupt-after", "claim")
+        self.assertEqual(interrupted.returncode, 86)
+        restarted = self._process()
+        self.assertEqual(restarted.returncode, 0, restarted.stderr)
+        result = json.loads(restarted.stdout)
+        self.assertEqual(result["classification"], "BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS")
+        self.assertEqual(len(self._dispatch_lines()), 0)
+
+    def test_ambiguous_post_dispatch_state_is_not_retried(self) -> None:
+        self._make_request()
+        interrupted = self._process("--test-interrupt-after", "dispatch-start")
+        self.assertEqual(interrupted.returncode, 86)
+        restarted = self._process()
+        result = json.loads(restarted.stdout)
+        self.assertEqual(result["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+        self.assertEqual(result["state"], "DISPATCHING_SYNTHETIC")
+        self.assertEqual(len(self._dispatch_lines()), 0)
+
+    def test_failed_synthetic_execution_is_terminal_and_not_replayed(self) -> None:
+        self._make_request()
+        failed = self._process("--target-mode", "failure")
+        self.assertEqual(failed.returncode, 4)
+        status = json.loads(failed.stdout)["status"]
+        self.assertEqual(status["state"], "FAILED_SYNTHETIC")
+        replay = self._process()
+        self.assertEqual(json.loads(replay.stdout)["state"], "FAILED_SYNTHETIC")
+        self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_tampered_request_identity_fails_before_claim(self) -> None:
+        envelope = self._make_request()
+        envelope["research_request"]["allowed_research_families"] = ["OTHER"]
+        self.request_file.write_text(json.dumps(envelope), encoding="utf-8")
+        result = self._process()
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(list(self.state_dir.glob("*.claim.json")) if self.state_dir.exists() else [], [])
+        self.assertEqual(len(self._dispatch_lines()), 0)
+
+    def test_nonterminal_or_unreadable_claim_fails_closed(self) -> None:
+        envelope = self._make_request()
+        request_id = envelope["research_request"]["request_id"].removeprefix("sha256:")
+        self.state_dir.mkdir()
+        (self.state_dir / f"{request_id}.claim.json").write_text("{", encoding="utf-8")
+        replay = self._process()
+        self.assertEqual(json.loads(replay.stdout)["classification"], "BLOCKED_CORRUPT_OR_INCOMPLETE_CLAIM")
+        self.assertEqual(len(self._dispatch_lines()), 0)
+
+    def test_actual_host_filesystem_exclusive_claim_and_immutable_status_marker(self) -> None:
+        probe_dir = self.run_dir / "filesystem-proof"
+        probe_dir.mkdir()
+        claim_path = probe_dir / "single.claim"
+        child_code = (
+            "import os,sys; fd=os.open(sys.argv[1],os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600); "
+            "os.write(fd,b'claim'); os.fsync(fd); os.close(fd)"
+        )
+        processes = [
+            subprocess.Popen([PYTHON, "-c", child_code, str(claim_path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for _ in range(24)
+        ]
+        outcomes = [process.communicate(timeout=30) + (process.returncode,) for process in processes]
+        self.assertEqual(sum(1 for _, _, code in outcomes if code == 0), 1, outcomes)
+        self.assertEqual(claim_path.read_bytes(), b"claim")
+
+        status_path = probe_dir / "terminal.json"
+        handoff._durable_json_create(status_path, {"state": "SUCCEEDED_SYNTHETIC"})
+        self.assertEqual(json.loads(status_path.read_text())["state"], "SUCCEEDED_SYNTHETIC")
+        with self.assertRaises(FileExistsError):
+            handoff._durable_json_create(status_path, {"state": "FAILED_SYNTHETIC"})
+
+if __name__ == "__main__":
+    unittest.main()
