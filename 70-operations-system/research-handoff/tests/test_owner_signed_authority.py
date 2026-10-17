@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -87,6 +88,42 @@ class OwnerSignedAuthorityTests(unittest.TestCase):
 
     def signed_snapshot(self, payload=None):
         return self.signed(self.snapshot if payload is None else payload)
+
+    def authority_pair(self, *, private_key=None, epoch=None, revoked=()):
+        signer = private_key or self.private_key
+        raw_public = signer.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+        key_id = "sha256:" + hashlib.sha256(raw_public).hexdigest()
+        approval_payload = dict(self.payload)
+        approval_payload["signing_key_id"] = key_id
+        approval_payload["authority_epoch"] = self.epoch if epoch is None else epoch
+        snapshot_payload = {
+            "domain": authority.REVOCATION_DOMAIN,
+            "signing_key_id": key_id,
+            "authority_epoch": self.epoch if epoch is None else epoch,
+            "revoked_approval_evidence_identities": list(revoked),
+        }
+        sign = lambda value: {
+            "payload": value,
+            "signature": base64.b64encode(signer.sign(rfc8785.dumps(value))).decode("ascii"),
+        }
+        trust = {
+            "trusted_public_key_b64": base64.b64encode(raw_public).decode("ascii"),
+            "trusted_key_id": key_id,
+            "revocation_snapshot": sign(snapshot_payload),
+            "minimum_trusted_epoch": snapshot_payload["authority_epoch"],
+            "trusted_source_available": True,
+        }
+        return sign(approval_payload), trust
+
+    def write_handoff_inputs(self, root):
+        request_path = root / "request.json"
+        policy_path = root / "policy.json"
+        request_path.write_text(json.dumps(handoff.create_synthetic_request()), encoding="utf-8")
+        policy_path.write_text(json.dumps(self.policy.model_dump(mode="json")), encoding="utf-8")
+        return request_path, policy_path
 
     def verify(self, *, approval=None, policy=None, request=None, snapshot=_DEFAULT,
                minimum_epoch=4, source_available=True, public_key=None, key_id=None):
@@ -212,6 +249,133 @@ class OwnerSignedAuthorityTests(unittest.TestCase):
             self.assertEqual(blocked_exit, 3)
             self.assertEqual(blocked["classification"], "DENIED_OLD_AUTHORIZATION_REPLAY")
             self.assertEqual(len(list(state_path.glob("*.dispatch.jsonl"))), 1)
+
+    def test_changed_authority_epoch_and_different_signer_block_terminal_replay(self):
+        for scenario in ("epoch", "signer"):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                request_path, policy_path = self.write_handoff_inputs(root)
+                state_path = root / "state"
+                original_approval, original_trust = self.authority_pair()
+                first, first_exit = handoff.process_synthetic_request(
+                    request_path, state_path, policy_path,
+                    signed_approval=original_approval, trusted_authority=original_trust,
+                )
+                self.assertEqual(first_exit, 0)
+                if scenario == "epoch":
+                    changed_approval, changed_trust = self.authority_pair(epoch=self.epoch + 1)
+                else:
+                    changed_approval, changed_trust = self.authority_pair(
+                        private_key=Ed25519PrivateKey.generate()
+                    )
+                replay, replay_exit = handoff.process_synthetic_request(
+                    request_path, state_path, policy_path,
+                    signed_approval=changed_approval, trusted_authority=changed_trust,
+                )
+                self.assertEqual(replay_exit, 3)
+                self.assertEqual(
+                    replay["classification"],
+                    "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+                )
+                self.assertEqual(len(list(state_path.glob("*.dispatch.jsonl"))), 1)
+
+    def test_tampered_signed_metadata_blocks_replay_without_redispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request_path, policy_path = self.write_handoff_inputs(root)
+            state_path = root / "state"
+            approval, trust = self.authority_pair()
+            first, first_exit = handoff.process_synthetic_request(
+                request_path, state_path, policy_path,
+                signed_approval=approval, trusted_authority=trust,
+            )
+            self.assertEqual(first_exit, 0)
+            terminal_path = next(state_path.glob("*.terminal.json"))
+            terminal = json.loads(terminal_path.read_text(encoding="utf-8"))
+            terminal["signature_metadata"]["authority_epoch"] += 1
+            terminal_path.write_text(json.dumps(terminal), encoding="utf-8")
+            replay, replay_exit = handoff.process_synthetic_request(
+                request_path, state_path, policy_path,
+                signed_approval=approval, trusted_authority=trust,
+            )
+            self.assertEqual(replay_exit, 3)
+            self.assertEqual(
+                replay["classification"], "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE"
+            )
+            self.assertEqual(len(list(state_path.glob("*.dispatch.jsonl"))), 1)
+
+    def test_revoked_evidence_on_replay_is_denied_without_redispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request_path, policy_path = self.write_handoff_inputs(root)
+            state_path = root / "state"
+            approval, trust = self.authority_pair()
+            first, first_exit = handoff.process_synthetic_request(
+                request_path, state_path, policy_path,
+                signed_approval=approval, trusted_authority=trust,
+            )
+            self.assertEqual(first_exit, 0)
+            # Keep the original epoch-4 approval while the signed current
+            # authority snapshot at epoch 5 revokes its evidence identity.
+            _, revoked_trust = self.authority_pair(
+                epoch=self.epoch + 1,
+                revoked=(self.approval_id,),
+            )
+            blocked, blocked_exit = handoff.process_synthetic_request(
+                request_path, state_path, policy_path,
+                signed_approval=approval, trusted_authority=revoked_trust,
+            )
+            self.assertEqual(blocked_exit, 3)
+            self.assertEqual(blocked["classification"], "DENIED_POLICY_REVOKED")
+            self.assertEqual(len(list(state_path.glob("*.dispatch.jsonl"))), 1)
+
+            stale_snapshot_trust = dict(trust)
+            stale_snapshot_trust["minimum_trusted_epoch"] = self.epoch + 1
+            stale_snapshot, stale_exit = handoff.process_synthetic_request(
+                request_path, state_path, policy_path,
+                signed_approval=approval,
+                trusted_authority=stale_snapshot_trust,
+            )
+            self.assertEqual(stale_exit, 3)
+            self.assertEqual(stale_snapshot["classification"], "DENIED_AUTHORITY_ROLLBACK")
+            self.assertEqual(len(list(state_path.glob("*.dispatch.jsonl"))), 1)
+
+    def test_signed_interrupted_dispatch_is_ambiguous_and_never_retried(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            request_path, policy_path = self.write_handoff_inputs(root)
+            state_path = root / "state"
+            approval, trust = self.authority_pair()
+            approval_path = root / "approval.json"
+            trust_path = root / "trust.json"
+            approval_path.write_text(json.dumps(approval), encoding="utf-8")
+            trust_path.write_text(json.dumps(trust), encoding="utf-8")
+            interrupted = subprocess.run(
+                [
+                    sys.executable,
+                    str(HANDOFF_DIR / "p12_research_handoff.py"),
+                    "process",
+                    "--request", str(request_path),
+                    "--policy", str(policy_path),
+                    "--state-dir", str(state_path),
+                    "--synthetic-only",
+                    "--test-signed-approval", str(approval_path),
+                    "--test-trusted-authority", str(trust_path),
+                    "--test-interrupt-after", "dispatch-start",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(interrupted.returncode, 86)
+            replay, replay_exit = handoff.process_synthetic_request(
+                request_path, state_path, policy_path,
+                signed_approval=approval, trusted_authority=trust,
+            )
+            self.assertEqual(replay_exit, 3)
+            self.assertEqual(replay["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+            self.assertEqual(len(list(state_path.glob("*.dispatching.json"))), 1)
+            self.assertEqual(len(list(state_path.glob("*.dispatch.jsonl"))), 0)
 
     def test_invalid_signature_and_wrong_trusted_key_are_denied(self):
         invalid = self.signed_approval()

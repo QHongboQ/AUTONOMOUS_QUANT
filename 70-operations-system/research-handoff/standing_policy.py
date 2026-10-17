@@ -321,6 +321,28 @@ def evaluate_policy_admission(
         "policy_signature_verification": (
             signature_result["classification"] if signature_result is not None else "NOT_PROVIDED"
         ),
+        "signed_authority_mode": (
+            "SIGNED_TEST_ONLY" if signature_result is not None else "UNSIGNED_TEST_ONLY"
+        ),
+        "signature_metadata": (
+            {
+                "mode": "SIGNED_TEST_ONLY",
+                "signing_key_id": signature_result["signing_key_id"],
+                "authority_epoch": signature_result["authority_epoch"],
+                "signed_payload_sha256": signature_result["signed_payload_sha256"],
+                "signed_approval_fingerprint": signature_result[
+                    "signed_approval_fingerprint"
+                ],
+            }
+            if signature_result is not None
+            else {
+                "mode": "UNSIGNED_TEST_ONLY",
+                "signing_key_id": None,
+                "authority_epoch": None,
+                "signed_payload_sha256": None,
+                "signed_approval_fingerprint": None,
+            }
+        ),
         "owner_approval_evidence_identity": (
             signature_result.get("owner_approval_evidence_identity")
             if signature_result is not None

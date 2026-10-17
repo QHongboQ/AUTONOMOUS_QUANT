@@ -78,6 +78,15 @@ The synthetic policy gate still denies `HUMAN_APPROVED` policies. The optional
 `--test-signed-approval` and `--test-trusted-authority` intake inputs are only
 for this offline POC; both are required together, and a request replay must
 present the same currently valid approval evidence to match the durable claim.
+For signed mode, claim, dispatch, and terminal markers bind an explicit
+`SIGNED_TEST_ONLY` mode, signer key ID, authority epoch, RFC 8785 payload hash,
+and a fingerprint of the canonical signed envelope. Replay revalidates the
+approval against the current signed revocation snapshot and then compares that
+metadata across all three markers. Changed signer/epoch/payload or tampered
+metadata fails closed without redispatch. New unsigned records carry an
+explicit `UNSIGNED_TEST_ONLY` mode; old unsigned PR157/158 and PR159 records
+remain compatible, while old signed records lacking immutable provenance are
+blocked.
 
 This is not production rollback protection: this host has no independent,
 owner-controlled monotonic epoch source. A signed old revocation snapshot can
@@ -272,7 +281,8 @@ binding, provider/model allowlists, unknown or exceeded simulated spend,
 negative/non-finite/invalid spend representations, concurrency, and resource
 caps. Replay tests cover same-policy replay, changed valid policy, and
 tampered policy identity in persisted records. Together the offline suite
-contained 38 tests after adding the signed-authority POC cases. Its budget checks are synthetic admission tests only: they
+contains 42 tests after adding the signed-authority and replay-provenance POC
+cases. Its budget checks are synthetic admission tests only: they
 do not prove pre-call provider charging enforcement or a race-safe real
 concurrency limit.
 

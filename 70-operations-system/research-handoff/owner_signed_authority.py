@@ -132,17 +132,16 @@ def verify_signed_research_policy(
         return _result("DENIED_TRUSTED_EPOCH_INVALID")
     if source_epoch < minimum_trusted_epoch:
         return _result("DENIED_AUTHORITY_ROLLBACK")
-    if epoch < minimum_trusted_epoch or epoch < source_epoch:
-        return _result("DENIED_OLD_AUTHORIZATION_REPLAY")
-    if epoch != source_epoch:
-        return _result("DENIED_AUTHORITY_EPOCH_MISMATCH")
-
     evidence_id = payload["owner_approval_evidence_identity"]
     revoked = snapshot["revoked_approval_evidence_identities"]
     if not isinstance(revoked, list) or any(not isinstance(item, str) for item in revoked):
         return _result("DENIED_REVOCATION_AUTHORITY_INVALID")
     if evidence_id in revoked:
         return _result("DENIED_POLICY_REVOKED")
+    if epoch < minimum_trusted_epoch or epoch < source_epoch:
+        return _result("DENIED_OLD_AUTHORIZATION_REPLAY")
+    if epoch != source_epoch:
+        return _result("DENIED_AUTHORITY_EPOCH_MISMATCH")
     try:
         current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
         effective_at = _aware_datetime(payload["effective_at"])
@@ -187,6 +186,10 @@ def verify_signed_research_policy(
         "VERIFIED_TEST_ONLY_SIGNATURE",
         policy_id=policy.policy_id,
         owner_approval_evidence_identity=evidence_id,
+        signing_key_id=payload["signing_key_id"],
         authority_epoch=epoch,
+        signed_payload_sha256="sha256:" + hashlib.sha256(rfc8785.dumps(payload)).hexdigest(),
+        signed_approval_fingerprint="sha256:"
+        + hashlib.sha256(rfc8785.dumps(approval)).hexdigest(),
         cryptographic_integrity="VERIFIED_TEST_ONLY",
     )
