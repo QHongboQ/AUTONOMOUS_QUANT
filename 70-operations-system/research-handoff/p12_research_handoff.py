@@ -1,7 +1,8 @@
-"""Test-only P12 handoff: P4 synthetic request -> durable claim -> inert target.
+"""Test-only P12 handoff: P4 synthetic request -> durable claim -> opt-in target.
 
-Real dispatch is deliberately not implemented. The only target in this module
-is a local synthetic executable that records an invocation and exits.
+Real dispatch is deliberately not implemented. The default target is a local
+inert executable. An explicit TEST_ONLY target can run a bounded official
+RD-Agent Docker/Proxy/mock smoke and cannot start a research loop.
 """
 
 from __future__ import annotations
@@ -36,6 +37,9 @@ _EXIT_INVALID = 2
 _EXIT_BLOCKED = 3
 _EXIT_FAILED = 4
 _EXIT_INTERRUPTED = 86
+TARGET_INERT = "INERT_LOCAL_EXECUTABLE"
+TARGET_DOCKER_RDAGENT = "DOCKER_RDAGENT_PROXY_MOCK_SMOKE"
+_TARGETS = {TARGET_INERT, TARGET_DOCKER_RDAGENT}
 
 
 def _identity(label: str) -> str:
@@ -202,6 +206,18 @@ def _signature_record_matches(
     )
 
 
+def _target_record_matches(marker: dict[str, Any], target_identity: str) -> bool:
+    if marker.get("target_identity") == target_identity:
+        return True
+    # Existing PR157-159 inert records predate explicit target identities.
+    # They stay replayable only as the inert default and can never match Docker.
+    return (
+        target_identity == TARGET_INERT
+        and marker.get("target_identity") is None
+        and marker.get("synthetic_dispatch_target") in (None, TARGET_INERT)
+    )
+
+
 def _replay_result(
     claim_path: Path,
     dispatch_path: Path,
@@ -213,6 +229,7 @@ def _replay_result(
     signed_authority_mode: str,
     signature_metadata: dict[str, Any],
     policy_signature_verification: str,
+    target_identity: str,
 ) -> dict[str, Any]:
     try:
         claim = _read_json_nofollow(claim_path)
@@ -230,6 +247,7 @@ def _replay_result(
         or claim.get("standing_policy_id") != standing_policy_id
         or claim.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
         or claim.get("owner_approval_evidence_identity") != owner_approval_evidence_identity
+        or not _target_record_matches(claim, target_identity)
         or not _signature_record_matches(
             claim,
             expected_mode=signed_authority_mode,
@@ -265,6 +283,7 @@ def _replay_result(
         or dispatch_marker.get("standing_policy_id") != standing_policy_id
         or dispatch_marker.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
         or dispatch_marker.get("owner_approval_evidence_identity") != owner_approval_evidence_identity
+        or not _target_record_matches(dispatch_marker, target_identity)
         or not _signature_record_matches(
             dispatch_marker,
             expected_mode=signed_authority_mode,
@@ -298,6 +317,7 @@ def _replay_result(
         or status.get("standing_policy_id") != standing_policy_id
         or status.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
         or status.get("owner_approval_evidence_identity") != owner_approval_evidence_identity
+        or not _target_record_matches(status, target_identity)
         or not _signature_record_matches(
             status,
             expected_mode=signed_authority_mode,
@@ -358,9 +378,42 @@ def process_synthetic_request(
     test_before_claim_delay_ms: int = 0,
     signed_approval: dict[str, Any] | None = None,
     trusted_authority: dict[str, Any] | None = None,
+    target_identity: str = TARGET_INERT,
+    docker_runtime_dir: Path | None = None,
 ) -> tuple[dict[str, Any], int]:
     if target_mode not in {"success", "failure"}:
         raise ValueError("synthetic target mode must be success or failure")
+    if target_identity not in _TARGETS:
+        raise ValueError("unsupported TEST_ONLY target")
+    if target_identity == TARGET_DOCKER_RDAGENT and target_mode != "success":
+        return (
+            {
+                "classification": "DENIED_DOCKER_TARGET_MODE_OVERRIDE",
+                "real_dispatch_permission": "DENIED",
+                "dispatch_count_added": 0,
+            },
+            _EXIT_BLOCKED,
+        )
+    if target_identity == TARGET_DOCKER_RDAGENT:
+        if docker_runtime_dir is None:
+            return (
+                {
+                    "classification": "DENIED_DOCKER_RUNTIME_DIRECTORY_MISSING",
+                    "real_dispatch_permission": "DENIED",
+                    "dispatch_count_added": 0,
+                },
+                _EXIT_BLOCKED,
+            )
+        resolved_runtime = docker_runtime_dir.resolve()
+        if resolved_runtime == REPO_ROOT or REPO_ROOT in resolved_runtime.parents:
+            return (
+                {
+                    "classification": "DENIED_DOCKER_RUNTIME_MUST_BE_OUTSIDE_REPOSITORY",
+                    "real_dispatch_permission": "DENIED",
+                    "dispatch_count_added": 0,
+                },
+                _EXIT_BLOCKED,
+            )
     envelope, decision, request = _validate_envelope(request_path)
     if decision.evidence_classification != "TEST_FIXTURE_NOT_REAL_EVIDENCE":
         return (
@@ -454,6 +507,8 @@ def process_synthetic_request(
         "signed_authority_mode": signed_authority_mode,
         "signature_metadata": signature_metadata,
         "owner_approval_evidence_identity": owner_approval_evidence_identity,
+        "target_identity": target_identity,
+        "synthetic_dispatch_target": target_identity,
     }
     if test_before_claim_delay_ms:
         import time
@@ -474,6 +529,7 @@ def process_synthetic_request(
             signed_authority_mode,
             signature_metadata,
             policy_signature_verification,
+            target_identity,
         )
         if replay["classification"] == "REPLAY_TERMINAL_NO_DISPATCH":
             return replay, 0
@@ -501,52 +557,80 @@ def process_synthetic_request(
         "external_authorization": "UNVERIFIED_DENIED",
         "spending_permission": "NOT_PROVEN_DENIED",
         "research_budget_identity_is_not_authorization": True,
-        "synthetic_dispatch_target": "INERT_LOCAL_EXECUTABLE",
+        "synthetic_dispatch_target": target_identity,
     }
     _durable_json_create(dispatch_path, status)
     if test_interrupt_after == "dispatch-start":
         os._exit(_EXIT_INTERRUPTED)
 
-    target = Path(__file__).with_name("synthetic_p3_dispatch_target.py")
     target_log = state_dir / f"{request.request_id.removeprefix('sha256:')}.dispatch.jsonl"
     try:
-        completed = subprocess.run(
-            [
-                sys.executable,
-                str(target),
-                "--request-id",
-                request.request_id,
-                "--target-log",
-                str(target_log),
-                "--outcome",
-                target_mode,
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=15,
-        )
+        if target_identity == TARGET_DOCKER_RDAGENT:
+            from docker_rdagent_target import (
+                DockerDispatchFailed,
+                run_docker_rdagent_proxy_mock_smoke,
+            )
+
+            try:
+                docker_evidence = run_docker_rdagent_proxy_mock_smoke(
+                    request_id=request.request_id,
+                    attempt_id=claim["attempt_id"],
+                    runtime_directory=resolved_runtime,
+                )
+                target_return_code = 0
+                target_stdout = json.dumps(docker_evidence, sort_keys=True)
+                target_stderr = ""
+            except DockerDispatchFailed as exc:
+                target_return_code = exc.return_code
+                target_stdout = json.dumps(exc.evidence, sort_keys=True)
+                target_stderr = ""
+        else:
+            target = Path(__file__).with_name("synthetic_p3_dispatch_target.py")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(target),
+                    "--request-id",
+                    request.request_id,
+                    "--target-log",
+                    str(target_log),
+                    "--outcome",
+                    target_mode,
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            target_return_code = completed.returncode
+            target_stdout = completed.stdout.strip()
+            target_stderr = completed.stderr.strip()
     except Exception as exc:
         # The process may have started before this parent observed an error.
         # Leave DISPATCHING_SYNTHETIC to prevent an unsafe automatic retry.
+        detail = (
+            str(exc)
+            if exc.__class__.__module__ == "docker_rdagent_target"
+            else type(exc).__name__
+        )
         return (
             {
                 "classification": "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
                 "request_id": request.request_id,
-                "error": type(exc).__name__,
+                "error": detail,
                 "dispatch_count_added": 0,
                 "real_dispatch_permission": "DENIED",
             },
             _EXIT_BLOCKED,
         )
 
-    succeeded = completed.returncode == 0
+    succeeded = target_return_code == 0
     terminal = {
         **status,
         "state": "SUCCEEDED_SYNTHETIC" if succeeded else "FAILED_SYNTHETIC",
-        "target_return_code": completed.returncode,
-        "target_stdout": completed.stdout.strip(),
-        "target_stderr": completed.stderr.strip(),
+        "target_return_code": target_return_code,
+        "target_stdout": target_stdout,
+        "target_stderr": target_stderr,
         "candidate_count": 0,
         "p2_status": "NOT_EVALUATED_NO_CANDIDATE",
         "p4_lifecycle_status": "NOT_EVALUATED",
@@ -588,6 +672,13 @@ def main(argv: list[str] | None = None) -> int:
     process_parser.add_argument("--test-signed-approval", type=Path)
     process_parser.add_argument("--test-trusted-authority", type=Path)
     process_parser.add_argument("--target-mode", choices=("success", "failure"), default="success")
+    process_parser.add_argument(
+        "--target",
+        choices=sorted(_TARGETS),
+        default=TARGET_INERT,
+        help="TEST_ONLY target; Docker RD-Agent smoke must be explicitly selected.",
+    )
+    process_parser.add_argument("--docker-runtime-dir", type=Path)
     process_parser.add_argument(
         "--test-interrupt-after", choices=("claim", "dispatch-start"), help=argparse.SUPPRESS
     )
@@ -657,6 +748,8 @@ def main(argv: list[str] | None = None) -> int:
                 if args.test_trusted_authority is not None
                 else None
             ),
+            target_identity=args.target,
+            docker_runtime_dir=args.docker_runtime_dir,
         )
         print(json.dumps(result, sort_keys=True))
         return exit_code

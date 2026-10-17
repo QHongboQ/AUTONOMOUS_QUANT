@@ -14,6 +14,7 @@ HANDOFF_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HANDOFF_DIR))
 import p12_research_handoff as handoff  # noqa: E402
 import standing_policy as policy_gate  # noqa: E402
+import docker_rdagent_target  # noqa: E402
 
 TEST_ROOT = Path(
     os.environ.get(
@@ -134,6 +135,149 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(replay.returncode, 0, replay.stderr)
         self.assertEqual(json.loads(replay.stdout)["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
         self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_docker_target_identity_is_durable_and_success_replays_without_redispatch(self) -> None:
+        self._make_request()
+        evidence = {
+            "classification": "DOCKER_RDAGENT_PROXY_MOCK_SMOKE",
+            "mock_chat_count": 1,
+            "mock_embedding_count": 1,
+            "paid_provider_calls": 0,
+            "training_runs": 0,
+            "broker_actions": 0,
+            "sealed_oos_accessed": False,
+        }
+        with patch.object(docker_rdagent_target, "run_docker_rdagent_proxy_mock_smoke", return_value=evidence) as run:
+            first, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_RDAGENT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(first["classification"], "SUCCEEDED_SYNTHETIC")
+        self.assertEqual(run.call_count, 1)
+        for kind in ("claim", "dispatching", "terminal"):
+            record = json.loads(self._record_path(kind).read_text(encoding="utf-8"))
+            self.assertEqual(record["target_identity"], handoff.TARGET_DOCKER_RDAGENT)
+            self.assertEqual(record["synthetic_dispatch_target"], handoff.TARGET_DOCKER_RDAGENT)
+
+        with patch.object(docker_rdagent_target, "run_docker_rdagent_proxy_mock_smoke", side_effect=AssertionError("redispatch")) as replay_runner:
+            replay, replay_code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_RDAGENT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(replay_code, 0)
+        self.assertEqual(replay["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
+        replay_runner.assert_not_called()
+
+    def test_inert_success_cannot_be_replayed_as_docker_target(self) -> None:
+        self._make_request()
+        first = self._process()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        with patch.object(docker_rdagent_target, "run_docker_rdagent_proxy_mock_smoke", side_effect=AssertionError("redispatch")) as runner:
+            replay = self._process(
+                "--target", handoff.TARGET_DOCKER_RDAGENT,
+                "--docker-runtime-dir", str(self.run_dir / "docker-runtime"),
+            )
+        self.assertEqual(replay.returncode, 3, replay.stderr)
+        self.assertEqual(json.loads(replay.stdout)["classification"], "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE")
+        runner.assert_not_called()
+
+    def test_docker_proxy_unavailable_is_ambiguous_and_not_retried(self) -> None:
+        self._make_request()
+        with patch.object(
+            docker_rdagent_target,
+            "run_docker_rdagent_proxy_mock_smoke",
+            side_effect=docker_rdagent_target.DockerDispatchAmbiguous("proxy unavailable"),
+        ) as runner:
+            result, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_RDAGENT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 3)
+        self.assertEqual(result["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+        self.assertFalse(self._record_path("terminal").exists())
+        replay, replay_code = handoff.process_synthetic_request(
+            self.request_file,
+            self.state_dir,
+            self.policy_file,
+            target_identity=handoff.TARGET_DOCKER_RDAGENT,
+            docker_runtime_dir=self.run_dir / "docker-runtime",
+        )
+        self.assertEqual(replay_code, 3)
+        self.assertEqual(replay["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+        runner.assert_called_once()
+
+    def test_failed_docker_worker_is_terminal_and_not_replayed(self) -> None:
+        self._make_request()
+        evidence = {"classification": "DOCKER_RDAGENT_SMOKE_FAILED", "worker": {"classification": "EXPECTED_DENIAL"}}
+        with patch.object(
+            docker_rdagent_target,
+            "run_docker_rdagent_proxy_mock_smoke",
+            side_effect=docker_rdagent_target.DockerDispatchFailed(17, evidence),
+        ) as runner:
+            failed, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_RDAGENT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 4)
+        self.assertEqual(failed["classification"], "FAILED_SYNTHETIC")
+        replay, replay_code = handoff.process_synthetic_request(
+            self.request_file,
+            self.state_dir,
+            self.policy_file,
+            target_identity=handoff.TARGET_DOCKER_RDAGENT,
+            docker_runtime_dir=self.run_dir / "docker-runtime",
+        )
+        self.assertEqual(replay_code, 4)
+        self.assertEqual(replay["classification"], "REPLAY_TERMINAL_FAILED_NO_DISPATCH")
+        runner.assert_called_once()
+
+    def test_invalid_test_proxy_key_denial_cannot_be_terminal_success(self) -> None:
+        self._make_request()
+        evidence = {"classification": "DOCKER_RDAGENT_SMOKE_FAILED_INVALID_KEY_DENIAL"}
+        with patch.object(
+            docker_rdagent_target,
+            "run_docker_rdagent_proxy_mock_smoke",
+            side_effect=docker_rdagent_target.DockerDispatchFailed(1, evidence),
+        ):
+            result, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_RDAGENT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 4)
+        self.assertEqual(result["classification"], "FAILED_SYNTHETIC")
+        self.assertEqual(result["status"]["target_return_code"], 1)
+        self.assertEqual(result["status"]["target_identity"], handoff.TARGET_DOCKER_RDAGENT)
+
+    def test_interrupted_docker_dispatch_is_ambiguous_without_redispatch(self) -> None:
+        self._make_request()
+        interrupted = self._process(
+            "--target", handoff.TARGET_DOCKER_RDAGENT,
+            "--docker-runtime-dir", str(self.run_dir / "docker-runtime"),
+            "--test-interrupt-after", "dispatch-start",
+        )
+        self.assertEqual(interrupted.returncode, 86)
+        replay = self._process(
+            "--target", handoff.TARGET_DOCKER_RDAGENT,
+            "--docker-runtime-dir", str(self.run_dir / "docker-runtime"),
+        )
+        self.assertEqual(replay.returncode, 3)
+        self.assertEqual(json.loads(replay.stdout)["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
 
     def test_different_valid_policy_for_same_request_blocks_replay(self) -> None:
         self._make_request()

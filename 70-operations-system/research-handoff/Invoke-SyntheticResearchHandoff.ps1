@@ -2,7 +2,10 @@ param(
     [Parameter(Mandatory = $true)][string]$RepoRoot,
     [Parameter(Mandatory = $true)][string]$RequestPath,
     [Parameter(Mandatory = $true)][string]$PolicyPath,
-    [Parameter(Mandatory = $true)][string]$StateDirectory
+    [Parameter(Mandatory = $true)][string]$StateDirectory,
+    [ValidateSet('INERT_LOCAL_EXECUTABLE', 'DOCKER_RDAGENT_PROXY_MOCK_SMOKE')]
+    [string]$Target = 'INERT_LOCAL_EXECUTABLE',
+    [string]$DockerRuntimeDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,7 +27,15 @@ $request = ConvertTo-WslPath $RequestPath
 $policy = ConvertTo-WslPath $PolicyPath
 $state = ConvertTo-WslPath $StateDirectory
 $entry = "$repo/70-operations-system/research-handoff/p12_research_handoff.py"
+$arguments = @(
+    $entry, 'process', '--request', $request, '--policy', $policy,
+    '--state-dir', $state, '--synthetic-only', '--target', $Target
+)
+if ($Target -eq 'DOCKER_RDAGENT_PROXY_MOCK_SMOKE') {
+    if (-not $DockerRuntimeDirectory) { throw 'DockerRuntimeDirectory is required for the Docker TEST_ONLY target.' }
+    $runtime = ConvertTo-WslPath $DockerRuntimeDirectory
+    $arguments += @('--docker-runtime-dir', $runtime)
+}
 
-& $wslExe -d Ubuntu-24.04 -u zhou -- env "PYTHONPATH=$rfc8785Lib" $python $entry process `
-    --request $request --policy $policy --state-dir $state --synthetic-only
+& $wslExe -d Ubuntu-24.04 -u zhou -- env "PYTHONPATH=$rfc8785Lib" $python @arguments
 exit $LASTEXITCODE

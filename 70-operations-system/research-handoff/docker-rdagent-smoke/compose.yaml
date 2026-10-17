@@ -1,0 +1,102 @@
+name: aq-p12-rdagent-native-smoke
+services:
+  postgres:
+    image: postgres@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_DB: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?temporary test database password required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks: [core]
+
+  redis:
+    image: redis@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks: [core]
+
+  mock:
+    image: python@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+    command: ["python", "-u", "/app/mock_provider.py"]
+    volumes:
+      - ./mock_provider.py:/app/mock_provider.py:ro
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks: [core]
+
+  litellm:
+    image: ghcr.io/berriai/litellm@sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?fresh temporary Proxy admin key required}
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./provision_test_key.py:/app/provision_test_key.py:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      mock: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)"]
+      interval: 3s
+      timeout: 4s
+      retries: 40
+    expose: ["4000"]
+    networks: [core, worker_proxy]
+
+  rdagent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped test Proxy key required}
+      OPENAI_API_BASE: http://litellm:4000/v1
+      LITELLM_CHAT_MODEL: openai/deepseek-chat
+      LITELLM_EMBEDDING_MODEL: openai/qwen3-embedding:0.6b
+      LITELLM_CHAT_STREAM: "false"
+      LITELLM_LOG_LLM_CHAT_CONTENT: "false"
+      HOME: /tmp
+      TMPDIR: /tmp
+    entrypoint: ["python", "/app/native_smoke.py"]
+    working_dir: /tmp
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 2g
+    init: true
+    depends_on:
+      litellm: {condition: service_healthy}
+    networks: [worker_proxy]
+
+networks:
+  core:
+    driver: bridge
+  worker_proxy:
+    driver: bridge
+    internal: true
+
+volumes:
+  pgdata: {}
+  redisdata: {}
