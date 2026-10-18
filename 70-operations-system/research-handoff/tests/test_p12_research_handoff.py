@@ -488,6 +488,19 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)["real_dispatch_permission"], "DENIED")
         self.assertEqual(len(self._dispatch_lines()), 0)
 
+    def test_real_finquant_target_is_not_registered_or_dispatchable(self) -> None:
+        self._make_request()
+        with self.assertRaisesRegex(ValueError, "unsupported TEST_ONLY target"):
+            handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity="DOCKER_RDAGENT_FINQUANT_REAL",
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(len(self._dispatch_lines()), 0)
+        self.assertFalse(self._record_path("claim").exists())
+
     def test_same_request_concurrent_claims_dispatch_once(self) -> None:
         self._make_request()
         command = [

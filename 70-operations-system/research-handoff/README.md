@@ -364,6 +364,32 @@ P2 frozen protocols/cohorts remain unchanged. Candidate V4 outside the frozen
 P2 V2 cohort remains ineligible. P4-to-P7 provenance remains a separate open
 gap. No P2 or P4 downstream decision is fabricated by the P12 test.
 
+## First real research readiness review
+
+At base `e2a6a498b9fffa7fe35646982d757538c165b2e4`, the real fin_quant target
+is intentionally not registered in P12. The TEST_ONLY target identities and
+durable replay rules remain unchanged. A real target must not be added until
+all of the independent authorization, provider-budget, and worker-isolation
+gates below are established.
+
+| Readiness item | Current state | Evidence / blocker |
+| --- | --- | --- |
+| Durable Qlib/RD-Agent outputs | **Not ready** | The TEST_ONLY worker writes `/workspace`, its SQLite MLflow URI, traces, and workspaces to tmpfs; Compose cleanup removes the run. No dedicated persistent run volume is mounted. A future volume must be unique per P12 attempt and retain Qlib/MLflow Recorder artifacts, `task`, `params.pkl`, `dataset`, `pred.pkl`, RD-Agent trace, and lineage. |
+| Real-provider Proxy route | **Not ready** | The checked-in Compose config routes only to the local Mock. At review time only `aq-p12-health` was running; no LiteLLM/PostgreSQL/Redis research stack or related Docker volumes were present. The P3 Candidate V4 contract identifies DeepSeek chat, but that identity is not owner approval for future spending. |
+| Provider credential isolation | **Not ready** | The existing host audit found the P3 DeepSeek credential file-readable by the WSL P3 account that launches Docker. No provider secret was read. The credential must be revoked/rotated and provisioned only to a separately protected Proxy/control identity; the worker may receive only a model-restricted Proxy virtual key. The current shared Windows/WSL/Docker authority does not prove that separation. |
+| Persistent native spend gate | **Not ready** | The Proxy configuration in this Compose is TEST_ONLY and its Postgres/Redis data are removed during teardown. The test virtual-key provisioner sets model allowlists but no per-key spend cap or reset window. P12 admission is synthetic-only; `research_budget_identity` and simulated spend are not enforcement. No approved numeric budget is available, so none is supplied here. |
+| Trusted owner approval/revocation source | **Not ready** | The local signature verifier has no independent owner-controlled approval store or monotonic revocation/epoch source. Local files, verifier, and rollback state are writable by the same host/WSL operator. Signed or `HUMAN_APPROVED` fields alone cannot authorize dispatch. |
+| Candidate V4 handoff | **Existing, separate** | Keep `project_rdagent_candidate_v4.py` and its V4 contract unchanged. It requires a FINISHED native Qlib Recorder and the four native artifacts before hashing them. P2 retains its independent eligibility decision; a V4 Candidate outside the frozen V2 cohort remains ineligible. No P12-to-materializer invocation is wired by this readiness review. |
+
+Therefore the target remains **DISABLED** and no real provider route or
+spending amount is configured. The future bounded command remains
+`rdagent fin_quant --loop-n 1`; it may be invoked only after trusted owner
+approval and revocation, a persistent Proxy/PostgreSQL budget reservation
+with a human-approved limit, provider-key rotation/isolation, and a durable
+run-scoped artifact volume are verified together. The real worker must preserve
+the existing three read-only P2/P3 data mounts and internal Proxy-only egress.
+No schedule or service is enabled by this review.
+
 ## Local validation
 
 Use the already installed pinned RD-Agent WSL runtime and RFC 8785 0.1.4
