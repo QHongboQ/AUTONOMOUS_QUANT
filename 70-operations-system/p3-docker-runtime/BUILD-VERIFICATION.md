@@ -5,8 +5,8 @@
 - Base repository commit: `1346f6d770ed27081d60ff1cebf9d3b5a8ed975c`
 - Base image: `condaforge/miniforge3:26.7.2-0`, linux/amd64 manifest digest `sha256:be01a3e63d4af20d8a9937d1e12fa299d1c572edf601b961180a59c78bd7250d`
 - Stable local tag: `aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1`
-- Docker Engine local image digest: `sha256:80d832b0899c8d9e380b4ace42afeea931ed789e491b21b0ed6be09add64bc84`
-- Image size: 9,554,316,541 bytes; image was kept local and not pushed.
+- Docker Engine image ID after the PR #161 final build: `sha256:f0caceba9e06a618dda72bd999de78c13e34e0773831c8796936c80793e4eea2`
+- Image size: 9,554,321,896 bytes; image was kept local and not pushed.
 - RD-Agent source: `microsoft/RD-Agent@484776c211e4fbbeef03e0ec00d6bbee7362a4f4`
 - Qlib source: `microsoft/qlib@2fb9380b342556ddb50a4b24e4fe8655d548b2b8`
 - Python: 3.10.21 in both `rdagent-official-v1` and `rdagent4qlib`.
@@ -19,11 +19,21 @@
 
 ## Actual runtime acceptance
 
-The corrected source acceptance was run inside a disposable container from
-this pinned image. It passed all five `unittest` checks. The container used
-the same image digest, RD-Agent/Qlib source SHAs and package versions above;
-the updated acceptance source was streamed to Python on stdin so no image
-rebuild or code bind mount was needed.
+The final PR #161 image was built from the repository root with the current
+Dockerfile and updated `runtime_acceptance.py`:
+
+```text
+docker build --platform linux/amd64 --build-arg P3_RUNTIME_IMAGE_VERSION=rdagent-1.0.0-qlib-0.9.8.dev26-v1 -f 70-operations-system/p3-docker-runtime/Dockerfile -t aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1 .
+BUILD_EXIT_CODE = 0
+IMAGE_ID = sha256:f0caceba9e06a618dda72bd999de78c13e34e0773831c8796936c80793e4eea2
+```
+
+The built image was run without overriding its default entrypoint or command;
+the baked-in `/opt/aq/runtime_acceptance.py` executed and the container exited
+with code 0. `docker inspect` reported the same image ID, user `10001:10001`,
+`NetworkMode=none`, read-only root, 256 process limit, 4 GiB memory limit, and
+the default command `python /opt/aq/runtime_acceptance.py`. All five
+`unittest` checks passed (`Ran 5 tests in 23.535s`, `OK`).
 
 The container was non-root (`10001:10001`), networkless (`none`), read-only at
 root, capped at 4 GiB and 256 processes, and had exactly three host bind mounts.
@@ -41,6 +51,9 @@ frozen `instruments/p2_pit.txt` SHA-256 was
 `D.list_instruments()` observed and matched the full authority: 730 security
 identities and 745 membership ranges. `D.calendar()` returned 2,516 historical
 sessions from 2015-01-02 through 2024-12-31 with required boundaries present.
+The baked-in probe emitted `US_PIT_QLIB_DATA_ACCEPTANCE_PASS`,
+`instrument_count=730`, `membership_range_count=745`, and
+`membership_matches_frozen_authority=true`.
 The separately mounted calendar source is documented in P2's historical
 rehearsal as a calendar-only runtime generated from XNYS 4.13.2; `day.txt` and
 Qlib-required `day_future.txt` matched the frozen SHA-256s. It contains no
