@@ -72,8 +72,8 @@ services:
     pull_policy: never
     profiles: [p12-test-run]
     environment:
-      P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped TEST_ONLY Proxy key required}
-      OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped TEST_ONLY Proxy key required}
+      P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:-}
+      OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:-}
       OPENAI_API_BASE: http://litellm:4000/v1
       BACKEND: rdagent.oai.backend.LiteLLMAPIBackend
       LITELLM_CHAT_MODEL: openai/deepseek-chat
@@ -105,17 +105,33 @@ services:
       QLIB_MODEL_VALID_END: "2021-12-31"
       QLIB_MODEL_TEST_START: "2022-01-03"
       QLIB_MODEL_TEST_END: "2024-12-31"
-      WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/workspaces
-      PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/pickle-cache
-      LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/trace
-      QLIB_MLFLOW_URI: sqlite:////workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/mlflow.db
+      P12_RUN_NAMESPACE: ${P12_RUN_NAMESPACE:-}
+      P12_FINQUANT_OUTPUT_DIR: ${P12_FINQUANT_OUTPUT_DIR:-}
+      WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/workspaces
+      PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:-}/pickle-cache
+      LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/trace
+      QLIB_MLFLOW_URI: sqlite:////workspace/runs/${P12_RUN_NAMESPACE:-}/mlflow.db
       HOME: /home/rdagent
       TMPDIR: /tmp
-    entrypoint: ["rdagent"]
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        case "$${P3_TEST_PROXY_KEY}" in
+          sk-*) case "$${P3_TEST_PROXY_KEY}" in sk-test-*|*placeholder*|*not-yet-provisioned*) echo 'TEST_ONLY scoped Proxy key required' >&2; exit 64;; esac;;
+          *) echo 'TEST_ONLY scoped Proxy key required' >&2; exit 64;;
+        esac
+        test "$${OPENAI_API_KEY}" = "$${P3_TEST_PROXY_KEY}"
+        case "$${P12_RUN_NAMESPACE}" in aq-p12-finquant-????????????) ;; *) echo 'request-scoped run namespace required' >&2; exit 64;; esac
+        test "$${P12_RUN_NAMESPACE}" != aq-p12-finquant-aaaaaaaaaaaa
+        case "$${P12_FINQUANT_OUTPUT_DIR}" in /mnt/d/AQ/OPERATIONS/P12/finquant-output/*/*) ;; *) echo 'durable per-attempt output path required' >&2; exit 64;; esac
+        test -d "$${P12_FINQUANT_OUTPUT_DIR}"
+        exec rdagent "$$@"
+      - --
     command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]
     volumes:
       - type: bind
-        source: ${P12_FINQUANT_OUTPUT_DIR:?unique durable per-attempt output directory required}
+        source: ${P12_FINQUANT_OUTPUT_DIR:-/tmp/p12-worker-disabled}
         target: /workspace
         bind:
           create_host_path: false

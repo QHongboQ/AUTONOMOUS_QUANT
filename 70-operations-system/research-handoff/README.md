@@ -521,6 +521,13 @@ exhaustion before Mock, service restart persistence, and PostgreSQL-outage
 denial before Mock. Test keys/results live only in the separately mounted
 operations state directory.
 
+The persistent Compose model can also be used by the original PR #165
+standalone service commands without P12 worker variables. Worker-only values
+default to empty for model parsing; the TEST_ONLY worker preflight refuses to
+execute RD-Agent unless it receives a non-placeholder scoped key, matching
+OpenAI key, request-scoped run namespace, and existing durable per-attempt
+output directory.
+
 On the Windows/WSL host, create a dedicated operations directory and state
 subdirectory with owner-only ACLs. Put fresh `LITELLM_MASTER_KEY`,
 `POSTGRES_PASSWORD`, and `P12_LITELLM_STATE_DIR` values in its external Compose

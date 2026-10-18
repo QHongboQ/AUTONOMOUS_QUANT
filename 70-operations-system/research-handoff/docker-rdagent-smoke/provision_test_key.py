@@ -139,6 +139,19 @@ def create(max_budget: float, key_alias: str) -> dict:
     }
 
 
+def create_legacy() -> dict:
+    """Preserve the original no-argument TEST_ONLY smoke provisioner."""
+    status, payload = request(
+        "POST", "/key/generate", key=master_key(), body={"models": MODELS}
+    )
+    if status not in (200, 201):
+        raise RuntimeError(f"native key generation returned HTTP {status}")
+    token = payload.get("key") or payload.get("token")
+    if not isinstance(token, str) or not token:
+        raise RuntimeError("Proxy did not return a virtual key")
+    return {"classification": "TEST_PROXY_KEY_CREATED", "token": token}
+
+
 def mock_counts() -> dict:
     with urllib.request.urlopen(MOCK_URL + "/counts", timeout=5) as response:
         value = json.load(response)
@@ -205,12 +218,14 @@ def block_key() -> dict:
 
 def main() -> int:
     try:
-        mode = sys.argv[1]
-        if mode == "create" and len(sys.argv) == 4:
-            result = create(float(sys.argv[2]), sys.argv[3])
-        elif mode == "verify-exhaustion" and len(sys.argv) == 2:
+        args = sys.argv[1:]
+        if not args:
+            result = create_legacy()
+        elif args[0] == "create" and len(args) == 3:
+            result = create(float(args[1]), args[2])
+        elif args[0] == "verify-exhaustion" and len(args) == 1:
             result = verify_exhaustion()
-        elif mode == "block" and len(sys.argv) == 2:
+        elif args[0] == "block" and len(args) == 1:
             result = block_key()
         else:
             raise ValueError("invalid control command")

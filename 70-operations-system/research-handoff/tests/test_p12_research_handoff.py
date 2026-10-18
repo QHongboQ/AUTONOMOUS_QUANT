@@ -398,8 +398,10 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertIn("name: aq-p12-litellm-worker-proxy", compose)
         self.assertIn("internal: true", compose)
         self.assertIn("networks: [worker_proxy]", worker_section)
-        self.assertIn("P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped TEST_ONLY Proxy key required}", worker_section)
-        self.assertIn("OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped TEST_ONLY Proxy key required}", worker_section)
+        self.assertIn("P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:-}", worker_section)
+        self.assertIn("OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:-}", worker_section)
+        self.assertIn("TEST_ONLY scoped Proxy key required", worker_section)
+        self.assertIn("durable per-attempt output path required", worker_section)
         for forbidden in ("LITELLM_MASTER_KEY", "POSTGRES_PASSWORD", "DEEPSEEK_API_KEY", "ports:", "/var/run/docker.sock"):
             self.assertNotIn(forbidden, worker_section)
         self.assertIn("provision_test_key.py", proxy_section)
