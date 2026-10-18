@@ -53,6 +53,8 @@ services:
       - ./config.yaml:/app/config.yaml:ro
       - ./provision_test_key.py:/app/provision_test_key.py:ro
       - ./persistent_budget_acceptance.py:/app/persistent_budget_acceptance.py:ro
+      - ./native_experiment_budget.py:/app/native_experiment_budget.py:ro
+      - ./experiment_budget_acceptance.py:/app/experiment_budget_acceptance.py:ro
       - type: bind
         source: ${P12_LITELLM_STATE_DIR:?dedicated protected TEST_ONLY state directory required}
         target: /test-state

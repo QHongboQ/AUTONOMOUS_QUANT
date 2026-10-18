@@ -27,9 +27,11 @@ P4_POLICY_DIR = (
     / "40-certification-system/champion-challenger/p4-residual-thin-policy"
 )
 sys.path.insert(0, str(P4_POLICY_DIR))
+sys.path.insert(0, str(Path(__file__).with_name("docker-rdagent-smoke")))
 
 import aq_p4_policy as p4  # noqa: E402
 import standing_policy as policy_gate  # noqa: E402
+from native_experiment_budget import experiment_user_id  # noqa: E402
 
 _REQUEST_ID_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TERMINAL_STATES = {"SUCCEEDED_SYNTHETIC", "FAILED_SYNTHETIC"}
@@ -226,6 +228,8 @@ def _replay_result(
     status_path: Path,
     request_id: str,
     request_digest: str,
+    research_budget_identity: str,
+    native_experiment_user_id: str,
     standing_policy_id: str,
     owner_approval_evidence_identity: str | None,
     signed_authority_mode: str,
@@ -245,6 +249,8 @@ def _replay_result(
         claim.get("state") != "CLAIMED"
         or claim.get("request_id") != request_id
         or claim.get("request_digest") != request_digest
+        or claim.get("research_budget_identity", research_budget_identity) != research_budget_identity
+        or claim.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
         or not _valid_attempt_id(claim.get("attempt_id"))
         or claim.get("standing_policy_id") != standing_policy_id
         or claim.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
@@ -280,6 +286,8 @@ def _replay_result(
         dispatch_marker.get("state") != "DISPATCHING_SYNTHETIC"
         or dispatch_marker.get("request_id") != request_id
         or dispatch_marker.get("request_digest") != request_digest
+        or dispatch_marker.get("research_budget_identity", research_budget_identity) != research_budget_identity
+        or dispatch_marker.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
         or dispatch_marker.get("attempt_id") != claim.get("attempt_id")
         or dispatch_marker.get("dispatch_mode") != "SYNTHETIC_ONLY"
         or dispatch_marker.get("standing_policy_id") != standing_policy_id
@@ -315,6 +323,8 @@ def _replay_result(
     if (
         status.get("request_id") != request_id
         or status.get("request_digest") != request_digest
+        or status.get("research_budget_identity", research_budget_identity) != research_budget_identity
+        or status.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
         or status.get("attempt_id") != claim.get("attempt_id")
         or status.get("standing_policy_id") != standing_policy_id
         or status.get("policy_admission") != "ADMITTED_SYNTHETIC_TEST_ONLY"
@@ -487,6 +497,8 @@ def process_synthetic_request(
         )
 
     request_digest = _canonical_digest(envelope)
+    research_budget_identity = request.research_budget_identity
+    native_user_id = experiment_user_id(research_budget_identity)
     owner_approval_evidence_identity = admission.get("owner_approval_evidence_identity")
     signed_authority_mode = admission["signed_authority_mode"]
     signature_metadata = admission["signature_metadata"]
@@ -499,6 +511,8 @@ def process_synthetic_request(
         "state": "CLAIMED",
         "request_id": request.request_id,
         "request_digest": request_digest,
+        "research_budget_identity": research_budget_identity,
+        "native_experiment_user_id": native_user_id,
         "attempt_id": str(uuid.uuid4()),
         "dispatch_mode": "SYNTHETIC_ONLY",
         "real_dispatch_permission": "DENIED",
@@ -526,6 +540,8 @@ def process_synthetic_request(
             status_path,
             request.request_id,
             request_digest,
+            research_budget_identity,
+            native_user_id,
             test_policy.policy_id,
             owner_approval_evidence_identity,
             signed_authority_mode,

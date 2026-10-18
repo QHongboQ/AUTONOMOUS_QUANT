@@ -130,13 +130,37 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(result["status"]["request_id"], envelope["research_request"]["request_id"])
         policy_id = json.loads(self.policy_file.read_text(encoding="utf-8"))["policy_id"]
         self.assertEqual(result["status"]["standing_policy_id"], policy_id)
+        research_budget_identity = envelope["research_request"]["research_budget_identity"]
+        experiment_user_id = handoff.experiment_user_id(research_budget_identity)
         for record_kind in ("claim", "dispatching", "terminal"):
-            self.assertEqual(json.loads(self._record_path(record_kind).read_text())["standing_policy_id"], policy_id)
+            marker = json.loads(self._record_path(record_kind).read_text())
+            self.assertEqual(marker["standing_policy_id"], policy_id)
+            self.assertEqual(marker["research_budget_identity"], research_budget_identity)
+            self.assertEqual(marker["native_experiment_user_id"], experiment_user_id)
 
         replay = self._process()
         self.assertEqual(replay.returncode, 0, replay.stderr)
         self.assertEqual(json.loads(replay.stdout)["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
         self.assertEqual(len(self._dispatch_lines()), 1)
+
+    def test_native_experiment_identity_tampering_blocks_replay(self) -> None:
+        self._make_request()
+        for marker_kind in ("claim", "dispatching", "terminal"):
+            state_dir = self.run_dir / f"native-user-{marker_kind}"
+            first = self._process_at(state_dir)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            marker_path = self._record_path(marker_kind, state_dir)
+            marker = json.loads(marker_path.read_text(encoding="utf-8"))
+            marker["native_experiment_user_id"] = "aq-p12-exp-tampered"
+            marker_path.write_text(json.dumps(marker), encoding="utf-8")
+
+            replay = self._process_at(state_dir)
+            self.assertEqual(replay.returncode, 3, replay.stderr)
+            self.assertEqual(
+                json.loads(replay.stdout)["classification"],
+                "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+            )
+            self.assertEqual(len(list(state_dir.glob("*.dispatch.jsonl"))), 1)
 
     def test_docker_target_identity_is_durable_and_success_replays_without_redispatch(self) -> None:
         self._make_request()

@@ -721,8 +721,8 @@ untrusted owner approval, expiry/revocation, P4 scope/provenance/budget
 binding, provider/model allowlists, unknown or exceeded simulated spend,
 negative/non-finite/invalid spend representations, concurrency, and resource
 caps. Replay tests cover same-policy replay, changed valid policy, and
-tampered policy identity in persisted records. The current focused offline
-suite contains 58 tests. Those synthetic admission tests do not by themselves
+tampered policy identity in persisted records. The focused offline
+suite contains 88 tests. Those synthetic admission tests do not by themselves
 prove provider charging enforcement or a race-safe real concurrency limit;
 the separate live LiteLLM acceptance above verifies pre-call rejection for
 the local TEST_ONLY Mock budget fixture only, not for real provider spending.
@@ -730,3 +730,51 @@ the local TEST_ONLY Mock budget fixture only, not for real provider spending.
 The acceptance record proves process-level durable replay on this host file
 path. It does not prove recovery from power loss, disk/controller failure, or
 exactly-once external effects.
+
+## Native cumulative experiment budget binding
+
+`docker-rdagent-smoke/native_experiment_budget.py` binds P12's canonical
+`research_budget_identity` to one domain-separated deterministic LiteLLM
+`user_id`. P12 writes that identity and user ID into its immutable claim,
+dispatch, and terminal records; replay rejects a changed binding. The
+control-side adapter uses LiteLLM's native `/user/new`, `/user/info`,
+`/key/generate`, and `/key/info` APIs. A user has one persistent
+`max_budget` with `budget_duration: null`; keys attach to that same user and
+have their own non-resetting budget cap, no more than 24-hour expiry, exact
+Mock/local-embedding model allowlist, and concurrency one. Replays verify the
+existing user and never allocate a new one or issue a key. A missing native
+user on replay, changed budget, reset, model scope, or mismatched user ID fails
+closed.
+
+The live acceptance harness uses a separate synthetic P12 request and a
+`$0.00012` TEST_ONLY user budget, not the future `$5.00` owner budget. Two
+separately issued Mock keys share the native user spend; a third key is denied
+before Mock when aggregate spend is exhausted. The same user budget and spend
+were observed after restarting only the existing persistent TEST_ONLY
+PostgreSQL container. P12 and LiteLLM replay checks made no user-allocation or
+key-generation call. Temporary keys are blocked after the persistence check.
+
+Real issuance stays hard-denied: the repository has no independent
+owner-controlled approval and revocation source available to this path. A P12
+identity, locally supplied approval object, TEST_ONLY policy, or existing
+signed test snapshot is not real spending authority. No `$5` user/key was
+created, and real P12 dispatch remains disabled. Before real issuance, the
+owner must establish a separately controlled approval/revocation authority
+that binds the experiment identity, provider/model scope, single run, total
+budget, concurrency, and expiry; the control side must verify it before
+creating the native user/key. This integration does not confer P2
+certification, Candidate eligibility, production, or broker authority.
+
+Live cumulative-budget acceptance on 2026-10-18 used P12 synthetic request
+`sha256:94d8470c76fea98a3ce40260742a7401f88b0c47579bdf9c163c92e2c2e9b3cd`,
+policy `sha256:15cba385da6e181f862e80873e438978119492fcb686ff302ed3e62f712d371a`,
+and deterministic native user `aq-p12-exp-6a7844cc2873afa3176a94a5e4912e5871274eb7267abf842d401718f703effc`.
+The `$0.00012` TEST_ONLY user spend rose from `$0` to `$0.00005` through Key A,
+then to `$0.00010` through Key B. Key C was denied and the Mock chat count did
+not increase. P12 and LiteLLM replay checks reused the same request, attempt,
+and native user without `/user/new` or `/key/generate` calls. After restarting
+only `aq-p12-litellm-persistent-test-postgres-1` on the existing
+`aq-p12-litellm-test-pgdata` volume, the user ID, non-resetting `$0.00012`
+budget, and `$0.00010` spend remained; Key C remained denied before Mock.
+Temporary keys were blocked after the check. The P12 fixture generated no
+Candidate and performed no training, certification, provider, or broker call.
