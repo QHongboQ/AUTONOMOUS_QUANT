@@ -65,12 +65,39 @@ def info_is_scoped(info: dict, max_budget: float) -> bool:
     except (TypeError, ValueError):
         return False
     return (
-        info.get("models") == MODELS
+        math.isfinite(observed_budget)
+        and info.get("models") == MODELS
         and math.isclose(observed_budget, max_budget, rel_tol=0, abs_tol=1e-12)
         and info.get("budget_duration") == RESET_PERIOD
         and bool(info.get("expires"))
         and info.get("max_parallel_requests") == MAX_PARALLEL_REQUESTS
     )
+
+
+def settled_spend(token: str, *, timeout: float = 90, stable_reads: int = 8) -> tuple[dict, float]:
+    """Wait for native key spend to stop changing before the exhaustion probe."""
+    deadline = time.monotonic() + timeout
+    previous = None
+    stable_count = 0
+    latest_info = {}
+    latest_spend = 0.0
+    while time.monotonic() < deadline:
+        latest_info = key_info(token)
+        try:
+            latest_spend = float(latest_info.get("spend", 0.0))
+        except (TypeError, ValueError):
+            raise RuntimeError("LiteLLM native spend was not numeric") from None
+        if not math.isfinite(latest_spend) or latest_spend < 0:
+            raise RuntimeError("LiteLLM native spend was invalid")
+        if previous is not None and math.isclose(latest_spend, previous, rel_tol=0, abs_tol=1e-12):
+            stable_count += 1
+        else:
+            stable_count = 0
+        if latest_spend > 0 and stable_count >= stable_reads:
+            return latest_info, latest_spend
+        previous = latest_spend
+        time.sleep(1)
+    raise RuntimeError("LiteLLM native spend did not settle before the bounded timeout")
 
 
 def create(max_budget: float, key_alias: str) -> dict:
@@ -122,15 +149,7 @@ def mock_counts() -> dict:
 
 def verify_exhaustion() -> dict:
     token = virtual_key()
-    deadline = time.monotonic() + 45
-    info = key_info(token)
-    spent = float(info.get("spend", 0.0))
-    while spent <= 0 and time.monotonic() < deadline:
-        time.sleep(1)
-        info = key_info(token)
-        spent = float(info.get("spend", 0.0))
-    if not math.isfinite(spent) or spent <= 0:
-        raise RuntimeError("LiteLLM did not persist positive spend for this run")
+    info, spent = settled_spend(token)
 
     # Lower only the synthetic test key's native cap to its already-recorded
     # spend so the next chargeable probe exercises LiteLLM's native gate.

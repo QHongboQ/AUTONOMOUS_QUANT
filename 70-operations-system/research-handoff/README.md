@@ -203,16 +203,32 @@ LiteLLM/PostgreSQL retained the scoped key's synthetic spend (`0.0005`), and
 that key was blocked after the attempt. This is internal Mock accounting, not
 provider spending.
 
-The P12 wrapper then encountered a local `NameError` in its post-dispatch
-network verification before it could persist a terminal result or run the
-configured budget-exhaustion probe. P12 correctly recorded
-`BLOCKED_UNKNOWN_POST_DISPATCH_STATE`. Replaying the same request returned the
-same blocked state with `dispatch_count_added: 0`, and did not recreate a
-worker. The prior request must not be retried: the native worker did run, while
-the durable terminal classification and full network/budget postchecks remain
-unverified. A new synthetic request is required only after this correction is
-reviewed. Real research remains denied; no Candidate, certification, training,
-paid provider call, or broker action was produced.
+The first wrapper attempt encountered a local `NameError` in its
+post-dispatch network verification before it could persist a terminal result or
+run the configured budget-exhaustion probe. P12 correctly recorded
+`BLOCKED_UNKNOWN_POST_DISPATCH_STATE`. Replaying that same request returned the
+same blocked state with `dispatch_count_added: 0`; it was not retried.
+
+A separate, freshly generated P4 synthetic request was then dispatched after
+the wrapper correction. Request `sha256:e58af0dfc1cad1c53c20f474bf8ab092763979954bbc2e152117e6015b205cf4`,
+attempt `0813c673-f557-4ed1-8a16-63489489f1f1`, reached RD-Agent's native
+`direct_exp_gen` proposal path and made ten Mock chat requests. The Mock's
+deliberately malformed `synthetic-ok` response caused proposal parsing to fail;
+P12 persisted `FAILED_SYNTHETIC`, return code 1, zero candidates, and no P2
+evaluation. The worker was removed, while 57 run-scoped durable output files
+remained under
+`D:\AQ\OPERATIONS\P12\finquant-output\e58af0dfc1cad1c53c20f474bf8ab092763979954bbc2e152117e6015b205cf4\0813c673-f557-4ed1-8a16-63489489f1f1`.
+
+The native LiteLLM budget exhaustion probe was denied (`422 budget_exceeded`)
+without increasing the Mock request count. PostgreSQL later showed spend
+settling from `0.0004` at probe time to `0.0005`; the scoped key remained
+blocked, and its native cap was aligned to the settled spend through LiteLLM's
+official key API. A follow-up replay returned
+`REPLAY_TERMINAL_FAILED_NO_DISPATCH` with zero added dispatches. Regression
+coverage now waits for stable native spend before probing exhaustion. These are
+TEST_ONLY Mock accounting results, not provider spend or owner authorization.
+No Candidate, certification, full training, paid provider call, or broker
+action was produced; real research remains denied.
 
 ## Synthetic request and intake
 
