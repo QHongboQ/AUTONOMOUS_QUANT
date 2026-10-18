@@ -137,6 +137,11 @@ services:
     command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]
     volumes:
       - type: bind
+        source: ${P12_FINQUANT_OUTPUT_DIR:?unique durable per-attempt output directory required}
+        target: /workspace
+        bind:
+          create_host_path: false
+      - type: bind
         source: /mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source
         target: /data/factor-source
         read_only: true
@@ -151,7 +156,6 @@ services:
     working_dir: /workspace
     read_only: true
     tmpfs:
-      - /workspace:rw,nosuid,nodev,size=1g,uid=10001,gid=10001
       - /tmp:rw,nosuid,nodev,size=256m,uid=10001,gid=10001
       - /home/rdagent:rw,nosuid,nodev,size=256m,uid=10001,gid=10001
     user: "10001:10001"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import pickle
 import subprocess
 import sys
 import tempfile
@@ -300,7 +301,9 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             stdout = "sha256:wrong-image\n" if command[:3] == ["docker", "image", "inspect"] else ""
             return subprocess.CompletedProcess(command, 0, stdout, "")
 
-        with patch.object(docker_rdagent_target, "_run", side_effect=inspect_wrong_image) as run:
+        with patch.object(docker_rdagent_target, "FINQUANT_OUTPUT_ROOT", self.run_dir / "durable-output"), patch.object(
+            docker_rdagent_target, "_run", side_effect=inspect_wrong_image
+        ) as run:
             with self.assertRaises(docker_rdagent_target.DockerDispatchFailed) as raised:
                 docker_rdagent_target.run_docker_rdagent_finquant(
                     request_id="sha256:" + "a" * 64,
@@ -314,6 +317,54 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertFalse(any(command[:2] == ["docker", "compose"] and "up" in command for command in commands))
         self.assertFalse(any(command[:2] == ["docker", "compose"] and "run" in command for command in commands))
 
+    def test_finquant_durable_output_is_request_and_attempt_scoped_and_immutable(self) -> None:
+        root = self.run_dir / "durable-output"
+        request_id = "sha256:" + "b" * 64
+        attempt_id = str(uuid.uuid4())
+        output = docker_rdagent_target._finquant_output_directory(request_id, attempt_id, root)
+        self.assertEqual(output, root / ("b" * 64) / attempt_id)
+        self.assertTrue(output.is_dir())
+        docker_rdagent_target._durable_output_write(output, "diagnostic.txt", "preserved\n")
+        with self.assertRaises(FileExistsError):
+            docker_rdagent_target._durable_output_write(output, "diagnostic.txt", "overwrite\n")
+        self.assertEqual((output / "diagnostic.txt").read_text(encoding="utf-8"), "preserved\n")
+        second_attempt = docker_rdagent_target._finquant_output_directory(
+            request_id, str(uuid.uuid4()), root
+        )
+        self.assertNotEqual(output, second_attempt)
+
+    def test_finquant_durable_output_rejects_noncanonical_request_or_attempt_identity(self) -> None:
+        root = self.run_dir / "durable-output"
+        with self.assertRaises(ValueError):
+            docker_rdagent_target._finquant_output_directory("request", str(uuid.uuid4()), root)
+        with self.assertRaises(ValueError):
+            docker_rdagent_target._finquant_output_directory("sha256:" + "c" * 64, "../attempt", root)
+        self.assertFalse(root.exists())
+
+    def test_finquant_diagnostics_redact_test_and_provider_tokens(self) -> None:
+        sanitized = docker_rdagent_target._redact_diagnostics(
+            "key=sk-specific-secret-value Bearer abcdefghijklmnop", ("sk-specific-secret-value",)
+        )
+        self.assertNotIn("specific-secret", sanitized)
+        self.assertNotIn("abcdefghijklmnop", sanitized)
+        self.assertIn("[REDACTED_TEST_SECRET]", sanitized)
+        self.assertIn("[REDACTED_BEARER_TOKEN]", sanitized)
+
+    def test_finquant_redacts_plain_log_without_mutating_signed_native_pickle(self) -> None:
+        output = self.run_dir / "native-output"
+        settings_directory = output / "LITELLM_SETTINGS"
+        settings_directory.mkdir(parents=True)
+        source = {"api_key": "sk-" + "a" * 32, "authorization": "Bearer " + "b" * 24}
+        artifact = settings_directory / "trace.pkl"
+        artifact.write_bytes(pickle.dumps(source, protocol=4))
+        original = artifact.read_bytes()
+        (output / "selector.log").write_text(source["api_key"] + "\n", encoding="utf-8")
+        self.assertEqual(docker_rdagent_target._redact_persisted_selector_logs(output), 1)
+        restored = pickle.loads(artifact.read_bytes())
+        self.assertEqual(artifact.read_bytes(), original)
+        self.assertEqual(restored, source)
+        self.assertNotIn(source["api_key"], (output / "selector.log").read_text(encoding="utf-8"))
+
     def test_finquant_compose_uses_existing_image_and_official_step_limit(self) -> None:
         compose = (HANDOFF_DIR / "docker-rdagent-smoke/compose.yaml").read_text(encoding="utf-8")
         self.assertIn("rdagent-finquant-worker:", compose)
@@ -324,6 +375,10 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertIn('entrypoint: ["rdagent"]', worker_section)
         self.assertIn('command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]', worker_section)
         self.assertIn("read_only: true", worker_section)
+        self.assertIn("source: ${P12_FINQUANT_OUTPUT_DIR:?unique durable per-attempt output directory required}", worker_section)
+        self.assertIn("target: /workspace", worker_section)
+        self.assertIn("create_host_path: false", worker_section)
+        self.assertNotIn("/workspace:rw", worker_section)
         for name, value in (
             ("QLIB_QUANT_TRAIN_START", "2015-01-02"),
             ("QLIB_QUANT_TEST_END", "2024-12-31"),

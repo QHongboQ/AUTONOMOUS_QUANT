@@ -65,9 +65,20 @@ credentials. Its sole model URL is the Proxy, routed by the pinned LiteLLM
 config to the local Mock. Three exact P2/P3 data paths are bind-mounted
 read-only: the P3 factor source, the frozen P2 Qlib provider URI, and the
 separate frozen Qlib calendar-provider URI. Its writable `/workspace` is a
-per-attempt tmpfs namespace, with the native workspace, trace, pickle, and
-SQLite MLflow paths all scoped under that namespace. The frozen P3 binding and
-US/PIT templates are used from the image.
+per-attempt host bind at
+`D:\AQ\OPERATIONS\P12\finquant-output\<request-id-hex>\<attempt-uuid>`.
+P12 validates the canonical request identity and UUID attempt, creates the
+leaf exclusively, and passes only that directory to Compose as `/workspace`.
+Compose refuses to create a missing host source implicitly. The native
+workspace, trace, pickle cache, MLflow SQLite path, and any task/Recorder
+artifacts therefore remain in the request/attempt namespace after temporary
+Compose resources are removed. P12 also stores immutable attempt/evidence or
+failure records and redacted stdout/stderr beside those native outputs.
+Plain `selector.log` credentials are redacted; signed RD-Agent settings
+pickles are preserved byte-for-byte. The short-lived test Proxy key in those
+signed settings is usable only against the temporary Proxy database, which is
+removed during teardown. The frozen P3 binding and US/PIT templates are used
+from the image.
 
 The current Mock's chat body is the synthetic string `synthetic-ok`, not a
 fabricated hypothesis. The native proposal request may therefore fail while
@@ -101,6 +112,38 @@ dispatches. This demonstrates native entry and controlled request routing; it
 does not demonstrate a valid hypothesis, completed research, spending
 authorization, certification, or production readiness. The unquoted date
 regression is covered by a focused Compose assertion.
+
+### Durable output acceptance (2026-10-17)
+
+P12 accepted a distinct synthetic P4 `NO_CHAMPION` request
+`sha256:afecf9df62511496d2c411445a9706f8bddcc238ac7b8add9e7637ce4c2e28e8`
+and created attempt `fd605e09-ba11-455c-974e-726e8396e21e` under
+`D:\AQ\OPERATIONS\P12\finquant-output\afecf9df62511496d2c411445a9706f8bddcc238ac7b8add9e7637ce4c2e28e8\fd605e09-ba11-455c-974e-726e8396e21e`.
+The actual P12 Compose worker used the pinned image, non-root UID 10001,
+read-only root, the three approved read-only inputs, and the internal Proxy
+network. `QlibQuantScenario` initialized, `direct_exp_gen` was entered, and
+the local Mock counted 10 chat requests. The Mock's `synthetic-ok` response
+was malformed for RD-Agent, so the native process truthfully exited 1 and P12
+persisted `FAILED_SYNTHETIC`; it produced no Candidate, training, certification,
+or broker action.
+
+After Compose teardown, 57 files remained in the host attempt directory,
+including RD-Agent trace/workspace artifacts, `selector.log`, durable P12
+attempt/evidence/failure records, and redacted process logs. The separate
+Qlib TEST_ONLY Recorder check created an MLflow SQLite database and a native
+Qlib diagnostic Recorder without training. Its writer container was removed;
+a second container reopened the same database read-only through Qlib's
+`R.get_recorder`, verified the same Recorder and experiment IDs, `FINISHED`
+status, and diagnostic parameters (`recorder_id=f03295bec4bc4cbeb32bc8645d0da149`,
+`experiment_id=1`). The persistent diagnostic database is
+`D:\AQ\OPERATIONS\P12\durable-output-implement-001\qlib-recorder-reopen-001\mlflow.db`.
+This checks the native persistence path; it does not claim the failed fin_quant
+proposal created a Recorder or database.
+
+Replaying the P12 request returned `REPLAY_TERMINAL_FAILED_NO_DISPATCH` with
+`dispatch_count_added: 0`; only the existing healthy P12 health container
+remained. Real dispatch remains denied, and the test does not authorize real
+spending, certification, or trading.
 
 Invoke it as a one-shot P12 TEST_ONLY request:
 
