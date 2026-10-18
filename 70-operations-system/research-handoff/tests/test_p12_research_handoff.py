@@ -175,6 +175,165 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(replay["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
         replay_runner.assert_not_called()
 
+    def test_finquant_test_only_target_is_durable_and_replay_does_not_redispatch(self) -> None:
+        self._make_request()
+        evidence = {
+            "classification": "P12_NATIVE_FINQUANT_TEST_ONLY",
+            "official_finquant_process_started": True,
+            "scenario_initialized": True,
+            "us_pit_binding_selected": True,
+            "proposal_phase_reached": True,
+            "proxy_mock_request_observed": True,
+            "worker_return_code": 0,
+            "paid_provider_calls": 0,
+            "training_runs": 0,
+            "candidate_count": 0,
+            "broker_actions": 0,
+            "sealed_oos_accessed": False,
+        }
+        with patch.object(docker_rdagent_target, "run_docker_rdagent_finquant", return_value=evidence) as run:
+            first, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_FINQUANT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 0)
+        self.assertEqual(first["classification"], "SUCCEEDED_SYNTHETIC")
+        self.assertEqual(first["status"]["target_stdout"], json.dumps(evidence, sort_keys=True))
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(
+            json.loads(self._record_path("claim").read_text(encoding="utf-8"))["target_identity"],
+            handoff.TARGET_DOCKER_FINQUANT,
+        )
+
+        with patch.object(
+            docker_rdagent_target,
+            "run_docker_rdagent_finquant",
+            side_effect=AssertionError("fin_quant redispatched on replay"),
+        ) as replay_runner:
+            replay, replay_code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_FINQUANT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(replay_code, 0)
+        self.assertEqual(replay["classification"], "REPLAY_TERMINAL_NO_DISPATCH")
+        replay_runner.assert_not_called()
+
+    def test_finquant_failed_proposal_is_terminal_and_replays_without_redispatch(self) -> None:
+        self._make_request()
+        evidence = {
+            "classification": "P12_NATIVE_FINQUANT_TEST_ONLY",
+            "official_finquant_process_started": True,
+            "scenario_initialized": True,
+            "us_pit_binding_selected": True,
+            "proposal_phase_reached": True,
+            "proxy_mock_request_observed": True,
+            "worker_return_code": 1,
+            "research_step_outcome": "FAILED_MALFORMED_MOCK_RESPONSE",
+            "paid_provider_calls": 0,
+            "training_runs": 0,
+            "candidate_count": 0,
+            "broker_actions": 0,
+            "sealed_oos_accessed": False,
+        }
+        with patch.object(
+            docker_rdagent_target,
+            "run_docker_rdagent_finquant",
+            side_effect=docker_rdagent_target.DockerDispatchFailed(1, evidence),
+        ) as run:
+            first, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_FINQUANT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 4)
+        self.assertEqual(first["classification"], "FAILED_SYNTHETIC")
+        self.assertEqual(first["status"]["target_return_code"], 1)
+        replay, replay_code = handoff.process_synthetic_request(
+            self.request_file,
+            self.state_dir,
+            self.policy_file,
+            target_identity=handoff.TARGET_DOCKER_FINQUANT,
+            docker_runtime_dir=self.run_dir / "docker-runtime",
+        )
+        self.assertEqual(replay_code, 4)
+        self.assertEqual(replay["classification"], "REPLAY_TERMINAL_FAILED_NO_DISPATCH")
+        run.assert_called_once()
+
+    def test_finquant_proxy_unavailable_blocks_replay_without_redispatch(self) -> None:
+        self._make_request()
+        with patch.object(
+            docker_rdagent_target,
+            "run_docker_rdagent_finquant",
+            side_effect=docker_rdagent_target.DockerDispatchAmbiguous("test Proxy unavailable"),
+        ) as run:
+            first, code = handoff.process_synthetic_request(
+                self.request_file,
+                self.state_dir,
+                self.policy_file,
+                target_identity=handoff.TARGET_DOCKER_FINQUANT,
+                docker_runtime_dir=self.run_dir / "docker-runtime",
+            )
+        self.assertEqual(code, 3)
+        self.assertEqual(first["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+        self.assertFalse(self._record_path("terminal").exists())
+        replay, replay_code = handoff.process_synthetic_request(
+            self.request_file,
+            self.state_dir,
+            self.policy_file,
+            target_identity=handoff.TARGET_DOCKER_FINQUANT,
+            docker_runtime_dir=self.run_dir / "docker-runtime",
+        )
+        self.assertEqual(replay_code, 3)
+        self.assertEqual(replay["classification"], "BLOCKED_UNKNOWN_POST_DISPATCH_STATE")
+        run.assert_called_once()
+
+    def test_finquant_image_mismatch_fails_closed_without_compose_launch(self) -> None:
+        def inspect_wrong_image(command, **kwargs):
+            stdout = "sha256:wrong-image\n" if command[:3] == ["docker", "image", "inspect"] else ""
+            return subprocess.CompletedProcess(command, 0, stdout, "")
+
+        with patch.object(docker_rdagent_target, "_run", side_effect=inspect_wrong_image) as run:
+            with self.assertRaises(docker_rdagent_target.DockerDispatchFailed) as raised:
+                docker_rdagent_target.run_docker_rdagent_finquant(
+                    request_id="sha256:" + "a" * 64,
+                    attempt_id=str(uuid.uuid4()),
+                    runtime_directory=self.run_dir / "docker-runtime",
+                )
+        self.assertEqual(raised.exception.evidence["classification"], "PINNED_FINQUANT_IMAGE_MISMATCH")
+        self.assertFalse(raised.exception.evidence["worker_launched"])
+        self.assertEqual(run.call_args_list[0].args[0][:3], ["docker", "image", "inspect"])
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertFalse(any(command[:2] == ["docker", "compose"] and "up" in command for command in commands))
+        self.assertFalse(any(command[:2] == ["docker", "compose"] and "run" in command for command in commands))
+
+    def test_finquant_compose_uses_existing_image_and_official_step_limit(self) -> None:
+        compose = (HANDOFF_DIR / "docker-rdagent-smoke/compose.yaml").read_text(encoding="utf-8")
+        self.assertIn("rdagent-finquant-worker:", compose)
+        worker_section = compose.split("  rdagent-finquant-worker:", 1)[1].split("\nnetworks:", 1)[0]
+        self.assertIn("image: aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1", worker_section)
+        self.assertIn("pull_policy: never", worker_section)
+        self.assertNotIn("build:", worker_section)
+        self.assertIn('entrypoint: ["rdagent"]', worker_section)
+        self.assertIn('command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]', worker_section)
+        self.assertIn("read_only: true", worker_section)
+        for name, value in (
+            ("QLIB_QUANT_TRAIN_START", "2015-01-02"),
+            ("QLIB_QUANT_TEST_END", "2024-12-31"),
+            ("QLIB_FACTOR_TRAIN_START", "2015-01-02"),
+            ("QLIB_FACTOR_TEST_END", "2024-12-31"),
+            ("QLIB_MODEL_TRAIN_START", "2015-01-02"),
+            ("QLIB_MODEL_TEST_END", "2024-12-31"),
+        ):
+            self.assertIn(f'{name}: "{value}"', worker_section)
+
     def test_inert_success_cannot_be_replayed_as_docker_target(self) -> None:
         self._make_request()
         first = self._process()

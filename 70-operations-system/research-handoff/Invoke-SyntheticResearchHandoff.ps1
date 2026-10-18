@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory = $true)][string]$RequestPath,
     [Parameter(Mandatory = $true)][string]$PolicyPath,
     [Parameter(Mandatory = $true)][string]$StateDirectory,
-    [ValidateSet('INERT_LOCAL_EXECUTABLE', 'DOCKER_RDAGENT_PROXY_MOCK_SMOKE')]
+    [ValidateSet('INERT_LOCAL_EXECUTABLE', 'DOCKER_RDAGENT_PROXY_MOCK_SMOKE', 'DOCKER_RDAGENT_FINQUANT_TEST_ONLY')]
     [string]$Target = 'INERT_LOCAL_EXECUTABLE',
     [string]$DockerRuntimeDirectory
 )
@@ -31,7 +31,7 @@ $arguments = @(
     $entry, 'process', '--request', $request, '--policy', $policy,
     '--state-dir', $state, '--synthetic-only', '--target', $Target
 )
-if ($Target -eq 'DOCKER_RDAGENT_PROXY_MOCK_SMOKE') {
+if ($Target -in @('DOCKER_RDAGENT_PROXY_MOCK_SMOKE', 'DOCKER_RDAGENT_FINQUANT_TEST_ONLY')) {
     if (-not $DockerRuntimeDirectory) { throw 'DockerRuntimeDirectory is required for the Docker TEST_ONLY target.' }
     $runtime = ConvertTo-WslPath $DockerRuntimeDirectory
     $arguments += @('--docker-runtime-dir', $runtime)

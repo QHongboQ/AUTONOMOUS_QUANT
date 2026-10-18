@@ -1,8 +1,8 @@
 """Test-only P12 handoff: P4 synthetic request -> durable claim -> opt-in target.
 
 Real dispatch is deliberately not implemented. The default target is a local
-inert executable. An explicit TEST_ONLY target can run a bounded official
-RD-Agent Docker/Proxy/mock smoke and cannot start a research loop.
+inert executable. Explicit TEST_ONLY targets can run either a backend smoke
+or one bounded step of the pinned official RD-Agent fin_quant workflow.
 """
 
 from __future__ import annotations
@@ -39,7 +39,9 @@ _EXIT_FAILED = 4
 _EXIT_INTERRUPTED = 86
 TARGET_INERT = "INERT_LOCAL_EXECUTABLE"
 TARGET_DOCKER_RDAGENT = "DOCKER_RDAGENT_PROXY_MOCK_SMOKE"
-_TARGETS = {TARGET_INERT, TARGET_DOCKER_RDAGENT}
+TARGET_DOCKER_FINQUANT = "DOCKER_RDAGENT_FINQUANT_TEST_ONLY"
+_DOCKER_TARGETS = {TARGET_DOCKER_RDAGENT, TARGET_DOCKER_FINQUANT}
+_TARGETS = {TARGET_INERT, *_DOCKER_TARGETS}
 
 
 def _identity(label: str) -> str:
@@ -385,7 +387,7 @@ def process_synthetic_request(
         raise ValueError("synthetic target mode must be success or failure")
     if target_identity not in _TARGETS:
         raise ValueError("unsupported TEST_ONLY target")
-    if target_identity == TARGET_DOCKER_RDAGENT and target_mode != "success":
+    if target_identity in _DOCKER_TARGETS and target_mode != "success":
         return (
             {
                 "classification": "DENIED_DOCKER_TARGET_MODE_OVERRIDE",
@@ -394,7 +396,7 @@ def process_synthetic_request(
             },
             _EXIT_BLOCKED,
         )
-    if target_identity == TARGET_DOCKER_RDAGENT:
+    if target_identity in _DOCKER_TARGETS:
         if docker_runtime_dir is None:
             return (
                 {
@@ -565,18 +567,26 @@ def process_synthetic_request(
 
     target_log = state_dir / f"{request.request_id.removeprefix('sha256:')}.dispatch.jsonl"
     try:
-        if target_identity == TARGET_DOCKER_RDAGENT:
+        if target_identity in _DOCKER_TARGETS:
             from docker_rdagent_target import (
                 DockerDispatchFailed,
                 run_docker_rdagent_proxy_mock_smoke,
+                run_docker_rdagent_finquant,
             )
 
             try:
-                docker_evidence = run_docker_rdagent_proxy_mock_smoke(
-                    request_id=request.request_id,
-                    attempt_id=claim["attempt_id"],
-                    runtime_directory=resolved_runtime,
-                )
+                if target_identity == TARGET_DOCKER_FINQUANT:
+                    docker_evidence = run_docker_rdagent_finquant(
+                        request_id=request.request_id,
+                        attempt_id=claim["attempt_id"],
+                        runtime_directory=resolved_runtime,
+                    )
+                else:
+                    docker_evidence = run_docker_rdagent_proxy_mock_smoke(
+                        request_id=request.request_id,
+                        attempt_id=claim["attempt_id"],
+                        runtime_directory=resolved_runtime,
+                    )
                 target_return_code = 0
                 target_stdout = json.dumps(docker_evidence, sort_keys=True)
                 target_stderr = ""
