@@ -51,6 +51,7 @@ services:
       REDIS_PORT: "6379"
     volumes:
       - ./config.yaml:/app/config.yaml:ro
+      - ./provision_test_key.py:/app/provision_test_key.py:ro
       - ./persistent_budget_acceptance.py:/app/persistent_budget_acceptance.py:ro
       - type: bind
         source: ${P12_LITELLM_STATE_DIR:?dedicated protected TEST_ONLY state directory required}
@@ -64,12 +65,111 @@ services:
       interval: 3s
       timeout: 4s
       retries: 40
-    networks: [core]
+    networks: [core, worker_proxy]
+
+  rdagent-finquant-worker:
+    image: aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1
+    pull_policy: never
+    profiles: [p12-test-run]
+    environment:
+      P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:-}
+      OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:-}
+      OPENAI_API_BASE: http://litellm:4000/v1
+      BACKEND: rdagent.oai.backend.LiteLLMAPIBackend
+      LITELLM_CHAT_MODEL: openai/deepseek-chat
+      LITELLM_EMBEDDING_MODEL: openai/qwen3-embedding:0.6b
+      LITELLM_CHAT_STREAM: "false"
+      LITELLM_LOG_LLM_CHAT_CONTENT: "false"
+      LITELLM_REASONING_EFFORT: high
+      MODEL_COSTEER_ENV_TYPE: conda
+      FACTOR_COSTEER_PYTHON_BIN: /opt/conda/envs/rdagent4qlib/bin/python
+      FACTOR_COSTEER_DATA_FOLDER: /data/factor-source/full
+      FACTOR_COSTEER_DATA_FOLDER_DEBUG: /data/factor-source/debug
+      QLIB_QUANT_FACTOR_HYPOTHESIS2EXPERIMENT: aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment
+      QLIB_QUANT_MODEL_HYPOTHESIS2EXPERIMENT: aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment
+      QLIB_QUANT_TRAIN_START: "2015-01-02"
+      QLIB_QUANT_TRAIN_END: "2019-12-31"
+      QLIB_QUANT_VALID_START: "2020-01-02"
+      QLIB_QUANT_VALID_END: "2021-12-31"
+      QLIB_QUANT_TEST_START: "2022-01-03"
+      QLIB_QUANT_TEST_END: "2024-12-31"
+      QLIB_FACTOR_TRAIN_START: "2015-01-02"
+      QLIB_FACTOR_TRAIN_END: "2019-12-31"
+      QLIB_FACTOR_VALID_START: "2020-01-02"
+      QLIB_FACTOR_VALID_END: "2021-12-31"
+      QLIB_FACTOR_TEST_START: "2022-01-03"
+      QLIB_FACTOR_TEST_END: "2024-12-31"
+      QLIB_MODEL_TRAIN_START: "2015-01-02"
+      QLIB_MODEL_TRAIN_END: "2019-12-31"
+      QLIB_MODEL_VALID_START: "2020-01-02"
+      QLIB_MODEL_VALID_END: "2021-12-31"
+      QLIB_MODEL_TEST_START: "2022-01-03"
+      QLIB_MODEL_TEST_END: "2024-12-31"
+      P12_RUN_NAMESPACE: ${P12_RUN_NAMESPACE:-}
+      P12_FINQUANT_OUTPUT_DIR: ${P12_FINQUANT_OUTPUT_DIR:-}
+      WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/workspaces
+      PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:-}/pickle-cache
+      LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/trace
+      QLIB_MLFLOW_URI: sqlite:////workspace/runs/${P12_RUN_NAMESPACE:-}/mlflow.db
+      HOME: /home/rdagent
+      TMPDIR: /tmp
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        case "$${P3_TEST_PROXY_KEY}" in
+          sk-*) case "$${P3_TEST_PROXY_KEY}" in sk-test-*|*placeholder*|*not-yet-provisioned*) echo 'TEST_ONLY scoped Proxy key required' >&2; exit 64;; esac;;
+          *) echo 'TEST_ONLY scoped Proxy key required' >&2; exit 64;;
+        esac
+        test "$${OPENAI_API_KEY}" = "$${P3_TEST_PROXY_KEY}"
+        case "$${P12_RUN_NAMESPACE}" in aq-p12-finquant-????????????) ;; *) echo 'request-scoped run namespace required' >&2; exit 64;; esac
+        test "$${P12_RUN_NAMESPACE}" != aq-p12-finquant-aaaaaaaaaaaa
+        case "$${P12_FINQUANT_OUTPUT_DIR}" in /mnt/d/AQ/OPERATIONS/P12/finquant-output/*/*) ;; *) echo 'durable per-attempt output path required' >&2; exit 64;; esac
+        test -f /workspace/p12-attempt.json
+        exec rdagent "$$@"
+      - --
+    command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]
+    volumes:
+      - type: bind
+        source: ${P12_FINQUANT_OUTPUT_DIR:-/tmp/p12-worker-disabled}
+        target: /workspace
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source
+        target: /data/factor-source
+        read_only: true
+      - type: bind
+        source: /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+        target: /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+        read_only: true
+      - type: bind
+        source: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
+        target: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
+        read_only: true
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m,uid=10001,gid=10001
+      - /home/rdagent:rw,nosuid,nodev,size=256m,uid=10001,gid=10001
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 4g
+    init: true
+    depends_on:
+      litellm: {condition: service_healthy}
+    networks: [worker_proxy]
 
 networks:
   core:
     driver: bridge
     internal: true
+  worker_proxy:
+    driver: bridge
+    internal: true
+    name: aq-p12-litellm-worker-proxy
 
 volumes:
   pgdata:

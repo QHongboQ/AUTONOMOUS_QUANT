@@ -178,6 +178,58 @@ runtime-directory parameters for a one-shot Task Scheduler invocation. The
 existing health tasks and any permanent research schedule are not changed.
 TEST_ONLY admission keeps real research spending and dispatch denied.
 
+### Persistent Proxy handoff integration (2026-10-17)
+
+The persistent Compose definition now gives LiteLLM both the existing internal
+`core` network and a dedicated internal `worker_proxy` network. PostgreSQL,
+Redis, and Mock remain on `core`; the one-off RD-Agent worker joins only
+`worker_proxy`, receives a new request-scoped TEST_ONLY LiteLLM virtual key,
+and uses the existing pinned image and durable P12 output bind. The key is
+created and inspected through LiteLLM's native key APIs on the trusted control
+side. Its allowed models route only to the local Mock, with a synthetic native
+budget, one-hour reset/expiration, and concurrency of one. The worker does not
+receive Proxy admin or database credentials. No host port or Docker socket is
+configured. The one-off cleanup leaves the persistent services and named
+volumes intact.
+
+The first integration dispatch for request
+`sha256:94d8470c76fea98a3ce40260742a7401f88b0c47579bdf9c163c92e2c2e9b3cd`
+and attempt `36b84186-be08-4eb8-8070-cfc9df4ce005` entered the native
+`direct_exp_gen` proposal path. RD-Agent received the Mock's deliberately
+malformed `synthetic-ok` response, retried JSON parsing, and exited with a
+failure. Its trace and redacted diagnostic logs remain under
+`D:\AQ\OPERATIONS\P12\finquant-output\94d8470c76fea98a3ce40260742a7401f88b0c47579bdf9c163c92e2c2e9b3cd\36b84186-be08-4eb8-8070-cfc9df4ce005`.
+LiteLLM/PostgreSQL retained the scoped key's synthetic spend (`0.0005`), and
+that key was blocked after the attempt. This is internal Mock accounting, not
+provider spending.
+
+The first wrapper attempt encountered a local `NameError` in its
+post-dispatch network verification before it could persist a terminal result or
+run the configured budget-exhaustion probe. P12 correctly recorded
+`BLOCKED_UNKNOWN_POST_DISPATCH_STATE`. Replaying that same request returned the
+same blocked state with `dispatch_count_added: 0`; it was not retried.
+
+A separate, freshly generated P4 synthetic request was then dispatched after
+the wrapper correction. Request `sha256:e58af0dfc1cad1c53c20f474bf8ab092763979954bbc2e152117e6015b205cf4`,
+attempt `0813c673-f557-4ed1-8a16-63489489f1f1`, reached RD-Agent's native
+`direct_exp_gen` proposal path and made ten Mock chat requests. The Mock's
+deliberately malformed `synthetic-ok` response caused proposal parsing to fail;
+P12 persisted `FAILED_SYNTHETIC`, return code 1, zero candidates, and no P2
+evaluation. The worker was removed, while 57 run-scoped durable output files
+remained under
+`D:\AQ\OPERATIONS\P12\finquant-output\e58af0dfc1cad1c53c20f474bf8ab092763979954bbc2e152117e6015b205cf4\0813c673-f557-4ed1-8a16-63489489f1f1`.
+
+The native LiteLLM budget exhaustion probe was denied (`422 budget_exceeded`)
+without increasing the Mock request count. PostgreSQL later showed spend
+settling from `0.0004` at probe time to `0.0005`; the scoped key remained
+blocked, and its native cap was aligned to the settled spend through LiteLLM's
+official key API. A follow-up replay returned
+`REPLAY_TERMINAL_FAILED_NO_DISPATCH` with zero added dispatches. Regression
+coverage now waits for stable native spend before probing exhaustion. These are
+TEST_ONLY Mock accounting results, not provider spend or owner authorization.
+No Candidate, certification, full training, paid provider call, or broker
+action was produced; real research remains denied.
+
 ## Synthetic request and intake
 
 `create-synthetic-request` calls P4's existing `challenger_needed()` with
@@ -468,6 +520,13 @@ It verifies model allowlisting, Mock-only calls, native spending, budget
 exhaustion before Mock, service restart persistence, and PostgreSQL-outage
 denial before Mock. Test keys/results live only in the separately mounted
 operations state directory.
+
+The persistent Compose model can also be used by the original PR #165
+standalone service commands without P12 worker variables. Worker-only values
+default to empty for model parsing; the TEST_ONLY worker preflight refuses to
+execute RD-Agent unless it receives a non-placeholder scoped key, matching
+OpenAI key, request-scoped run namespace, and existing durable per-attempt
+output directory.
 
 On the Windows/WSL host, create a dedicated operations directory and state
 subdirectory with owner-only ACLs. Put fresh `LITELLM_MASTER_KEY`,

@@ -244,12 +244,31 @@ def run_docker_rdagent_proxy_mock_smoke(
 
 PINNED_FINQUANT_IMAGE = "aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1"
 PINNED_FINQUANT_IMAGE_ID = "sha256:f0caceba9e06a618dda72bd999de78c13e34e0773831c8796936c80793e4eea2"
+PERSISTENT_LITELLM_PROJECT = "aq-p12-litellm-persistent-test"
+PERSISTENT_LITELLM_NETWORK = "aq-p12-litellm-worker-proxy"
+PERSISTENT_LITELLM_ENV_FILE = "/mnt/d/AQ/OPERATIONS/P12/persistent-litellm-budget-001/compose.env"
+FINQUANT_TEST_ONLY_MAX_BUDGET = "0.1"
 FINQUANT_DATA_MOUNTS = {
     "/data/factor-source": "/mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source",
     "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data": "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data",
     "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime": "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime",
 }
 FINQUANT_OUTPUT_ROOT = Path("/mnt/d/AQ/OPERATIONS/P12/finquant-output")
+
+
+def _persistent_finquant_env(virtual_key: str = "sk-test-key-not-yet-provisioned") -> dict[str, str]:
+    """Build a Docker control environment without inheriting provider secrets."""
+    env = {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "HOME": os.path.expanduser("~"),
+        "P3_TEST_PROXY_KEY": virtual_key,
+        "P12_RUN_NAMESPACE": "p12-test-run-placeholder",
+        "P12_FINQUANT_OUTPUT_DIR": "/tmp/p12-finquant-output-placeholder",
+    }
+    for name in ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "XDG_RUNTIME_DIR"):
+        if os.environ.get(name):
+            env[name] = os.environ[name]
+    return env
 
 
 def _finquant_output_directory(
@@ -395,23 +414,18 @@ def _compose_json_counts(compose: list[str], env: dict[str, str], cwd: Path) -> 
 def run_docker_rdagent_finquant(
     *, request_id: str, attempt_id: str, runtime_directory: Path
 ) -> dict[str, Any]:
-    """Run the pinned RD-Agent CLI for one TEST_ONLY native proposal step."""
+    """Run one P12 fin_quant proposal through the persistent TEST_ONLY Proxy."""
     source_directory = Path(__file__).with_name("docker-rdagent-smoke")
     runtime_directory = runtime_directory.resolve()
     runtime_directory.mkdir(parents=True, exist_ok=True)
-    project = "aq-p12-finquant-" + hashlib.sha256(
+    run_namespace = "aq-p12-finquant-" + hashlib.sha256(
         f"{request_id}:{attempt_id}".encode("utf-8")
     ).hexdigest()[:12]
     output_directory = _finquant_output_directory(request_id, attempt_id)
-    run_directory = runtime_directory / project
-    run_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
-    for name in _FILES:
-        shutil.copyfile(source_directory / name, run_directory / name)
-
-    master_key = "sk-" + secrets.token_urlsafe(32)
-    database_password = secrets.token_urlsafe(32)
-    env = _compose_env(master_key, database_password, "sk-test-key-not-yet-provisioned")
-    env["P12_RUN_NAMESPACE"] = project
+    # The trusted host loads persistent control secrets only through Compose's
+    # protected external env file. They are not copied into this subprocess env.
+    env = _persistent_finquant_env()
+    env["P12_RUN_NAMESPACE"] = run_namespace
     env["P12_FINQUANT_OUTPUT_DIR"] = str(output_directory)
     _durable_output_write(
         output_directory,
@@ -420,7 +434,7 @@ def run_docker_rdagent_finquant(
             {
                 "request_id": request_id,
                 "attempt_id": attempt_id,
-                "run_namespace": project,
+                "run_namespace": run_namespace,
                 "native_cli_command": "rdagent fin_quant --step-n 1 --loop-n 1",
                 "image": PINNED_FINQUANT_IMAGE,
                 "image_id": PINNED_FINQUANT_IMAGE_ID,
@@ -429,15 +443,21 @@ def run_docker_rdagent_finquant(
         )
         + "\n",
     )
-    compose_file = str(run_directory / "compose.yaml")
-    compose = ["docker", "compose", "--project-name", project, "--file", compose_file]
-    worker_name = project + "-finquant"
+    compose = [
+        "docker", "compose", "--project-name", PERSISTENT_LITELLM_PROJECT,
+        "--env-file", PERSISTENT_LITELLM_ENV_FILE,
+        "--file", str(source_directory / "compose.persistent-test.yaml"),
+        "--profile", "p12-test-run",
+    ]
+    worker_name = run_namespace + "-finquant"
+    worker_dispatch_attempted = False
+    key_revoked = False
     try:
         image = _run(
             ["docker", "image", "inspect", "--format", "{{.Id}}", PINNED_FINQUANT_IMAGE],
             env=env,
             timeout=30,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         observed_image_id = image.stdout.strip() if image.returncode == 0 else None
         if observed_image_id != PINNED_FINQUANT_IMAGE_ID:
@@ -474,7 +494,7 @@ def run_docker_rdagent_finquant(
                 },
             )
 
-        compose_check = _run([*compose, "config", "--quiet"], env=env, timeout=30, cwd=run_directory)
+        compose_check = _run([*compose, "config", "--quiet"], env=env, timeout=30, cwd=runtime_directory)
         if compose_check.returncode != 0:
             raise DockerDispatchFailed(
                 compose_check.returncode or 1,
@@ -489,25 +509,48 @@ def run_docker_rdagent_finquant(
             )
 
         started = _run(
-            [*compose, "up", "--detach", "--wait", "--wait-timeout", "180", "litellm"],
-            env=env,
-            timeout=240,
-            cwd=run_directory,
+            [*compose, "up", "--no-build", "--pull", "never", "--detach", "--wait", "--wait-timeout", "180", "postgres", "redis", "mock", "litellm"],
+            env=env, timeout=240, cwd=runtime_directory,
         )
         if started.returncode != 0:
-            raise DockerDispatchAmbiguous("Compose Proxy/Mock dependencies did not become healthy")
+            raise DockerDispatchAmbiguous("persistent Proxy dependencies did not become healthy")
+
+        # Ensure the trusted Proxy can see its core dependencies, but the
+        # research worker will receive only the dedicated internal network.
+        topology = _run(
+            ["docker", "network", "inspect", "--format", "{{.Internal}}", PERSISTENT_LITELLM_NETWORK],
+            env=env, timeout=30, cwd=runtime_directory,
+        )
+        if topology.returncode != 0 or topology.stdout.strip() != "true":
+            raise DockerDispatchAmbiguous("persistent worker Proxy network is not verified internal")
 
         provision = _run(
-            [*compose, "exec", "--no-TTY", "litellm", "python", "/app/provision_test_key.py"],
-            env=env,
-            timeout=30,
-            cwd=run_directory,
+            [
+                *compose, "exec", "--no-TTY", "litellm", "python",
+                "/app/provision_test_key.py", "create", FINQUANT_TEST_ONLY_MAX_BUDGET,
+                "aq-p12-finquant-test-only-" + run_namespace.removeprefix("aq-p12-finquant-"),
+            ],
+            env=env, timeout=45, cwd=runtime_directory,
         )
         key_record = _json_line(provision.stdout, "TEST_PROXY_KEY_CREATED")
-        if provision.returncode != 0 or not key_record or not isinstance(key_record.get("token"), str):
+        if (
+            provision.returncode != 0 or not key_record
+            or key_record.get("verified") is not True
+            or not isinstance(key_record.get("token"), str)
+            or key_record.get("key_alias") != "aq-p12-finquant-test-only-" + run_namespace.removeprefix("aq-p12-finquant-")
+            or key_record.get("max_budget") != float(FINQUANT_TEST_ONLY_MAX_BUDGET)
+            or key_record.get("models") != ["deepseek-chat", "qwen3-embedding:0.6b"]
+            or key_record.get("budget_duration") != "1h"
+            or key_record.get("duration") != "1h"
+            or key_record.get("max_parallel_requests") != 1
+        ):
             raise DockerDispatchAmbiguous("Proxy failed to provision its scoped TEST_ONLY key")
         env["P3_TEST_PROXY_KEY"] = key_record["token"]
+        env["P12_RUN_NAMESPACE"] = run_namespace
+        env["P12_FINQUANT_OUTPUT_DIR"] = str(output_directory)
+        counts_before = _compose_json_counts(compose, env, runtime_directory)
 
+        worker_dispatch_attempted = True
         worker = _run(
             [
                 *compose,
@@ -519,12 +562,10 @@ def run_docker_rdagent_finquant(
             ],
             env=env,
             timeout=420,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         redacted_selector_log_count = _redact_persisted_selector_logs(output_directory)
         redaction_values = (
-            master_key,
-            database_password,
             env.get("P3_TEST_PROXY_KEY", ""),
         )
         _durable_output_write(
@@ -549,7 +590,7 @@ def run_docker_rdagent_finquant(
             ],
             env=env,
             timeout=30,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         if inspect.returncode != 0:
             raise DockerDispatchAmbiguous("Native fin_quant container terminal state could not be inspected")
@@ -574,19 +615,19 @@ def run_docker_rdagent_finquant(
             ["docker", "container", "inspect", "--format", "{{json .Mounts}}", worker_name],
             env=env,
             timeout=30,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         env_result = _run(
             ["docker", "container", "inspect", "--format", "{{json .Config.Env}}", worker_name],
             env=env,
             timeout=30,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         networks_result = _run(
             ["docker", "container", "inspect", "--format", "{{json .NetworkSettings.Networks}}", worker_name],
             env=env,
             timeout=30,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         if any(result.returncode != 0 for result in (mounts_result, env_result, networks_result)):
             raise DockerDispatchAmbiguous("Native fin_quant isolation could not be inspected")
@@ -623,10 +664,10 @@ def run_docker_rdagent_finquant(
             "FACTOR_COSTEER_DATA_FOLDER_DEBUG": "/data/factor-source/debug",
             "QLIB_QUANT_FACTOR_HYPOTHESIS2EXPERIMENT": "aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment",
             "QLIB_QUANT_MODEL_HYPOTHESIS2EXPERIMENT": "aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment",
-            "WORKSPACE_PATH": f"/workspace/runs/{project}/workspaces",
-            "PICKLE_CACHE_FOLDER_PATH_STR": f"/workspace/runs/{project}/pickle-cache",
-            "LOG_TRACE_PATH": f"/workspace/runs/{project}/trace",
-            "QLIB_MLFLOW_URI": f"sqlite:////workspace/runs/{project}/mlflow.db",
+            "WORKSPACE_PATH": f"/workspace/runs/{run_namespace}/workspaces",
+            "PICKLE_CACHE_FOLDER_PATH_STR": f"/workspace/runs/{run_namespace}/pickle-cache",
+            "LOG_TRACE_PATH": f"/workspace/runs/{run_namespace}/trace",
+            "QLIB_MLFLOW_URI": f"sqlite:////workspace/runs/{run_namespace}/mlflow.db",
         }
         for prefix in ("QLIB_QUANT", "QLIB_FACTOR", "QLIB_MODEL"):
             expected_env.update(
@@ -643,6 +684,11 @@ def run_docker_rdagent_finquant(
             all(worker_env.get(name) == value for name, value in expected_env.items())
             and worker_env.get("OPENAI_API_KEY") == worker_env.get("P3_TEST_PROXY_KEY")
             and bool(worker_env.get("P3_TEST_PROXY_KEY"))
+            and not any(
+                re.search(r"(?i)(?:API_KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|MASTER_KEY)", name)
+                and name not in {"OPENAI_API_KEY", "P3_TEST_PROXY_KEY"}
+                for name in worker_env
+            )
             and not any(
                 name in worker_env
                 for name in (
@@ -671,19 +717,42 @@ def run_docker_rdagent_finquant(
                 "inspect",
                 "--format",
                 "{{.Internal}}",
-                f"{project}_worker_proxy",
+                PERSISTENT_LITELLM_NETWORK,
             ],
             env=env,
             timeout=30,
-            cwd=run_directory,
+            cwd=runtime_directory,
         )
         if internal_network.returncode != 0:
             raise DockerDispatchAmbiguous("Worker-only Proxy network could not be verified")
-        worker_network_valid = internal_network.stdout.strip() == "true" and len(networks) == 1 and all(
-            name.endswith("_worker_proxy") for name in networks
+        worker_network_valid = (
+            internal_network.stdout.strip() == "true"
+            and list(networks) == [PERSISTENT_LITELLM_NETWORK]
         )
 
-        counts = _compose_json_counts(compose, env, run_directory)
+        counts = _compose_json_counts(compose, env, runtime_directory)
+        counts_delta = {
+            name: counts[name] - counts_before[name]
+            for name in ("chat", "embedding")
+        }
+        # Verify native persisted per-key spend and prove its enforced limit
+        # rejects one excess call before Mock sees it. Revoke the ephemeral
+        # TEST_ONLY key immediately afterwards while preserving DB evidence.
+        budget_run = _run(
+            [*compose, "exec", "--no-TTY", "-e", "P3_TEST_PROXY_KEY", "litellm", "python", "/app/provision_test_key.py", "verify-exhaustion"],
+            env=env, timeout=90, cwd=runtime_directory,
+        )
+        budget_record = _json_line(budget_run.stdout, "TEST_PROXY_BUDGET_ENFORCED")
+        if budget_run.returncode != 0 or not budget_record or budget_record.get("excess_denied_before_mock") is not True:
+            raise DockerDispatchAmbiguous("native persistent Proxy budget enforcement was not verified")
+        revoke = _run(
+            [*compose, "exec", "--no-TTY", "-e", "P3_TEST_PROXY_KEY", "litellm", "python", "/app/provision_test_key.py", "block"],
+            env=env, timeout=45, cwd=runtime_directory,
+        )
+        revoke_record = _json_line(revoke.stdout, "TEST_PROXY_KEY_BLOCKED")
+        if revoke.returncode != 0 or not revoke_record or revoke_record.get("blocked") is not True:
+            raise DockerDispatchAmbiguous("per-run TEST_ONLY key revocation could not be verified")
+        key_revoked = True
         combined_output = f"{worker.stdout}\n{worker.stderr}"
         proposal_phase_reached = bool(
             re.search(r"Start Loop\s+0,\s*Step\s+0:\s*direct_exp_gen", combined_output)
@@ -704,7 +773,7 @@ def run_docker_rdagent_finquant(
             "us_pit_binding_selected": env_valid,
             "us_pit_data_mounts_read_only": mounts_valid,
             "worker_proxy_network_internal": worker_network_valid,
-            "run_namespace": project,
+            "run_namespace": run_namespace,
             "durable_output_path": str(output_directory),
             "durable_host_mount_valid": durable_host_mount_valid,
             "diagnostics_preserved": True,
@@ -713,9 +782,20 @@ def run_docker_rdagent_finquant(
             "worker_root_read_only": read_only_root == "true",
             "proposal_phase_reached": proposal_phase_reached,
             "proposal_phase_marker": "Start Loop 0, Step 0: direct_exp_gen" if proposal_phase_reached else None,
-            "proxy_mock_request_observed": counts["chat"] > 0 or counts["embedding"] > 0,
-            "proxy_mock_chat_count": counts["chat"],
-            "proxy_mock_embedding_count": counts["embedding"],
+            "proxy_mock_request_observed": counts_delta["chat"] > 0 or counts_delta["embedding"] > 0,
+            "proxy_mock_chat_count": counts_delta["chat"],
+            "proxy_mock_embedding_count": counts_delta["embedding"],
+            "proxy_native_scoped_key_verified": True,
+            "proxy_key_alias": key_record["key_alias"],
+            "proxy_key_models": key_record["models"],
+            "proxy_key_synthetic_max_budget": key_record["max_budget"],
+            "proxy_key_budget_duration": key_record["budget_duration"],
+            "proxy_key_expiration": key_record["duration"],
+            "proxy_key_max_parallel_requests": key_record["max_parallel_requests"],
+            "proxy_key_revoked_after_attempt": revoke_record["blocked"],
+            "native_budget_enforced": budget_record["excess_denied_before_mock"],
+            "persistent_proxy_spend": budget_record["spend"],
+            "post_exhaustion_mock_counts": budget_record["mock_counts"],
             "worker_return_code": worker.returncode,
             "container_return_code": inspect_return_code,
             "paid_provider_calls": 0,
@@ -738,6 +818,10 @@ def run_docker_rdagent_finquant(
             and scenario_initialized
             and proposal_phase_reached
             and evidence["proxy_mock_request_observed"]
+            and all(value >= 0 for value in counts_delta.values())
+            and budget_record["mock_counts_unchanged"] is True
+            and budget_record["spend"] > 0
+            and evidence["proxy_key_revoked_after_attempt"]
             and worker.returncode == 0
         ):
             raise DockerDispatchFailed(worker.returncode or 1, evidence)
@@ -758,22 +842,28 @@ def run_docker_rdagent_finquant(
             "NATIVE_FINQUANT_UNEXPECTED_ERROR",
             type(exc).__name__,
         )
-        raise DockerDispatchAmbiguous("Native fin_quant target failed with an unexpected local error") from None
+        raise DockerDispatchAmbiguous(
+            f"Native fin_quant target failed with an unexpected local error ({type(exc).__name__})"
+        ) from None
     finally:
-        remove = _run(
-            [*compose, "rm", "--force", "rdagent-finquant-worker"],
-            env=env,
-            timeout=120,
-            cwd=run_directory,
-        )
-        if remove.returncode != 0:
-            raise DockerDispatchAmbiguous("one-off fin_quant worker cleanup could not be verified")
-        down = _run(
-            [*compose, "down", "--volumes", "--remove-orphans"],
-            env=env,
-            timeout=120,
-            cwd=run_directory,
-        )
-        if down.returncode != 0:
-            raise DockerDispatchAmbiguous("temporary Compose Proxy/Mock teardown failed")
-        _ensure_cleaned(project, env, run_directory)
+        cleanup_error = None
+        if env.get("P3_TEST_PROXY_KEY") not in (None, "", "sk-test-key-not-yet-provisioned") and not key_revoked:
+            revoke = _run(
+                [
+                    *compose, "exec", "--no-TTY", "-e", "P3_TEST_PROXY_KEY",
+                    "litellm", "python", "/app/provision_test_key.py", "block",
+                ],
+                env=env, timeout=45, cwd=runtime_directory,
+            )
+            revoke_record = _json_line(revoke.stdout, "TEST_PROXY_KEY_BLOCKED")
+            if revoke.returncode != 0 or not revoke_record or revoke_record.get("blocked") is not True:
+                cleanup_error = "per-run TEST_ONLY key cleanup could not be verified"
+        if worker_dispatch_attempted:
+            remove = _run(
+                ["docker", "container", "rm", "--force", worker_name],
+                env=env, timeout=120, cwd=runtime_directory,
+            )
+            if remove.returncode != 0 and "No such container" not in (remove.stderr + remove.stdout):
+                cleanup_error = "one-off fin_quant worker cleanup could not be verified"
+        if cleanup_error:
+            raise DockerDispatchAmbiguous(cleanup_error)
