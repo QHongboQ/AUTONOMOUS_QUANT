@@ -9,6 +9,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -248,6 +249,117 @@ FINQUANT_DATA_MOUNTS = {
     "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data": "/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data",
     "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime": "/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime",
 }
+FINQUANT_OUTPUT_ROOT = Path("/mnt/d/AQ/OPERATIONS/P12/finquant-output")
+
+
+def _finquant_output_directory(
+    request_id: str, attempt_id: str, root: Path | None = None
+) -> Path:
+    root = FINQUANT_OUTPUT_ROOT if root is None else root
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", request_id):
+        raise ValueError("fin_quant output requires a canonical P12 request identity")
+    try:
+        normalized_attempt = str(uuid.UUID(attempt_id))
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError("fin_quant output requires a UUID attempt identity") from None
+
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    resolved_root = root.resolve(strict=True)
+    request_directory = resolved_root / request_id.removeprefix("sha256:")
+    request_directory.mkdir(mode=0o700, exist_ok=True)
+    output_directory = request_directory / normalized_attempt
+    output_directory.mkdir(mode=0o700, exist_ok=False)
+    resolved_output = output_directory.resolve(strict=True)
+    if not resolved_output.is_relative_to(resolved_root):
+        raise ValueError("fin_quant output path escaped its P12 operations root")
+    return resolved_output
+
+
+def _durable_output_write(output_directory: Path, name: str, content: str) -> None:
+    destination = output_directory / name
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(destination, flags, 0o600)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        directory_fd = os.open(output_directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        raise
+
+
+def _redact_diagnostics(text: str, secrets_to_redact: tuple[str, ...]) -> str:
+    for secret in secrets_to_redact:
+        if secret:
+            text = text.replace(secret, "[REDACTED_TEST_SECRET]")
+    text = re.sub(r"(?i)\bsk-[A-Za-z0-9_-]{16,}\b", "[REDACTED_TEST_TOKEN]", text)
+    return re.sub(
+        r"(?i)(Bearer\s+)[A-Za-z0-9._~+/-]{12,}",
+        r"\1[REDACTED_BEARER_TOKEN]",
+        text,
+    )
+
+
+def _redact_persisted_selector_logs(output_directory: Path) -> int:
+    """Redact plain selector logs without changing signed native artifacts."""
+    patterns = (
+        re.compile(rb"(?i)\bsk-[A-Za-z0-9_-]{16,}\b"),
+        re.compile(rb"(?i)(Bearer\s+)[A-Za-z0-9._~+/-]{12,}"),
+    )
+    redacted_files = 0
+    for path in output_directory.rglob("*"):
+        if path.is_symlink() or not path.is_file():
+            continue
+        if path.name != "selector.log":
+            continue
+        original = path.read_bytes()
+        redacted = original
+        for pattern in patterns:
+            redacted = pattern.sub(
+                lambda match: match.group(1) + b"X" * (len(match.group(0)) - len(match.group(1)))
+                if match.lastindex
+                else b"X" * len(match.group(0)),
+                redacted,
+            )
+        if redacted == original:
+            continue
+        descriptor = os.open(path, os.O_WRONLY | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(redacted)
+                stream.flush()
+                os.fsync(stream.fileno())
+        except BaseException:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+            raise
+        redacted_files += 1
+    if redacted_files:
+        directory_fd = os.open(output_directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    return redacted_files
+
+
+def _persist_failure_record(output_directory: Path, classification: str, message: str) -> None:
+    _durable_output_write(
+        output_directory,
+        "p12-target-failure.json",
+        json.dumps({"classification": classification, "message": message}, sort_keys=True) + "\n",
+    )
 
 
 def _compose_json_counts(compose: list[str], env: dict[str, str], cwd: Path) -> dict[str, Any]:
@@ -290,6 +402,7 @@ def run_docker_rdagent_finquant(
     project = "aq-p12-finquant-" + hashlib.sha256(
         f"{request_id}:{attempt_id}".encode("utf-8")
     ).hexdigest()[:12]
+    output_directory = _finquant_output_directory(request_id, attempt_id)
     run_directory = runtime_directory / project
     run_directory.mkdir(mode=0o700, parents=True, exist_ok=False)
     for name in _FILES:
@@ -299,6 +412,23 @@ def run_docker_rdagent_finquant(
     database_password = secrets.token_urlsafe(32)
     env = _compose_env(master_key, database_password, "sk-test-key-not-yet-provisioned")
     env["P12_RUN_NAMESPACE"] = project
+    env["P12_FINQUANT_OUTPUT_DIR"] = str(output_directory)
+    _durable_output_write(
+        output_directory,
+        "p12-attempt.json",
+        json.dumps(
+            {
+                "request_id": request_id,
+                "attempt_id": attempt_id,
+                "run_namespace": project,
+                "native_cli_command": "rdagent fin_quant --step-n 1 --loop-n 1",
+                "image": PINNED_FINQUANT_IMAGE,
+                "image_id": PINNED_FINQUANT_IMAGE_ID,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+    )
     compose_file = str(run_directory / "compose.yaml")
     compose = ["docker", "compose", "--project-name", project, "--file", compose_file]
     worker_name = project + "-finquant"
@@ -391,6 +521,22 @@ def run_docker_rdagent_finquant(
             timeout=420,
             cwd=run_directory,
         )
+        redacted_selector_log_count = _redact_persisted_selector_logs(output_directory)
+        redaction_values = (
+            master_key,
+            database_password,
+            env.get("P3_TEST_PROXY_KEY", ""),
+        )
+        _durable_output_write(
+            output_directory,
+            "rdagent.stdout.redacted.log",
+            _redact_diagnostics(worker.stdout, redaction_values),
+        )
+        _durable_output_write(
+            output_directory,
+            "rdagent.stderr.redacted.log",
+            _redact_diagnostics(worker.stderr, redaction_values),
+        )
 
         inspect = _run(
             [
@@ -398,7 +544,7 @@ def run_docker_rdagent_finquant(
                 "container",
                 "inspect",
                 "--format",
-                "{{.Image}}|{{.State.Status}}|{{.State.ExitCode}}|{{.Config.Image}}|{{json .Config.Entrypoint}}|{{json .Config.Cmd}}",
+                "{{.Image}}|{{.State.Status}}|{{.State.ExitCode}}|{{.Config.Image}}|{{json .Config.Entrypoint}}|{{json .Config.Cmd}}|{{.Config.User}}|{{.HostConfig.ReadonlyRootfs}}",
                 worker_name,
             ],
             env=env,
@@ -408,7 +554,16 @@ def run_docker_rdagent_finquant(
         if inspect.returncode != 0:
             raise DockerDispatchAmbiguous("Native fin_quant container terminal state could not be inspected")
         try:
-            image_id, state, inspect_return_code, configured_image, entrypoint, command = inspect.stdout.strip().split("|", 5)
+            (
+                image_id,
+                state,
+                inspect_return_code,
+                configured_image,
+                entrypoint,
+                command,
+                configured_user,
+                read_only_root,
+            ) = inspect.stdout.strip().split("|", 7)
             inspect_return_code = int(inspect_return_code)
             entrypoint_value = json.loads(entrypoint)
             command_value = json.loads(command)
@@ -443,13 +598,20 @@ def run_docker_rdagent_finquant(
             raise DockerDispatchAmbiguous("Native fin_quant isolation record was corrupt") from None
 
         mounted = {mount.get("Destination"): mount for mount in mounts if isinstance(mount, dict)}
-        mounts_valid = len(mounted) == 3 and all(
+        data_mounts_valid = len(mounted) == len(FINQUANT_DATA_MOUNTS) + 1 and all(
             target in mounted
             and mounted[target].get("Source") == source
             and mounted[target].get("RW") is False
             and mounted[target].get("Type") == "bind"
             for target, source in FINQUANT_DATA_MOUNTS.items()
         )
+        output_mount = mounted.get("/workspace", {})
+        durable_host_mount_valid = (
+            output_mount.get("Source") == str(output_directory)
+            and output_mount.get("RW") is True
+            and output_mount.get("Type") == "bind"
+        )
+        mounts_valid = data_mounts_valid and durable_host_mount_valid
         expected_env = {
             "OPENAI_API_BASE": "http://litellm:4000/v1",
             "BACKEND": "rdagent.oai.backend.LiteLLMAPIBackend",
@@ -499,6 +661,8 @@ def run_docker_rdagent_finquant(
             and inspect_return_code == worker.returncode
             and entrypoint_value == ["rdagent"]
             and command_value == expected_command
+            and configured_user == "10001:10001"
+            and read_only_root == "true"
         )
         internal_network = _run(
             [
@@ -541,6 +705,12 @@ def run_docker_rdagent_finquant(
             "us_pit_data_mounts_read_only": mounts_valid,
             "worker_proxy_network_internal": worker_network_valid,
             "run_namespace": project,
+            "durable_output_path": str(output_directory),
+            "durable_host_mount_valid": durable_host_mount_valid,
+            "diagnostics_preserved": True,
+            "selector_logs_redacted": redacted_selector_log_count,
+            "worker_non_root": configured_user == "10001:10001",
+            "worker_root_read_only": read_only_root == "true",
             "proposal_phase_reached": proposal_phase_reached,
             "proposal_phase_marker": "Start Loop 0, Step 0: direct_exp_gen" if proposal_phase_reached else None,
             "proxy_mock_request_observed": counts["chat"] > 0 or counts["embedding"] > 0,
@@ -555,6 +725,11 @@ def run_docker_rdagent_finquant(
             "broker_actions": 0,
             "sealed_oos_accessed": False,
         }
+        _durable_output_write(
+            output_directory,
+            "p12-target-evidence.json",
+            json.dumps(evidence, sort_keys=True) + "\n",
+        )
         if not (
             process_identity_valid
             and env_valid
@@ -567,6 +742,23 @@ def run_docker_rdagent_finquant(
         ):
             raise DockerDispatchFailed(worker.returncode or 1, evidence)
         return evidence
+    except DockerDispatchFailed as exc:
+        _persist_failure_record(
+            output_directory,
+            str(exc.evidence.get("classification", "NATIVE_FINQUANT_FAILED")),
+            json.dumps(exc.evidence, sort_keys=True),
+        )
+        raise
+    except DockerDispatchAmbiguous as exc:
+        _persist_failure_record(output_directory, "NATIVE_FINQUANT_AMBIGUOUS", str(exc))
+        raise
+    except Exception as exc:
+        _persist_failure_record(
+            output_directory,
+            "NATIVE_FINQUANT_UNEXPECTED_ERROR",
+            type(exc).__name__,
+        )
+        raise DockerDispatchAmbiguous("Native fin_quant target failed with an unexpected local error") from None
     finally:
         remove = _run(
             [*compose, "rm", "--force", "rdagent-finquant-worker"],
