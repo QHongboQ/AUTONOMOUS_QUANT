@@ -1,0 +1,44 @@
+services:
+  litellm-deepseek-staging:
+    image: ghcr.io/berriai/litellm@sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802
+    pull_policy: never
+    profiles: [deepseek-staging]
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - >-
+        test -s /run/secrets/deepseek_api_key;
+        export DEEPSEEK_API_KEY="$$(cat /run/secrets/deepseek_api_key)";
+        test -n "$$DEEPSEEK_API_KEY";
+        exec litellm --config /app/config.deepseek-staging.yaml --port 4000 --num_workers 1
+    environment:
+      LITELLM_DEEPSEEK_STAGING_MASTER_KEY: ${LITELLM_DEEPSEEK_STAGING_MASTER_KEY:?separate staging Proxy admin key required}
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD:?dedicated TEST_ONLY database password required}@postgres:5432/litellm_deepseek_staging
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
+      P12_OLLAMA_API_BASE: ${P12_OLLAMA_API_BASE:?reachable existing Ollama URL required}
+    secrets:
+      - deepseek_api_key
+    volumes:
+      - ./config.deepseek-staging.yaml:/app/config.deepseek-staging.yaml:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    expose: ["4000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/liveliness', timeout=3)"]
+      interval: 3s
+      timeout: 4s
+      retries: 40
+    networks: [core, provider_egress]
+
+secrets:
+  deepseek_api_key:
+    file: ${P12_DEEPSEEK_API_KEY_FILE:?owner-managed provider secret file required}
+
+networks:
+  provider_egress:
+    driver: bridge
+    internal: false
+    name: aq-p12-deepseek-provider-egress

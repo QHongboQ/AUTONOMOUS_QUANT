@@ -1,0 +1,29 @@
+model_list:
+  - model_name: deepseek/deepseek-flash
+    litellm_params:
+      model: deepseek/deepseek-flash
+      api_base: https://api.deepseek.com
+      api_key: os.environ/DEEPSEEK_API_KEY
+  - model_name: ollama/qwen3-embedding:0.6b
+    litellm_params:
+      model: ollama/qwen3-embedding:0.6b
+      api_base: os.environ/P12_OLLAMA_API_BASE
+    model_info:
+      mode: embedding
+      input_cost_per_token: 0.0
+      output_cost_per_token: 0.0
+general_settings:
+  master_key: os.environ/LITELLM_DEEPSEEK_STAGING_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+  disable_budget_reservation: false
+  fail_closed_budget_enforcement: true
+  allow_client_side_credentials: false
+litellm_settings:
+  block_requests_for_models_without_pricing: true
+router_settings:
+  redis_host: os.environ/REDIS_HOST
+  redis_port: os.environ/REDIS_PORT
+  cache_kwargs:
+    db: "1"
+  enable_pre_call_checks: true
+  num_retries: 0

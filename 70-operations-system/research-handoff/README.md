@@ -258,6 +258,75 @@ an already synthetic P4 request. It is never an owner approval record.
 The intake evaluates expiry, revocation, request scope, provider/model
 allowlists, simulated period/per-run spend, concurrency snapshot, and
 runtime/memory/storage bounds before creating a durable request claim.
+
+## Disabled DeepSeek Flash staging profile
+
+`docker-rdagent-smoke/compose.deepseek-staging.yaml` and
+`config.deepseek-staging.yaml` define a separate opt-in LiteLLM Proxy profile
+for the official `deepseek/deepseek-flash` route and the existing local
+`ollama/qwen3-embedding:0.6b` model. The ordinary persistent TEST_ONLY Compose
+file and its Mock aliases are unchanged. The staging profile has no published
+port, uses a separate PostgreSQL database (`litellm_deepseek_staging`) and
+Redis DB index, and is not connected to `worker_proxy`; therefore the current
+P12 dispatcher cannot reach it. It is disabled unless the
+`deepseek-staging` Compose profile is explicitly selected and an external
+secret file and separate Proxy admin key are supplied.
+
+The host supplies `P12_DEEPSEEK_API_KEY_FILE` to Compose. Compose mounts that
+file as a secret to the Proxy only; its entrypoint loads the value into the
+Proxy process environment required by the official LiteLLM config resolver.
+Neither the RD-Agent worker nor its P12 TEST_ONLY environment receives the
+provider credential. Compose secrets protect the container boundary from the
+worker, not from a host Docker administrator. The provider egress network is a
+regular Docker bridge and does not restrict destination hosts. No scoped paid
+virtual key is created here: real route use remains unavailable to P12 until a
+human-approved policy and independently enforced budget are established.
+There is no owner budget value in this configuration and no unlimited key is
+provisioned.
+
+Before first activation, an operator must create the separate database in the
+already-persistent PostgreSQL service with
+`docker exec aq-p12-litellm-persistent-test-postgres-1 createdb -U litellm -O litellm litellm_deepseek_staging`.
+This does not touch the existing `litellm` database or its volume. No
+verification token or paid-provider virtual key is created by staging.
+
+The running pinned LiteLLM 1.105.1 model-cost map contains the canonical
+`deepseek/deepseek-flash` entry for DeepSeek-V4.1-Flash-1017 and matches the
+[current official DeepSeek pricing](https://api-docs.deepseek.com/quick_start/pricing/):
+peak/off-peak cache-hit input is $0.006/$0.003 per million tokens,
+cache-miss input is $0.30/$0.15, and output is $1.20/$0.60. The equivalent
+LiteLLM entries and off-peak windows are in the
+[pinned v1.105.1 model map](https://raw.githubusercontent.com/BerriAI/litellm/v1.105.1/model_prices_and_context_window.json);
+no AQ price override is needed.
+The profile blocks models without known pricing, uses native pre-call budget
+reservation and fail-closed budget enforcement, and does not retry. The
+existing Ollama model is available locally at the pinned P3 name. A local
+LiteLLM embedding request reached it successfully and returned 1024 dimensions;
+no Mock embedding is used in this profile. The service requires the operator
+to supply
+`P12_OLLAMA_API_BASE` explicitly because the current WSL Ollama endpoint is
+reachable from Docker only at its current private WSL address; the default
+`host.docker.internal` address points to a different host endpoint. If the WSL
+address changes, the profile must be updated before it can start. No address
+is silently guessed.
+
+Offline acceptance used only a generated dummy provider secret. The pinned
+Proxy loaded both configured model routes and served one local Ollama embedding
+probe at 1024 dimensions; no DeepSeek chat request was sent and no real
+provider virtual key exists in the separate database. Compose inspection
+confirmed the staging Proxy alone joins the non-internal provider egress
+network, while PostgreSQL, Redis, Mock, and the RD-Agent worker do not. The
+worker remains on the existing internal `worker_proxy`; the staging Proxy has
+no published port and does not join that worker network. Destination-specific
+provider egress filtering is not configured.
+
+Candidate V4 remains frozen with its historical `deepseek/deepseek-chat`
+identity. The forward-only Candidate V5 schema records the unchanged P3
+LiteLLM client version `1.103.1` and `deepseek/deepseek-flash`; it reuses V3
+evidence definitions and does not alter the P2 protocol. The existing V4
+materializer remains V4-only. A future V5
+materializer must bind actual runtime and provider-response evidence, and P2
+must independently decide eligibility.
 Simulated spend evidence must be present, Decimal-typed, finite, and
 nonnegative before budget comparisons; invalid evidence is denied before any
 claim is written. The synthetic fixture's example numeric limits exist only to exercise validation;
