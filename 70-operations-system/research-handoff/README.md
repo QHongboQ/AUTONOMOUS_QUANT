@@ -281,8 +281,25 @@ worker, not from a host Docker administrator. The provider egress network is a
 regular Docker bridge and does not restrict destination hosts. No scoped paid
 virtual key is created here: real route use remains unavailable to P12 until a
 human-approved policy and independently enforced budget are established.
-There is no owner budget value in this configuration and no unlimited key is
-provisioned.
+The disabled profile now sets LiteLLM's native Proxy-wide `max_budget` to
+USD 5.00 against that dedicated persistent database and deliberately omits
+`budget_duration`, so the database spend ceiling is lifetime/cumulative and
+cannot reset on a timer, restart, or virtual-key reissue. Fail-closed budget
+and rate-limit enforcement are enabled and the default concurrent-request
+limit is one. The Proxy admin key remains control-side only; it is exempt from
+native user budgets and must never be used for inference. No paid virtual key
+is created by this configuration or PR, and the real P12 dispatch target stays
+disabled.
+
+This is only the persistent native spend ceiling, not proof of owner approval
+or an active spending grant. This host still has no verified independent
+owner-controlled signer/revocation source with rollback-protected epoch state.
+Also, the pinned LiteLLM 1.105.1 proxy hard-caps only requests that omit an
+explicit output-token limit when a TPM limit is configured; an explicit client
+`max_tokens` is not overridden. RD-Agent's complete loop has not been shown to
+omit or bound that field. Therefore bounded output-token dispatch is not
+established and the real target remains unavailable. Do not infer readiness
+from the USD ceiling alone.
 
 Before first activation, an operator must create the separate database in the
 already-persistent PostgreSQL service with

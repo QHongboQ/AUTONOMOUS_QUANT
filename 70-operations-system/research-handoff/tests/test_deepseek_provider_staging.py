@@ -55,6 +55,31 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn('db: "1"', config)
         self.assertNotIn("redis_db:", config)
 
+    def test_disabled_real_profile_has_native_lifetime_ceiling_and_no_reset(self) -> None:
+        config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
+        self.assertIn("max_budget: 5.0", config)
+        self.assertIn("fail_closed_budget_enforcement: true", config)
+        self.assertIn("fail_closed_rate_limit_enforcement: true", config)
+        self.assertIn("default_max_parallel_requests: 1", config)
+        # A duration-based budget would renew; only key/approval expiry is 24h.
+        self.assertFalse(
+            any(line.lstrip().startswith("budget_duration:") for line in config.splitlines())
+        )
+        self.assertIn("block_requests_for_models_without_pricing: true", config)
+        self.assertEqual(config.count("model_name:"), 2)
+        self.assertIn("model_name: deepseek/deepseek-flash", config)
+        self.assertIn("model_name: ollama/qwen3-embedding:0.6b", config)
+        self.assertNotIn("fallbacks:", config)
+
+    def test_native_budget_does_not_enable_real_dispatch_or_create_a_key(self) -> None:
+        config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
+        compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
+        self.assertIn("profiles: [deepseek-staging]", compose)
+        self.assertNotIn("rdagent-finquant-worker", compose)
+        self.assertNotIn("/key/generate", config)
+        handoff = (ROOT / "p12_research_handoff.py").read_text()
+        self.assertIn('"BLOCKED_REAL_DISPATCH_DENIED"', handoff)
+
 
 if __name__ == "__main__":
     unittest.main()
