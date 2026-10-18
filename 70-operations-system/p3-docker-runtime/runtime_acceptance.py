@@ -15,8 +15,11 @@ RDAGENT_SHA = "484776c211e4fbbeef03e0ec00d6bbee7362a4f4"
 QLIB_SHA = "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"
 ENV_ROOT = Path("/opt/conda/envs/rdagent4qlib")
 FACTOR_DATA = Path("/data/factor-source")
-QLIB_DATA = Path("/data/qlib")
+QLIB_DATA = Path("/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data")
+QLIB_CALENDAR = Path("/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime")
 WORKSPACE = Path("/workspace")
+P2_PIT_SHA256 = "e771f73b91664b26584e66c42eb007c4276c492071172e7d6594bc900f01f875"
+TEMPLATE_ROOT = Path("/opt/aq/p3/templates/p3-official-us")
 EXPECTED_DATES = (
     "2015-01-02",
     "2019-12-31",
@@ -57,13 +60,57 @@ def _qlib_distribution_identity() -> tuple[str, str]:
 def _qlib_data_probe() -> dict[str, object]:
     code = r'''
 import json
+import hashlib
+from pathlib import Path
 import pandas as pd
 import qlib
 from qlib.config import REG_US
 from qlib.data import D
 
-qlib.init(provider_uri="/data/qlib", region=REG_US)
-instruments = D.instruments(market="p2_pit")
+provider = Path("/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data")
+calendar_provider = Path("/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime")
+template = Path("/opt/aq/p3/templates/p3-official-us/factor_template/conf_baseline.yaml")
+import yaml
+template_text = template.read_text(encoding="utf-8")
+native_config = yaml.safe_load(template_text.split("\nmarket:", 1)[0])["qlib_init"]
+assert native_config["provider_uri"] == str(provider)
+assert native_config["calendar_provider"]["kwargs"]["backend"]["kwargs"]["provider_uri"] == str(calendar_provider)
+assert provider.is_dir() and calendar_provider.is_dir()
+assert hashlib.sha256((provider / "instruments/p2_pit.txt").read_bytes()).hexdigest() == "e771f73b91664b26584e66c42eb007c4276c492071172e7d6594bc900f01f875"
+for rel, expected in (
+    ("calendars/day.txt", "d4c0c100af851245f6f894e275e5d494d7e1cbd07f82d342c034cbdf7b7bfa4d"),
+    ("calendars/day_future.txt", "3225eab67ebddcd53022bec56d2d8fa99745a2d7990722c36eee57185566937d"),
+):
+    assert hashlib.sha256((calendar_provider / rel).read_bytes()).hexdigest() == expected
+
+qlib.init(
+    provider_uri=native_config["provider_uri"],
+    region=REG_US,
+    calendar_provider=native_config["calendar_provider"],
+    expression_cache=None,
+    dataset_cache=None,
+)
+instrument_config = D.instruments(market="p2_pit")
+observed = D.list_instruments(
+    instruments=instrument_config,
+    start_time="2015-01-02", end_time="2024-12-31", freq="day", as_list=False,
+)
+reference_rows = [
+    line.split() for line in (provider / "instruments/p2_pit.txt").read_text(encoding="utf-8").splitlines()
+    if line.strip()
+]
+reference = {}
+for instrument, start, end in reference_rows:
+    reference.setdefault(instrument, []).append((start, end))
+def normalized(value):
+    return pd.Timestamp(value).strftime("%Y-%m-%d")
+observed_normalized = {
+    instrument: sorted((normalized(start), normalized(end)) for start, end in ranges)
+    for instrument, ranges in observed.items()
+}
+reference_normalized = {instrument: sorted(ranges) for instrument, ranges in reference.items()}
+if observed_normalized != reference_normalized:
+    raise RuntimeError("native Qlib p2_pit membership differs from frozen provider authority")
 calendar = D.calendar(
     start_time="2015-01-02", end_time="2024-12-31", freq="day"
 )
@@ -73,19 +120,31 @@ required = (
     "2021-12-31", "2022-01-03", "2024-12-31",
 )
 missing = [value for value in required if value not in dates]
-if not instruments:
+if not observed:
     raise RuntimeError("p2_pit resolved to an empty instrument set")
+if len(observed) != 730 or len(reference_rows) != 745 or sum(map(len, observed.values())) != 745:
+    raise RuntimeError("native p2_pit membership counts differ from frozen authority (730/745)")
 if missing:
     raise RuntimeError("required historical calendar dates are missing: " + ",".join(missing))
+sample = "P2SEC00A2606527FADDDA12E3E76CDEA395D253F930C87F0E430726CA4C16E027FBB7"
+price = D.features([sample], ["$close"], "2015-12-29", "2015-12-29", disk_cache=0)
+if price.empty or price["$close"].isna().all():
+    raise RuntimeError("native Qlib historical close feature read returned no observation")
 print(json.dumps({
-    "classification": "US_PIT_QLIB_INIT_PASS",
+    "classification": "US_PIT_QLIB_DATA_ACCEPTANCE_PASS",
     "region": "US",
     "market": "p2_pit",
-    "instrument_count": len(instruments),
+    "instrument_count": len(observed),
+    "membership_range_count": sum(map(len, observed.values())),
+    "membership_matches_frozen_authority": True,
+    "reference_sha256": hashlib.sha256((provider / "instruments/p2_pit.txt").read_bytes()).hexdigest(),
     "calendar_count": len(calendar),
     "calendar_start": min(dates),
     "calendar_end": max(dates),
     "required_dates_present": True,
+    "historical_feature_read": {"instrument": sample, "date": "2015-12-29", "close_observed": True},
+    "provider_uri": str(provider),
+    "calendar_provider_uri": str(calendar_provider),
     "training_performed": False,
     "sealed_oos_accessed": False,
 }, sort_keys=True))
@@ -105,7 +164,7 @@ print(json.dumps({
             value = json.loads(line)
         except ValueError:
             continue
-        if value.get("classification") == "US_PIT_QLIB_INIT_PASS":
+        if value.get("classification") == "US_PIT_QLIB_DATA_ACCEPTANCE_PASS":
             return value
     raise AssertionError("Qlib data probe did not emit its success record")
 
@@ -191,13 +250,26 @@ class PinnedDockerRuntimeAcceptance(unittest.TestCase):
         self.assertTrue((FACTOR_DATA / "full").is_dir())
         self.assertTrue((FACTOR_DATA / "debug").is_dir())
         self.assertTrue((QLIB_DATA / "instruments/p2_pit.txt").is_file())
-        marker = (Path("/opt/aq/p3/templates/p3-official-us/model_template/conf_baseline_factors_model.yaml")).read_text(encoding="utf-8")
+        self.assertTrue((QLIB_CALENDAR / "calendars/day.txt").is_file())
+        self.assertTrue((QLIB_CALENDAR / "calendars/day_future.txt").is_file())
+        for template in sorted(TEMPLATE_ROOT.glob("*/*.yaml")):
+            text = template.read_text(encoding="utf-8")
+            self.assertIn(str(QLIB_DATA), text, template.name)
+            self.assertIn(str(QLIB_CALENDAR), text, template.name)
+        marker = (TEMPLATE_ROOT / "model_template/conf_baseline_factors_model.yaml").read_text(encoding="utf-8")
         self.assertIn("market: &market p2_pit", marker)
         self.assertNotIn("csi300", marker.lower())
         result = _qlib_data_probe()
         self.assertEqual(result["region"], "US")
         self.assertEqual(result["market"], "p2_pit")
         self.assertTrue(result["required_dates_present"])
+        self.assertTrue(result["membership_matches_frozen_authority"])
+        self.assertEqual(result["instrument_count"], 730)
+        self.assertEqual(result["membership_range_count"], 745)
+        self.assertEqual(result["reference_sha256"], P2_PIT_SHA256)
+        self.assertTrue(result["historical_feature_read"]["close_observed"])
+        self.assertEqual(result["provider_uri"], str(QLIB_DATA))
+        self.assertEqual(result["calendar_provider_uri"], str(QLIB_CALENDAR))
         self.assertFalse(result["training_performed"])
         self.assertFalse(result["sealed_oos_accessed"])
         print(json.dumps({"qlib_data_probe": result}, sort_keys=True))

@@ -42,12 +42,15 @@ do not rebuild it for each request.
 
 ## Runtime acceptance
 
-The acceptance container should have only these two data mounts, both
-read-only:
+The acceptance container uses three narrowly scoped data mounts, all
+read-only. The first is the existing P3 factor source. The other two preserve
+the exact provider and separate native calendar-provider URIs already frozen
+inside the factor/model templates:
 
 ```text
 D:/AQ_DATA/P3/rdagent-us-ragged/factor-source -> /data/factor-source
-D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data -> /data/qlib
+D:/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data -> /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+D:/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime -> /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
 ```
 
 Use the image with no network, a non-root UID, a read-only root filesystem,
@@ -60,7 +63,8 @@ docker run --detach --name aq-p3-runtime-acceptance \
   --tmpfs /workspace:rw,nosuid,nodev,size=1g,uid=10001,gid=10001 --tmpfs /tmp:rw,nosuid,nodev,size=256m,uid=10001,gid=10001 \
   --tmpfs /home/rdagent:rw,nosuid,nodev,size=256m,uid=10001,gid=10001 \
   --mount type=bind,source=/mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source,target=/data/factor-source,readonly \
-  --mount type=bind,source=/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data,target=/data/qlib,readonly \
+  --mount type=bind,source=/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data,target=/mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data,readonly \
+  --mount type=bind,source=/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime,target=/mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime,readonly \
   --entrypoint sleep aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1 infinity
 
 docker exec aq-p3-runtime-acceptance \
@@ -71,13 +75,20 @@ docker inspect aq-p3-runtime-acceptance
 docker rm --force aq-p3-runtime-acceptance
 ```
 
-Confirm inspect reports `NetworkMode=none`, user `10001:10001`, exactly two
+Confirm inspect reports `NetworkMode=none`, user `10001:10001`, exactly three
 bind mounts with `RW=false`, and no Docker socket. The acceptance script also
 checks RD-Agent/Qlib source commits and imports, Conda, LightGBM, Torch, Tables,
-CatBoost and XGBoost, resolves factor/model CoSTEER to `rdagent4qlib`, and
-initializes native Qlib as US against `market=p2_pit` for the existing
-2015--2024 historical research calendar. It does not open any sealed-OOS
-protocol or files, train a model, invoke an LLM, or create a Candidate.
+CatBoost and XGBoost, resolves factor/model CoSTEER to `rdagent4qlib`, and reads
+the frozen template URIs without changing template bytes. It passes the
+template's native `calendar_provider` configuration to Qlib, enumerates actual
+`p2_pit` membership with `D.list_instruments()`, and compares all 730 security
+identities and 745 ranges with the frozen provider file and its authority hash.
+It checks the 2015--2024 Qlib historical calendar and reads one bounded native
+historical `$close` observation with disk cache disabled. The separate
+calendar source is the documented P2 historical rehearsal calendar, with its
+day and Qlib-required boundary files hash-checked. The script does not open any
+sealed-OOS protocol or files, train a model, invoke an LLM, or create a
+Candidate.
 
 The image contains no provider credentials or owner keys. It includes the
 existing AQ US binding and frozen templates only. It does not include P12 or

@@ -19,23 +19,36 @@
 
 ## Actual runtime acceptance
 
-The image default entry point and command were run in a disposable container.
-The container exited with code 0 after all five `unittest` checks passed.
-Acceptance verified RD-Agent and Qlib source commit metadata, Conda availability,
-the `rdagent4qlib` environment, native imports, official `QlibCondaEnv`, and
-factor/model CoSTEER environment resolution.
+The corrected source acceptance was run inside a disposable container from
+this pinned image. It passed all five `unittest` checks. The container used
+the same image digest, RD-Agent/Qlib source SHAs and package versions above;
+the updated acceptance source was streamed to Python on stdin so no image
+rebuild or code bind mount was needed.
 
-Qlib initialized on the approved US `p2_pit` data. It resolved 2 instruments
-and 2,516 historical calendar entries from 2015-01-02 through 2024-12-31;
-the required train/validation/history boundary dates were present. No training
-or Candidate production occurred.
+The container was non-root (`10001:10001`), networkless (`none`), read-only at
+root, capped at 4 GiB and 256 processes, and had exactly three host bind mounts.
+All were `RW=false`: the existing approved P3 factor-source path; the exact P2
+Qlib provider path frozen in the templates; and the separate exact
+`calendar_provider` path frozen in the templates. Workspace, temporary files,
+and `/home/rdagent` were isolated UID-owned tmpfs mounts. No Docker socket,
+credentials, signing keys, or sealed OOS directory was mounted. The existing
+`aq-p12-health` container remained `running` and `healthy` after the test.
 
-The runtime container was non-root (`10001:10001`), networkless (`none`),
-read-only at root, capped at 4 GiB and 256 processes, and had exactly two host
-bind mounts. Both mounts were `RW=false`: the approved P3 factor-source path
-and P2 Qlib `p2_pit` data path. Workspace, temporary files, and `/home/rdagent`
-were isolated UID-owned tmpfs mounts. No Docker socket, credentials, signing
-keys, or sealed OOS directory was mounted.
+The acceptance loaded the template's native `calendar_provider` configuration
+into Qlib and checked both frozen paths and source-file hashes. The provider's
+frozen `instruments/p2_pit.txt` SHA-256 was
+`e771f73b91664b26584e66c42eb007c4276c492071172e7d6594bc900f01f875`. Qlib
+`D.list_instruments()` observed and matched the full authority: 730 security
+identities and 745 membership ranges. `D.calendar()` returned 2,516 historical
+sessions from 2015-01-02 through 2024-12-31 with required boundaries present.
+The separately mounted calendar source is documented in P2's historical
+rehearsal as a calendar-only runtime generated from XNYS 4.13.2; `day.txt` and
+Qlib-required `day_future.txt` matched the frozen SHA-256s. It contains no
+market observations and adds only the native boundary session 2025-01-02.
+A native Qlib `D.features()` read returned an observed `$close` for the
+previously documented sample identity on 2015-12-29 with disk cache disabled.
+No training, Candidate production, paid LLM request, or sealed OOS access
+occurred.
 
 RD-Agent's imported LiteLLM utility attempted its optional public model-cost
 metadata refresh; the networkless container blocked name resolution and it
