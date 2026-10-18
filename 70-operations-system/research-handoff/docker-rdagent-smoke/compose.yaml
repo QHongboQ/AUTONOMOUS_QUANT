@@ -90,6 +90,80 @@ services:
       litellm: {condition: service_healthy}
     networks: [worker_proxy]
 
+  rdagent-finquant-worker:
+    image: aq/p3-rdagent-qlib:rdagent-1.0.0-qlib-0.9.8.dev26-v1
+    pull_policy: never
+    environment:
+      P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped test Proxy key required}
+      OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped test Proxy key required}
+      OPENAI_API_BASE: http://litellm:4000/v1
+      BACKEND: rdagent.oai.backend.LiteLLMAPIBackend
+      LITELLM_CHAT_MODEL: openai/deepseek-chat
+      LITELLM_EMBEDDING_MODEL: openai/qwen3-embedding:0.6b
+      LITELLM_CHAT_STREAM: "false"
+      LITELLM_LOG_LLM_CHAT_CONTENT: "false"
+      LITELLM_REASONING_EFFORT: high
+      MODEL_COSTEER_ENV_TYPE: conda
+      FACTOR_COSTEER_PYTHON_BIN: /opt/conda/envs/rdagent4qlib/bin/python
+      FACTOR_COSTEER_DATA_FOLDER: /data/factor-source/full
+      FACTOR_COSTEER_DATA_FOLDER_DEBUG: /data/factor-source/debug
+      QLIB_QUANT_FACTOR_HYPOTHESIS2EXPERIMENT: aq_rdagent_official_us_binding.USQlibFactorHypothesis2Experiment
+      QLIB_QUANT_MODEL_HYPOTHESIS2EXPERIMENT: aq_rdagent_official_us_binding.USQlibModelHypothesis2Experiment
+      QLIB_QUANT_TRAIN_START: "2015-01-02"
+      QLIB_QUANT_TRAIN_END: "2019-12-31"
+      QLIB_QUANT_VALID_START: "2020-01-02"
+      QLIB_QUANT_VALID_END: "2021-12-31"
+      QLIB_QUANT_TEST_START: "2022-01-03"
+      QLIB_QUANT_TEST_END: "2024-12-31"
+      QLIB_FACTOR_TRAIN_START: "2015-01-02"
+      QLIB_FACTOR_TRAIN_END: "2019-12-31"
+      QLIB_FACTOR_VALID_START: "2020-01-02"
+      QLIB_FACTOR_VALID_END: "2021-12-31"
+      QLIB_FACTOR_TEST_START: "2022-01-03"
+      QLIB_FACTOR_TEST_END: "2024-12-31"
+      QLIB_MODEL_TRAIN_START: "2015-01-02"
+      QLIB_MODEL_TRAIN_END: "2019-12-31"
+      QLIB_MODEL_VALID_START: "2020-01-02"
+      QLIB_MODEL_VALID_END: "2021-12-31"
+      QLIB_MODEL_TEST_START: "2022-01-03"
+      QLIB_MODEL_TEST_END: "2024-12-31"
+      WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/workspaces
+      PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/pickle-cache
+      LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/trace
+      QLIB_MLFLOW_URI: sqlite:////workspace/runs/${P12_RUN_NAMESPACE:?unique P12 run namespace required}/mlflow.db
+      HOME: /home/rdagent
+      TMPDIR: /tmp
+    entrypoint: ["rdagent"]
+    command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]
+    volumes:
+      - type: bind
+        source: /mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source
+        target: /data/factor-source
+        read_only: true
+      - type: bind
+        source: /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+        target: /mnt/d/AQ_DATA/P2/qlib-native-ragged-panel-001/qlib_data
+        read_only: true
+      - type: bind
+        source: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
+        target: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
+        read_only: true
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /workspace:rw,nosuid,nodev,size=1g,uid=10001,gid=10001
+      - /tmp:rw,nosuid,nodev,size=256m,uid=10001,gid=10001
+      - /home/rdagent:rw,nosuid,nodev,size=256m,uid=10001,gid=10001
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 4g
+    init: true
+    depends_on:
+      litellm: {condition: service_healthy}
+    networks: [worker_proxy]
+
 networks:
   core:
     driver: bridge

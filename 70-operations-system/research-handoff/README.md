@@ -8,13 +8,19 @@ research; Qlib owns training and Recorder outputs; P2 alone owns certification.
 The default P12 dispatch target is an inert local synthetic executable. One
 explicit `TEST_ONLY` option runs a bounded official RD-Agent chat/embedding
 backend smoke through the existing Docker Compose/LiteLLM Proxy/mock pattern.
-The Docker target does not start a research loop, Qlib, DVC, MLflow, a real
-provider, or a broker.
+The previous smoke target remains available unchanged. A second explicit
+`TEST_ONLY` target starts one bounded native RD-Agent `fin_quant` proposal
+step from the already-built P3 runtime image. Neither target enables real
+dispatch, provider credentials, certification, or a broker.
 
-P3's documented future native command remains
-`rdagent fin_quant --loop-n 1`. That research loop is not present as a dispatch
-option here. The Docker target calls only RD-Agent 1.0.0's native chat and
-embedding backend methods. Real dispatch permission is always `DENIED`.
+P3's documented native command remains `rdagent fin_quant --loop-n 1`. The new
+P12 target adds upstream's supported `--step-n 1` bound so the native
+application reaches its first `direct_exp_gen` proposal step and stops before
+coding, running, feedback, or training. The exact CLI options and step behavior
+were verified against the pinned RD-Agent
+`484776c211e4fbbeef03e0ec00d6bbee7362a4f4` source in the P3 image:
+`rdagent/app/cli.py`, `rdagent/app/qlib_rd_loop/quant.py`, and
+`rdagent/utils/workflow/loop.py`. Real dispatch permission remains `DENIED`.
 
 ### Opt-in Docker RD-Agent native smoke
 
@@ -41,6 +47,74 @@ The smoke verifies one mock chat and one mock embedding call, then tears down
 the isolated Compose project and verifies its containers, networks and
 volumes are gone. The worker image may remain cached; no credentials are stored
 in the repository or runtime directory.
+
+### Opt-in native fin_quant proposal step
+
+Select `DOCKER_RDAGENT_FINQUANT_TEST_ONLY` through the same P12 durable intake.
+Before starting Compose, P12 requires the local image ID to equal
+`sha256:f0caceba9e06a618dda72bd999de78c13e34e0773831c8796936c80793e4eea2`;
+this worker has `pull_policy: never`, and this path does not build an image.
+The Proxy, local Mock, Postgres, and Redis remain the existing pinned services.
+Only the fin_quant worker is new; the previous smoke worker definition and
+target are unchanged.
+
+The new worker runs as UID 10001 with read-only root, bounded resources, no
+Docker socket, and only the internal Proxy network. It receives a fresh
+Proxy virtual key scoped to the two Mock model aliases and no provider/admin
+credentials. Its sole model URL is the Proxy, routed by the pinned LiteLLM
+config to the local Mock. Three exact P2/P3 data paths are bind-mounted
+read-only: the P3 factor source, the frozen P2 Qlib provider URI, and the
+separate frozen Qlib calendar-provider URI. Its writable `/workspace` is a
+per-attempt tmpfs namespace, with the native workspace, trace, pickle, and
+SQLite MLflow paths all scoped under that namespace. The frozen P3 binding and
+US/PIT templates are used from the image.
+
+The current Mock's chat body is the synthetic string `synthetic-ok`, not a
+fabricated hypothesis. The native proposal request may therefore fail while
+parsing. P12 records the observed process exit, proposal-phase marker, and
+Mock request counters as a failed terminal status when that happens. A same-ID
+replay returns the persisted terminal result without starting another process.
+Missing data, wrong image, or an invalid worker configuration fail before the
+worker runs. Proxy unavailability or an unverified process outcome leaves the
+request blocked/unknown and prevents retry.
+
+### Actual TEST_ONLY execution record
+
+On 2026-10-17, P12 accepted a synthetic P4 no-Champion request and started the
+one-step official CLI in the verified image
+`sha256:f0caceba9e06a618dda72bd999de78c13e34e0773831c8796936c80793e4eea2`.
+The first attempt exposed unquoted YAML date values being coerced into
+timestamps; P12 marked that request `FAILED_SYNTHETIC` and preserved the
+failed terminal record. Date values are now quoted, and Compose rendering plus
+the runtime preflight verify the unchanged `YYYY-MM-DD` strings. A separate
+synthetic P4 request then verified the corrected end-to-end boundary:
+`QlibQuantScenario` initialized, `direct_exp_gen` was reached, the three
+approved mounts were read-only, the worker used the internal Proxy-only
+network, and the local Mock observed 10 chat requests. The run namespace was
+`aq-p12-finquant-5be5898accf0`.
+
+The Mock returned only `synthetic-ok`; RD-Agent exited 1 while processing the
+proposal. P12 persisted `FAILED_SYNTHETIC`, return code 1, zero Candidate,
+training, certification, and broker counts, and denied real dispatch. Replay
+returned `REPLAY_TERMINAL_FAILED_NO_DISPATCH` (P12 exit 4) with zero additional
+dispatches. This demonstrates native entry and controlled request routing; it
+does not demonstrate a valid hypothesis, completed research, spending
+authorization, certification, or production readiness. The unquoted date
+regression is covered by a focused Compose assertion.
+
+Invoke it as a one-shot P12 TEST_ONLY request:
+
+```bash
+export PYTHONPATH=/mnt/d/AQ_DATA/P3/candidate-v3-materialization-001/upstream-libs
+/home/zhou/AQ_ENVS/rdagent/bin/python \
+  70-operations-system/research-handoff/p12_research_handoff.py process \
+  --request /mnt/d/AQ/OPERATIONS/P12/<run>/request.json \
+  --policy /mnt/d/AQ/OPERATIONS/P12/<run>/test-policy.json \
+  --state-dir /mnt/d/AQ/OPERATIONS/P12/<run>/state \
+  --synthetic-only \
+  --target DOCKER_RDAGENT_FINQUANT_TEST_ONLY \
+  --docker-runtime-dir /mnt/d/AQ/OPERATIONS/P12/<run>/runtime
+```
 
 The temporary host command is:
 
