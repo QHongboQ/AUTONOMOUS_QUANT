@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import pickle
@@ -388,6 +389,35 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
             ("QLIB_MODEL_TEST_END", "2024-12-31"),
         ):
             self.assertIn(f'{name}: "{value}"', worker_section)
+
+    def test_persistent_proxy_worker_isolated_and_uses_native_scoped_key(self) -> None:
+        compose = (HANDOFF_DIR / "docker-rdagent-smoke/compose.persistent-test.yaml").read_text(encoding="utf-8")
+        proxy_section = compose.split("  litellm:", 1)[1].split("  rdagent-finquant-worker:", 1)[0]
+        worker_section = compose.split("  rdagent-finquant-worker:", 1)[1].split("\nnetworks:", 1)[0]
+        self.assertIn("networks: [core, worker_proxy]", proxy_section)
+        self.assertIn("name: aq-p12-litellm-worker-proxy", compose)
+        self.assertIn("internal: true", compose)
+        self.assertIn("networks: [worker_proxy]", worker_section)
+        self.assertIn("P3_TEST_PROXY_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped TEST_ONLY Proxy key required}", worker_section)
+        self.assertIn("OPENAI_API_KEY: ${P3_TEST_PROXY_KEY:?fresh scoped TEST_ONLY Proxy key required}", worker_section)
+        for forbidden in ("LITELLM_MASTER_KEY", "POSTGRES_PASSWORD", "DEEPSEEK_API_KEY", "ports:", "/var/run/docker.sock"):
+            self.assertNotIn(forbidden, worker_section)
+        self.assertIn("provision_test_key.py", proxy_section)
+        provisioner = (HANDOFF_DIR / "docker-rdagent-smoke/provision_test_key.py").read_text(encoding="utf-8")
+        for native_limit in ("max_budget", "budget_duration", "duration", "max_parallel_requests"):
+            self.assertIn(native_limit, provisioner)
+        self.assertIn("/key/generate", provisioner)
+        self.assertIn("/key/info", provisioner)
+        self.assertIn("/key/update", provisioner)
+        self.assertIn("/key/block", provisioner)
+
+        target_source = inspect.getsource(docker_rdagent_target.run_docker_rdagent_finquant)
+        self.assertIn("PERSISTENT_LITELLM_PROJECT", target_source)
+        self.assertIn("PERSISTENT_LITELLM_ENV_FILE", target_source)
+        self.assertIn('"create"', target_source)
+        self.assertIn('"verify-exhaustion"', target_source)
+        self.assertIn('"block"', target_source)
+        self.assertNotIn('"down", "--volumes"', target_source)
 
     def test_inert_success_cannot_be_replayed_as_docker_target(self) -> None:
         self._make_request()

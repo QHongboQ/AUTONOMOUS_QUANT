@@ -178,6 +178,42 @@ runtime-directory parameters for a one-shot Task Scheduler invocation. The
 existing health tasks and any permanent research schedule are not changed.
 TEST_ONLY admission keeps real research spending and dispatch denied.
 
+### Persistent Proxy handoff integration (2026-10-17)
+
+The persistent Compose definition now gives LiteLLM both the existing internal
+`core` network and a dedicated internal `worker_proxy` network. PostgreSQL,
+Redis, and Mock remain on `core`; the one-off RD-Agent worker joins only
+`worker_proxy`, receives a new request-scoped TEST_ONLY LiteLLM virtual key,
+and uses the existing pinned image and durable P12 output bind. The key is
+created and inspected through LiteLLM's native key APIs on the trusted control
+side. Its allowed models route only to the local Mock, with a synthetic native
+budget, one-hour reset/expiration, and concurrency of one. The worker does not
+receive Proxy admin or database credentials. No host port or Docker socket is
+configured. The one-off cleanup leaves the persistent services and named
+volumes intact.
+
+The first integration dispatch for request
+`sha256:94d8470c76fea98a3ce40260742a7401f88b0c47579bdf9c163c92e2c2e9b3cd`
+and attempt `36b84186-be08-4eb8-8070-cfc9df4ce005` entered the native
+`direct_exp_gen` proposal path. RD-Agent received the Mock's deliberately
+malformed `synthetic-ok` response, retried JSON parsing, and exited with a
+failure. Its trace and redacted diagnostic logs remain under
+`D:\AQ\OPERATIONS\P12\finquant-output\94d8470c76fea98a3ce40260742a7401f88b0c47579bdf9c163c92e2c2e9b3cd\36b84186-be08-4eb8-8070-cfc9df4ce005`.
+LiteLLM/PostgreSQL retained the scoped key's synthetic spend (`0.0005`), and
+that key was blocked after the attempt. This is internal Mock accounting, not
+provider spending.
+
+The P12 wrapper then encountered a local `NameError` in its post-dispatch
+network verification before it could persist a terminal result or run the
+configured budget-exhaustion probe. P12 correctly recorded
+`BLOCKED_UNKNOWN_POST_DISPATCH_STATE`. Replaying the same request returned the
+same blocked state with `dispatch_count_added: 0`, and did not recreate a
+worker. The prior request must not be retried: the native worker did run, while
+the durable terminal classification and full network/budget postchecks remain
+unverified. A new synthetic request is required only after this correction is
+reviewed. Real research remains denied; no Candidate, certification, training,
+paid provider call, or broker action was produced.
+
 ## Synthetic request and intake
 
 `create-synthetic-request` calls P4's existing `challenger_needed()` with
