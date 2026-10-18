@@ -55,6 +55,61 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn('db: "1"', config)
         self.assertNotIn("redis_db:", config)
 
+    def test_staging_profile_sets_native_key_issuance_bounds_without_global_budget(self) -> None:
+        config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
+        self.assertNotRegex(config, r"(?m)^  max_budget:")
+        self.assertIn("default_key_generate_params:", config)
+        self.assertIn("upperbound_key_generate_params:", config)
+        settings = config.split("litellm_settings:", 1)[1].split("router_settings:", 1)[0]
+        defaults = settings.split("default_key_generate_params:", 1)[1].split(
+            "upperbound_key_generate_params:", 1
+        )[0]
+        upperbounds = settings.split("upperbound_key_generate_params:", 1)[1]
+        self.assertIn("    max_budget: 5.0", defaults)
+        self.assertIn("    budget_duration: null", defaults)
+        self.assertIn("    duration: 24h", defaults)
+        self.assertIn("    max_parallel_requests: 1", defaults)
+        self.assertIn("      - deepseek/deepseek-flash", defaults)
+        self.assertIn("      - ollama/qwen3-embedding:0.6b", defaults)
+        self.assertIn("    max_budget: 5.0", upperbounds)
+        self.assertIn("    duration: 24h", upperbounds)
+        self.assertIn("    max_parallel_requests: 1", upperbounds)
+        self.assertNotIn("budget_duration:", upperbounds)
+        self.assertIn("fail_closed_budget_enforcement: true", config)
+        self.assertIn("fail_closed_rate_limit_enforcement: true", config)
+        router_settings = config.split("router_settings:", 1)[1]
+        self.assertIn("default_max_parallel_requests: 1", router_settings)
+        self.assertNotIn("default_max_parallel_requests:", config.split("router_settings:", 1)[0])
+        self.assertIn("block_requests_for_models_without_pricing: true", config)
+        self.assertEqual(config.count("model_name:"), 2)
+        self.assertIn("model_name: deepseek/deepseek-flash", config)
+        self.assertIn("model_name: ollama/qwen3-embedding:0.6b", config)
+        self.assertNotIn("fallbacks:", config)
+
+    def test_experiment_aggregate_requires_native_persistent_user_budget(self) -> None:
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn("native persistent LiteLLM", readme)
+        self.assertIn("same `user_id`", readme)
+        self.assertIn("Per-key caps alone do not enforce this aggregate", readme)
+        self.assertIn("No owner approval, native user, paid key", readme)
+
+    def test_pinned_source_contains_native_user_and_key_budget_controls(self) -> None:
+        # Pin the upstream interface contract checked in the v1.105.1 runtime.
+        compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
+        self.assertIn("ghcr.io/berriai/litellm@sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802", compose)
+        # User/key creation belongs to a future approved control workflow, not startup.
+        self.assertNotIn("/user/new", compose)
+        self.assertNotIn("/key/generate", compose)
+
+    def test_native_budget_does_not_enable_real_dispatch_or_create_a_key(self) -> None:
+        config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
+        compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
+        self.assertIn("profiles: [deepseek-staging]", compose)
+        self.assertNotIn("rdagent-finquant-worker", compose)
+        self.assertNotIn("/key/generate", config)
+        handoff = (ROOT / "p12_research_handoff.py").read_text()
+        self.assertIn('"BLOCKED_REAL_DISPATCH_DENIED"', handoff)
+
 
 if __name__ == "__main__":
     unittest.main()

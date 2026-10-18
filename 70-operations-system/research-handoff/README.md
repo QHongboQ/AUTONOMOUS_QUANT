@@ -281,14 +281,84 @@ worker, not from a host Docker administrator. The provider egress network is a
 regular Docker bridge and does not restrict destination hosts. No scoped paid
 virtual key is created here: real route use remains unavailable to P12 until a
 human-approved policy and independently enforced budget are established.
-There is no owner budget value in this configuration and no unlimited key is
-provisioned.
+The pinned LiteLLM 1.105.1 startup path requires `budget_duration` whenever a
+PostgreSQL-backed Proxy has a positive global `litellm_settings.max_budget`.
+Omitting the duration therefore crashes startup; adding one creates a resetting
+global budget, not a lifetime ceiling. This profile does not set a global
+`max_budget`. The `default_key_generate_params` and
+`upperbound_key_generate_params` instead prepare issuance defaults/bounds for a
+future key: USD 5 maximum, 24-hour key expiry, the Flash and local Ollama model
+allowlist, and one parallel request. The default key budget explicitly has
+`budget_duration: null` (no periodic reset). These are configuration bounds,
+not an owner-approved grant, a created key, or proof of spend enforcement.
+`default_max_parallel_requests` is under `router_settings`, where the pinned
+Router consumes it. Fail-closed budget/rate-limit settings remain enabled, but
+the real P12 dispatch target stays disabled.
 
-Before first activation, an operator must create the separate database in the
-already-persistent PostgreSQL service with
+The pinned image source was checked directly: `proxy_server.py` calls
+`_add_proxy_budget_to_db()` only for a positive global budget with PostgreSQL,
+and that method raises when `budget_duration` is absent. Its
+`LiteLLM_UpperboundKeyGenerateParams` supports `max_budget`, `duration`,
+`budget_duration`, `max_parallel_requests`, TPM, and RPM fields; key generation
+applies these caps. `GenerateRequestBase` persists per-key `max_budget` and
+`budget_duration`. `NewUserRequest` exposes `max_budget` and inherits
+`user_id`/budget duration; the native `/user/new` contract documents that an
+omitted user `budget_duration` means the budget never resets. These user and
+key records use LiteLLM's PostgreSQL-backed tables when configured. The
+upper-bound schema does not enforce a `models` field, so the trusted issuer
+must apply the two-model allowlist and verify the issued key with LiteLLM's
+native key-info API before any future dispatch.
+
+Keep three distinct states clear:
+
+1. **Configured upper bound (present):** the staging profile constrains future
+   key issuance to the configured maximum and defaults. No paid key is created.
+2. **Experiment aggregate budget (future, not provisioned):** before issuing
+   any key, the trusted control side must create one native persistent LiteLLM
+   user with `max_budget: 5.0` and no `budget_duration`, using a stable
+   `user_id` derived from the authorized experiment identity. Every key for
+   that experiment must use that same `user_id`, so LiteLLM's persistent
+   per-user spend is shared across keys. The user must not be recreated or
+   assigned a new identity on retry/restart; P12's no-redispatch policy remains
+   required. Per-key caps alone do not enforce this aggregate, because issuing
+   another key could otherwise grant another USD 5. The pinned native user
+   API/database provides the cumulative spend boundary; AQ does not keep a
+   parallel ledger.
+3. **Actual enforcement after owner approval (not active):** a verified,
+   unexpired, revocable owner approval and the experiment-bound native user
+   budget must exist before a paid key is issued. The control side must verify
+   the user and key settings through LiteLLM's native APIs before dispatch.
+   No owner approval, native user, paid key, provider request, or real dispatch
+   was created by this change. Real research remains denied.
+
+These are issuance bounds, not a persistent spend ceiling, proof of owner
+approval, or an active spending grant. This host still has no verified independent
+owner-controlled signer/revocation source with rollback-protected epoch state.
+Also, the pinned LiteLLM 1.105.1 proxy hard-caps only requests that omit an
+explicit output-token limit when a TPM limit is configured; an explicit client
+`max_tokens` is not overridden. RD-Agent's complete loop has not been shown to
+omit or bound that field. Therefore bounded output-token dispatch is not
+established and the real target remains unavailable. Do not infer readiness
+from the configured key issuance bound alone.
+
+The staging profile uses a separate database in the existing persistent
+PostgreSQL service. If that database is absent on a new host, an operator can
+create it with
 `docker exec aq-p12-litellm-persistent-test-postgres-1 createdb -U litellm -O litellm litellm_deepseek_staging`.
 This does not touch the existing `litellm` database or its volume. No
 verification token or paid-provider virtual key is created by staging.
+
+Staging startup acceptance on 2026-10-18 used the pinned LiteLLM image and a
+dummy provider secret. The separate `litellm_deepseek_staging` database already
+existed; migrations completed and the Proxy health endpoint returned 200. The
+loaded profile had no global `max_budget`, key defaults of USD 5 / 24h / the
+two listed models / one parallel request / null `budget_duration`, and
+`router_settings.default_max_parallel_requests: 1`. Only the Flash and local
+Ollama routes were registered. The staging Proxy had no worker attached; no
+key was created and no chat, embedding, or provider request was sent. The
+existing TEST_ONLY Proxy, Mock, PostgreSQL, Redis, health service, and both
+named volumes remained healthy/present. The temporary staging Proxy and its
+provider egress network were removed without removing volumes.
 
 The running pinned LiteLLM 1.105.1 model-cost map contains the canonical
 `deepseek/deepseek-flash` entry for DeepSeek-V4.1-Flash-1017 and matches the
