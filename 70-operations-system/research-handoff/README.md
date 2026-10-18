@@ -448,6 +448,58 @@ Acceptance runs use an isolated directory under
 `D:\AQ\OPERATIONS\P12\research-handoff-synthetic-poc-001`. They do not touch
 the existing health deployment or its scheduled tasks.
 
+## Persistent LiteLLM TEST_ONLY budget deployment
+
+`docker-rdagent-smoke/compose.persistent-test.yaml` runs only the existing
+pinned LiteLLM Proxy, PostgreSQL, Redis, and local Mock images. It uses a
+dedicated named PostgreSQL volume and Redis volume, an internal Docker network,
+and no host-published ports or research worker. The existing `config.yaml`
+routes both configured aliases only to `http://mock:8000/v1`. Admin and
+database credentials belong in a separately ACL-protected operations env file;
+the Proxy admin credential is not mounted into a research worker. The real
+P12 research target remains unregistered and denied.
+
+The acceptance harness `docker-rdagent-smoke/persistent_budget_acceptance.py`
+calls LiteLLM's native `/key/generate`, `/key/info`, and chat APIs from the
+Proxy control container. It uses a synthetic `$0.0001` test key budget, `1h`
+budget reset period and key expiry, and a one-request concurrency bound. These
+test values are enforcement fixtures, not owner-approved research spending.
+It verifies model allowlisting, Mock-only calls, native spending, budget
+exhaustion before Mock, service restart persistence, and PostgreSQL-outage
+denial before Mock. Test keys/results live only in the separately mounted
+operations state directory.
+
+On the Windows/WSL host, create a dedicated operations directory and state
+subdirectory with owner-only ACLs. Put fresh `LITELLM_MASTER_KEY`,
+`POSTGRES_PASSWORD`, and `P12_LITELLM_STATE_DIR` values in its external Compose
+env file; do not put that file in the repository. Then run:
+
+```bash
+docker compose --project-name aq-p12-litellm-persistent-test \
+  --env-file /mnt/d/AQ/OPERATIONS/P12/persistent-litellm-budget-001/compose.env \
+  -f 70-operations-system/research-handoff/docker-rdagent-smoke/compose.persistent-test.yaml \
+  up --no-build --pull never -d postgres redis mock litellm
+
+docker compose --project-name aq-p12-litellm-persistent-test \
+  --env-file /mnt/d/AQ/OPERATIONS/P12/persistent-litellm-budget-001/compose.env \
+  -f 70-operations-system/research-handoff/docker-rdagent-smoke/compose.persistent-test.yaml \
+  exec -T litellm python /app/persistent_budget_acceptance.py setup
+```
+
+For restart acceptance, stop `litellm postgres`, start PostgreSQL and wait for
+its health check, then start LiteLLM and run the harness `after-restart` phase.
+Run `prepare-outage`, stop PostgreSQL, run `outage-check`, start PostgreSQL,
+restart LiteLLM, and run `after-outage`. Do not remove the named test volume
+when stopping the deployment. This stack is a local TEST_ONLY validation
+deployment and grants no real provider spending or P12 research permission.
+
+Observed acceptance: native key creation and constraints passed; two Mock chat
+calls recorded `$0.0001`; the next request received LiteLLM `budget_exceeded`
+HTTP 422 before Mock; spend and allowlist persisted across a Proxy/PostgreSQL
+stop/start; and a chargeable probe during PostgreSQL outage returned HTTP 503
+without reaching Mock. Paid provider calls, training, P2 certification, and
+broker activity were not performed.
+
 ## Acceptance record
 
 On the actual host D: path through WSL's `/mnt/d` 9P/DrvFS mount:
@@ -471,11 +523,11 @@ untrusted owner approval, expiry/revocation, P4 scope/provenance/budget
 binding, provider/model allowlists, unknown or exceeded simulated spend,
 negative/non-finite/invalid spend representations, concurrency, and resource
 caps. Replay tests cover same-policy replay, changed valid policy, and
-tampered policy identity in persisted records. Together the offline suite
-contains 42 tests after adding the signed-authority and replay-provenance POC
-cases. Its budget checks are synthetic admission tests only: they
-do not prove pre-call provider charging enforcement or a race-safe real
-concurrency limit.
+tampered policy identity in persisted records. The current focused offline
+suite contains 58 tests. Those synthetic admission tests do not by themselves
+prove provider charging enforcement or a race-safe real concurrency limit;
+the separate live LiteLLM acceptance above verifies pre-call rejection for
+the local TEST_ONLY Mock budget fixture only, not for real provider spending.
 
 The acceptance record proves process-level durable replay on this host file
 path. It does not prove recovery from power loss, disk/controller failure, or
