@@ -125,7 +125,7 @@ services:
         case "$${P12_RUN_NAMESPACE}" in aq-p12-finquant-????????????) ;; *) echo 'request-scoped run namespace required' >&2; exit 64;; esac
         test "$${P12_RUN_NAMESPACE}" != aq-p12-finquant-aaaaaaaaaaaa
         case "$${P12_FINQUANT_OUTPUT_DIR}" in /mnt/d/AQ/OPERATIONS/P12/finquant-output/*/*) ;; *) echo 'durable per-attempt output path required' >&2; exit 64;; esac
-        test -d "$${P12_FINQUANT_OUTPUT_DIR}"
+        test -f /workspace/p12-attempt.json
         exec rdagent "$$@"
       - --
     command: ["fin_quant", "--step-n", "1", "--loop-n", "1"]
