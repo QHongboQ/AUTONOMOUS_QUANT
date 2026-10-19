@@ -725,11 +725,49 @@ def _owner_oneshot_replay(
     ):
         return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     state, code = terminal.get("state"), terminal.get("target_return_code")
-    if type(code) is not int or (state == "SUCCEEDED_OWNER_ONESHOT" and code != 0) or (state == "FAILED_OWNER_ONESHOT" and code == 0):
+    process_status = terminal.get("process_exit_status")
+    evidence_status = terminal.get("research_evidence_status")
+    terminal_fields = ("process_exit_status", "research_evidence_status")
+    terminal_field_presence = [key in terminal for key in terminal_fields]
+    legacy_records = all(
+        not any(key in record for key in terminal_fields)
+        for record in (claim, dispatch, terminal)
+    )
+    if terminal_field_presence == [False, False] and legacy_records:
+        if (
+            type(code) is not int
+            or (state == "SUCCEEDED_OWNER_ONESHOT" and code != 0)
+            or (state == "FAILED_OWNER_ONESHOT" and code == 0)
+            or state not in {"SUCCEEDED_OWNER_ONESHOT", "FAILED_OWNER_ONESHOT"}
+        ):
+            return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        return ({
+            "classification": "LEGACY_OWNER_ONESHOT_NOT_VERIFIED",
+            "request_id": request_id,
+            "legacy_process_exit_status": "PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED",
+            "research_evidence_status": "NOT_VERIFIED",
+            "status": terminal,
+            "dispatch_count_added": 0,
+            "new_key_created": False,
+        }, _EXIT_FAILED)
+    if terminal_field_presence != [True, True] or any(
+        any(key in record for key in terminal_fields)
+        for record in (claim, dispatch)
+    ):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    if (
+        type(code) is not int
+        or process_status != ("PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED")
+        or (state == "SUCCEEDED_OWNER_ONESHOT" and (code != 0 or evidence_status != "RESEARCH_EVIDENCE_COMPLETE"))
+        or (state == "FAILED_OWNER_ONESHOT" and code == 0)
+        or (state == "INCOMPLETE_OWNER_ONESHOT" and (code != 0 or evidence_status != "RESEARCH_EVIDENCE_INCOMPLETE"))
+    ):
         return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     if state == "SUCCEEDED_OWNER_ONESHOT":
         return ({"classification": state, "request_id": request_id, "status": terminal, "dispatch_count_added": 0}, 0)
     if state == "FAILED_OWNER_ONESHOT":
+        return ({"classification": state, "request_id": request_id, "status": terminal, "dispatch_count_added": 0}, _EXIT_FAILED)
+    if state == "INCOMPLETE_OWNER_ONESHOT":
         return ({"classification": state, "request_id": request_id, "status": terminal, "dispatch_count_added": 0}, _EXIT_FAILED)
     return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_TERMINAL", "dispatch_count_added": 0}, _EXIT_BLOCKED)
 
@@ -861,18 +899,32 @@ def process_owner_oneshot(
         if type(code) is not int or evidence.get("key_blocked_after_attempt") is not True:
             keep_lock = True
             return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_UNVERIFIED", "request_id": request_id, "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        process_status = "PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED"
+        evidence_status = evidence.get("research_evidence_status")
+        if evidence_status not in {"RESEARCH_EVIDENCE_COMPLETE", "RESEARCH_EVIDENCE_INCOMPLETE"}:
+            evidence_status = "RESEARCH_EVIDENCE_INCOMPLETE"
+        terminal_state = (
+            "FAILED_OWNER_ONESHOT" if code != 0
+            else "SUCCEEDED_OWNER_ONESHOT" if evidence_status == "RESEARCH_EVIDENCE_COMPLETE"
+            else "INCOMPLETE_OWNER_ONESHOT"
+        )
         terminal = {
             **dispatch,
             **evidence,
-            "state": "SUCCEEDED_OWNER_ONESHOT" if code == 0 else "FAILED_OWNER_ONESHOT",
+            "state": terminal_state,
             "target_return_code": code,
+            "process_exit_status": process_status,
+            "research_evidence_status": evidence_status,
             "real_dispatch_permission": "LOCAL_INTERACTIVE_OWNER_CONFIRMED",
             "candidate_count": 0,
             "broker_actions": 0,
             "sealed_oos_accessed": False,
         }
         _durable_json_create(_status_file(state_dir, request_id), terminal)
-        return ({"classification": terminal["state"], "request_id": request_id, "status": terminal, "dispatch_count_added": 1}, 0 if code == 0 else _EXIT_FAILED)
+        return (
+            {"classification": terminal["state"], "request_id": request_id, "status": terminal, "dispatch_count_added": 1},
+            0 if terminal_state == "SUCCEEDED_OWNER_ONESHOT" else _EXIT_FAILED,
+        )
     finally:
         os.close(lock_fd)
         if not keep_lock:

@@ -77,6 +77,7 @@ services:
       QLIB_MODEL_TEST_END: "2024-12-31"
       P12_RUN_NAMESPACE: ${P12_RUN_NAMESPACE:-}
       P12_FINQUANT_OUTPUT_DIR: ${P12_FINQUANT_OUTPUT_DIR:-}
+      P12_MLFLOW_ARTIFACT_VOLUME: ${P12_MLFLOW_ARTIFACT_VOLUME:-}
       WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/workspaces
       PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:-}/pickle-cache
       LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/trace
@@ -96,6 +97,7 @@ services:
         test "$${LITELLM_CHAT_MODEL_MAP}" = '{}'
         case "$${P12_RUN_NAMESPACE}" in aq-p12-owner-????????????) ;; *) echo 'one-shot run namespace required' >&2; exit 64;; esac
         case "$${P12_FINQUANT_OUTPUT_DIR}" in /mnt/d/AQ/OPERATIONS/P12/finquant-output/*/*) ;; *) echo 'durable per-attempt output path required' >&2; exit 64;; esac
+        case "$${P12_MLFLOW_ARTIFACT_VOLUME}" in aq-p12-owner-artifacts-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;; *) echo 'per-attempt persistent MLflow artifact volume required' >&2; exit 64;; esac
         test -f /workspace/p12-attempt.json
         exec rdagent "$@"
       - --
@@ -118,6 +120,11 @@ services:
         source: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
         target: /mnt/d/AQ_DATA/P2/certification-historical-rehearsal-001/qlib-calendar-runtime
         read_only: true
+      - type: volume
+        source: p12_owner_mlflow_artifacts
+        target: /qlib-artifacts
+        volume:
+          nocopy: true
     working_dir: /workspace
     read_only: true
     tmpfs:
@@ -144,3 +151,8 @@ networks:
     driver: bridge
     internal: false
     name: aq-p12-deepseek-provider-egress
+
+volumes:
+  p12_owner_mlflow_artifacts:
+    external: true
+    name: ${P12_MLFLOW_ARTIFACT_VOLUME:-aq-p12-owner-artifacts-disabled}
