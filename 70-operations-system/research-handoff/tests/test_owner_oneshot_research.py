@@ -29,6 +29,13 @@ from native_experiment_budget import (  # noqa: E402
     P12ExperimentIdentity,
     experiment_user_id,
 )
+from docker_rdagent_target import (  # noqa: E402
+    FINQUANT_DATA_MOUNTS,
+    PINNED_FINQUANT_IMAGE,
+    PINNED_FINQUANT_IMAGE_ID,
+    PERSISTENT_LITELLM_NETWORK,
+    validate_owner_worker_inspection,
+)
 
 
 def identity(label: str) -> str:
@@ -232,10 +239,39 @@ class OwnerOneShotTests(unittest.TestCase):
         envelope, request, policy = owner_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             state_dir = Path(tmp)
-            oneshot._ensure_experiment_binding(state_dir, request, policy)
-            changed_request = request.model_copy(update={"request_id": identity("different-request")})
-            with self.assertRaisesRegex(ValueError, "already bound"):
-                oneshot._ensure_experiment_binding(state_dir, changed_request, policy)
+            result, code = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state_dir, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+            )
+            self.assertEqual(code, 0)
+            sources = (identity("different-real-source"),)
+            changed_decision = p4.challenger_needed(
+                candidate_id=identity("different-candidate"),
+                reason=p4.ChallengerReason.NO_CHAMPION,
+                current_champion_state=None,
+                source_evidence_identities=sources,
+            )
+            changed_request = p4.build_research_request(
+                challenger_decision=changed_decision,
+                asset_universe_scope_identity=request.asset_universe_scope_identity,
+                allowed_research_families=tuple(request.allowed_research_families),
+                research_budget_identity=request.research_budget_identity,
+                target_protocol_context="same-US-PIT-scope",
+                evidence_cutoff=request.evidence_cutoff,
+                request_provenance=identity("different-provenance"),
+            )
+            changed_envelope = {
+                "p4_decision": changed_decision.model_dump(mode="json"),
+                "research_request": changed_request.model_dump(mode="json"),
+            }
+            result, code = oneshot.p12.process_owner_oneshot(
+                changed_envelope, state_dir=state_dir, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: self.fail("rebound experiment must not dispatch"),
+            )
+        self.assertNotEqual(code, 0)
+        self.assertIn("EXPERIMENT_REBOUND", result["classification"])
 
     def test_cli_requires_tty_and_exact_interactive_owner_phrase(self):
         envelope, request, policy = owner_fixture()
@@ -255,51 +291,114 @@ class OwnerOneShotTests(unittest.TestCase):
 
     def test_owner_terminal_replay_never_dispatches_again(self):
         envelope, request, policy = owner_fixture()
-        digest = hashlib.sha256(oneshot.rfc8785.dumps(envelope)).hexdigest()
-        user_id = experiment_user_id(request.research_budget_identity)
         with tempfile.TemporaryDirectory() as tmp:
             state = Path(tmp)
-            attempt = "90dba3ad-a291-4fb7-9df4-cd84e3556396"
-            common = {
-                "request_id": request.request_id, "request_digest": digest,
-                "research_budget_identity": request.research_budget_identity,
-                "native_experiment_user_id": user_id, "standing_policy_id": policy.policy_id,
-                "attempt_id": attempt, "target_identity": oneshot.REAL_TARGET,
-            }
-            claim = {**common, "state": "CLAIMED_OWNER_ONESHOT", "dispatch_mode": "OWNER_ONESHOT"}
-            dispatch = {**common, "state": "DISPATCHING_OWNER_ONESHOT", "dispatch_mode": "OWNER_ONESHOT"}
-            status = {
-                **common, "state": "SUCCEEDED_OWNER_ONESHOT", "dispatch_mode": "OWNER_ONESHOT",
-                "target_return_code": 0, "key_blocked_after_attempt": True,
-                "real_dispatch_permission": "LOCAL_INTERACTIVE_OWNER_CONFIRMED",
-                "candidate_count": 0, "broker_actions": 0, "sealed_oos_accessed": False,
-            }
-            for path, value in ((oneshot.p12._claim_file(state, request.request_id), claim), (oneshot.p12._dispatch_file(state, request.request_id), dispatch), (oneshot.p12._status_file(state, request.request_id), status)):
-                path.write_text(json.dumps(value))
-            result, code = oneshot._owner_replay(state, request.request_id, digest, request.research_budget_identity, user_id, policy.policy_id)
+            result, code = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: {
+                    "target_return_code": 0, "key_blocked_after_attempt": True,
+                    "worker_identity_verified": True,
+                },
+            )
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
         self.assertEqual(code, 0)
-        self.assertEqual(result["dispatch_count_added"], 0)
+        self.assertEqual(result["dispatch_count_added"], 1)
+        self.assertEqual(replay[1], 0)
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_failed_terminal_is_persisted_and_replayed_nonzero(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            result, code = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: {"target_return_code": 1, "key_blocked_after_attempt": True},
+            )
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(result["classification"], "FAILED_OWNER_ONESHOT")
+        self.assertNotEqual(replay[1], 0)
+
+    def test_ambiguous_target_preserves_blocked_semantics_without_retry(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            result, code = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: (_ for _ in ()).throw(TimeoutError("ambiguous")),
+            )
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(result["classification"], "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH")
+        self.assertNotEqual(replay[1], 0)
+        self.assertIn("BLOCKED_OWNER_ONESHOT", replay[0]["classification"])
 
     def test_interrupted_claim_and_concurrent_owner_attempt_fail_closed(self):
         envelope, request, policy = owner_fixture()
-        digest = hashlib.sha256(oneshot.rfc8785.dumps(envelope)).hexdigest()
-        user_id = experiment_user_id(request.research_budget_identity)
         with tempfile.TemporaryDirectory() as tmp:
             state = Path(tmp)
             oneshot.p12._durable_json_create(
                 oneshot.p12._claim_file(state, request.request_id),
                 {"request_id": request.request_id, "state": "CLAIMED_OWNER_ONESHOT"},
             )
-            result, code = oneshot._owner_replay(
-                state, request.request_id, digest, request.research_budget_identity,
-                user_id, policy.policy_id,
+            result, code = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
             )
             self.assertNotEqual(code, 0)
             self.assertTrue(result["classification"].startswith("BLOCKED_OWNER_ONESHOT"))
-            first = oneshot._acquire_run_lock(state, request.request_id)
-            with self.assertRaises(FileExistsError):
-                oneshot._acquire_run_lock(state, request.request_id)
-            oneshot._release_run_lock(state, first)
+            (state / "owner-oneshot-active.lock").write_text("active")
+            concurrent, concurrent_code = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True, target=lambda _: self.fail("concurrent attempt must not dispatch"),
+            )
+        self.assertNotEqual(concurrent_code, 0)
+        self.assertEqual(concurrent["classification"], "BLOCKED_OWNER_ONESHOT_CONCURRENT_RUN")
+
+    def test_actual_shell_entrypoint_identity_is_accepted_and_tampering_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            script = (SMOKE / "compose.deepseek-staging.yaml").read_text().split("      - |\n", 1)[1].split("\n      - --", 1)[0]
+            entrypoint = ["/bin/sh", "-ec", script, "--"]
+            environment = [
+                "OPENAI_API_BASE=http://litellm-deepseek-staging:4000/v1",
+                "OPENAI_API_KEY=sk-dummy-owner-key-0123456789",
+                "P12_OWNER_SCOPED_PROXY_KEY=sk-dummy-owner-key-0123456789",
+                "LITELLM_CHAT_MAX_TOKENS=8192", "LITELLM_CHAT_MODEL_MAP={}",
+                "WORKSPACE_PATH=/workspace/runs/aq-p12-owner-123456789abc/workspaces",
+            ]
+            inspection = {
+                "Image": PINNED_FINQUANT_IMAGE_ID,
+                "Config": {"Image": PINNED_FINQUANT_IMAGE, "Entrypoint": entrypoint,
+                           "Cmd": ["fin_quant", "--loop-n", "1"], "User": "10001:10001",
+                           "Env": environment},
+                "State": {"Status": "exited", "ExitCode": 0},
+                "HostConfig": {"ReadonlyRootfs": True},
+                "Mounts": [
+                    {"Destination": target, "Source": source, "RW": False, "Type": "bind"}
+                    for target, source in FINQUANT_DATA_MOUNTS.items()
+                ] + [{"Destination": "/workspace", "Source": str(output.resolve()), "RW": True, "Type": "bind"}],
+                "NetworkSettings": {"Networks": {PERSISTENT_LITELLM_NETWORK: {}}},
+            }
+            observed = validate_owner_worker_inspection(
+                inspection, expected_key="sk-dummy-owner-key-0123456789",
+                expected_output=output, run_namespace="aq-p12-owner-123456789abc",
+            )
+            self.assertEqual(observed["return_code"], 0)
+            inspection["Config"]["Entrypoint"] = ["rdagent"]
+            with self.assertRaises(Exception):
+                validate_owner_worker_inspection(
+                    inspection, expected_key="sk-dummy-owner-key-0123456789",
+                    expected_output=output, run_namespace="aq-p12-owner-123456789abc",
+                )
 
     def test_compose_worker_uses_full_loop_pinned_proxy_and_static_token_cap(self):
         compose = (SMOKE / "compose.deepseek-staging.yaml").read_text()

@@ -867,3 +867,245 @@ def run_docker_rdagent_finquant(
                 cleanup_error = "one-off fin_quant worker cleanup could not be verified"
         if cleanup_error:
             raise DockerDispatchAmbiguous(cleanup_error)
+
+
+def validate_owner_worker_inspection(
+    inspection: dict[str, Any], *, expected_key: str, expected_output: Path,
+    run_namespace: str, expected_command: tuple[str, ...] = ("fin_quant", "--loop-n", "1"),
+) -> dict[str, Any]:
+    """Validate the actual profiled worker configuration, including its shell gate."""
+    config = inspection.get("Config", {})
+    state = inspection.get("State", {})
+    host = inspection.get("HostConfig", {})
+    entrypoint = config.get("Entrypoint")
+    command = config.get("Cmd")
+    if not isinstance(entrypoint, list) or len(entrypoint) != 4:
+        raise DockerDispatchAmbiguous("Owner worker entrypoint shape was invalid")
+    script = entrypoint[2]
+    if (
+        entrypoint[0:2] != ["/bin/sh", "-ec"] or entrypoint[3] != "--"
+        or not isinstance(script, str)
+        or 'exec rdagent "$@"' not in script
+        or "test -f /workspace/p12-attempt.json" not in script
+        or "LITELLM_CHAT_MAX_TOKENS" not in script
+        or "LITELLM_CHAT_MODEL_MAP" not in script
+        or "owner-scoped paid Proxy key required" not in script
+    ):
+        raise DockerDispatchAmbiguous("Owner worker shell preflight was missing or bypassed")
+    if (
+        inspection.get("Image") != PINNED_FINQUANT_IMAGE_ID
+        or config.get("Image") != PINNED_FINQUANT_IMAGE
+        or state.get("Status") != "exited"
+        or type(state.get("ExitCode")) is not int
+        or state.get("ExitCode") != inspection.get("expected_return_code", state.get("ExitCode"))
+        or tuple(command or ()) != expected_command
+        or config.get("User") != "10001:10001"
+        or host.get("ReadonlyRootfs") is not True
+    ):
+        raise DockerDispatchAmbiguous("Owner worker image, command, or terminal identity mismatch")
+    environment = dict(
+        item.split("=", 1) for item in config.get("Env", [])
+        if isinstance(item, str) and "=" in item
+    )
+    mounts = inspection.get("Mounts")
+    networks = inspection.get("NetworkSettings", {}).get("Networks", {})
+    if not isinstance(mounts, list) or not isinstance(networks, dict):
+        raise DockerDispatchAmbiguous("Owner worker mounts or networks were unavailable")
+    mounted = {item.get("Destination"): item for item in mounts if isinstance(item, dict)}
+    data_mounts_valid = len(mounted) == len(FINQUANT_DATA_MOUNTS) + 1 and all(
+        target in mounted
+        and mounted[target].get("Source") == source
+        and mounted[target].get("RW") is False
+        and mounted[target].get("Type") == "bind"
+        for target, source in FINQUANT_DATA_MOUNTS.items()
+    )
+    output = mounted.get("/workspace", {})
+    output_valid = (
+        output.get("Source") == str(expected_output.resolve())
+        and output.get("RW") is True
+        and output.get("Type") == "bind"
+    )
+    sensitive_names = {
+        "DEEPSEEK_API_KEY", "LITELLM_DEEPSEEK_STAGING_MASTER_KEY",
+        "POSTGRES_PASSWORD", "LITELLM_MASTER_KEY", "OWNER_SIGNING_PRIVATE_KEY",
+    }
+    if (
+        not data_mounts_valid or not output_valid
+        or list(networks) != [PERSISTENT_LITELLM_NETWORK]
+        or environment.get("OPENAI_API_BASE") != "http://litellm-deepseek-staging:4000/v1"
+        or environment.get("OPENAI_API_KEY") != expected_key
+        or environment.get("P12_OWNER_SCOPED_PROXY_KEY") != expected_key
+        or environment.get("LITELLM_CHAT_MAX_TOKENS") != "8192"
+        or environment.get("LITELLM_CHAT_MODEL_MAP") != "{}"
+        or environment.get("WORKSPACE_PATH") != f"/workspace/runs/{run_namespace}/workspaces"
+        or any(name in environment for name in sensitive_names)
+    ):
+        raise DockerDispatchAmbiguous("Owner worker network, mounts, key, or credential isolation mismatch")
+    return {
+        "return_code": state["ExitCode"],
+        "image_id": inspection["Image"],
+        "entrypoint_verified": True,
+        "command_verified": True,
+        "mounts_valid": True,
+        "network_valid": True,
+        "credential_isolation": True,
+    }
+
+
+def _owner_safe_environment(extra: dict[str, str] | None = None) -> dict[str, str]:
+    env = {
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "HOME": os.path.expanduser("~"),
+    }
+    for name in ("DOCKER_HOST", "DOCKER_CONTEXT", "DOCKER_CONFIG", "XDG_RUNTIME_DIR"):
+        if os.environ.get(name):
+            env[name] = os.environ[name]
+    if extra:
+        env.update(extra)
+    return env
+
+
+def run_docker_rdagent_owner_oneshot(
+    *, request_id: str, attempt_id: str, runtime_directory: Path,
+    research_budget_identity: str, standing_policy_id: str,
+    env_file: Path, provider_secret_file: Path, maximum_runtime_seconds: int,
+) -> dict[str, Any]:
+    """Execute one P12-authorized full native run and return observed evidence."""
+    from native_experiment_budget import OWNER_ONESHOT_MODELS
+
+    source = Path(__file__).with_name("docker-rdagent-smoke")
+    runtime = runtime_directory.resolve()
+    runtime.mkdir(parents=True, exist_ok=True)
+    run_namespace = "aq-p12-owner-" + hashlib.sha256(f"{request_id}:{attempt_id}".encode()).hexdigest()[:12]
+    output = _finquant_output_directory(request_id, attempt_id)
+    attempt = {
+        "request_id": request_id, "attempt_id": attempt_id,
+        "run_namespace": run_namespace, "native_cli_command": "rdagent fin_quant --loop-n 1",
+        "image": PINNED_FINQUANT_IMAGE, "image_id": PINNED_FINQUANT_IMAGE_ID,
+        "p2_status": "NOT_EVALUATED_NO_CANDIDATE",
+    }
+    _durable_output_write(output, "p12-attempt.json", json.dumps(attempt, sort_keys=True) + "\n")
+    compose = [
+        "docker", "compose", "--project-name", PERSISTENT_LITELLM_PROJECT,
+        "--env-file", str(env_file), "--file", str(source / "compose.persistent-test.yaml"),
+        "--file", str(source / "compose.deepseek-staging.yaml"),
+        "--profile", "deepseek-staging", "--profile", "p12-owner-oneshot",
+    ]
+    env = _owner_safe_environment({
+        "P12_RUN_NAMESPACE": run_namespace,
+        "P12_FINQUANT_OUTPUT_DIR": str(output),
+        "P12_OWNER_SCOPED_PROXY_KEY": "sk-preflight-placeholder-only",
+        "P12_DEEPSEEK_API_KEY_FILE": str(provider_secret_file),
+        "P12_OWNER_RESEARCH_BUDGET_IDENTITY": research_budget_identity,
+    })
+    worker_name = run_namespace + "-finquant"
+    staging_started = False
+    key: str | None = None
+    key_blocked = False
+    worker_started = False
+    try:
+        config = subprocess.run([*compose, "config", "--quiet"], capture_output=True, text=True, env=env, cwd=runtime, timeout=60)
+        if config.returncode != 0:
+            raise DockerDispatchFailed(config.returncode or 1, {"classification": "OWNER_COMPOSE_INVALID"})
+        prior = subprocess.run([*compose, "ps", "-q", "litellm-deepseek-staging"], capture_output=True, text=True, env=env, cwd=runtime, timeout=30)
+        if prior.returncode != 0:
+            raise DockerDispatchAmbiguous("Staging Proxy state could not be checked")
+        staging_started = not bool(prior.stdout.strip())
+        started = subprocess.run(
+            [*compose, "up", "--no-build", "--pull", "never", "--detach", "--wait", "--wait-timeout", "180", "postgres", "redis", "litellm-deepseek-staging"],
+            capture_output=True, text=True, env=env, cwd=runtime, timeout=240,
+        )
+        if started.returncode != 0:
+            raise DockerDispatchAmbiguous("Staging Proxy dependencies did not become healthy")
+        prepared = subprocess.run(
+            [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
+            input=json.dumps({
+                "operation": "prepare", "owner_activation_confirmed": True,
+                "research_budget_identity": research_budget_identity,
+                "request_id": request_id,
+                "standing_policy_id": standing_policy_id,
+            }), capture_output=True, text=True, env=env, cwd=runtime, timeout=90,
+        )
+        if prepared.returncode != 0:
+            raise DockerDispatchAmbiguous("Native LiteLLM experiment user/key provisioning failed")
+        lines = prepared.stdout.strip().splitlines()
+        record = json.loads(lines[-1]) if lines else {}
+        key = record.get("token")
+        if (
+            record.get("classification") != "OWNER_ONESHOT_NATIVE_KEY_READY"
+            or not isinstance(key, str) or not key.startswith("sk-")
+            or record.get("user_budget_usd") != 5.0
+            or record.get("user_spend_usd") != 0.0
+            or record.get("key_budget_usd") is None or record.get("key_budget_usd") > 5.0
+            or record.get("budget_duration") is not None
+            or record.get("max_parallel_requests") != 1
+            or record.get("models") != list(OWNER_ONESHOT_MODELS)
+        ):
+            raise DockerDispatchAmbiguous("Native LiteLLM user/key scope verification failed")
+        env["P12_OWNER_SCOPED_PROXY_KEY"] = key
+        worker_started = True
+        launched = subprocess.run(
+            [*compose, "run", "--no-deps", "--name", worker_name, "rdagent-owner-oneshot-worker"],
+            capture_output=True, text=True, env=env, cwd=runtime, timeout=maximum_runtime_seconds,
+        )
+        _redact_persisted_selector_logs(output)
+        _durable_output_write(output, "rdagent.stdout.redacted.log", _redact_diagnostics(launched.stdout, (key,)))
+        _durable_output_write(output, "rdagent.stderr.redacted.log", _redact_diagnostics(launched.stderr, (key,)))
+        raw = subprocess.run(["docker", "container", "inspect", "--format", "{{json .}}", worker_name], capture_output=True, text=True, env=_owner_safe_environment(), timeout=30)
+        if raw.returncode != 0:
+            raise DockerDispatchAmbiguous("Owner worker terminal state could not be inspected")
+        try:
+            inspection = json.loads(raw.stdout)
+            observed = validate_owner_worker_inspection(inspection, expected_key=key, expected_output=output, run_namespace=run_namespace)
+        except Exception as exc:
+            raise DockerDispatchAmbiguous(f"Owner worker inspection failed ({type(exc).__name__})") from None
+        if observed["return_code"] != launched.returncode:
+            raise DockerDispatchAmbiguous("Compose and inspected worker return codes differed")
+        blocked = subprocess.run(
+            [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
+            input=json.dumps({"operation": "block", "token": key}), capture_output=True, text=True,
+            env=env, cwd=runtime, timeout=60,
+        )
+        blocked_record = json.loads(blocked.stdout.strip().splitlines()[-1]) if blocked.stdout.strip() else {}
+        if blocked.returncode != 0 or blocked_record.get("blocked") is not True:
+            raise DockerDispatchAmbiguous("Native one-shot key blocking was not verified")
+        key_blocked = True
+        remove = subprocess.run(["docker", "container", "rm", worker_name], capture_output=True, text=True, env=_owner_safe_environment(), timeout=30)
+        if remove.returncode != 0:
+            raise DockerDispatchAmbiguous("Owner worker cleanup was not verified")
+        worker_started = False
+        if staging_started:
+            stop = subprocess.run([*compose, "stop", "litellm-deepseek-staging"], capture_output=True, text=True, env=env, cwd=runtime, timeout=60)
+            if stop.returncode != 0:
+                raise DockerDispatchAmbiguous("Temporary staging Proxy could not be stopped")
+            staging_started = False
+        return {
+            **observed,
+            "target_return_code": launched.returncode,
+            "key_blocked_after_attempt": True,
+            "native_user_budget_usd": record["user_budget_usd"],
+            "native_key_budget_usd": record["key_budget_usd"],
+            "native_user_spend_usd": blocked_record.get("spend"),
+            "output_directory": str(output),
+            "chat_max_tokens": 8192,
+        }
+    except subprocess.TimeoutExpired as exc:
+        if worker_started:
+            subprocess.run(["docker", "container", "stop", "--time", "30", worker_name], capture_output=True, text=True, env=_owner_safe_environment(), timeout=45)
+        raise DockerDispatchAmbiguous("Owner one-shot worker timed out; dispatch state is ambiguous") from exc
+    finally:
+        if key and not key_blocked:
+            try:
+                blocked = subprocess.run(
+                    [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
+                    input=json.dumps({"operation": "block", "token": key}), capture_output=True, text=True,
+                    env=env, cwd=runtime, timeout=60,
+                )
+                block_record = json.loads(blocked.stdout.strip().splitlines()[-1]) if blocked.stdout.strip() else {}
+                key_blocked = blocked.returncode == 0 and block_record.get("blocked") is True
+            except Exception:
+                key_blocked = False
+        if staging_started:
+            subprocess.run([*compose, "stop", "litellm-deepseek-staging"], capture_output=True, text=True, env=env, cwd=runtime, timeout=60)
+        if key and not key_blocked:
+            raise DockerDispatchAmbiguous("Native one-shot key block could not be verified")

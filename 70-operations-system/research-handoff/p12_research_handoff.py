@@ -17,7 +17,7 @@ import sys
 import uuid
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import rfc8785
 
@@ -42,6 +42,7 @@ _EXIT_INTERRUPTED = 86
 TARGET_INERT = "INERT_LOCAL_EXECUTABLE"
 TARGET_DOCKER_RDAGENT = "DOCKER_RDAGENT_PROXY_MOCK_SMOKE"
 TARGET_DOCKER_FINQUANT = "DOCKER_RDAGENT_FINQUANT_TEST_ONLY"
+TARGET_OWNER_ONESHOT = "DOCKER_RDAGENT_FINQUANT_OWNER_ONESHOT"
 _DOCKER_TARGETS = {TARGET_DOCKER_RDAGENT, TARGET_DOCKER_FINQUANT}
 _TARGETS = {TARGET_INERT, *_DOCKER_TARGETS}
 
@@ -485,6 +486,8 @@ def process_synthetic_request(
         signed_approval=signed_approval,
         trusted_authority=trusted_authority,
     )
+
+
     if admission["classification"] != "ADMITTED_SYNTHETIC_TEST_ONLY":
         return (
             {
@@ -613,16 +616,7 @@ def process_synthetic_request(
         else:
             target = Path(__file__).with_name("synthetic_p3_dispatch_target.py")
             completed = subprocess.run(
-                [
-                    sys.executable,
-                    str(target),
-                    "--request-id",
-                    request.request_id,
-                    "--target-log",
-                    str(target_log),
-                    "--outcome",
-                    target_mode,
-                ],
+                [sys.executable, str(target), "--request-id", request.request_id, "--target-log", str(target_log), "--outcome", target_mode],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -632,21 +626,9 @@ def process_synthetic_request(
             target_stdout = completed.stdout.strip()
             target_stderr = completed.stderr.strip()
     except Exception as exc:
-        # The process may have started before this parent observed an error.
-        # Leave DISPATCHING_SYNTHETIC to prevent an unsafe automatic retry.
-        detail = (
-            str(exc)
-            if exc.__class__.__module__ == "docker_rdagent_target"
-            else type(exc).__name__
-        )
+        detail = str(exc) if exc.__class__.__module__ == "docker_rdagent_target" else type(exc).__name__
         return (
-            {
-                "classification": "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
-                "request_id": request.request_id,
-                "error": detail,
-                "dispatch_count_added": 0,
-                "real_dispatch_permission": "DENIED",
-            },
+            {"classification": "BLOCKED_UNKNOWN_POST_DISPATCH_STATE", "request_id": request.request_id, "error": detail, "dispatch_count_added": 0, "real_dispatch_permission": "DENIED"},
             _EXIT_BLOCKED,
         )
 
@@ -666,22 +648,196 @@ def process_synthetic_request(
     }
     _durable_json_create(status_path, terminal)
     return (
-        {
-            "classification": terminal["state"],
-            "request_id": request.request_id,
-            "structurally_valid": True,
-            "p4_decision_classification": decision.evidence_classification,
-            "external_authorization": "UNVERIFIED_DENIED",
-            "spending_permission": "NOT_PROVEN_DENIED",
-            "real_dispatch_permission": "DENIED",
-            "candidate_count": 0,
-            "dispatch_count_added": 1,
-            "status": terminal,
-        },
+        {"classification": terminal["state"], "request_id": request.request_id, "structurally_valid": True, "p4_decision_classification": decision.evidence_classification, "external_authorization": "UNVERIFIED_DENIED", "spending_permission": "NOT_PROVEN_DENIED", "real_dispatch_permission": "DENIED", "candidate_count": 0, "dispatch_count_added": 1, "status": terminal},
         0 if succeeded else _EXIT_FAILED,
     )
 
 
+def _owner_oneshot_replay(
+    state_dir: Path,
+    request_id: str,
+    request_digest: str,
+    budget_identity: str,
+    user_id: str,
+    policy_id: str,
+) -> tuple[dict[str, Any], int]:
+    try:
+        claim = _read_json_nofollow(_claim_file(state_dir, request_id))
+        dispatch = _read_json_nofollow(_dispatch_file(state_dir, request_id))
+        terminal = _read_json_nofollow(_status_file(state_dir, request_id))
+    except Exception:
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_INCOMPLETE_OR_CORRUPT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    attempt = claim.get("attempt_id")
+    expected = {
+        "request_id": request_id,
+        "request_digest": request_digest,
+        "research_budget_identity": budget_identity,
+        "native_experiment_user_id": user_id,
+        "standing_policy_id": policy_id,
+        "attempt_id": attempt,
+        "target_identity": TARGET_OWNER_ONESHOT,
+        "dispatch_mode": "OWNER_ONESHOT",
+    }
+    if not _valid_attempt_id(attempt) or any(
+        any(record.get(key) != value for key, value in expected.items())
+        for record in (claim, dispatch, terminal)
+    ):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_IDENTITY_COLLISION", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    if (
+        claim.get("state") != "CLAIMED_OWNER_ONESHOT"
+        or dispatch.get("state") != "DISPATCHING_OWNER_ONESHOT"
+        or terminal.get("key_blocked_after_attempt") is not True
+        or terminal.get("real_dispatch_permission") != "LOCAL_INTERACTIVE_OWNER_CONFIRMED"
+        or terminal.get("candidate_count") != 0
+        or terminal.get("broker_actions") != 0
+        or terminal.get("sealed_oos_accessed") is not False
+    ):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    state, code = terminal.get("state"), terminal.get("target_return_code")
+    if type(code) is not int or (state == "SUCCEEDED_OWNER_ONESHOT" and code != 0) or (state == "FAILED_OWNER_ONESHOT" and code == 0):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    if state == "SUCCEEDED_OWNER_ONESHOT":
+        return ({"classification": state, "request_id": request_id, "status": terminal, "dispatch_count_added": 0}, 0)
+    if state == "FAILED_OWNER_ONESHOT":
+        return ({"classification": state, "request_id": request_id, "status": terminal, "dispatch_count_added": 0}, _EXIT_FAILED)
+    return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_TERMINAL", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+
+
+def process_owner_oneshot(
+    request_envelope: dict[str, Any],
+    *,
+    state_dir: Path,
+    policy_id: str,
+    owner_confirmed: bool,
+    target: Callable[[str], dict[str, Any]],
+) -> tuple[dict[str, Any], int]:
+    """P12-owned claim/replay/terminal lifecycle for the private local-owner adapter.
+
+    This is deliberately not exposed as an ordinary synthetic CLI target.
+    The adapter supplies validated real P4 evidence and an interactive owner
+    confirmation; P12 remains the single durable request lifecycle owner.
+    """
+    if owner_confirmed is not True:
+        return ({"classification": "DENIED_OWNER_ACTIVATION_REQUIRED", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    try:
+        if set(request_envelope) != {"p4_decision", "research_request"}:
+            raise ValueError("invalid P4 envelope")
+        decision = p4.LifecycleDecisionEvidenceV1.model_validate(request_envelope["p4_decision"])
+        request = p4.ResearchRequestV1.model_validate(request_envelope["research_request"])
+        if (
+            decision.evidence_classification != "REAL_EXTERNAL_EVIDENCE"
+            or decision.decision_kind != p4.DecisionKind.CHALLENGER_NEEDED
+            or decision.reason.value != request.reason.value
+            or decision.source_evidence_identities != request.source_evidence_identities
+        ):
+            raise ValueError("P4 evidence mismatch")
+        request_id = request.request_id
+        request_digest = _canonical_digest(request_envelope)
+        budget_identity = request.research_budget_identity
+        user_id = experiment_user_id(budget_identity)
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", policy_id):
+            raise ValueError("invalid policy identity")
+    except Exception:
+        return ({"classification": "DENIED_OWNER_ONESHOT_P4_IDENTITY", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+
+    state_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = state_dir / "owner-oneshot-active.lock"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        lock_fd = os.open(lock_path, flags, 0o600)
+    except FileExistsError:
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_CONCURRENT_RUN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    os.write(lock_fd, json.dumps({"request_id": request_id, "pid": os.getpid()}, sort_keys=True).encode())
+    os.fsync(lock_fd)
+    _fsync_directory(state_dir)
+    keep_lock = False
+    try:
+        identity_path = state_dir / ("experiment-" + budget_identity.removeprefix("sha256:") + ".json")
+        identity = {
+            "research_budget_identity": budget_identity,
+            "request_id": request_id,
+            "standing_policy_id": policy_id,
+            "native_experiment_user_id": user_id,
+        }
+        if identity_path.exists():
+            if _read_json_nofollow(identity_path) != identity:
+                return ({"classification": "BLOCKED_OWNER_ONESHOT_EXPERIMENT_REBOUND", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        else:
+            _durable_json_create(identity_path, identity)
+
+        claim = {
+            "state": "CLAIMED_OWNER_ONESHOT",
+            "request_id": request_id,
+            "request_digest": request_digest,
+            "research_budget_identity": budget_identity,
+            "native_experiment_user_id": user_id,
+            "attempt_id": str(uuid.uuid4()),
+            "standing_policy_id": policy_id,
+            "dispatch_mode": "OWNER_ONESHOT",
+            "real_dispatch_permission": "LOCAL_INTERACTIVE_OWNER_CONFIRMED",
+            "policy_admission": "LOCAL_OWNER_ONESHOT_POLICY_VERIFIED",
+            "target_identity": TARGET_OWNER_ONESHOT,
+        }
+        try:
+            _durable_json_create(_claim_file(state_dir, request_id), claim)
+        except FileExistsError:
+            return _owner_oneshot_replay(state_dir, request_id, request_digest, budget_identity, user_id, policy_id)
+
+        dispatch = {**claim, "state": "DISPATCHING_OWNER_ONESHOT"}
+        _durable_json_create(_dispatch_file(state_dir, request_id), dispatch)
+        try:
+            evidence = target(claim["attempt_id"])
+        except Exception as exc:
+            keep_lock = True
+            return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "request_id": request_id, "error_type": type(exc).__name__, "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        code = evidence.get("target_return_code") if isinstance(evidence, dict) else None
+        if type(code) is not int or evidence.get("key_blocked_after_attempt") is not True:
+            keep_lock = True
+            return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_UNVERIFIED", "request_id": request_id, "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        terminal = {
+            **dispatch,
+            **evidence,
+            "state": "SUCCEEDED_OWNER_ONESHOT" if code == 0 else "FAILED_OWNER_ONESHOT",
+            "target_return_code": code,
+            "real_dispatch_permission": "LOCAL_INTERACTIVE_OWNER_CONFIRMED",
+            "candidate_count": 0,
+            "broker_actions": 0,
+            "sealed_oos_accessed": False,
+        }
+        _durable_json_create(_status_file(state_dir, request_id), terminal)
+        return ({"classification": terminal["state"], "request_id": request_id, "status": terminal, "dispatch_count_added": 1}, 0 if code == 0 else _EXIT_FAILED)
+    finally:
+        os.close(lock_fd)
+        if not keep_lock:
+            try:
+                lock_path.unlink()
+                _fsync_directory(state_dir)
+            except FileNotFoundError:
+                pass
+
+
+def owner_oneshot_replay_if_claimed(
+    request_envelope: dict[str, Any], *, state_dir: Path, policy_id: str,
+) -> tuple[dict[str, Any], int] | None:
+    """Return P12's verified owner-mode replay result without prompting or dispatching."""
+    try:
+        request = p4.ResearchRequestV1.model_validate(request_envelope["research_request"])
+        if set(request_envelope) != {"p4_decision", "research_request"}:
+            return ({"classification": "DENIED_OWNER_ONESHOT_P4_IDENTITY", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        request_id = request.request_id
+        claim_path = _claim_file(state_dir, request_id)
+        if not claim_path.exists():
+            return None
+        return _owner_oneshot_replay(
+            state_dir,
+            request_id,
+            _canonical_digest(request_envelope),
+            request.research_budget_identity,
+            experiment_user_id(request.research_budget_identity),
+            policy_id,
+        )
+    except Exception:
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_INCOMPLETE_OR_CORRUPT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
