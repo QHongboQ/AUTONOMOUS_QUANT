@@ -256,6 +256,7 @@ def _replay_result(
     if (
         claim.get("state") != "CLAIMED"
         or claim.get("request_id") != request_id
+        or claim.get("request_origin") != P4_LIFECYCLE_ORIGIN
         or claim.get("request_digest") != request_digest
         or claim.get("research_budget_identity", research_budget_identity) != research_budget_identity
         or claim.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
@@ -293,6 +294,7 @@ def _replay_result(
     if (
         dispatch_marker.get("state") != "DISPATCHING_SYNTHETIC"
         or dispatch_marker.get("request_id") != request_id
+        or dispatch_marker.get("request_origin") != P4_LIFECYCLE_ORIGIN
         or dispatch_marker.get("request_digest") != request_digest
         or dispatch_marker.get("research_budget_identity", research_budget_identity) != research_budget_identity
         or dispatch_marker.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
@@ -330,6 +332,7 @@ def _replay_result(
         }
     if (
         status.get("request_id") != request_id
+        or status.get("request_origin") != P4_LIFECYCLE_ORIGIN
         or status.get("request_digest") != request_digest
         or status.get("research_budget_identity", research_budget_identity) != research_budget_identity
         or status.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
@@ -519,6 +522,7 @@ def process_synthetic_request(
     status_path = _status_file(state_dir, request.request_id)
     claim = {
         "state": "CLAIMED",
+        "request_origin": P4_LIFECYCLE_ORIGIN,
         "request_id": request.request_id,
         "request_digest": request_digest,
         "research_budget_identity": research_budget_identity,
