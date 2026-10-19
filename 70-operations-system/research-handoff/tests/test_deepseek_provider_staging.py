@@ -112,7 +112,7 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn("profiles: [deepseek-staging]", compose)
         worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("secrets:", 1)[0]
         self.assertIn("profiles: [p12-owner-oneshot]", worker)
-        self.assertIn("P12_OWNER_SCOPED_PROXY_KEY:?", compose)
+        self.assertIn("P12_OWNER_SCOPED_PROXY_KEY:-", compose)
         self.assertIn("owner_oneshot_proxy_control.py", compose)
         self.assertNotIn("/key/generate", config)
         control = (ROOT / "docker-rdagent-smoke" / "owner_oneshot_proxy_control.py").read_text()
@@ -124,6 +124,17 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn("sk-preflight-placeholder-only", entrypoint)
         handoff = (ROOT / "p12_research_handoff.py").read_text()
         self.assertIn('"BLOCKED_REAL_DISPATCH_DENIED"', handoff)
+
+    def test_inactive_worker_has_optional_compose_inputs_and_noncreating_sentinel(self) -> None:
+        compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
+        worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("\nsecrets:", 1)[0]
+        for variable in ("P12_OWNER_SCOPED_PROXY_KEY", "P12_RUN_NAMESPACE", "P12_FINQUANT_OUTPUT_DIR"):
+            self.assertIn(f"${{{variable}:-}}", worker)
+        self.assertIn("source: ${P12_FINQUANT_OUTPUT_DIR:-/tmp/p12-worker-disabled}", worker)
+        self.assertIn("create_host_path: false", worker)
+        self.assertIn("test -f /workspace/p12-attempt.json", worker)
+        self.assertIn("owner-scoped paid Proxy key required", worker)
+        self.assertIn('exec rdagent "$@"', worker)
 
 
 if __name__ == "__main__":

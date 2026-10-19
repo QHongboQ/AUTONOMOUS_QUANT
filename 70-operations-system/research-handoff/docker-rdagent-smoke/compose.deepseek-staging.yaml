@@ -40,8 +40,8 @@ services:
     pull_policy: never
     profiles: [p12-owner-oneshot]
     environment:
-      P12_OWNER_SCOPED_PROXY_KEY: ${P12_OWNER_SCOPED_PROXY_KEY:?interactive one-shot controller must provision scoped key}
-      OPENAI_API_KEY: ${P12_OWNER_SCOPED_PROXY_KEY:?interactive one-shot controller must provision scoped key}
+      P12_OWNER_SCOPED_PROXY_KEY: ${P12_OWNER_SCOPED_PROXY_KEY:-}
+      OPENAI_API_KEY: ${P12_OWNER_SCOPED_PROXY_KEY:-}
       OPENAI_API_BASE: http://litellm-deepseek-staging:4000/v1
       BACKEND: rdagent.oai.backend.LiteLLMAPIBackend
       LITELLM_CHAT_MODEL: openai/deepseek/deepseek-flash
@@ -75,12 +75,12 @@ services:
       QLIB_MODEL_VALID_END: "2021-12-31"
       QLIB_MODEL_TEST_START: "2022-01-03"
       QLIB_MODEL_TEST_END: "2024-12-31"
-      P12_RUN_NAMESPACE: ${P12_RUN_NAMESPACE:?unique request-scoped run namespace required}
-      P12_FINQUANT_OUTPUT_DIR: ${P12_FINQUANT_OUTPUT_DIR:?durable per-attempt output directory required}
-      WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:?unique request-scoped run namespace required}/workspaces
-      PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:?unique request-scoped run namespace required}/pickle-cache
-      LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:?unique request-scoped run namespace required}/trace
-      QLIB_MLFLOW_URI: sqlite:////workspace/runs/${P12_RUN_NAMESPACE:?unique request-scoped run namespace required}/mlflow.db
+      P12_RUN_NAMESPACE: ${P12_RUN_NAMESPACE:-}
+      P12_FINQUANT_OUTPUT_DIR: ${P12_FINQUANT_OUTPUT_DIR:-}
+      WORKSPACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/workspaces
+      PICKLE_CACHE_FOLDER_PATH_STR: /workspace/runs/${P12_RUN_NAMESPACE:-}/pickle-cache
+      LOG_TRACE_PATH: /workspace/runs/${P12_RUN_NAMESPACE:-}/trace
+      QLIB_MLFLOW_URI: sqlite:////workspace/runs/${P12_RUN_NAMESPACE:-}/mlflow.db
       HOME: /home/rdagent
       TMPDIR: /tmp
     entrypoint:
@@ -102,7 +102,7 @@ services:
     command: ["fin_quant", "--loop-n", "1"]
     volumes:
       - type: bind
-        source: ${P12_FINQUANT_OUTPUT_DIR:?durable per-attempt output directory required}
+        source: ${P12_FINQUANT_OUTPUT_DIR:-/tmp/p12-worker-disabled}
         target: /workspace
         bind:
           create_host_path: false
