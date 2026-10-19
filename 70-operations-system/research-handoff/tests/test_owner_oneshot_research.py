@@ -280,6 +280,27 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(result["dispatch_count_added"], 0)
 
+    def test_interrupted_claim_and_concurrent_owner_attempt_fail_closed(self):
+        envelope, request, policy = owner_fixture()
+        digest = hashlib.sha256(oneshot.rfc8785.dumps(envelope)).hexdigest()
+        user_id = experiment_user_id(request.research_budget_identity)
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            oneshot.p12._durable_json_create(
+                oneshot.p12._claim_file(state, request.request_id),
+                {"request_id": request.request_id, "state": "CLAIMED_OWNER_ONESHOT"},
+            )
+            result, code = oneshot._owner_replay(
+                state, request.request_id, digest, request.research_budget_identity,
+                user_id, policy.policy_id,
+            )
+            self.assertNotEqual(code, 0)
+            self.assertTrue(result["classification"].startswith("BLOCKED_OWNER_ONESHOT"))
+            first = oneshot._acquire_run_lock(state, request.request_id)
+            with self.assertRaises(FileExistsError):
+                oneshot._acquire_run_lock(state, request.request_id)
+            oneshot._release_run_lock(state, first)
+
     def test_compose_worker_uses_full_loop_pinned_proxy_and_static_token_cap(self):
         compose = (SMOKE / "compose.deepseek-staging.yaml").read_text()
         worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("secrets:", 1)[0]
