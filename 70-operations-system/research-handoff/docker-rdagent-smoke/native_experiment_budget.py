@@ -21,6 +21,7 @@ from typing import Any
 
 USER_ID_DOMAIN = b"AUTONOMOUS_QUANT:P12:LITELLM_EXPERIMENT_BUDGET:V1\0"
 ALLOWED_MODELS = ("deepseek-chat", "qwen3-embedding:0.6b")
+OWNER_ONESHOT_MODELS = ("deepseek/deepseek-flash", "ollama/qwen3-embedding:0.6b")
 MAX_EXPERIMENT_BUDGET_USD = 5.00
 MAX_KEY_DURATION = timedelta(hours=24)
 MAX_PARALLEL_REQUESTS = 1
@@ -318,3 +319,174 @@ class NativeExperimentBudgetController:
 
     def issue_real_key(self, *args: Any, owner_authorization: Any = None, **kwargs: Any) -> None:
         self.verify_real_issuance_authority(owner_authorization)
+
+    def prepare_owner_oneshot(
+        self,
+        identity: P12ExperimentIdentity,
+        *,
+        owner_activation_confirmed: bool,
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        """Create and verify the single owner-initiated run's native user/key.
+
+        This deliberately narrow local-host exception is called only by the
+        interactive P12 one-shot command after it obtains terminal input. It
+        does not change the existing TEST_ONLY issuance path or accept AWS
+        snapshots, API booleans, or worker-side authorization.
+        """
+        if owner_activation_confirmed is not True:
+            raise BudgetBoundaryDenied("DENIED_INTERACTIVE_OWNER_ACTIVATION_REQUIRED")
+
+        budget = MAX_EXPERIMENT_BUDGET_USD
+        user_alias = "aq-p12-owner-once-" + hashlib.sha256(
+            identity.request_id.encode("ascii")
+        ).hexdigest()[:20]
+        user = self.api.user_info(identity.user_id)
+        if user is None:
+            status, payload = self.api.request(
+                "POST",
+                "/user/new",
+                {
+                    "user_id": identity.user_id,
+                    "user_alias": user_alias,
+                    "max_budget": budget,
+                    "budget_duration": None,
+                    "models": list(OWNER_ONESHOT_MODELS),
+                    "max_parallel_requests": MAX_PARALLEL_REQUESTS,
+                    "auto_create_key": False,
+                },
+            )
+            if status not in (200, 201) or payload.get("user_id") != identity.user_id:
+                raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_USER_CREATE_FAILED")
+            user = self.api.user_info(identity.user_id)
+        user = self._verify_owner_user(identity, user, user_alias)
+
+        self._assert_no_owner_oneshot_keys(identity)
+
+        key_alias = "aq-p12-owner-once-" + hashlib.sha256(
+            (identity.request_id + ":key").encode("ascii")
+        ).hexdigest()[:20]
+        status, payload = self.api.request(
+            "POST",
+            "/key/generate",
+            {
+                "key_alias": key_alias,
+                "user_id": identity.user_id,
+                "models": list(OWNER_ONESHOT_MODELS),
+                "max_budget": budget,
+                "budget_duration": None,
+                "duration": "24h",
+                "max_parallel_requests": MAX_PARALLEL_REQUESTS,
+            },
+        )
+        token = payload.get("key") or payload.get("token")
+        if status not in (200, 201) or not isinstance(token, str) or not token.startswith("sk-"):
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_KEY_CREATE_FAILED")
+        try:
+            key = self.api.key_info(token)
+            self._verify_owner_key(identity, key, key_alias, budget)
+        except Exception as exc:
+            # Do not leave an unverified one-shot credential active. If native
+            # revocation cannot be confirmed, surface that as the failure.
+            blocked_status, blocked_payload = self.api.request("POST", "/key/block", {"key": token})
+            if blocked_status not in (200, 201) or blocked_payload.get("blocked") is not True:
+                raise BudgetBoundaryDenied("DENIED_OWNER_UNVERIFIED_KEY_BLOCK_UNCONFIRMED") from None
+            blocked_key = self.api.key_info(token)
+            if blocked_key.get("blocked") is not True:
+                raise BudgetBoundaryDenied("DENIED_OWNER_UNVERIFIED_KEY_BLOCK_UNCONFIRMED") from None
+            if isinstance(exc, BudgetBoundaryDenied):
+                raise
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_KEY_SCOPE_MISMATCH") from None
+        return token, user, key
+
+    def _assert_no_owner_oneshot_keys(self, identity: P12ExperimentIdentity) -> None:
+        """Reject any prior key on the unique experiment user, including revoked keys."""
+        for status_filter in ("active", "expired", "revoked", "deleted"):
+            page = 1
+            while True:
+                query = urllib.parse.urlencode({
+                    "user_id": identity.user_id,
+                    "status": status_filter,
+                    "page": page,
+                    "size": 100,
+                    "return_full_object": "true",
+                })
+                status, payload = self.api.request("GET", f"/key/list?{query}")
+                keys = payload.get("keys")
+                total_pages = payload.get("total_pages")
+                if (
+                    status != 200
+                    or not isinstance(keys, list)
+                    or type(total_pages) is not int
+                    or total_pages < page
+                ):
+                    if status == 200 and total_pages == 0 and keys == []:
+                        break
+                    raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_KEY_HISTORY_UNAVAILABLE")
+                if keys:
+                    raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_KEY_ALREADY_ISSUED")
+                if page >= total_pages:
+                    break
+                page += 1
+
+    def _verify_owner_user(
+        self,
+        identity: P12ExperimentIdentity,
+        user: dict[str, Any] | None,
+        expected_alias: str,
+    ) -> dict[str, Any]:
+        if not isinstance(user, dict):
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_USER_MISSING")
+        try:
+            observed_budget = float(user.get("max_budget"))
+            spend = float(user.get("spend", 0.0))
+        except (TypeError, ValueError, OverflowError):
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_USER_INVALID") from None
+        if (
+            user.get("user_id") != identity.user_id
+            or user.get("user_alias") != expected_alias
+            or not math.isclose(observed_budget, MAX_EXPERIMENT_BUDGET_USD, rel_tol=0, abs_tol=1e-12)
+            or user.get("budget_duration") is not None
+            or user.get("models") != list(OWNER_ONESHOT_MODELS)
+            or user.get("max_parallel_requests") != MAX_PARALLEL_REQUESTS
+            or not math.isfinite(spend)
+            or spend != 0
+        ):
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_USER_SCOPE_OR_SPEND_MISMATCH")
+        return user
+
+    def _verify_owner_key(
+        self,
+        identity: P12ExperimentIdentity,
+        key: dict[str, Any],
+        expected_alias: str,
+        budget: float,
+    ) -> dict[str, Any]:
+        try:
+            key_budget = float(key.get("max_budget"))
+            expiry_value = key.get("expires")
+            if isinstance(expiry_value, (int, float)):
+                expiry = datetime.fromtimestamp(float(expiry_value), tz=timezone.utc)
+            elif isinstance(expiry_value, str):
+                expiry = datetime.fromisoformat(expiry_value.replace("Z", "+00:00"))
+                if expiry.tzinfo is None or expiry.utcoffset() is None:
+                    raise ValueError("timezone required")
+                expiry = expiry.astimezone(timezone.utc)
+            else:
+                raise ValueError("expiry required")
+        except (ValueError, TypeError, OverflowError, OSError):
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_KEY_INVALID") from None
+        now = datetime.now(timezone.utc)
+        if (
+            key.get("user_id") != identity.user_id
+            or key.get("key_alias") != expected_alias
+            or key.get("models") != list(OWNER_ONESHOT_MODELS)
+            or key.get("budget_duration") is not None
+            or key.get("max_parallel_requests") != MAX_PARALLEL_REQUESTS
+            or not math.isfinite(key_budget)
+            or key_budget <= 0
+            or key_budget > budget
+            or expiry <= now
+            or expiry > now + timedelta(hours=24, minutes=2)
+        ):
+            raise BudgetBoundaryDenied("DENIED_OWNER_NATIVE_KEY_SCOPE_MISMATCH")
+        return key
