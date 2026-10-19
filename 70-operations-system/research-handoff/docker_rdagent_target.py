@@ -912,7 +912,11 @@ def validate_owner_worker_inspection(
     networks = inspection.get("NetworkSettings", {}).get("Networks", {})
     if not isinstance(mounts, list) or not isinstance(networks, dict):
         raise DockerDispatchAmbiguous("Owner worker mounts or networks were unavailable")
+    if any(not isinstance(item, dict) for item in mounts):
+        raise DockerDispatchAmbiguous("Owner worker mount record was invalid")
     mounted = {item.get("Destination"): item for item in mounts if isinstance(item, dict)}
+    if len(mounted) != len(mounts):
+        raise DockerDispatchAmbiguous("Owner worker had duplicate mount destinations")
     data_mounts_valid = all(
         target in mounted
         and mounted[target].get("Source") == source
@@ -928,7 +932,7 @@ def validate_owner_worker_inspection(
     )
     artifact_mount = mounted.get("/qlib-artifacts", {})
     artifact_volume_valid = (
-        artifact_mount.get("Source") == expected_artifact_volume
+        artifact_mount.get("Name") == expected_artifact_volume
         and artifact_mount.get("RW") is True
         and artifact_mount.get("Type") == "volume"
     )
@@ -1003,6 +1007,8 @@ def _owner_artifact_container_command(
             "--mount", f"type=volume,src={volume},dst=/qlib-artifacts",
             "--entrypoint", image_python, PINNED_FINQUANT_IMAGE,
             f"/workspace/{helper}", "--tracking-uri", tracking_uri,
+            "--request-id", request_id, "--attempt-id", attempt_id,
+            "--artifact-volume", volume,
             *( ["--prepare"] if prepare else [] ),
         ],
         capture_output=True, text=True, env=_owner_safe_environment(), timeout=120,
@@ -1098,7 +1104,8 @@ def run_docker_rdagent_owner_oneshot(
         tracking_uri = f"sqlite:////workspace/runs/{run_namespace}/mlflow.db"
         prepare_artifacts = _owner_artifact_container_command(
             output=output, volume=artifact_volume, tracking_uri=tracking_uri,
-            helper=helper_name, prepare=True,
+            helper=helper_name, request_id=request_id, attempt_id=attempt_id,
+            prepare=True,
         )
         try:
             artifact_store_record = json.loads(prepare_artifacts.stdout.strip().splitlines()[-1])
@@ -1108,6 +1115,9 @@ def run_docker_rdagent_owner_oneshot(
             prepare_artifacts.returncode != 0
             or artifact_store_record.get("classification") != "MLFLOW_ARTIFACT_ROOT_READY"
             or artifact_store_record.get("artifact_location") != "file:///qlib-artifacts"
+            or artifact_store_record.get("request_id") != request_id
+            or artifact_store_record.get("attempt_id") != attempt_id
+            or artifact_store_record.get("artifact_volume") != artifact_volume
         ):
             raise DockerDispatchAmbiguous("Native MLflow experiment could not be bound to its per-attempt artifact volume")
         prepared = subprocess.run(
@@ -1159,7 +1169,8 @@ def run_docker_rdagent_owner_oneshot(
             raise DockerDispatchAmbiguous("Compose and inspected worker return codes differed")
         evidence_result = _owner_artifact_container_command(
             output=output, volume=artifact_volume, tracking_uri=tracking_uri,
-            helper=helper_name, prepare=False,
+            helper=helper_name, request_id=request_id, attempt_id=attempt_id,
+            prepare=False,
         )
         try:
             research_evidence = json.loads(evidence_result.stdout.strip().splitlines()[-1])

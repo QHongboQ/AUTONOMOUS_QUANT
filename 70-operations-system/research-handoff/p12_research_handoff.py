@@ -727,6 +727,34 @@ def _owner_oneshot_replay(
     state, code = terminal.get("state"), terminal.get("target_return_code")
     process_status = terminal.get("process_exit_status")
     evidence_status = terminal.get("research_evidence_status")
+    terminal_fields = ("process_exit_status", "research_evidence_status")
+    terminal_field_presence = [key in terminal for key in terminal_fields]
+    legacy_records = all(
+        not any(key in record for key in terminal_fields)
+        for record in (claim, dispatch, terminal)
+    )
+    if terminal_field_presence == [False, False] and legacy_records:
+        if (
+            type(code) is not int
+            or (state == "SUCCEEDED_OWNER_ONESHOT" and code != 0)
+            or (state == "FAILED_OWNER_ONESHOT" and code == 0)
+            or state not in {"SUCCEEDED_OWNER_ONESHOT", "FAILED_OWNER_ONESHOT"}
+        ):
+            return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        return ({
+            "classification": "LEGACY_OWNER_ONESHOT_NOT_VERIFIED",
+            "request_id": request_id,
+            "legacy_process_exit_status": "PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED",
+            "research_evidence_status": "NOT_VERIFIED",
+            "status": terminal,
+            "dispatch_count_added": 0,
+            "new_key_created": False,
+        }, _EXIT_FAILED)
+    if terminal_field_presence != [True, True] or any(
+        any(key in record for key in terminal_fields)
+        for record in (claim, dispatch)
+    ):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     if (
         type(code) is not int
         or process_status != ("PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED")

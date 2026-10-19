@@ -575,6 +575,50 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertEqual(replay[1], 0)
         self.assertEqual(replay[0]["dispatch_count_added"], 0)
 
+    def test_legacy_owner_terminal_replay_is_not_verified_and_never_redispatches(self):
+        envelope, request, policy = owner_fixture()
+        dispatches = []
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: (dispatches.append("dispatch") or completed_owner_evidence()),
+            )
+            status_path = oneshot.p12._status_file(state, request.request_id)
+            legacy_terminal = oneshot.p12._read_json_nofollow(status_path)
+            legacy_terminal.pop("process_exit_status")
+            legacy_terminal.pop("research_evidence_status")
+            status_path.write_text(json.dumps(legacy_terminal))
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertEqual(replay[0]["classification"], "LEGACY_OWNER_ONESHOT_NOT_VERIFIED")
+        self.assertEqual(replay[0]["research_evidence_status"], "NOT_VERIFIED")
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+        self.assertFalse(replay[0]["new_key_created"])
+        self.assertNotEqual(replay[1], 0)
+        self.assertEqual(dispatches, ["dispatch"])
+
+    def test_mixed_legacy_terminal_evidence_is_blocked(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True, target=lambda _: completed_owner_evidence(),
+            )
+            status_path = oneshot.p12._status_file(state, request.request_id)
+            terminal = oneshot.p12._read_json_nofollow(status_path)
+            terminal.pop("research_evidence_status")
+            status_path.write_text(json.dumps(terminal))
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertEqual(replay[0]["classification"], "BLOCKED_OWNER_ONESHOT_TERMINAL_INCONSISTENT")
+        self.assertNotEqual(replay[1], 0)
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
     def test_zero_exit_without_finished_qlib_evidence_is_incomplete_and_replay_fails(self):
         envelope, request, policy = owner_fixture()
         with tempfile.TemporaryDirectory() as tmp:
@@ -596,6 +640,25 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertEqual(replay[0]["dispatch_count_added"], 0)
 
     def test_mlflow_evidence_gate_requires_finished_recorder_and_native_outputs(self):
+        request_id = identity("evidence-request")
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        volume = "aq-p12-owner-artifacts-0123456789abcdef"
+        artifacts = {
+            "task": False, "dataset": False, "params.pkl": False, "pred.pkl": False,
+            "sig_analysis": True, "sig_analysis/ic.pkl": False, "sig_analysis/ric.pkl": False,
+            "portfolio_analysis": True,
+            "portfolio_analysis/report_normal_1day.pkl": False,
+            "portfolio_analysis/port_analysis_1day.pkl": False,
+        }
+        metrics = {
+            "IC": 0.05, "ICIR": 0.3, "Rank IC": 0.04, "Rank ICIR": 0.2,
+            **{
+                f"1day.{kind}.{metric}": 0.1
+                for kind in ("excess_return_without_cost", "excess_return_with_cost")
+                for metric in ("annualized_return", "information_ratio", "max_drawdown")
+            },
+        }
+
         class Info:
             experiment_id = "1"
             run_id = "recorder-1"
@@ -606,35 +669,61 @@ class OwnerOneShotTests(unittest.TestCase):
             def __init__(self, status):
                 self.info = Info()
                 self.info.status = status
-                self.data = type("Data", (), {"metrics": {"IC": 0.05, "ICIR": 0.3}})()
+                self.data = type("Data", (), {"metrics": metrics})()
 
         class Artifact:
             def __init__(self, path, is_dir=False):
                 self.path, self.is_dir = path, is_dir
+                self.file_size = 0 if is_dir else 128
 
         class Client:
-            def __init__(self, status="FINISHED", include_all=True):
+            def __init__(self, status="FINISHED", files=None):
                 self.run = Run(status)
-                self.include_all = include_all
+                self.files = files or artifacts
             def get_experiment_by_name(self, name):
-                return type("Experiment", (), {"experiment_id": "1"})()
+                return type("Experiment", (), {
+                    "experiment_id": "1", "artifact_location": "file:///qlib-artifacts",
+                    "tags": {"aq.p12.request_id": request_id, "aq.p12.attempt_id": attempt_id,
+                             "aq.p12.artifact_volume": volume},
+                })()
             def search_runs(self, experiment_ids, max_results):
                 return [self.run]
             def list_artifacts(self, run_id, path=None):
-                if path:
-                    return []
-                names = ["task.pkl", "dataset.pkl", "model.pkl", "pred.pkl", "portfolio_analysis", "sig_analysis"]
-                if not self.include_all:
-                    names = ["task.pkl"]
-                return [Artifact(name, name.endswith("analysis")) for name in names]
+                prefix = f"{path}/" if path else ""
+                direct = {}
+                for name, is_dir in self.files.items():
+                    if not name.startswith(prefix):
+                        continue
+                    remainder = name[len(prefix):]
+                    head, separator, _ = remainder.partition("/")
+                    direct[f"{prefix}{head}"] = True if separator else is_dir
+                return [Artifact(name, is_dir) for name, is_dir in direct.items()]
 
-        complete = inspect_research_evidence(Client())
-        failed = inspect_research_evidence(Client(status="FAILED"))
-        incomplete = inspect_research_evidence(Client(include_all=False))
+        args = {"request_id": request_id, "attempt_id": attempt_id, "artifact_volume": volume}
+        complete = inspect_research_evidence(Client(), **args)
+        failed = inspect_research_evidence(Client(status="FAILED"), **args)
+        missing_params = dict(artifacts)
+        missing_params.pop("params.pkl")
+        missing_model = inspect_research_evidence(Client(files=missing_params), **args)
+        empty_folder = inspect_research_evidence(
+            Client(files={"sig_analysis": True, "portfolio_analysis": True}), **args
+        )
         self.assertEqual(complete["classification"], "RESEARCH_EVIDENCE_COMPLETE")
         self.assertEqual(failed["reason"], "NO_FINISHED_RECORDER")
-        self.assertEqual(incomplete["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
-        self.assertIn("model", incomplete["missing"])
+        self.assertEqual(missing_model["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertIn("model_parameters", missing_model["missing"])
+        self.assertEqual(empty_folder["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+
+        mismatched = Client()
+        mismatched.get_experiment_by_name = lambda name: type("Experiment", (), {
+            "experiment_id": "1", "artifact_location": "file:///qlib-artifacts",
+            "tags": {"aq.p12.request_id": request_id, "aq.p12.attempt_id": attempt_id,
+                     "aq.p12.artifact_volume": "wrong-volume"},
+        })()
+        self.assertEqual(
+            inspect_research_evidence(mismatched, **args)["reason"],
+            "ATTEMPT_OR_ARTIFACT_VOLUME_MISMATCH",
+        )
 
     def test_failed_terminal_is_persisted_and_replayed_nonzero(self):
         envelope, request, policy = owner_fixture()
@@ -714,7 +803,7 @@ class OwnerOneShotTests(unittest.TestCase):
                     for target, source in FINQUANT_DATA_MOUNTS.items()
                 ] + [
                     {"Destination": "/workspace", "Source": str(output.resolve()), "RW": True, "Type": "bind"},
-                    {"Destination": "/qlib-artifacts", "Source": "aq-p12-owner-artifacts-0123456789abcdef", "RW": True, "Type": "volume"},
+                    {"Destination": "/qlib-artifacts", "Name": "aq-p12-owner-artifacts-0123456789abcdef", "Source": "/var/lib/docker/volumes/aq-p12-owner-artifacts-0123456789abcdef/_data", "RW": True, "Type": "volume"},
                 ],
                 "NetworkSettings": {"Networks": {PERSISTENT_LITELLM_NETWORK: {}}},
             }
@@ -724,6 +813,24 @@ class OwnerOneShotTests(unittest.TestCase):
                 expected_artifact_volume="aq-p12-owner-artifacts-0123456789abcdef",
             )
             self.assertEqual(observed["return_code"], 0)
+            bad_name = json.loads(json.dumps(inspection))
+            bad_name["Mounts"][-1]["Name"] = "wrong-volume"
+            with self.assertRaises(Exception):
+                validate_owner_worker_inspection(
+                    bad_name, expected_key="sk-dummy-owner-key-0123456789",
+                    expected_output=output, run_namespace="aq-p12-owner-123456789abc",
+                    expected_artifact_volume="aq-p12-owner-artifacts-0123456789abcdef",
+                )
+            extra_mount = json.loads(json.dumps(inspection))
+            extra_mount["Mounts"].append({
+                "Destination": "/unexpected", "Source": "/tmp", "RW": True, "Type": "bind",
+            })
+            with self.assertRaises(Exception):
+                validate_owner_worker_inspection(
+                    extra_mount, expected_key="sk-dummy-owner-key-0123456789",
+                    expected_output=output, run_namespace="aq-p12-owner-123456789abc",
+                    expected_artifact_volume="aq-p12-owner-artifacts-0123456789abcdef",
+                )
             inspection["Config"]["Entrypoint"] = ["rdagent"]
             with self.assertRaises(Exception):
                 validate_owner_worker_inspection(
