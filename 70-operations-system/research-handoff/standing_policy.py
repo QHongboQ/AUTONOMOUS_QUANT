@@ -231,6 +231,11 @@ def evaluate_policy_admission(
             )
         except (ImportError, TypeError, ValueError):
             return {"classification": "DENIED_SIGNATURE_VERIFIER_UNAVAILABLE"}
+        if signature_result["classification"] == "VERIFIED_HUMAN_APPROVAL_SIGNATURE":
+            return {
+                "classification": "DENIED_OWNER_AUTHORITY_NOT_WIRED_TO_REAL_DISPATCH",
+                "real_dispatch_permission": "DENIED",
+            }
         if signature_result["classification"] != "VERIFIED_TEST_ONLY_SIGNATURE":
             return {
                 "classification": signature_result["classification"],

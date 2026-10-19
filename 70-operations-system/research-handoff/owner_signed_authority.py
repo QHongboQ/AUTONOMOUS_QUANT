@@ -171,7 +171,8 @@ def verify_signed_research_policy(
         return _result("DENIED_SIGNED_POLICY_MISMATCH")
     if (
         payload["policy_version"] != "P12StandingResearchPolicyV1"
-        or payload["evidence_classification"] != "TEST_ONLY"
+        or payload["evidence_classification"] not in {"TEST_ONLY", "HUMAN_APPROVED"}
+        or payload["evidence_classification"] != policy.evidence_classification
     ):
         return _result("DENIED_POLICY_CLASSIFICATION")
     if request.asset_universe_scope_identity not in payload["allowed_universe_scope_identities"]:
@@ -182,8 +183,13 @@ def verify_signed_research_policy(
         return _result("DENIED_BUDGET_IDENTITY_MISMATCH")
     if not set(request.allowed_research_families).issubset(payload["allowed_research_families"]):
         return _result("DENIED_RESEARCH_FAMILY")
+    verification_classification = (
+        "VERIFIED_HUMAN_APPROVAL_SIGNATURE"
+        if payload["evidence_classification"] == "HUMAN_APPROVED"
+        else "VERIFIED_TEST_ONLY_SIGNATURE"
+    )
     return _result(
-        "VERIFIED_TEST_ONLY_SIGNATURE",
+        verification_classification,
         policy_id=policy.policy_id,
         owner_approval_evidence_identity=evidence_id,
         signing_key_id=payload["signing_key_id"],
@@ -191,5 +197,5 @@ def verify_signed_research_policy(
         signed_payload_sha256="sha256:" + hashlib.sha256(rfc8785.dumps(payload)).hexdigest(),
         signed_approval_fingerprint="sha256:"
         + hashlib.sha256(rfc8785.dumps(approval)).hexdigest(),
-        cryptographic_integrity="VERIFIED_TEST_ONLY",
+        cryptographic_integrity=verification_classification,
     )

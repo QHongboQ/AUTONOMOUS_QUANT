@@ -778,3 +778,35 @@ only `aq-p12-litellm-persistent-test-postgres-1` on the existing
 budget, and `$0.00010` spend remained; Key C remained denied before Mock.
 Temporary keys were blocked after the check. The P12 fixture generated no
 Candidate and performed no training, certification, provider, or broker call.
+
+## AWS owner approval and revocation authority (offline implementation)
+
+`aws_owner_authority.py` is a thin adapter around the existing P12 Ed25519/RFC 8785 verifier, native LiteLLM experiment user identity, and the AWS SDK. It introduces no signing format, budget engine, or dispatch permission. The adapter has been exercised only with in-memory local Ed25519 test keys and simulated KMS, DynamoDB, and STS responses. No AWS account, resource, approval, paid key, or provider call was used. Even a verified approval currently returns `real_dispatch_permission: DENIED`; P12 real dispatch remains disabled.
+
+### Authority record and identity
+
+Use one DynamoDB table whose partition key is the string `research_budget_identity`. Each item binds that identity to exactly one P4 `request_id`, P12 `policy_id`, and deterministic `native_experiment_user_id` from `native_experiment_budget.experiment_user_id()`. A conditional create prevents another approval or budget allocation for that identity. The record contains the signed canonical approval, current epoch/status, KMS key ARN, and a separately signed revocation snapshot. Runtime reads use `GetItem(ConsistentRead=True)` on every verification. There is no local APPROVED cache or local flag override.
+
+Approvals are limited by the adapter to the existing P12 policy contract with USD 5.00 maximum run and period spend, DeepSeek Flash plus local Ollama embedding routes, exact P4 request scope/provenance/families, one concurrent run, and an approval interval no longer than 24 hours. It does not issue a LiteLLM key or change any existing key/user. The existing native user budget/key issuance workflow remains a separate boundary and is still hard-denied for real issuance until separately integrated and explicitly authorized.
+
+The KMS key must use `ECC_NIST_EDWARDS25519`, `SIGN_VERIFY`, and `ED25519_SHA_512`; the adapter signs RFC 8785 bytes with `MessageType=RAW`. It checks the returned KMS key ARN and derives the trusted public key identity from `GetPublicKey`. DynamoDB approval creation is conditional on the identity not existing. Revocation conditionally advances the epoch and changes current status; stale writes lose the compare-and-swap. Runtime verifies the current record and both signatures, requires approval and revocation epochs to match the strongly read current epoch, and denies unavailable AWS, stale, revoked, expired, or mismatched state.
+
+### Permission split and setup
+
+Create AWS resources only through the owner's normal infrastructure process. Keep the owner role and research runtime role distinct:
+
+- **Owner role:** require authenticated AWS IAM Identity Center/SSO or equivalent interactive owner session. Grant `sts:GetCallerIdentity`, `kms:GetPublicKey`, `kms:Sign` on the one approval key, and DynamoDB `GetItem`, `PutItem`, `UpdateItem` on the one authority table. Do not grant key administration, table administration, deletion, or permission to use the role from the WSL/research identity.
+- **Runtime control role:** grant only DynamoDB `GetItem` on the authority table and KMS `GetPublicKey` on the configured key. It has no signing or write permission. Its credentials, if later deployed, must remain in a trusted P12 control process, outside the RD-Agent container.
+- **RD-Agent worker:** no AWS role, credentials, KMS permission, DynamoDB permission, owner secret, Proxy master key, or provider credential.
+
+The runtime verifies the configured KMS key ARN on every lookup and does not trust a key identity supplied by the approval file. Protect the control role and owner role with separate AWS trust policies and independently authenticated principals. Since no AWS account was available for this task, actual IAM separation, key policy, resource policy, and AWS conditional-write behavior have not been live-tested.
+
+For an eventual owner setup, after the owner has provisioned and reviewed the key/table and IAM policies:
+
+1. From the independently controlled owner workstation, authenticate to the owner role with the organization's MFA-backed AWS SSO/assume-role flow. Set `AWS_PROFILE`, `AWS_REGION`, `AQ_OWNER_AUTHORITY_TABLE`, `AQ_OWNER_KMS_KEY_ARN`, and `AQ_OWNER_ROLE_ARN` in that owner shell only.
+2. Review the exact P4 ResearchRequestV1 and a genuine, deliberately prepared `HUMAN_APPROVED` P12 policy. Confirm its unique `research_budget_identity`, $5.00 run/period ceiling, exact model routes and US/PIT scope, one run/concurrency, and expiry within 24 hours. The approval command requires the explicit `--confirm-owner-approval` switch and never creates owner approval by itself.
+3. Record the approval through `python aws_owner_authority.py approve --request <request.json> --policy <policy.json> --confirm-owner-approval`. The row is immutable with respect to initial issuance; a duplicate identity is denied, not replenished.
+4. A trusted control-side verifier may use `python aws_owner_authority.py verify --request <request.json> --policy <policy.json>`; verification is read-only and must be repeated against current AWS state immediately before any future dispatch.
+5. To revoke, use the owner role and `python aws_owner_authority.py revoke --research-budget-identity <sha256:...> --approval-evidence-identity <sha256:...> --expected-epoch <current-epoch>`. A successful revocation advances the epoch and cannot be undone by replaying an old approval snapshot.
+
+Do not copy the owner profile or credentials to the Windows research account, WSL research process, Docker image, or worker. There is no automatic approval, renewal, reissue, key creation, deployment, or real dispatch in this implementation. AWS KMS Ed25519 and DynamoDB consistency/conditional-write references: [KMS key specs](https://docs.aws.amazon.com/kms/latest/developerguide/symm-asymm-choose-key-spec.html), [KMS Sign API](https://docs.aws.amazon.com/boto3/latest/reference/services/kms/client/sign.html), [DynamoDB strongly consistent GetItem](https://docs.aws.amazon.com/boto3/latest/reference/services/dynamodb/table/get_item.html), and [DynamoDB conditional expressions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ConditionExpressions.html).
