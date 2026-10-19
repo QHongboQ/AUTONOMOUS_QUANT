@@ -46,11 +46,16 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
         self.assertIn("profiles: [deepseek-staging]", compose)
         self.assertIn("pull_policy: never", compose)
-        self.assertIn("networks: [core, provider_egress]", compose)
-        self.assertNotIn("worker_proxy", compose)
+        self.assertIn("networks: [core, worker_proxy, provider_egress]", compose)
         self.assertNotIn("ports:", compose)
         self.assertIn("deepseek_api_key", compose)
         self.assertIn("P12_OLLAMA_API_BASE:?", compose)
+        worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("secrets:", 1)[0]
+        self.assertIn("profiles: [p12-owner-oneshot]", worker)
+        self.assertIn("networks: [worker_proxy]", worker)
+        self.assertNotIn("provider_egress", worker)
+        self.assertIn('command: ["fin_quant", "--loop-n", "1"]', worker)
+        self.assertIn('LITELLM_CHAT_MAX_TOKENS: "8192"', worker)
         config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
         self.assertIn('db: "1"', config)
         self.assertNotIn("redis_db:", config)
@@ -91,7 +96,7 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn("native persistent LiteLLM", readme)
         self.assertIn("same `user_id`", readme)
         self.assertIn("Per-key caps alone do not enforce this aggregate", readme)
-        self.assertIn("No owner approval, native user, paid key", readme)
+        self.assertIn("No owner approval file, native user, paid key", readme)
 
     def test_pinned_source_contains_native_user_and_key_budget_controls(self) -> None:
         # Pin the upstream interface contract checked in the v1.105.1 runtime.
@@ -101,14 +106,35 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertNotIn("/user/new", compose)
         self.assertNotIn("/key/generate", compose)
 
-    def test_native_budget_does_not_enable_real_dispatch_or_create_a_key(self) -> None:
+    def test_real_worker_is_owner_one_shot_only_and_startup_does_not_issue_a_key(self) -> None:
         config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
         compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
         self.assertIn("profiles: [deepseek-staging]", compose)
-        self.assertNotIn("rdagent-finquant-worker", compose)
+        worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("secrets:", 1)[0]
+        self.assertIn("profiles: [p12-owner-oneshot]", worker)
+        self.assertIn("P12_OWNER_SCOPED_PROXY_KEY:-", compose)
+        self.assertIn("owner_oneshot_proxy_control.py", compose)
         self.assertNotIn("/key/generate", config)
+        control = (ROOT / "docker-rdagent-smoke" / "owner_oneshot_proxy_control.py").read_text()
+        self.assertIn('"prepare"', control)
+        self.assertIn('"block"', control)
+        entrypoint = (ROOT / "owner_oneshot_research.py").read_text()
+        self.assertIn("sys.stdin.isatty()", entrypoint)
+        self.assertIn("RUN $5 ONCE", entrypoint)
+        self.assertIn("sk-preflight-placeholder-only", entrypoint)
         handoff = (ROOT / "p12_research_handoff.py").read_text()
         self.assertIn('"BLOCKED_REAL_DISPATCH_DENIED"', handoff)
+
+    def test_inactive_worker_has_optional_compose_inputs_and_noncreating_sentinel(self) -> None:
+        compose = (ROOT / "docker-rdagent-smoke" / "compose.deepseek-staging.yaml").read_text()
+        worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("\nsecrets:", 1)[0]
+        for variable in ("P12_OWNER_SCOPED_PROXY_KEY", "P12_RUN_NAMESPACE", "P12_FINQUANT_OUTPUT_DIR"):
+            self.assertIn(f"${{{variable}:-}}", worker)
+        self.assertIn("source: ${P12_FINQUANT_OUTPUT_DIR:-/tmp/p12-worker-disabled}", worker)
+        self.assertIn("create_host_path: false", worker)
+        self.assertIn("test -f /workspace/p12-attempt.json", worker)
+        self.assertIn("owner-scoped paid Proxy key required", worker)
+        self.assertIn('exec rdagent "$@"', worker)
 
 
 if __name__ == "__main__":

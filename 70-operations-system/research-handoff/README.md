@@ -267,10 +267,11 @@ for the official `deepseek/deepseek-flash` route and the existing local
 `ollama/qwen3-embedding:0.6b` model. The ordinary persistent TEST_ONLY Compose
 file and its Mock aliases are unchanged. The staging profile has no published
 port, uses a separate PostgreSQL database (`litellm_deepseek_staging`) and
-Redis DB index, and is not connected to `worker_proxy`; therefore the current
-P12 dispatcher cannot reach it. It is disabled unless the
-`deepseek-staging` Compose profile is explicitly selected and an external
-secret file and separate Proxy admin key are supplied.
+Redis DB index, and joins the existing internal `worker_proxy` network only
+for its opt-in one-shot worker. The worker profile is disabled unless both
+`deepseek-staging` and `p12-owner-oneshot` are selected through the explicit
+local owner command; the external provider secret file and separate Proxy
+admin key remain required.
 
 The host supplies `P12_DEEPSEEK_API_KEY_FILE` to Compose. Compose mounts that
 file as a secret to the Proxy only; its entrypoint loads the value into the
@@ -278,9 +279,10 @@ Proxy process environment required by the official LiteLLM config resolver.
 Neither the RD-Agent worker nor its P12 TEST_ONLY environment receives the
 provider credential. Compose secrets protect the container boundary from the
 worker, not from a host Docker administrator. The provider egress network is a
-regular Docker bridge and does not restrict destination hosts. No scoped paid
-virtual key is created here: real route use remains unavailable to P12 until a
-human-approved policy and independently enforced budget are established.
+regular Docker bridge; the RD-Agent worker is attached only to the internal
+`worker_proxy` network. A host-side one-shot command provisions a native
+scoped key only after local interactive owner confirmation. No key is created
+at startup.
 The pinned LiteLLM 1.105.1 startup path requires `budget_duration` whenever a
 PostgreSQL-backed Proxy has a positive global `litellm_settings.max_budget`.
 Omitting the duration therefore crashes startup; adding one creates a resetting
@@ -324,22 +326,30 @@ Keep three distinct states clear:
    another key could otherwise grant another USD 5. The pinned native user
    API/database provides the cumulative spend boundary; AQ does not keep a
    parallel ledger.
-3. **Actual enforcement after owner approval (not active):** a verified,
-   unexpired, revocable owner approval and the experiment-bound native user
-   budget must exist before a paid key is issued. The control side must verify
-   the user and key settings through LiteLLM's native APIs before dispatch.
-   No owner approval, native user, paid key, provider request, or real dispatch
-   was created by this change. Real research remains denied.
+3. **Actual native enforcement after local owner activation:** the interactive
+   one-shot control creates one experiment-bound native user and one scoped
+   key only after checking the supplied P4 request and P12 policy and receiving
+   the exact confirmation phrase. It verifies the user/key through native
+   LiteLLM APIs before dispatch. No owner approval file, native user, paid key,
+   provider request, or real dispatch was created by this change. The local
+   trusted-host exception is not a cloud-grade signer, revocation authority,
+   or protection from a malicious host operator.
 
-These are issuance bounds, not a persistent spend ceiling, proof of owner
-approval, or an active spending grant. This host still has no verified independent
-owner-controlled signer/revocation source with rollback-protected epoch state.
-Also, the pinned LiteLLM 1.105.1 proxy hard-caps only requests that omit an
-explicit output-token limit when a TPM limit is configured; an explicit client
-`max_tokens` is not overridden. RD-Agent's complete loop has not been shown to
-omit or bound that field. Therefore bounded output-token dispatch is not
-established and the real target remains unavailable. Do not infer readiness
-from the configured key issuance bound alone.
+The configured key bounds alone are not a spending grant. The owner one-shot
+path uses a native persistent user budget of USD 5 with
+`budget_duration: null` and a key capped at USD 5 with
+`budget_duration: null`, maximum 24-hour expiration, the two-model allowlist,
+and one parallel request. It refuses prior user spend, any previous key on the
+experiment user, mismatched identity, or a replayed P12 request. After the run
+or failure it blocks the scoped key; an ambiguous dispatch leaves the P12
+claim in place and cannot be retried.
+
+The pinned RD-Agent LiteLLM backend reads `LITELLM_CHAT_MAX_TOKENS` into its
+chat completion kwargs and passes them to `litellm.completion`. Its
+`chat_model_map` can override the token value, so the worker fixes that map to
+`{}` and rejects other values. A no-network, read-only probe of the exact
+pinned image verified `max_tokens=8192`, the Flash model, an empty model map,
+and native retries disabled. No chat request was made during this check.
 
 The staging profile uses a separate database in the existing persistent
 PostgreSQL service. If that database is absent on a new host, an operator can
@@ -347,6 +357,55 @@ create it with
 `docker exec aq-p12-litellm-persistent-test-postgres-1 createdb -U litellm -O litellm litellm_deepseek_staging`.
 This does not touch the existing `litellm` database or its volume. No
 verification token or paid-provider virtual key is created by staging.
+
+### Local owner one-shot entrypoint
+
+`owner_oneshot_research.py` is the explicit local control-side entrypoint. Its
+`preflight` command validates the P4 decision/request and policy, checks the
+pinned image and frozen read-only inputs, validates the merged Compose config,
+and probes the RD-Agent token bound with networking disabled. It does not
+start services, create a LiteLLM user/key, or dispatch research. The `run`
+command requires an existing P12 state directory, an owner-managed new
+provider secret below `D:/AQ/OPERATIONS/P12`, the protected persistent Compose
+env file, and an interactive WSL terminal. It asks the owner to type the exact
+request-specific `RUN $5 ONCE sha256:...` confirmation phrase before claiming
+the request, creating the one native experiment user/key, and invoking the
+full upstream command `rdagent fin_quant --loop-n 1`. Do not invoke it from
+Task Scheduler or another unattended process.
+
+For example, after those owner-controlled inputs actually exist:
+
+```sh
+python owner_oneshot_research.py preflight \
+  --request /mnt/d/AQ/OPERATIONS/P12/owner-input/request.json \
+  --policy /mnt/d/AQ/OPERATIONS/P12/owner-input/policy.json
+
+python owner_oneshot_research.py run \
+  --request /mnt/d/AQ/OPERATIONS/P12/owner-input/request.json \
+  --policy /mnt/d/AQ/OPERATIONS/P12/owner-input/policy.json \
+  --state-dir /mnt/d/AQ/OPERATIONS/P12/existing-p12-run/state \
+  --new-provider-secret-file /mnt/d/AQ/OPERATIONS/P12/owner-one-shot-secrets/deepseek-flash
+```
+
+The local terminal confirmation is the only real-run activation in this path;
+it is not an independently signed/cloud-verifiable approval. The command
+binds the canonical request and policy to the existing P12 claim/status files
+and one deterministic native LiteLLM user. It never resets the user budget,
+will not issue a replacement key for a user with key history or spend, blocks
+the scoped key after a completed attempt, and fails closed on an ambiguous
+dispatch. RD-Agent receives only the scoped key and the Proxy URL. The real
+provider key stays on the staging Proxy side. The P2 gate is not invoked or
+modified, and no Candidate, certification, P4 lifecycle result, or trading
+authority is implied by successful execution.
+
+No paid key, provider request, or real `fin_quant` run was performed while
+adding this path. A first real run still requires the owner to supply a
+genuine current P4 `REAL_EXTERNAL_EVIDENCE` decision and matching request, a
+human-reviewed active P12 policy with the exact limits above, a newly
+owner-provisioned DeepSeek credential, the protected staging Proxy settings
+and reachable existing Ollama endpoint, and the existing durable P12 state
+directory. None of those approval or credential inputs is created by this
+change.
 
 Staging startup acceptance on 2026-10-18 used the pinned LiteLLM image and a
 dummy provider secret. The separate `litellm_deepseek_staging` database already
@@ -598,7 +657,13 @@ P2 frozen protocols/cohorts remain unchanged. Candidate V4 outside the frozen
 P2 V2 cohort remains ineligible. P4-to-P7 provenance remains a separate open
 gap. No P2 or P4 downstream decision is fabricated by the P12 test.
 
-## First real research readiness review
+## Historical first real research readiness review
+
+This review records the earlier state at its named base commit. The local
+owner-initiated one-shot path documented below supersedes its “target not
+registered” and “not ready” conclusions for one interactive run only. The
+ordinary P12 dispatcher remains TEST_ONLY; this does not authorize unattended
+research or change certification/trading boundaries.
 
 At base `e2a6a498b9fffa7fe35646982d757538c165b2e4`, the real fin_quant target
 is intentionally not registered in P12. The TEST_ONLY target identities and
@@ -754,15 +819,13 @@ were observed after restarting only the existing persistent TEST_ONLY
 PostgreSQL container. P12 and LiteLLM replay checks made no user-allocation or
 key-generation call. Temporary keys are blocked after the persistence check.
 
-Real issuance stays hard-denied: the repository has no independent
-owner-controlled approval and revocation source available to this path. A P12
-identity, locally supplied approval object, TEST_ONLY policy, or existing
-signed test snapshot is not real spending authority. No `$5` user/key was
-created, and real P12 dispatch remains disabled. Before real issuance, the
-owner must establish a separately controlled approval/revocation authority
-that binds the experiment identity, provider/model scope, single run, total
-budget, concurrency, and expiry; the control side must verify it before
-creating the native user/key. This integration does not confer P2
+Historical state at this section’s acceptance date: real issuance was
+hard-denied because no independent owner-controlled approval/revocation
+source was available. The local one-shot mechanism documented above is the
+current exception for an owner physically operating the trusted host; it does
+not turn local policy files or signed test snapshots into independent
+authority, and it does not enable unattended runs. No `$5` user/key was
+created by that earlier acceptance. This integration still confers no P2
 certification, Candidate eligibility, production, or broker authority.
 
 Live cumulative-budget acceptance on 2026-10-18 used P12 synthetic request
