@@ -871,7 +871,8 @@ def run_docker_rdagent_finquant(
 
 def validate_owner_worker_inspection(
     inspection: dict[str, Any], *, expected_key: str, expected_output: Path,
-    run_namespace: str, expected_command: tuple[str, ...] = ("fin_quant", "--loop-n", "1"),
+    run_namespace: str, expected_artifact_volume: str,
+    expected_command: tuple[str, ...] = ("fin_quant", "--loop-n", "1"),
 ) -> dict[str, Any]:
     """Validate the actual profiled worker configuration, including its shell gate."""
     config = inspection.get("Config", {})
@@ -912,7 +913,7 @@ def validate_owner_worker_inspection(
     if not isinstance(mounts, list) or not isinstance(networks, dict):
         raise DockerDispatchAmbiguous("Owner worker mounts or networks were unavailable")
     mounted = {item.get("Destination"): item for item in mounts if isinstance(item, dict)}
-    data_mounts_valid = len(mounted) == len(FINQUANT_DATA_MOUNTS) + 1 and all(
+    data_mounts_valid = all(
         target in mounted
         and mounted[target].get("Source") == source
         and mounted[target].get("RW") is False
@@ -925,12 +926,19 @@ def validate_owner_worker_inspection(
         and output.get("RW") is True
         and output.get("Type") == "bind"
     )
+    artifact_mount = mounted.get("/qlib-artifacts", {})
+    artifact_volume_valid = (
+        artifact_mount.get("Source") == expected_artifact_volume
+        and artifact_mount.get("RW") is True
+        and artifact_mount.get("Type") == "volume"
+    )
     sensitive_names = {
         "DEEPSEEK_API_KEY", "LITELLM_DEEPSEEK_STAGING_MASTER_KEY",
         "POSTGRES_PASSWORD", "LITELLM_MASTER_KEY", "OWNER_SIGNING_PRIVATE_KEY",
     }
     if (
-        not data_mounts_valid or not output_valid
+        not data_mounts_valid or len(mounted) != len(FINQUANT_DATA_MOUNTS) + 2
+        or not output_valid or not artifact_volume_valid
         or list(networks) != [PERSISTENT_LITELLM_NETWORK]
         or environment.get("OPENAI_API_BASE") != "http://litellm-deepseek-staging:4000/v1"
         or environment.get("OPENAI_API_KEY") != expected_key
@@ -947,6 +955,8 @@ def validate_owner_worker_inspection(
         "entrypoint_verified": True,
         "command_verified": True,
         "mounts_valid": True,
+        "artifact_volume": expected_artifact_volume,
+        "artifact_volume_valid": True,
         "network_valid": True,
         "credential_isolation": True,
     }
@@ -965,6 +975,40 @@ def _owner_safe_environment(extra: dict[str, str] | None = None) -> dict[str, st
     return env
 
 
+def _owner_artifact_volume_name(request_id: str, attempt_id: str) -> str:
+    if (
+        not re.fullmatch(r"sha256:[0-9a-f]{64}", request_id)
+        or not re.fullmatch(
+            r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+            attempt_id,
+        )
+    ):
+        raise DockerDispatchAmbiguous("Owner artifact store identity was invalid")
+    suffix = hashlib.sha256(f"{request_id}:{attempt_id}".encode()).hexdigest()[:16]
+    return "aq-p12-owner-artifacts-" + suffix
+
+
+def _owner_artifact_container_command(
+    *, output: Path, volume: str, tracking_uri: str, helper: str, prepare: bool,
+) -> subprocess.CompletedProcess[str]:
+    image_python = "/opt/conda/envs/rdagent4qlib/bin/python"
+    return subprocess.run(
+        [
+            "docker", "run", "--rm", "--network", "none", "--read-only",
+            "--user", "10001:10001", "--cap-drop", "ALL",
+            "--security-opt", "no-new-privileges:true",
+            "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m,uid=10001,gid=10001",
+            "--tmpfs", "/home/rdagent:rw,nosuid,nodev,size=64m,uid=10001,gid=10001",
+            "--mount", f"type=bind,src={output},dst=/workspace",
+            "--mount", f"type=volume,src={volume},dst=/qlib-artifacts",
+            "--entrypoint", image_python, PINNED_FINQUANT_IMAGE,
+            f"/workspace/{helper}", "--tracking-uri", tracking_uri,
+            *( ["--prepare"] if prepare else [] ),
+        ],
+        capture_output=True, text=True, env=_owner_safe_environment(), timeout=120,
+    )
+
+
 def run_docker_rdagent_owner_oneshot(
     *, request_id: str, attempt_id: str, runtime_directory: Path,
     research_budget_identity: str, standing_policy_id: str,
@@ -978,13 +1022,18 @@ def run_docker_rdagent_owner_oneshot(
     runtime.mkdir(parents=True, exist_ok=True)
     run_namespace = "aq-p12-owner-" + hashlib.sha256(f"{request_id}:{attempt_id}".encode()).hexdigest()[:12]
     output = _finquant_output_directory(request_id, attempt_id)
+    artifact_volume = _owner_artifact_volume_name(request_id, attempt_id)
     attempt = {
         "request_id": request_id, "attempt_id": attempt_id,
         "run_namespace": run_namespace, "native_cli_command": "rdagent fin_quant --loop-n 1",
         "image": PINNED_FINQUANT_IMAGE, "image_id": PINNED_FINQUANT_IMAGE_ID,
+        "mlflow_artifact_volume": artifact_volume,
         "p2_status": "NOT_EVALUATED_NO_CANDIDATE",
     }
     _durable_output_write(output, "p12-attempt.json", json.dumps(attempt, sort_keys=True) + "\n")
+    helper_source = Path(__file__).with_name("docker-rdagent-smoke") / "p12_mlflow_evidence.py"
+    helper_name = "p12_mlflow_evidence.py"
+    shutil.copyfile(helper_source, output / helper_name)
     compose = [
         "docker", "compose", "--project-name", PERSISTENT_LITELLM_PROJECT,
         "--env-file", str(env_file), "--file", str(source / "compose.persistent-test.yaml"),
@@ -997,6 +1046,7 @@ def run_docker_rdagent_owner_oneshot(
         "P12_OWNER_SCOPED_PROXY_KEY": "sk-preflight-placeholder-only",
         "P12_DEEPSEEK_API_KEY_FILE": str(provider_secret_file),
         "P12_OWNER_RESEARCH_BUDGET_IDENTITY": research_budget_identity,
+        "P12_MLFLOW_ARTIFACT_VOLUME": artifact_volume,
     })
     worker_name = run_namespace + "-finquant"
     staging_started = False
@@ -1004,6 +1054,34 @@ def run_docker_rdagent_owner_oneshot(
     key_blocked = False
     worker_started = False
     try:
+        volume_check = subprocess.run(
+            ["docker", "volume", "inspect", artifact_volume],
+            capture_output=True, text=True, env=_owner_safe_environment(), timeout=30,
+        )
+        if volume_check.returncode == 0:
+            raise DockerDispatchAmbiguous("Per-attempt MLflow artifact volume already exists")
+        created_volume = subprocess.run(
+            [
+                "docker", "volume", "create", "--label", f"aq.p12.request={request_id}",
+                "--label", f"aq.p12.attempt={attempt_id}", artifact_volume,
+            ],
+            capture_output=True, text=True, env=_owner_safe_environment(), timeout=30,
+        )
+        if created_volume.returncode != 0 or created_volume.stdout.strip() != artifact_volume:
+            raise DockerDispatchAmbiguous("Per-attempt MLflow artifact volume could not be created")
+        initialize_volume = subprocess.run(
+            [
+                "docker", "run", "--rm", "--network", "none", "--read-only",
+                "--user", "0:0", "--cap-drop", "ALL", "--cap-add", "CHOWN", "--cap-add", "FOWNER",
+                "--security-opt", "no-new-privileges:true",
+                "--mount", f"type=volume,src={artifact_volume},dst=/qlib-artifacts",
+                "--entrypoint", "/bin/sh", PINNED_FINQUANT_IMAGE,
+                "-ec", "chown 10001:10001 /qlib-artifacts && chmod 0750 /qlib-artifacts",
+            ],
+            capture_output=True, text=True, env=_owner_safe_environment(), timeout=60,
+        )
+        if initialize_volume.returncode != 0:
+            raise DockerDispatchAmbiguous("Per-attempt MLflow artifact volume ownership could not be verified")
         config = subprocess.run([*compose, "config", "--quiet"], capture_output=True, text=True, env=env, cwd=runtime, timeout=60)
         if config.returncode != 0:
             raise DockerDispatchFailed(config.returncode or 1, {"classification": "OWNER_COMPOSE_INVALID"})
@@ -1017,6 +1095,21 @@ def run_docker_rdagent_owner_oneshot(
         )
         if started.returncode != 0:
             raise DockerDispatchAmbiguous("Staging Proxy dependencies did not become healthy")
+        tracking_uri = f"sqlite:////workspace/runs/{run_namespace}/mlflow.db"
+        prepare_artifacts = _owner_artifact_container_command(
+            output=output, volume=artifact_volume, tracking_uri=tracking_uri,
+            helper=helper_name, prepare=True,
+        )
+        try:
+            artifact_store_record = json.loads(prepare_artifacts.stdout.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            artifact_store_record = {}
+        if (
+            prepare_artifacts.returncode != 0
+            or artifact_store_record.get("classification") != "MLFLOW_ARTIFACT_ROOT_READY"
+            or artifact_store_record.get("artifact_location") != "file:///qlib-artifacts"
+        ):
+            raise DockerDispatchAmbiguous("Native MLflow experiment could not be bound to its per-attempt artifact volume")
         prepared = subprocess.run(
             [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
             input=json.dumps({
@@ -1056,11 +1149,24 @@ def run_docker_rdagent_owner_oneshot(
             raise DockerDispatchAmbiguous("Owner worker terminal state could not be inspected")
         try:
             inspection = json.loads(raw.stdout)
-            observed = validate_owner_worker_inspection(inspection, expected_key=key, expected_output=output, run_namespace=run_namespace)
+            observed = validate_owner_worker_inspection(
+                inspection, expected_key=key, expected_output=output,
+                run_namespace=run_namespace, expected_artifact_volume=artifact_volume,
+            )
         except Exception as exc:
             raise DockerDispatchAmbiguous(f"Owner worker inspection failed ({type(exc).__name__})") from None
         if observed["return_code"] != launched.returncode:
             raise DockerDispatchAmbiguous("Compose and inspected worker return codes differed")
+        evidence_result = _owner_artifact_container_command(
+            output=output, volume=artifact_volume, tracking_uri=tracking_uri,
+            helper=helper_name, prepare=False,
+        )
+        try:
+            research_evidence = json.loads(evidence_result.stdout.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            raise DockerDispatchAmbiguous("Native Qlib Recorder evidence could not be read") from None
+        if evidence_result.returncode not in (0, 2):
+            raise DockerDispatchAmbiguous("Native Qlib Recorder evidence inspection failed")
         blocked = subprocess.run(
             [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
             input=json.dumps({"operation": "block", "token": key}), capture_output=True, text=True,
@@ -1082,11 +1188,15 @@ def run_docker_rdagent_owner_oneshot(
         return {
             **observed,
             "target_return_code": launched.returncode,
+            "process_exit_status": "PROCESS_EXIT_SUCCESS" if launched.returncode == 0 else "PROCESS_EXIT_FAILED",
+            "research_evidence_status": research_evidence.get("classification"),
+            "research_evidence": research_evidence,
             "key_blocked_after_attempt": True,
             "native_user_budget_usd": record["user_budget_usd"],
             "native_key_budget_usd": record["key_budget_usd"],
             "native_user_spend_usd": blocked_record.get("spend"),
             "output_directory": str(output),
+            "mlflow_artifact_volume": artifact_volume,
             "chat_max_tokens": 8192,
         }
     except subprocess.TimeoutExpired as exc:

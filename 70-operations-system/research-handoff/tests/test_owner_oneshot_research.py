@@ -36,11 +36,23 @@ from docker_rdagent_target import (  # noqa: E402
     PINNED_FINQUANT_IMAGE_ID,
     PERSISTENT_LITELLM_NETWORK,
     validate_owner_worker_inspection,
+    _owner_artifact_volume_name,
 )
+from p12_mlflow_evidence import inspect_research_evidence  # noqa: E402
 
 
 def identity(label: str) -> str:
     return "sha256:" + hashlib.sha256(label.encode()).hexdigest()
+
+
+def completed_owner_evidence(return_code: int = 0):
+    return {
+        "target_return_code": return_code,
+        "key_blocked_after_attempt": True,
+        "research_evidence_status": (
+            "RESEARCH_EVIDENCE_COMPLETE" if return_code == 0 else "RESEARCH_EVIDENCE_INCOMPLETE"
+        ),
+    }
 
 
 def owner_fixture(now: datetime | None = None):
@@ -177,8 +189,7 @@ class OwnerOneShotTests(unittest.TestCase):
                     envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
                     owner_confirmed=True,
                     target=lambda _: calls.append("dispatch") or {
-                        "target_return_code": 0, "key_blocked_after_attempt": True,
-                        "worker_identity_verified": True,
+                        **completed_owner_evidence(), "worker_identity_verified": True,
                     },
                 )
                 replay = oneshot.p12.owner_oneshot_replay_if_claimed(
@@ -206,9 +217,7 @@ class OwnerOneShotTests(unittest.TestCase):
                     state = Path(tmp)
                     first, first_code = oneshot.p12.process_owner_oneshot(
                         envelope, state_dir=state, policy_id=policy.policy_id, owner_confirmed=True,
-                        target=lambda _: calls.append("dispatch") or {
-                            "target_return_code": return_code, "key_blocked_after_attempt": True,
-                        },
+                        target=lambda _: calls.append("dispatch") or completed_owner_evidence(return_code),
                     )
                     self.assertEqual(first_code, expected_code)
                     self.assertEqual(first["classification"], expected_state)
@@ -235,9 +244,7 @@ class OwnerOneShotTests(unittest.TestCase):
             calls = []
             oneshot.p12.process_owner_oneshot(
                 envelope, state_dir=state, policy_id=policy.policy_id, owner_confirmed=True,
-                target=lambda _: calls.append("dispatch") or {
-                    "target_return_code": 0, "key_blocked_after_attempt": True,
-                },
+                target=lambda _: calls.append("dispatch") or completed_owner_evidence(),
             )
             claim_path = oneshot.p12._claim_file(state, request.request_id)
             claim = json.loads(claim_path.read_text())
@@ -260,7 +267,7 @@ class OwnerOneShotTests(unittest.TestCase):
                 oneshot.p12.process_owner_oneshot(
                     envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
                     owner_confirmed=True,
-                    target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+                    target=lambda _: completed_owner_evidence(),
                 )
                 for marker in (
                     oneshot.p12._claim_file(state, request.request_id),
@@ -317,7 +324,7 @@ class OwnerOneShotTests(unittest.TestCase):
                 self.assertEqual(denied["classification"], "DENIED_OWNER_BOOTSTRAP_REQUEST_IDENTITY")
                 accepted, code = oneshot.p12.process_owner_oneshot(
                     envelope, state_dir=canonical, policy_id=identity("policy-a"), owner_confirmed=True,
-                    target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+                    target=lambda _: completed_owner_evidence(),
                 )
                 other, _ = self.bootstrap_fixture_with_suffix("other")
                 denied_again, code_again = oneshot.p12.process_owner_oneshot(
@@ -384,7 +391,7 @@ class OwnerOneShotTests(unittest.TestCase):
             state = Path(tmp)
             oneshot.p12.process_owner_oneshot(
                 envelope, state_dir=state, policy_id=policy.policy_id, owner_confirmed=True,
-                target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+                target=lambda _: completed_owner_evidence(),
             )
             claim_path = oneshot.p12._claim_file(state, request.request_id)
             claim = json.loads(claim_path.read_text())
@@ -504,7 +511,7 @@ class OwnerOneShotTests(unittest.TestCase):
             result, code = oneshot.p12.process_owner_oneshot(
                 envelope, state_dir=state_dir, policy_id=policy.policy_id,
                 owner_confirmed=True,
-                target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+                target=lambda _: completed_owner_evidence(),
             )
             self.assertEqual(code, 0)
             sources = (identity("different-real-source"),)
@@ -558,10 +565,7 @@ class OwnerOneShotTests(unittest.TestCase):
             result, code = oneshot.p12.process_owner_oneshot(
                 envelope, state_dir=state, policy_id=policy.policy_id,
                 owner_confirmed=True,
-                target=lambda _: {
-                    "target_return_code": 0, "key_blocked_after_attempt": True,
-                    "worker_identity_verified": True,
-                },
+                target=lambda _: {**completed_owner_evidence(), "worker_identity_verified": True},
             )
             replay = oneshot.p12.owner_oneshot_replay_if_claimed(
                 envelope, state_dir=state, policy_id=policy.policy_id,
@@ -571,6 +575,67 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertEqual(replay[1], 0)
         self.assertEqual(replay[0]["dispatch_count_added"], 0)
 
+    def test_zero_exit_without_finished_qlib_evidence_is_incomplete_and_replay_fails(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            result, code = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True,
+                target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+            )
+            terminal = oneshot.p12._read_json_nofollow(oneshot.p12._status_file(state, request.request_id))
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertNotEqual(code, 0)
+        self.assertEqual(result["classification"], "INCOMPLETE_OWNER_ONESHOT")
+        self.assertEqual(terminal["process_exit_status"], "PROCESS_EXIT_SUCCESS")
+        self.assertEqual(terminal["research_evidence_status"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertNotEqual(replay[1], 0)
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_mlflow_evidence_gate_requires_finished_recorder_and_native_outputs(self):
+        class Info:
+            experiment_id = "1"
+            run_id = "recorder-1"
+            status = "FINISHED"
+            artifact_uri = "file:///qlib-artifacts/recorder-1/artifacts"
+
+        class Run:
+            def __init__(self, status):
+                self.info = Info()
+                self.info.status = status
+                self.data = type("Data", (), {"metrics": {"IC": 0.05, "ICIR": 0.3}})()
+
+        class Artifact:
+            def __init__(self, path, is_dir=False):
+                self.path, self.is_dir = path, is_dir
+
+        class Client:
+            def __init__(self, status="FINISHED", include_all=True):
+                self.run = Run(status)
+                self.include_all = include_all
+            def get_experiment_by_name(self, name):
+                return type("Experiment", (), {"experiment_id": "1"})()
+            def search_runs(self, experiment_ids, max_results):
+                return [self.run]
+            def list_artifacts(self, run_id, path=None):
+                if path:
+                    return []
+                names = ["task.pkl", "dataset.pkl", "model.pkl", "pred.pkl", "portfolio_analysis", "sig_analysis"]
+                if not self.include_all:
+                    names = ["task.pkl"]
+                return [Artifact(name, name.endswith("analysis")) for name in names]
+
+        complete = inspect_research_evidence(Client())
+        failed = inspect_research_evidence(Client(status="FAILED"))
+        incomplete = inspect_research_evidence(Client(include_all=False))
+        self.assertEqual(complete["classification"], "RESEARCH_EVIDENCE_COMPLETE")
+        self.assertEqual(failed["reason"], "NO_FINISHED_RECORDER")
+        self.assertEqual(incomplete["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertIn("model", incomplete["missing"])
+
     def test_failed_terminal_is_persisted_and_replayed_nonzero(self):
         envelope, request, policy = owner_fixture()
         with tempfile.TemporaryDirectory() as tmp:
@@ -578,7 +643,7 @@ class OwnerOneShotTests(unittest.TestCase):
             result, code = oneshot.p12.process_owner_oneshot(
                 envelope, state_dir=state, policy_id=policy.policy_id,
                 owner_confirmed=True,
-                target=lambda _: {"target_return_code": 1, "key_blocked_after_attempt": True},
+                target=lambda _: completed_owner_evidence(1),
             )
             replay = oneshot.p12.owner_oneshot_replay_if_claimed(
                 envelope, state_dir=state, policy_id=policy.policy_id,
@@ -647,12 +712,16 @@ class OwnerOneShotTests(unittest.TestCase):
                 "Mounts": [
                     {"Destination": target, "Source": source, "RW": False, "Type": "bind"}
                     for target, source in FINQUANT_DATA_MOUNTS.items()
-                ] + [{"Destination": "/workspace", "Source": str(output.resolve()), "RW": True, "Type": "bind"}],
+                ] + [
+                    {"Destination": "/workspace", "Source": str(output.resolve()), "RW": True, "Type": "bind"},
+                    {"Destination": "/qlib-artifacts", "Source": "aq-p12-owner-artifacts-0123456789abcdef", "RW": True, "Type": "volume"},
+                ],
                 "NetworkSettings": {"Networks": {PERSISTENT_LITELLM_NETWORK: {}}},
             }
             observed = validate_owner_worker_inspection(
                 inspection, expected_key="sk-dummy-owner-key-0123456789",
                 expected_output=output, run_namespace="aq-p12-owner-123456789abc",
+                expected_artifact_volume="aq-p12-owner-artifacts-0123456789abcdef",
             )
             self.assertEqual(observed["return_code"], 0)
             inspection["Config"]["Entrypoint"] = ["rdagent"]
@@ -660,6 +729,7 @@ class OwnerOneShotTests(unittest.TestCase):
                 validate_owner_worker_inspection(
                     inspection, expected_key="sk-dummy-owner-key-0123456789",
                     expected_output=output, run_namespace="aq-p12-owner-123456789abc",
+                    expected_artifact_volume="aq-p12-owner-artifacts-0123456789abcdef",
                 )
 
     def test_compose_worker_uses_full_loop_pinned_proxy_and_static_token_cap(self):
@@ -671,6 +741,14 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertIn('LITELLM_CHAT_MODEL_MAP: "{}"', worker)
         self.assertIn("http://litellm-deepseek-staging:4000/v1", worker)
         self.assertIn("networks: [worker_proxy]", worker)
+        self.assertIn("target: /qlib-artifacts", worker)
+        self.assertIn("P12_MLFLOW_ARTIFACT_VOLUME", worker)
+        self.assertEqual(
+            _owner_artifact_volume_name(identity("request"), "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"),
+            "aq-p12-owner-artifacts-" + hashlib.sha256(
+                f"{identity('request')}:d1feb58c-7b86-41f1-8eef-7bd54b1bffd1".encode()
+            ).hexdigest()[:16],
+        )
         for forbidden in ("DEEPSEEK_API_KEY", "LITELLM_DEEPSEEK_STAGING_MASTER_KEY", "POSTGRES_PASSWORD", "/var/run/docker.sock"):
             self.assertNotIn(forbidden, worker)
         self.assertEqual(len(oneshot.FINQUANT_DATA_MOUNTS), 3)

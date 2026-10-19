@@ -70,10 +70,21 @@ per-attempt host bind at
 P12 validates the canonical request identity and UUID attempt, creates the
 leaf exclusively, and passes only that directory to Compose as `/workspace`.
 Compose refuses to create a missing host source implicitly. The native
-workspace, trace, pickle cache, MLflow SQLite path, and any task/Recorder
-artifacts therefore remain in the request/attempt namespace after temporary
-Compose resources are removed. P12 also stores immutable attempt/evidence or
-failure records and redacted stdout/stderr beside those native outputs.
+workspace, trace, pickle cache, MLflow SQLite path, attempt/evidence records,
+and redacted stdout/stderr remain in that request/attempt namespace. Qlib's
+MLflow artifact repository is a separate per-attempt Docker named volume:
+the control side creates the native `workflow` experiment through MLflow's
+public client with `file:///qlib-artifacts`, and Compose mounts that volume at
+`/qlib-artifacts`. Its deterministic name is recorded in `p12-attempt.json`
+and the P12 terminal status; the volume is retained after worker removal.
+This keeps MLflow's atomic staged-artifact writes on a Linux Docker volume
+instead of the D: host bind, whose timestamp update failed under MLflow's
+`shutil.copystat`. P12 does not interpret process exit 0 as research success:
+it also reads MLflow Recorder metadata and artifact listings without opening
+serialized files, requiring a `FINISHED` Recorder with task, dataset, model,
+prediction, portfolio/signal evaluation artifacts, and metrics. Missing
+evidence is terminal `INCOMPLETE_OWNER_ONESHOT`; replay is nonzero and does
+not redispatch. The volume is not automatically pruned or reused.
 Plain `selector.log` credentials are redacted; signed RD-Agent settings
 pickles are preserved byte-for-byte. The short-lived test Proxy key in those
 signed settings is usable only against the temporary Proxy database, which is
