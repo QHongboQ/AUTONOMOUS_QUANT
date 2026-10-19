@@ -159,6 +159,42 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
                 self.assertNotEqual(replay.returncode, 0)
                 self.assertIn("COLLISION", json.loads(replay.stdout)["classification"])
 
+    def test_legacy_synthetic_success_and_failure_replay_without_redispatch(self) -> None:
+        self._make_request()
+        for mode, expected_code, expected_classification in (
+            ("success", 0, "REPLAY_TERMINAL_NO_DISPATCH"),
+            ("failure", 4, "REPLAY_TERMINAL_FAILED_NO_DISPATCH"),
+        ):
+            with self.subTest(mode=mode):
+                state = self.run_dir / f"legacy-{mode}"
+                first = self._process_at(state, "--target-mode", mode)
+                self.assertEqual(first.returncode, expected_code)
+                for kind in ("claim", "dispatching", "terminal"):
+                    path = self._record_path(kind, state)
+                    record = json.loads(path.read_text(encoding="utf-8"))
+                    record.pop("request_origin")
+                    path.write_text(json.dumps(record), encoding="utf-8")
+                replay = self._process_at(state)
+                self.assertEqual(replay.returncode, expected_code, replay.stderr)
+                self.assertEqual(json.loads(replay.stdout)["classification"], expected_classification)
+                self.assertEqual(len(list(state.glob("*.dispatch.jsonl"))), 1)
+
+    def test_mixed_legacy_and_origin_markers_are_rejected(self) -> None:
+        self._make_request()
+        state = self.run_dir / "mixed-origin"
+        self.assertEqual(self._process_at(state).returncode, 0)
+        path = self._record_path("claim", state)
+        claim = json.loads(path.read_text(encoding="utf-8"))
+        claim.pop("request_origin")
+        path.write_text(json.dumps(claim), encoding="utf-8")
+        replay = self._process_at(state)
+        self.assertEqual(replay.returncode, 3, replay.stderr)
+        self.assertEqual(
+            json.loads(replay.stdout)["classification"],
+            "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+        )
+        self.assertEqual(len(list(state.glob("*.dispatch.jsonl"))), 1)
+
     def test_native_experiment_identity_tampering_blocks_replay(self) -> None:
         self._make_request()
         for marker_kind in ("claim", "dispatching", "terminal"):
@@ -658,6 +694,7 @@ class DurableSyntheticHandoffTests(unittest.TestCase):
         self.assertEqual(classes.count("SUCCEEDED_SYNTHETIC"), 1, classes)
         blocked = {
             "BLOCKED_CLAIM_WITHOUT_TERMINAL_STATUS",
+            "BLOCKED_CORRUPT_OR_INCOMPLETE_CLAIM",
             "BLOCKED_UNKNOWN_POST_DISPATCH_STATE",
         }
         self.assertEqual(sum(classification in blocked for classification in classes), 1, classes)

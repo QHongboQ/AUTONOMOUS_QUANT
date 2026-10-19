@@ -47,6 +47,19 @@ TARGET_DOCKER_FINQUANT = "DOCKER_RDAGENT_FINQUANT_TEST_ONLY"
 TARGET_OWNER_ONESHOT = "DOCKER_RDAGENT_FINQUANT_OWNER_ONESHOT"
 P4_LIFECYCLE_ORIGIN = "P4_LIFECYCLE"
 OWNER_BOOTSTRAP_ORIGIN = "OWNER_INITIAL_BOOTSTRAP"
+
+
+def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) -> bool:
+    """Accept pre-origin P4 records only when every durable marker is legacy.
+
+    Bootstrap authority was introduced with an explicit origin and must never
+    inherit the legacy exception. Once any marker carries an origin, all
+    markers must carry the same expected value.
+    """
+    present = tuple("request_origin" in record for record in records)
+    if not any(present):
+        return expected == P4_LIFECYCLE_ORIGIN
+    return all(present) and all(record.get("request_origin") == expected for record in records)
 # Real bootstrap admission is pinned to this single durable control namespace.
 # Tests replace this constant with an isolated temporary directory.
 OWNER_BOOTSTRAP_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-one-shot-state")
@@ -256,7 +269,6 @@ def _replay_result(
     if (
         claim.get("state") != "CLAIMED"
         or claim.get("request_id") != request_id
-        or claim.get("request_origin") != P4_LIFECYCLE_ORIGIN
         or claim.get("request_digest") != request_digest
         or claim.get("research_budget_identity", research_budget_identity) != research_budget_identity
         or claim.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
@@ -294,7 +306,6 @@ def _replay_result(
     if (
         dispatch_marker.get("state") != "DISPATCHING_SYNTHETIC"
         or dispatch_marker.get("request_id") != request_id
-        or dispatch_marker.get("request_origin") != P4_LIFECYCLE_ORIGIN
         or dispatch_marker.get("request_digest") != request_digest
         or dispatch_marker.get("research_budget_identity", research_budget_identity) != research_budget_identity
         or dispatch_marker.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
@@ -330,9 +341,13 @@ def _replay_result(
             "reason": type(exc).__name__,
             "dispatch_count_added": 0,
         }
+    if not _origin_records_match((claim, dispatch_marker, status), P4_LIFECYCLE_ORIGIN):
+        return {
+            "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+            "dispatch_count_added": 0,
+        }
     if (
         status.get("request_id") != request_id
-        or status.get("request_origin") != P4_LIFECYCLE_ORIGIN
         or status.get("request_digest") != request_digest
         or status.get("research_budget_identity", research_budget_identity) != research_budget_identity
         or status.get("native_experiment_user_id", native_experiment_user_id) != native_experiment_user_id
@@ -689,11 +704,14 @@ def _owner_oneshot_replay(
         "attempt_id": attempt,
         "target_identity": TARGET_OWNER_ONESHOT,
         "dispatch_mode": "OWNER_ONESHOT",
-        "request_origin": request_origin,
     }
-    if not _valid_attempt_id(attempt) or any(
-        any(record.get(key) != value for key, value in expected.items())
-        for record in (claim, dispatch, terminal)
+    if (
+        not _valid_attempt_id(attempt)
+        or not _origin_records_match((claim, dispatch, terminal), request_origin)
+        or any(
+            any(record.get(key) != value for key, value in expected.items())
+            for record in (claim, dispatch, terminal)
+        )
     ):
         return ({"classification": "BLOCKED_OWNER_ONESHOT_IDENTITY_COLLISION", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     if (
