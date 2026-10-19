@@ -22,6 +22,7 @@ for directory in (str(P4_DIR), str(HANDOFF), str(SMOKE)):
 
 import aq_p4_policy as p4  # noqa: E402
 import owner_oneshot_research as oneshot  # noqa: E402
+import owner_bootstrap_request as bootstrap  # noqa: E402
 import standing_policy  # noqa: E402
 from native_experiment_budget import (  # noqa: E402
     OWNER_ONESHOT_MODELS,
@@ -134,6 +135,267 @@ class FakeNativeAPI:
 
 
 class OwnerOneShotTests(unittest.TestCase):
+    def bootstrap_fixture(self):
+        inputs = tuple(
+            bootstrap.InputIdentityV1(name=name, sha256=identity(name))
+            for name in ("p2_pit_inventory", "p3_materialization_report", "rdagent_qlib_pinned_image")
+        )
+        request = bootstrap.build_owner_bootstrap_request(inputs)
+        return {"bootstrap_request": request.model_dump(mode="json")}, request
+
+    def test_bootstrap_contract_is_content_addressed_without_p4_claim(self):
+        envelope, request = self.bootstrap_fixture()
+        with patch.object(bootstrap, "verify_current_frozen_inputs"):
+            origin, decision, parsed = oneshot._parse_request_envelope(envelope)
+        self.assertEqual(origin, p12_origin := "OWNER_INITIAL_BOOTSTRAP")
+        self.assertIsNone(decision)
+        self.assertEqual(parsed.request_id, request.request_id)
+        self.assertEqual(request.scope, "US/PIT")
+        self.assertEqual(request.allowed_research_families, ("RD_AGENT",))
+        self.assertEqual(request.trading_authority, "NONE")
+        changed = dict(envelope["bootstrap_request"])
+        changed["asset_universe_scope_identity"] = identity("changed-scope")
+        with self.assertRaisesRegex(ValueError, "scope, budget, or provenance|request_id"):
+            bootstrap.OwnerInitialBootstrapRequestV1.model_validate(changed)
+        self.assertEqual(p12_origin, "OWNER_INITIAL_BOOTSTRAP")
+
+    def test_bootstrap_request_rejects_any_fabricated_p4_payload(self):
+        envelope, _ = self.bootstrap_fixture()
+        envelope["p4_decision"] = {"evidence_classification": "REAL_EXTERNAL_EVIDENCE"}
+        with self.assertRaisesRegex(ValueError, "must not contain P4"):
+            bootstrap.validate_owner_bootstrap_envelope(envelope)
+
+    def test_bootstrap_p12_claim_records_origin_and_replay_does_not_dispatch(self):
+        envelope, request = self.bootstrap_fixture()
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            with patch.object(oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", state), patch.object(
+                bootstrap, "verify_current_frozen_inputs"
+            ):
+                result, code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
+                    owner_confirmed=True,
+                    target=lambda _: calls.append("dispatch") or {
+                        "target_return_code": 0, "key_blocked_after_attempt": True,
+                        "worker_identity_verified": True,
+                    },
+                )
+                replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
+                )
+            self.assertEqual(code, 0)
+            self.assertEqual(result["dispatch_count_added"], 1)
+            self.assertEqual(replay[1], 0)
+            self.assertEqual(replay[0]["dispatch_count_added"], 0)
+            for marker in (oneshot.p12._claim_file(state, request.request_id),
+                           oneshot.p12._dispatch_file(state, request.request_id),
+                           oneshot.p12._status_file(state, request.request_id)):
+                self.assertEqual(oneshot.p12._read_json_nofollow(marker)["request_origin"], "OWNER_INITIAL_BOOTSTRAP")
+        self.assertEqual(calls, ["dispatch"])
+
+    def test_legacy_p4_owner_success_and_failure_replay_without_redispatch(self):
+        for return_code, expected_code, expected_state in (
+            (0, 0, "SUCCEEDED_OWNER_ONESHOT"),
+            (1, oneshot.p12._EXIT_FAILED, "FAILED_OWNER_ONESHOT"),
+        ):
+            with self.subTest(return_code=return_code):
+                envelope, request, policy = owner_fixture()
+                calls = []
+                with tempfile.TemporaryDirectory() as tmp:
+                    state = Path(tmp)
+                    first, first_code = oneshot.p12.process_owner_oneshot(
+                        envelope, state_dir=state, policy_id=policy.policy_id, owner_confirmed=True,
+                        target=lambda _: calls.append("dispatch") or {
+                            "target_return_code": return_code, "key_blocked_after_attempt": True,
+                        },
+                    )
+                    self.assertEqual(first_code, expected_code)
+                    self.assertEqual(first["classification"], expected_state)
+                    for marker in (
+                        oneshot.p12._claim_file(state, request.request_id),
+                        oneshot.p12._dispatch_file(state, request.request_id),
+                        oneshot.p12._status_file(state, request.request_id),
+                    ):
+                        record = json.loads(marker.read_text())
+                        record.pop("request_origin")
+                        marker.write_text(json.dumps(record))
+                    replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                        envelope, state_dir=state, policy_id=policy.policy_id,
+                    )
+                self.assertEqual(replay[1], expected_code)
+                self.assertEqual(replay[0]["classification"], expected_state)
+                self.assertEqual(replay[0]["dispatch_count_added"], 0)
+                self.assertEqual(calls, ["dispatch"])
+
+    def test_mixed_owner_origin_markers_fail_closed(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            calls = []
+            oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id, owner_confirmed=True,
+                target=lambda _: calls.append("dispatch") or {
+                    "target_return_code": 0, "key_blocked_after_attempt": True,
+                },
+            )
+            claim_path = oneshot.p12._claim_file(state, request.request_id)
+            claim = json.loads(claim_path.read_text())
+            claim.pop("request_origin")
+            claim_path.write_text(json.dumps(claim))
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertNotEqual(replay[1], 0)
+        self.assertIn("IDENTITY_COLLISION", replay[0]["classification"])
+        self.assertEqual(calls, ["dispatch"])
+
+    def test_bootstrap_legacy_origin_is_never_accepted(self):
+        envelope, request = self.bootstrap_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            with patch.object(oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", state), patch.object(
+                bootstrap, "verify_current_frozen_inputs"
+            ):
+                oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
+                    owner_confirmed=True,
+                    target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+                )
+                for marker in (
+                    oneshot.p12._claim_file(state, request.request_id),
+                    oneshot.p12._dispatch_file(state, request.request_id),
+                    oneshot.p12._status_file(state, request.request_id),
+                ):
+                    record = json.loads(marker.read_text())
+                    record.pop("request_origin")
+                    marker.write_text(json.dumps(record))
+                replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
+                )
+        self.assertNotEqual(replay[1], 0)
+        self.assertIn("IDENTITY_COLLISION", replay[0]["classification"])
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_interrupted_bootstrap_claim_blocks_restart_without_second_dispatch(self):
+        envelope, request = self.bootstrap_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            with patch.object(oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", state), patch.object(
+                bootstrap, "verify_current_frozen_inputs"
+            ):
+                state.mkdir()
+                oneshot.p12._durable_json_create(
+                    oneshot.p12._claim_file(state, request.request_id),
+                    {"request_id": request.request_id, "request_origin": "OWNER_INITIAL_BOOTSTRAP", "state": "CLAIMED_OWNER_ONESHOT"},
+                )
+                replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"),
+                )
+                restarted, code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("approved-bootstrap-policy"), owner_confirmed=True,
+                    target=lambda _: self.fail("interrupted bootstrap must never be retried"),
+                )
+        self.assertNotEqual(replay[1], 0)
+        self.assertNotEqual(code, 0)
+        self.assertIn("BLOCKED_OWNER_ONESHOT", replay[0]["classification"])
+        self.assertIn("BLOCKED_OWNER_ONESHOT", restarted["classification"])
+
+    def test_bootstrap_cannot_use_arbitrary_state_or_allocate_second_experiment(self):
+        envelope, _ = self.bootstrap_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            canonical = Path(tmp) / "canonical"
+            arbitrary = Path(tmp) / "alternate"
+            with patch.object(oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", canonical), patch.object(
+                bootstrap, "verify_current_frozen_inputs"
+            ):
+                denied, code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=arbitrary, policy_id=identity("policy-a"), owner_confirmed=True,
+                    target=lambda _: self.fail("noncanonical bootstrap must not dispatch"),
+                )
+                self.assertNotEqual(code, 0)
+                self.assertEqual(denied["classification"], "DENIED_OWNER_BOOTSTRAP_REQUEST_IDENTITY")
+                accepted, code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=canonical, policy_id=identity("policy-a"), owner_confirmed=True,
+                    target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+                )
+                other, _ = self.bootstrap_fixture_with_suffix("other")
+                denied_again, code_again = oneshot.p12.process_owner_oneshot(
+                    other, state_dir=canonical, policy_id=identity("policy-b"), owner_confirmed=True,
+                    target=lambda _: self.fail("second bootstrap allocation must not dispatch"),
+                )
+        self.assertEqual(code, 0)
+        self.assertNotEqual(code_again, 0)
+        self.assertEqual(denied_again["classification"], "BLOCKED_OWNER_BOOTSTRAP_ALREADY_ALLOCATED")
+
+    def bootstrap_fixture_with_suffix(self, suffix: str):
+        inputs = tuple(
+            bootstrap.InputIdentityV1(name=name, sha256=identity(name + suffix))
+            for name in ("p2_pit_inventory", "p3_materialization_report", "rdagent_qlib_pinned_image")
+        )
+        request = bootstrap.build_owner_bootstrap_request(inputs)
+        return {"bootstrap_request": request.model_dump(mode="json")}, request
+
+    def test_no_tty_confirmation_creates_no_bootstrap_policy_or_claim(self):
+        envelope, request = self.bootstrap_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            request_path = Path(tmp) / "request.json"
+            request_path.write_text(json.dumps(envelope))
+            with patch.object(oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", state), patch.object(
+                bootstrap, "verify_current_frozen_inputs"
+            ), patch.object(oneshot, "_preflight", return_value={"classification": "PASS"}), patch.object(
+                oneshot, "_new_provider_secret_path", return_value=Path(tmp) / "provider.secret"
+            ), patch.object(oneshot.sys.stdin, "isatty", return_value=False):
+                result, code = oneshot.run_one_shot(
+                    request_path, None, state, Path(tmp) / "runtime", Path(tmp) / "compose.env",
+                    Path(tmp) / "provider.secret",
+                )
+            self.assertNotEqual(code, 0)
+            self.assertEqual(result["classification"], "DENIED_INTERACTIVE_OWNER_TTY_REQUIRED")
+            self.assertFalse(state.exists())
+            self.assertFalse((state / oneshot.BOOTSTRAP_POLICY_NAME).exists())
+            self.assertFalse((state / "owner-initial-bootstrap-allocation.json").exists())
+
+    def test_bootstrap_policy_materializes_only_after_exact_request_confirmation(self):
+        _, request = self.bootstrap_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            state.mkdir()
+            with patch.object(oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", state):
+                with self.assertRaisesRegex(ValueError, "CONFIRMATION_MISMATCH"):
+                    oneshot._materialize_bootstrap_policy_after_confirmation(
+                        request, state_dir=state, confirmation="yes",
+                    )
+                self.assertFalse((state / oneshot.BOOTSTRAP_POLICY_NAME).exists())
+                phrase = f"AUTHORIZE INITIAL $5 RUN {request.request_id}"
+                policy = oneshot._materialize_bootstrap_policy_after_confirmation(
+                    request, state_dir=state, confirmation=phrase,
+                    now=datetime(2026, 10, 18, tzinfo=timezone.utc),
+                )
+            self.assertEqual(policy.evidence_classification, "HUMAN_APPROVED")
+            self.assertEqual(policy.research_budget_identity, request.research_budget_identity)
+            self.assertEqual(policy.maximum_period_spend_usd, Decimal("5.00"))
+            self.assertEqual(policy.expires_at - policy.effective_at, timedelta(hours=24))
+
+    def test_p4_terminal_claim_cannot_replay_as_bootstrap_origin(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp)
+            oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id, owner_confirmed=True,
+                target=lambda _: {"target_return_code": 0, "key_blocked_after_attempt": True},
+            )
+            claim_path = oneshot.p12._claim_file(state, request.request_id)
+            claim = json.loads(claim_path.read_text())
+            claim["request_origin"] = "OWNER_INITIAL_BOOTSTRAP"
+            claim_path.write_text(json.dumps(claim))
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertNotEqual(replay[1], 0)
+        self.assertIn("IDENTITY_COLLISION", replay[0]["classification"])
+
     def test_real_p4_request_and_exact_expiring_policy_validate(self):
         envelope, request, policy = owner_fixture()
         with tempfile.TemporaryDirectory() as tmp:

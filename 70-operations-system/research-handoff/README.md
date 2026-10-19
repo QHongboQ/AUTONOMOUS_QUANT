@@ -361,10 +361,11 @@ verification token or paid-provider virtual key is created by staging.
 ### Local owner one-shot entrypoint
 
 `owner_oneshot_research.py` is the explicit local control-side entrypoint. Its
-`preflight` command validates the P4 decision/request and policy, checks the
-pinned image and frozen read-only inputs, validates the merged Compose config,
-and probes the RD-Agent token bound with networking disabled. It does not
-start services, create a LiteLLM user/key, or dispatch research. The `run`
+`preflight` command validates either a P4 decision/request plus policy or a
+current owner-bootstrap request, checks the pinned image and frozen read-only
+inputs, validates the merged Compose config, and probes the RD-Agent token
+bound with networking disabled. It does not start services, create a LiteLLM
+user/key, or dispatch research. The `run`
 command requires an existing P12 state directory, an owner-managed new
 provider secret below `D:/AQ/OPERATIONS/P12`, the protected persistent Compose
 env file, and an interactive WSL terminal. It asks the owner to type the exact
@@ -387,25 +388,53 @@ python owner_oneshot_research.py run \
   --new-provider-secret-file /mnt/d/AQ/OPERATIONS/P12/owner-one-shot-secrets/deepseek-flash
 ```
 
-The local terminal confirmation is the only real-run activation in this path;
-it is not an independently signed/cloud-verifiable approval. The command
-binds the canonical request and policy to the existing P12 claim/status files
-and one deterministic native LiteLLM user. It never resets the user budget,
-will not issue a replacement key for a user with key history or spend, blocks
-the scoped key after a completed attempt, and fails closed on an ambiguous
-dispatch. RD-Agent receives only the scoped key and the Proxy URL. The real
-provider key stays on the staging Proxy side. The P2 gate is not invoked or
-modified, and no Candidate, certification, P4 lifecycle result, or trading
-authority is implied by successful execution.
+The existing `P4_LIFECYCLE` request path remains as described. A first
+experiment may instead use one explicit `OWNER_INITIAL_BOOTSTRAP` request;
+this contract asserts no NO_CHAMPION state, P4 decision, or P2 evidence. To
+prepare a review-only package, the control verifies the live frozen P3 factor
+materialization report and factor files, P2 source manifest and PIT inventory,
+Qlib provider tree/calendar/membership, separate runtime calendars, pinned
+image identity, and all five frozen US/PIT templates. The request binds these
+SHA256 identities, the `p2_pit` scope, research-family identity, deterministic
+budget identity, and `trading_authority: NONE` using RFC 8785 + SHA256.
+
+```sh
+python owner_oneshot_research.py prepare-bootstrap-review \
+  --output-dir /mnt/d/AQ/OPERATIONS/P12/owner-bootstrap-review/review-unique-id
+
+python owner_oneshot_research.py preflight \
+  --request /mnt/d/AQ/OPERATIONS/P12/owner-bootstrap-review/review-unique-id/owner-initial-bootstrap-request.json
+```
+
+Choose an unused leaf directory under the isolated `owner-bootstrap-review`
+root for each review package; existing packages are never overwritten.
+
+The package is explicitly `REVIEW_ONLY_NOT_APPROVED`; it contains no policy,
+owner signature, or paid key. A future local interactive `run` for that request
+requires the exact phrase `AUTHORIZE INITIAL $5 RUN <request_id>`. Only after
+that confirmation does P12 persist the 24-hour, one-run policy and proceed to
+the existing P12 claim and Docker target. Bootstrap is pinned to the single
+canonical state directory `/mnt/d/AQ/OPERATIONS/P12/owner-one-shot-state` and
+an immutable one-allocation marker, so selecting another `--state-dir` cannot
+replenish initial authority. Claim, dispatch, and terminal records include
+`request_origin`; cross-origin replay is rejected. This confirmation is local
+terminal authority, not an independently signed/cloud-verifiable approval.
+
+For either origin, P12 binds the request and policy to the same deterministic
+native LiteLLM experiment user, never resets its budget, will not issue a
+replacement key for a user with key history or spend, blocks the scoped key
+after a completed attempt, and fails closed on ambiguous dispatch. RD-Agent
+receives only the scoped key and Proxy URL. The real provider key stays on the
+staging Proxy side. P2 is not invoked or modified; no Candidate, certification,
+P4 lifecycle decision, or trading authority is implied by successful research.
 
 No paid key, provider request, or real `fin_quant` run was performed while
-adding this path. A first real run still requires the owner to supply a
-genuine current P4 `REAL_EXTERNAL_EVIDENCE` decision and matching request, a
-human-reviewed active P12 policy with the exact limits above, a newly
-owner-provisioned DeepSeek credential, the protected staging Proxy settings
-and reachable existing Ollama endpoint, and the existing durable P12 state
-directory. None of those approval or credential inputs is created by this
-change.
+adding this path. A future run requires the owner to review the package and
+enter its exact request-specific phrase in an interactive local terminal, a
+newly owner-provisioned DeepSeek credential, the protected staging Proxy
+settings, reachable existing Ollama endpoint, and the canonical durable P12
+state directory. The review command does not create a P4 lifecycle decision,
+owner approval, policy, key, or dispatch.
 
 Staging startup acceptance on 2026-10-18 used the pinned LiteLLM image and a
 dummy provider secret. The separate `litellm_deepseek_staging` database already

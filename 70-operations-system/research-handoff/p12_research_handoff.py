@@ -1,8 +1,9 @@
-"""Test-only P12 handoff: P4 synthetic request -> durable claim -> opt-in target.
+"""P12 durable handoff: TEST_ONLY P4 fixtures or explicit owner one-shot input.
 
-Real dispatch is deliberately not implemented. The default target is a local
-inert executable. Explicit TEST_ONLY targets can run either a backend smoke
-or one bounded step of the pinned official RD-Agent fin_quant workflow.
+The default target is inert and ordinary synthetic targets remain TEST_ONLY.
+The private owner one-shot adapter accepts genuine P4 lifecycle evidence or
+the bounded OWNER_INITIAL_BOOTSTRAP contract after exact interactive owner
+confirmation. P12 owns the sole claim/replay/terminal lifecycle.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ sys.path.insert(0, str(P4_POLICY_DIR))
 sys.path.insert(0, str(Path(__file__).with_name("docker-rdagent-smoke")))
 
 import aq_p4_policy as p4  # noqa: E402
+import owner_bootstrap_request as bootstrap  # noqa: E402
 import standing_policy as policy_gate  # noqa: E402
 from native_experiment_budget import experiment_user_id  # noqa: E402
 
@@ -43,6 +45,24 @@ TARGET_INERT = "INERT_LOCAL_EXECUTABLE"
 TARGET_DOCKER_RDAGENT = "DOCKER_RDAGENT_PROXY_MOCK_SMOKE"
 TARGET_DOCKER_FINQUANT = "DOCKER_RDAGENT_FINQUANT_TEST_ONLY"
 TARGET_OWNER_ONESHOT = "DOCKER_RDAGENT_FINQUANT_OWNER_ONESHOT"
+P4_LIFECYCLE_ORIGIN = "P4_LIFECYCLE"
+OWNER_BOOTSTRAP_ORIGIN = "OWNER_INITIAL_BOOTSTRAP"
+
+
+def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) -> bool:
+    """Accept pre-origin P4 records only when every durable marker is legacy.
+
+    Bootstrap authority was introduced with an explicit origin and must never
+    inherit the legacy exception. Once any marker carries an origin, all
+    markers must carry the same expected value.
+    """
+    present = tuple("request_origin" in record for record in records)
+    if not any(present):
+        return expected == P4_LIFECYCLE_ORIGIN
+    return all(present) and all(record.get("request_origin") == expected for record in records)
+# Real bootstrap admission is pinned to this single durable control namespace.
+# Tests replace this constant with an isolated temporary directory.
+OWNER_BOOTSTRAP_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-one-shot-state")
 _DOCKER_TARGETS = {TARGET_DOCKER_RDAGENT, TARGET_DOCKER_FINQUANT}
 _TARGETS = {TARGET_INERT, *_DOCKER_TARGETS}
 
@@ -321,6 +341,11 @@ def _replay_result(
             "reason": type(exc).__name__,
             "dispatch_count_added": 0,
         }
+    if not _origin_records_match((claim, dispatch_marker, status), P4_LIFECYCLE_ORIGIN):
+        return {
+            "classification": "BLOCKED_REQUEST_ID_COLLISION_OR_CONTENT_CHANGE",
+            "dispatch_count_added": 0,
+        }
     if (
         status.get("request_id") != request_id
         or status.get("request_digest") != request_digest
@@ -512,6 +537,7 @@ def process_synthetic_request(
     status_path = _status_file(state_dir, request.request_id)
     claim = {
         "state": "CLAIMED",
+        "request_origin": P4_LIFECYCLE_ORIGIN,
         "request_id": request.request_id,
         "request_digest": request_digest,
         "research_budget_identity": research_budget_identity,
@@ -660,6 +686,7 @@ def _owner_oneshot_replay(
     budget_identity: str,
     user_id: str,
     policy_id: str,
+    request_origin: str,
 ) -> tuple[dict[str, Any], int]:
     try:
         claim = _read_json_nofollow(_claim_file(state_dir, request_id))
@@ -678,9 +705,13 @@ def _owner_oneshot_replay(
         "target_identity": TARGET_OWNER_ONESHOT,
         "dispatch_mode": "OWNER_ONESHOT",
     }
-    if not _valid_attempt_id(attempt) or any(
-        any(record.get(key) != value for key, value in expected.items())
-        for record in (claim, dispatch, terminal)
+    if (
+        not _valid_attempt_id(attempt)
+        or not _origin_records_match((claim, dispatch, terminal), request_origin)
+        or any(
+            any(record.get(key) != value for key, value in expected.items())
+            for record in (claim, dispatch, terminal)
+        )
     ):
         return ({"classification": "BLOCKED_OWNER_ONESHOT_IDENTITY_COLLISION", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     if (
@@ -714,31 +745,48 @@ def process_owner_oneshot(
     """P12-owned claim/replay/terminal lifecycle for the private local-owner adapter.
 
     This is deliberately not exposed as an ordinary synthetic CLI target.
-    The adapter supplies validated real P4 evidence and an interactive owner
-    confirmation; P12 remains the single durable request lifecycle owner.
+    The adapter supplies either validated real P4 evidence or the explicit
+    P12 bootstrap contract, plus interactive owner confirmation. P12 remains
+    the single durable request lifecycle owner.
     """
     if owner_confirmed is not True:
         return ({"classification": "DENIED_OWNER_ACTIVATION_REQUIRED", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     try:
-        if set(request_envelope) != {"p4_decision", "research_request"}:
-            raise ValueError("invalid P4 envelope")
-        decision = p4.LifecycleDecisionEvidenceV1.model_validate(request_envelope["p4_decision"])
-        request = p4.ResearchRequestV1.model_validate(request_envelope["research_request"])
-        if (
-            decision.evidence_classification != "REAL_EXTERNAL_EVIDENCE"
-            or decision.decision_kind != p4.DecisionKind.CHALLENGER_NEEDED
-            or decision.reason.value != request.reason.value
-            or decision.source_evidence_identities != request.source_evidence_identities
-        ):
-            raise ValueError("P4 evidence mismatch")
-        request_id = request.request_id
+        if set(request_envelope) == {"p4_decision", "research_request"}:
+            decision = p4.LifecycleDecisionEvidenceV1.model_validate(request_envelope["p4_decision"])
+            request = p4.ResearchRequestV1.model_validate(request_envelope["research_request"])
+            if (
+                decision.evidence_classification != "REAL_EXTERNAL_EVIDENCE"
+                or decision.decision_kind != p4.DecisionKind.CHALLENGER_NEEDED
+                or decision.reason.value != request.reason.value
+                or decision.source_evidence_identities != request.source_evidence_identities
+            ):
+                raise ValueError("P4 evidence mismatch")
+            request_origin = P4_LIFECYCLE_ORIGIN
+            request_id = request.request_id
+            budget_identity = request.research_budget_identity
+        elif set(request_envelope) == {"bootstrap_request"}:
+            request = bootstrap.validate_owner_bootstrap_envelope(request_envelope)
+            bootstrap.verify_current_frozen_inputs(request, REPO_ROOT)
+            request_origin = OWNER_BOOTSTRAP_ORIGIN
+            request_id = request.request_id
+            budget_identity = request.research_budget_identity
+            canonical_state = OWNER_BOOTSTRAP_STATE_DIR.resolve()
+            if state_dir.resolve() != canonical_state:
+                raise ValueError("bootstrap requires the canonical P12 owner-control state directory")
+        else:
+            raise ValueError("unsupported owner request origin")
         request_digest = _canonical_digest(request_envelope)
-        budget_identity = request.research_budget_identity
         user_id = experiment_user_id(budget_identity)
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", policy_id):
             raise ValueError("invalid policy identity")
     except Exception:
-        return ({"classification": "DENIED_OWNER_ONESHOT_P4_IDENTITY", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        classification = (
+            "DENIED_OWNER_BOOTSTRAP_REQUEST_IDENTITY"
+            if isinstance(request_envelope, dict) and set(request_envelope) == {"bootstrap_request"}
+            else "DENIED_OWNER_ONESHOT_P4_IDENTITY"
+        )
+        return ({"classification": classification, "dispatch_count_added": 0}, _EXIT_BLOCKED)
 
     state_dir.mkdir(parents=True, exist_ok=True)
     lock_path = state_dir / "owner-oneshot-active.lock"
@@ -752,6 +800,22 @@ def process_owner_oneshot(
     _fsync_directory(state_dir)
     keep_lock = False
     try:
+        if request_origin == OWNER_BOOTSTRAP_ORIGIN:
+            allocation_path = state_dir / "owner-initial-bootstrap-allocation.json"
+            allocation = {
+                "request_origin": request_origin,
+                "request_id": request_id,
+                "request_digest": request_digest,
+                "research_budget_identity": budget_identity,
+                "native_experiment_user_id": user_id,
+                "standing_policy_id": policy_id,
+            }
+            try:
+                _durable_json_create(allocation_path, allocation)
+            except FileExistsError:
+                if _read_json_nofollow(allocation_path) != allocation:
+                    return ({"classification": "BLOCKED_OWNER_BOOTSTRAP_ALREADY_ALLOCATED", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+
         identity_path = state_dir / ("experiment-" + budget_identity.removeprefix("sha256:") + ".json")
         identity = {
             "research_budget_identity": budget_identity,
@@ -759,6 +823,8 @@ def process_owner_oneshot(
             "standing_policy_id": policy_id,
             "native_experiment_user_id": user_id,
         }
+        if request_origin == OWNER_BOOTSTRAP_ORIGIN:
+            identity["request_origin"] = request_origin
         if identity_path.exists():
             if _read_json_nofollow(identity_path) != identity:
                 return ({"classification": "BLOCKED_OWNER_ONESHOT_EXPERIMENT_REBOUND", "dispatch_count_added": 0}, _EXIT_BLOCKED)
@@ -774,6 +840,7 @@ def process_owner_oneshot(
             "attempt_id": str(uuid.uuid4()),
             "standing_policy_id": policy_id,
             "dispatch_mode": "OWNER_ONESHOT",
+            "request_origin": request_origin,
             "real_dispatch_permission": "LOCAL_INTERACTIVE_OWNER_CONFIRMED",
             "policy_admission": "LOCAL_OWNER_ONESHOT_POLICY_VERIFIED",
             "target_identity": TARGET_OWNER_ONESHOT,
@@ -781,7 +848,7 @@ def process_owner_oneshot(
         try:
             _durable_json_create(_claim_file(state_dir, request_id), claim)
         except FileExistsError:
-            return _owner_oneshot_replay(state_dir, request_id, request_digest, budget_identity, user_id, policy_id)
+            return _owner_oneshot_replay(state_dir, request_id, request_digest, budget_identity, user_id, policy_id, request_origin)
 
         dispatch = {**claim, "state": "DISPATCHING_OWNER_ONESHOT"}
         _durable_json_create(_dispatch_file(state_dir, request_id), dispatch)
@@ -821,9 +888,17 @@ def owner_oneshot_replay_if_claimed(
 ) -> tuple[dict[str, Any], int] | None:
     """Return P12's verified owner-mode replay result without prompting or dispatching."""
     try:
-        request = p4.ResearchRequestV1.model_validate(request_envelope["research_request"])
-        if set(request_envelope) != {"p4_decision", "research_request"}:
-            return ({"classification": "DENIED_OWNER_ONESHOT_P4_IDENTITY", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        if set(request_envelope) == {"p4_decision", "research_request"}:
+            request = p4.ResearchRequestV1.model_validate(request_envelope["research_request"])
+            request_origin = P4_LIFECYCLE_ORIGIN
+        elif set(request_envelope) == {"bootstrap_request"}:
+            request = bootstrap.validate_owner_bootstrap_envelope(request_envelope)
+            bootstrap.verify_current_frozen_inputs(request, REPO_ROOT)
+            request_origin = OWNER_BOOTSTRAP_ORIGIN
+            if state_dir.resolve() != OWNER_BOOTSTRAP_STATE_DIR.resolve():
+                return ({"classification": "BLOCKED_OWNER_BOOTSTRAP_NONCANONICAL_STATE", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        else:
+            return ({"classification": "DENIED_OWNER_ONESHOT_REQUEST_ORIGIN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
         request_id = request.request_id
         claim_path = _claim_file(state_dir, request_id)
         if not claim_path.exists():
@@ -835,6 +910,7 @@ def owner_oneshot_replay_if_claimed(
             request.research_budget_identity,
             experiment_user_id(request.research_budget_identity),
             policy_id,
+            request_origin,
         )
     except Exception:
         return ({"classification": "BLOCKED_OWNER_ONESHOT_INCOMPLETE_OR_CORRUPT", "dispatch_count_added": 0}, _EXIT_BLOCKED)

@@ -23,6 +23,7 @@ sys.path.insert(0, str(HANDOFF))
 sys.path.insert(0, str(SMOKE))
 
 import aq_p4_policy as p4  # noqa: E402
+import owner_bootstrap_request as bootstrap  # noqa: E402
 import standing_policy  # noqa: E402
 import p12_research_handoff as p12  # noqa: E402
 from docker_rdagent_target import (  # noqa: E402
@@ -40,26 +41,35 @@ OWNER_MODEL_ROUTES = frozenset({
     ("ollama", "ollama/qwen3-embedding:0.6b", "LOCAL"),
 })
 EXIT_BLOCKED = 3
+BOOTSTRAP_POLICY_NAME = "owner-initial-bootstrap-policy.json"
+BOOTSTRAP_REVIEW_ROOT = Path("/mnt/d/AQ/OPERATIONS/P12/owner-bootstrap-review")
 
 
 def _json(path: Path) -> dict[str, Any]:
     return p12._read_json_nofollow(path)
 
 
-def _validate_inputs(request_path: Path, policy_path: Path, now: datetime | None = None):
-    envelope = _json(request_path)
-    if set(envelope) != {"p4_decision", "research_request"}:
-        raise ValueError("expected a P4 decision and ResearchRequestV1")
-    decision = p4.LifecycleDecisionEvidenceV1.model_validate(envelope["p4_decision"])
-    request = p4.ResearchRequestV1.model_validate(envelope["research_request"])
-    if (
-        decision.decision_kind != p4.DecisionKind.CHALLENGER_NEEDED
-        or decision.evidence_classification != "REAL_EXTERNAL_EVIDENCE"
-        or decision.reason.value != request.reason.value
-        or decision.source_evidence_identities != request.source_evidence_identities
-    ):
-        raise ValueError("P4 decision is synthetic or does not match ResearchRequestV1")
-    policy = standing_policy.P12StandingResearchPolicyV1.model_validate(_json(policy_path))
+def _parse_request_envelope(envelope: dict[str, Any]):
+    if set(envelope) == {"p4_decision", "research_request"}:
+        decision = p4.LifecycleDecisionEvidenceV1.model_validate(envelope["p4_decision"])
+        request = p4.ResearchRequestV1.model_validate(envelope["research_request"])
+        if (
+            decision.decision_kind != p4.DecisionKind.CHALLENGER_NEEDED
+            or decision.evidence_classification != "REAL_EXTERNAL_EVIDENCE"
+            or decision.reason.value != request.reason.value
+            or decision.source_evidence_identities != request.source_evidence_identities
+        ):
+            raise ValueError("P4 decision is synthetic or does not match ResearchRequestV1")
+        return p12.P4_LIFECYCLE_ORIGIN, decision, request
+    if set(envelope) == {"bootstrap_request"}:
+        request = bootstrap.validate_owner_bootstrap_envelope(envelope)
+        bootstrap.verify_current_frozen_inputs(request, REPO_ROOT)
+        return p12.OWNER_BOOTSTRAP_ORIGIN, None, request
+    raise ValueError("request must be an exact P4 lifecycle or owner bootstrap envelope")
+
+
+def _validate_policy_object(policy: Any, request: Any, now: datetime | None = None):
+    policy = standing_policy.P12StandingResearchPolicyV1.model_validate(policy.model_dump(mode="json") if hasattr(policy, "model_dump") else policy)
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     effective, expires = policy.effective_at.astimezone(timezone.utc), policy.expires_at.astimezone(timezone.utc)
     routes = frozenset((route.provider, route.model, route.billing_class) for route in policy.allowed_llm_routes)
@@ -80,7 +90,113 @@ def _validate_inputs(request_path: Path, policy_path: Path, now: datetime | None
         or policy.allowed_research_families != tuple(request.allowed_research_families)
     ):
         raise ValueError("P12 owner policy does not match the bounded one-shot scope")
+    return policy
+
+
+def _validate_inputs(request_path: Path, policy_path: Path | None, now: datetime | None = None):
+    envelope = _json(request_path)
+    origin, decision, request = _parse_request_envelope(envelope)
+    if policy_path is None:
+        if origin != p12.OWNER_BOOTSTRAP_ORIGIN:
+            raise ValueError("P4 lifecycle input requires its separately approved policy")
+        return envelope, decision, request, None
+    policy = _validate_policy_object(_json(policy_path), request, now)
     return envelope, decision, request, policy
+
+
+def _prepare_bootstrap_review_package(output_dir: Path) -> dict[str, Any]:
+    output_resolved = output_dir.resolve()
+    if not output_resolved.is_relative_to(BOOTSTRAP_REVIEW_ROOT.resolve()) or output_resolved == BOOTSTRAP_REVIEW_ROOT.resolve():
+        raise ValueError("bootstrap review package must be stored in the isolated P12 review directory")
+    inputs = bootstrap.collect_frozen_us_pit_inputs(REPO_ROOT)
+    request = bootstrap.build_owner_bootstrap_request(inputs)
+    output_dir.mkdir(parents=True, exist_ok=False)
+    request_path = output_dir / "owner-initial-bootstrap-request.json"
+    review_path = output_dir / "owner-review.json"
+    envelope = {"bootstrap_request": request.model_dump(mode="json")}
+    review = {
+        "package_version": "P12OwnerBootstrapReviewV1",
+        "approval_status": "REVIEW_ONLY_NOT_APPROVED",
+        "human_approved": False,
+        "request_id": request.request_id,
+        "research_budget_identity": request.research_budget_identity,
+        "request_origin": request.request_origin,
+        "scope": request.scope,
+        "provider_market": request.provider_market,
+        "data_cutoff": request.data_cutoff,
+        "input_manifest_identities": [item.model_dump(mode="json") for item in request.input_manifest_identities],
+        "research_family": "RD_AGENT",
+        "native_command_after_explicit_owner_activation": "rdagent fin_quant --loop-n 1",
+        "research_budget_usd_total_nonresetting": request.maximum_total_spend_usd,
+        "budget_duration": request.budget_duration,
+        "permitted_routes": list(request.permitted_llm_routes),
+        "authorization_lifetime_hours": request.authorization_lifetime_hours,
+        "maximum_research_runs": request.maximum_research_runs,
+        "maximum_concurrent_runs": request.maximum_concurrent_runs,
+        "p2_certification_authority": "NONE",
+        "trading_authority": "NONE",
+        "p4_lifecycle_evidence": "NOT_ASSERTED_OR_REQUIRED_FOR_INITIAL_BOOTSTRAP",
+        "policy_materialized": False,
+        "paid_key_created": False,
+        "real_dispatch_permission": "DENIED",
+    }
+    p12._durable_json_create(request_path, envelope)
+    p12._durable_json_create(review_path, review)
+    return {"classification": review["approval_status"], "request_id": request.request_id,
+            "request_path": str(request_path), "review_path": str(review_path),
+            "paid_key_created": False, "real_dispatch_permission": "DENIED"}
+
+
+def _materialize_bootstrap_policy_after_confirmation(
+    request: Any, *, state_dir: Path, confirmation: str, now: datetime | None = None,
+) -> standing_policy.P12StandingResearchPolicyV1:
+    expected = f"AUTHORIZE INITIAL $5 RUN {request.request_id}"
+    if confirmation != expected:
+        raise ValueError("DENIED_OWNER_BOOTSTRAP_CONFIRMATION_MISMATCH")
+    if state_dir.resolve() != p12.OWNER_BOOTSTRAP_STATE_DIR.resolve():
+        raise ValueError("DENIED_OWNER_BOOTSTRAP_NONCANONICAL_STATE")
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    record_id = "sha256:" + hashlib.sha256(rfc8785.dumps({
+        "request_id": request.request_id,
+        "approved_at": current.isoformat(),
+        "confirmation_method": "LOCAL_INTERACTIVE_TTY_EXACT_REQUEST_PHRASE",
+    })).hexdigest()
+    fields: dict[str, Any] = {
+        "contract_version": "P12StandingResearchPolicyV1",
+        "authorization_status": "APPROVED",
+        "evidence_classification": "HUMAN_APPROVED",
+        "approval_source_identity": "sha256:" + hashlib.sha256(b"AQ:P12:LOCAL_OWNER_INTERACTIVE_TTY:V1").hexdigest(),
+        "approval_record_identity": record_id,
+        "effective_at": current.isoformat().replace("+00:00", "Z"),
+        "expires_at": (current + MAX_POLICY_LIFETIME).isoformat().replace("+00:00", "Z"),
+        "revoked_at": None,
+        "allowed_universe_scope_identities": [request.asset_universe_scope_identity],
+        "allowed_request_provenance_identities": [request.request_provenance],
+        "allowed_research_families": ["RD_AGENT"],
+        "allowed_llm_routes": [
+            {"provider": "deepseek", "model": "deepseek/deepseek-flash", "billing_class": "PAID"},
+            {"provider": "ollama", "model": "ollama/qwen3-embedding:0.6b", "billing_class": "LOCAL"},
+        ],
+        "research_budget_identity": request.research_budget_identity,
+        "maximum_period_spend_usd": "5.00",
+        "maximum_run_spend_usd": "5.00",
+        "spending_reset_window_seconds": 86400,
+        "spending_limit_semantics": "TRACKED_SPEND_LIMIT_ONLY",
+        "maximum_concurrent_runs": 1,
+        "maximum_runtime_seconds": 3600,
+        "maximum_memory_mb": 4096,
+        "maximum_storage_bytes": 100000000000,
+    }
+    fields["policy_id"] = standing_policy.policy_identity(fields)
+    policy = standing_policy.P12StandingResearchPolicyV1.model_validate(fields)
+    path = state_dir / BOOTSTRAP_POLICY_NAME
+    try:
+        p12._durable_json_create(path, policy.model_dump(mode="json"))
+    except FileExistsError:
+        existing = standing_policy.P12StandingResearchPolicyV1.model_validate(_json(path))
+        _validate_policy_object(existing, request, current)
+        return existing
+    return policy
 
 
 def _safe_host_environment(extra: dict[str, str] | None = None) -> dict[str, str]:
@@ -178,21 +294,41 @@ def _preflight(env_file: Path, provider_secret_file: Path | None = None) -> dict
     }
 
 
-def run_one_shot(request_path: Path, policy_path: Path, state_dir: Path, runtime_dir: Path, env_file: Path, provider_secret_file: Path) -> tuple[dict[str, Any], int]:
-    envelope, _, request, policy = _validate_inputs(request_path, policy_path)
-    replay = p12.owner_oneshot_replay_if_claimed(envelope, state_dir=state_dir, policy_id=policy.policy_id)
-    if replay is not None:
-        return replay
+def run_one_shot(request_path: Path, policy_path: Path | None, state_dir: Path, runtime_dir: Path, env_file: Path, provider_secret_file: Path) -> tuple[dict[str, Any], int]:
+    envelope = _json(request_path)
+    origin, _, request = _parse_request_envelope(envelope)
+    policy: standing_policy.P12StandingResearchPolicyV1 | None = None
+    if origin == p12.OWNER_BOOTSTRAP_ORIGIN:
+        if state_dir.resolve() != p12.OWNER_BOOTSTRAP_STATE_DIR.resolve():
+            return ({"classification": "DENIED_OWNER_BOOTSTRAP_NONCANONICAL_STATE", "real_dispatch_permission": "DENIED", "dispatch_count_added": 0}, EXIT_BLOCKED)
+        if policy_path is not None:
+            return ({"classification": "DENIED_BOOTSTRAP_POLICY_MUST_BE_MATERIALIZED_AFTER_CONFIRMATION", "real_dispatch_permission": "DENIED", "dispatch_count_added": 0}, EXIT_BLOCKED)
+        persisted_policy = state_dir / BOOTSTRAP_POLICY_NAME
+        if persisted_policy.exists():
+            policy = _validate_policy_object(_json(persisted_policy), request)
+        claim_path = p12._claim_file(state_dir, request.request_id)
+        if claim_path.exists() and policy is None:
+            return ({"classification": "BLOCKED_OWNER_BOOTSTRAP_POLICY_MISSING_AFTER_CLAIM", "dispatch_count_added": 0}, EXIT_BLOCKED)
+    else:
+        envelope, _, request, policy = _validate_inputs(request_path, policy_path)
+    if policy is not None:
+        replay = p12.owner_oneshot_replay_if_claimed(envelope, state_dir=state_dir, policy_id=policy.policy_id)
+        if replay is not None:
+            return replay
     secret = _new_provider_secret_path(provider_secret_file)
     _preflight(env_file, secret)
     if not sys.stdin.isatty():
         return ({"classification": "DENIED_INTERACTIVE_OWNER_TTY_REQUIRED", "real_dispatch_permission": "DENIED", "dispatch_count_added": 0}, EXIT_BLOCKED)
-    phrase = f"RUN $5 ONCE {request.request_id}"
+    phrase = (
+        f"AUTHORIZE INITIAL $5 RUN {request.request_id}"
+        if origin == p12.OWNER_BOOTSTRAP_ORIGIN else f"RUN $5 ONCE {request.request_id}"
+    )
+    expiry = policy.expires_at.isoformat() if policy is not None else "24 hours after this exact confirmation"
     print(
         "Review before confirming: "
-        f"scope={request.asset_universe_scope_identity}; families={','.join(request.allowed_research_families)}; "
+        f"origin={origin}; scope={request.asset_universe_scope_identity}; families={','.join(request.allowed_research_families)}; "
         "models=DeepSeek Flash + local Ollama; total cap=USD 5.00; "
-        f"policy expires={policy.expires_at.isoformat()}; runs=1; concurrency=1; P2/trading authority=none."
+        f"policy expires={expiry}; runs=1; concurrency=1; P2/trading authority=none."
     )
     try:
         response = input(f"To activate exactly one run, type: {phrase}\n> ")
@@ -200,9 +336,19 @@ def run_one_shot(request_path: Path, policy_path: Path, state_dir: Path, runtime
         response = ""
     if response != phrase:
         return ({"classification": "DENIED_OWNER_ACTIVATION_NOT_CONFIRMED", "real_dispatch_permission": "DENIED", "dispatch_count_added": 0}, EXIT_BLOCKED)
-    current, _, current_request, current_policy = _validate_inputs(request_path, policy_path)
-    if current_request.request_id != request.request_id or current_policy.policy_id != policy.policy_id:
+    current_envelope = _json(request_path)
+    current_origin, _, current_request = _parse_request_envelope(current_envelope)
+    if current_request.request_id != request.request_id or current_origin != origin:
         return ({"classification": "BLOCKED_OWNER_ONESHOT_INPUT_CHANGED", "dispatch_count_added": 0}, EXIT_BLOCKED)
+    if origin == p12.OWNER_BOOTSTRAP_ORIGIN:
+        current_policy = _materialize_bootstrap_policy_after_confirmation(
+            current_request, state_dir=state_dir, confirmation=response,
+        )
+        _validate_policy_object(current_policy, current_request)
+    else:
+        current_envelope, _, current_request, current_policy = _validate_inputs(request_path, policy_path)
+        if policy is None or current_policy.policy_id != policy.policy_id:
+            return ({"classification": "BLOCKED_OWNER_ONESHOT_INPUT_CHANGED", "dispatch_count_added": 0}, EXIT_BLOCKED)
     runtime_dir.mkdir(parents=True, exist_ok=True)
     if runtime_dir.resolve() == REPO_ROOT or REPO_ROOT in runtime_dir.resolve().parents:
         return ({"classification": "DENIED_RUNTIME_DIRECTORY_INSIDE_REPOSITORY", "dispatch_count_added": 0}, EXIT_BLOCKED)
@@ -213,14 +359,14 @@ def run_one_shot(request_path: Path, policy_path: Path, state_dir: Path, runtime
             attempt_id=attempt_id,
             runtime_directory=runtime_dir,
             research_budget_identity=request.research_budget_identity,
-            standing_policy_id=policy.policy_id,
+            standing_policy_id=current_policy.policy_id,
             env_file=env_file,
             provider_secret_file=secret,
-            maximum_runtime_seconds=policy.maximum_runtime_seconds,
+            maximum_runtime_seconds=current_policy.maximum_runtime_seconds,
         )
 
     return p12.process_owner_oneshot(
-        current, state_dir=state_dir, policy_id=current_policy.policy_id,
+        current_envelope, state_dir=state_dir, policy_id=current_policy.policy_id,
         owner_confirmed=True, target=target,
     )
 
@@ -228,10 +374,12 @@ def run_one_shot(request_path: Path, policy_path: Path, state_dir: Path, runtime
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+    review_parser = sub.add_parser("prepare-bootstrap-review")
+    review_parser.add_argument("--output-dir", type=Path, required=True)
     for name in ("preflight", "run"):
         command = sub.add_parser(name)
         command.add_argument("--request", type=Path, required=True)
-        command.add_argument("--policy", type=Path, required=True)
+        command.add_argument("--policy", type=Path)
         command.add_argument("--compose-env-file", type=Path, default=Path(PERSISTENT_LITELLM_ENV_FILE))
         if name == "run":
             command.add_argument("--state-dir", type=Path, required=True)
@@ -239,10 +387,17 @@ def main(argv: list[str] | None = None) -> int:
             command.add_argument("--new-provider-secret-file", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
+        if args.command == "prepare-bootstrap-review":
+            result = _prepare_bootstrap_review_package(args.output_dir)
+            print(json.dumps(result, sort_keys=True))
+            return 0
         if args.command == "preflight":
-            _, _, _, policy = _validate_inputs(args.request, args.policy)
+            envelope, _, request, policy = _validate_inputs(args.request, args.policy)
             result = _preflight(args.compose_env_file)
-            result["standing_policy_id"] = policy.policy_id
+            result["request_origin"] = p12.OWNER_BOOTSTRAP_ORIGIN if set(envelope) == {"bootstrap_request"} else p12.P4_LIFECYCLE_ORIGIN
+            result["request_id"] = request.request_id
+            result["standing_policy_id"] = policy.policy_id if policy is not None else None
+            result["owner_review_only"] = policy is None
             print(json.dumps(result, sort_keys=True))
             return 0
         result, code = run_one_shot(args.request, args.policy, args.state_dir, args.runtime_dir, args.compose_env_file, args.new_provider_secret_file)
