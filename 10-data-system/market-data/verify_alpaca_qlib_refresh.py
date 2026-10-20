@@ -8,7 +8,9 @@ import hashlib
 import importlib.metadata
 import json
 import math
+import os
 import pathlib
+import re
 import sys
 from datetime import date, datetime, timezone
 
@@ -21,10 +23,148 @@ CSV_FIELDS = ("date", "symbol", "open", "high", "low", "close", "volume")
 QLIB_FIELDS = ("$open", "$high", "$low", "$close", "$volume")
 QLIB_VALUE_FIELDS = ("open", "high", "low", "close", "volume")
 FIELD_PAIRS = tuple(zip(SOURCE_FIELDS, QLIB_VALUE_FIELDS, strict=True))
+RESEARCH_MAX_DATE = date(2026, 9, 11)
+SEALED_OOS_START = date(2026, 9, 14)
+FORWARD_RAW_ONLY_ROOT = pathlib.Path("/mnt/d/AQ_DATA/FORWARD_RAW_ONLY")
+FORWARD_SYMBOL_PATTERN = re.compile(r"[A-Z][A-Z0-9.-]{0,9}\Z")
 
 
 def _day(value: str) -> date:
     return date.fromisoformat(value[:10])
+
+
+def _assert_research_range(start: str, end: str) -> tuple[date, date]:
+    first, last = date.fromisoformat(start), date.fromisoformat(end)
+    if first.isoformat() != start or last.isoformat() != end or last < first or last > RESEARCH_MAX_DATE:
+        raise ValueError("DATE_RANGE_OUTSIDE_APPROVED_PRESEAL_SCOPE")
+    return first, last
+
+
+def store_forward_raw_only(
+    raw_dir: pathlib.Path,
+    output_id: str,
+    start: str,
+    end: str,
+    symbols: list[str],
+    *,
+    root: pathlib.Path = FORWARD_RAW_ONLY_ROOT,
+) -> dict:
+    """Validate and store post-seal raw bars outside every Qlib provider."""
+    if os.name == "nt":
+        raise ValueError("FORWARD_RAW_ONLY_REQUIRES_WSL_PATH")
+    first, last = date.fromisoformat(start), date.fromisoformat(end)
+    if first.isoformat() != start or last.isoformat() != end:
+        raise ValueError("FORWARD_RAW_DATE_FORMAT_MUST_BE_YYYY_MM_DD")
+    if first < SEALED_OOS_START or last < first:
+        raise ValueError("FORWARD_RAW_RANGE_MUST_START_AT_OR_AFTER_SEALED_OOS")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", output_id) or output_id in {".", ".."}:
+        raise ValueError("FORWARD_RAW_OUTPUT_ID_INVALID")
+    if not symbols or len(symbols) != len(set(symbols)) or any(not FORWARD_SYMBOL_PATTERN.fullmatch(item) for item in symbols):
+        raise ValueError("FORWARD_RAW_SYMBOL_SCOPE_INVALID")
+
+    # Validate all sources before creating the output directory. Keep original
+    # bytes unchanged; this path deliberately does not build CSV or Qlib bins.
+    validated: list[tuple[str, bytes, int, str, str]] = []
+    for symbol in symbols:
+        source = raw_dir / f"{symbol}.json"
+        raw_bytes = source.read_bytes()
+        payload = json.loads(raw_bytes)
+        if not isinstance(payload, dict) or not isinstance(payload.get("bars"), list) or not payload["bars"]:
+            raise ValueError(f"FORWARD_RAW_BARS_INVALID:{symbol}")
+        if payload.get("next_page_token"):
+            raise ValueError(f"FORWARD_RAW_PAGINATION_INCOMPLETE:{symbol}")
+
+        seen: set[date] = set()
+        ordered: list[date] = []
+        for bar in payload["bars"]:
+            try:
+                timestamp = datetime.fromisoformat(bar["t"].replace("Z", "+00:00"))
+                if timestamp.tzinfo is None:
+                    raise ValueError("timestamp has no timezone")
+                day = timestamp.astimezone(timezone.utc).date()
+                values = {name: float(bar[key]) for key, name in FIELD_PAIRS}
+            except (AttributeError, KeyError, TypeError, ValueError) as exc:
+                raise ValueError(f"FORWARD_RAW_BAR_SCHEMA_INVALID:{symbol}") from exc
+            if day < first or day > last or day < SEALED_OOS_START:
+                raise ValueError(f"FORWARD_RAW_DATE_OUTSIDE_SCOPE:{symbol}:{day.isoformat()}")
+            if day in seen:
+                raise ValueError(f"FORWARD_RAW_DUPLICATE_DATE:{symbol}:{day.isoformat()}")
+            if any(not math.isfinite(value) for value in values.values()):
+                raise ValueError(f"FORWARD_RAW_NONFINITE_OHLCV:{symbol}:{day.isoformat()}")
+            if (
+                min(values[name] for name in ("open", "high", "low", "close")) <= 0
+                or values["volume"] < 0
+                or values["high"] < max(values["open"], values["close"], values["low"])
+                or values["low"] > min(values["open"], values["close"], values["high"])
+            ):
+                raise ValueError(f"FORWARD_RAW_OHLCV_INVALID:{symbol}:{day.isoformat()}")
+            seen.add(day)
+            ordered.append(day)
+        if ordered != sorted(ordered):
+            raise ValueError(f"FORWARD_RAW_DATES_NOT_SORTED:{symbol}")
+        validated.append(
+            (
+                symbol,
+                raw_bytes,
+                len(ordered),
+                ordered[0].isoformat(),
+                ordered[-1].isoformat(),
+            )
+        )
+
+    root = pathlib.Path(root)
+    if root.exists() and root.is_symlink():
+        raise ValueError("FORWARD_RAW_ROOT_MUST_NOT_BE_SYMLINK")
+    root.mkdir(parents=True, exist_ok=True)
+    resolved_root = root.resolve(strict=True)
+    if resolved_root != root:
+        raise ValueError("FORWARD_RAW_ROOT_PATH_MISMATCH")
+    destination = root / output_id
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("FORWARD_RAW_OUTPUT_ALREADY_EXISTS")
+    destination.mkdir()
+
+    records = []
+    try:
+        for symbol, raw_bytes, count, first_day, last_day in validated:
+            output = destination / f"{symbol}.json"
+            with output.open("xb") as handle:
+                handle.write(raw_bytes)
+                handle.flush()
+                os.fsync(handle.fileno())
+            records.append(
+                {
+                    "symbol": symbol,
+                    "bars": count,
+                    "first_date": first_day,
+                    "last_date": last_day,
+                    "bytes": len(raw_bytes),
+                    "sha256": hashlib.sha256(raw_bytes).hexdigest(),
+                }
+            )
+        result = {
+            "schema": "aq-forward-raw-only-v1",
+            "status": "FORWARD_RAW_ONLY_COMPLETE",
+            "source_attestation": "UNVERIFIED_INPUT_PAYLOAD",
+            "start": first.isoformat(),
+            "end": last.isoformat(),
+            "symbols": records,
+            "storage_class": "FORWARD_RAW_ONLY",
+            "qlib_conversion": False,
+            "p3_research_access": False,
+            "p2_certification_authority": False,
+            "training_or_trading_authority": False,
+        }
+        manifest = destination / "manifest.json"
+        with manifest.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        return {**result, "output_path": str(destination)}
+    except Exception:
+        # Leave any partial output visibly incomplete for manual inspection;
+        # no pointer or consumer is updated by this command.
+        raise
 
 
 def _bars_for_symbol(symbol: str, payload: dict, expected_days: set[date]) -> list[dict]:
@@ -60,11 +200,9 @@ def _bars_for_symbol(symbol: str, payload: dict, expected_days: set[date]) -> li
 
 
 def make_calendar(start: str, end: str) -> dict:
+    first, last = _assert_research_range(start, end)
     import exchange_calendars as xcals
 
-    first, last = _day(start), _day(end)
-    if last < first or last.isoformat() > "2026-09-11":
-        raise ValueError("DATE_RANGE_OUTSIDE_APPROVED_PRESEAL_SCOPE")
     sessions = xcals.get_calendar("XNYS", start=first.isoformat(), end=last.isoformat())
     days = [item.date().isoformat() for item in sessions.sessions_in_range(first.isoformat(), last.isoformat())]
     if not days:
@@ -87,6 +225,7 @@ def _read_calendar(path: pathlib.Path, start: str, end: str) -> list[str]:
 
 
 def prepare(raw_dir: pathlib.Path, csv_dir: pathlib.Path, calendar_path: pathlib.Path, start: str, end: str) -> dict:
+    _assert_research_range(start, end)
     expected_days = _read_calendar(calendar_path, start, end)
     expected = {_day(item) for item in expected_days}
     if not expected:
@@ -150,6 +289,7 @@ def verify(
     parent_end: str,
     end: str,
 ) -> dict:
+    _assert_research_range(start, end)
     import qlib
     from qlib.data import D
 
@@ -268,14 +408,29 @@ def main(argv: list[str] | None = None) -> int:
     calendar_parser = sub.add_parser("calendar")
     calendar_parser.add_argument("--start", required=True)
     calendar_parser.add_argument("--end", required=True)
+    forward_parser = sub.add_parser("forward-raw-only")
+    forward_parser.add_argument("--raw", type=pathlib.Path, required=True)
+    forward_parser.add_argument("--output-id", required=True)
+    forward_parser.add_argument("--start", required=True)
+    forward_parser.add_argument("--end", required=True)
+    forward_parser.add_argument("--symbols", nargs="+", required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "calendar":
             result = make_calendar(args.start, args.end)
         elif args.command == "prepare":
             result = prepare(args.raw, args.csv, args.calendar, args.start, args.end)
-        else:
+        elif args.command == "verify":
             result = verify(args.parent, args.provider, args.raw, args.calendar, args.start, args.parent_end, args.end)
+        else:
+            result = store_forward_raw_only(
+                args.raw,
+                args.output_id,
+                args.start,
+                args.end,
+                args.symbols,
+                root=FORWARD_RAW_ONLY_ROOT,
+            )
         print(json.dumps(result, sort_keys=True))
         return 0
     except Exception as exc:  # CLI reports stable failure category; traceback is retained by caller stderr.
