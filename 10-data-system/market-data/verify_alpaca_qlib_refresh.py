@@ -13,6 +13,7 @@ import pathlib
 import re
 import sys
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
@@ -208,6 +209,36 @@ def make_calendar(start: str, end: str) -> dict:
     if not days:
         raise ValueError("NO_EXPECTED_XNYS_SESSIONS")
     return {"calendar": "XNYS", "package": "exchange_calendars", "version": importlib.metadata.version("exchange-calendars"), "start": first.isoformat(), "end": last.isoformat(), "sessions": days}
+
+
+def last_completed_xnys_session(now_utc: str) -> dict:
+    """Return the newest XNYS session whose scheduled close has passed."""
+    try:
+        now = datetime.fromisoformat(now_utc.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("XNYS_NOW_UTC_INVALID") from exc
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("XNYS_NOW_UTC_MUST_BE_TIMEZONE_AWARE")
+    now = now.astimezone(timezone.utc)
+
+    import exchange_calendars as xcals
+
+    calendar = xcals.get_calendar("XNYS")
+    market_day = now.astimezone(ZoneInfo("America/New_York")).date()
+    sessions = calendar.sessions_in_range(market_day.isoformat(), market_day.isoformat())
+    base = {
+        "calendar": "XNYS",
+        "package": "exchange_calendars",
+        "version": importlib.metadata.version("exchange-calendars"),
+        "market_date": market_day.isoformat(),
+        "observed_at_utc": now.isoformat().replace("+00:00", "Z"),
+    }
+    if len(sessions) == 0:
+        return {**base, "status": "SKIPPED_NON_TRADING_DAY", "session": None, "close_utc": None}
+    session = sessions[-1]
+    close = calendar.session_close(session).to_pydatetime().astimezone(timezone.utc)
+    status = "SESSION_COMPLETE" if close <= now else "SKIPPED_SESSION_NOT_COMPLETE"
+    return {**base, "status": status, "session": session.strftime("%Y-%m-%d"), "close_utc": close.isoformat().replace("+00:00", "Z")}
 
 
 def _read_calendar(path: pathlib.Path, start: str, end: str) -> list[str]:
@@ -408,6 +439,8 @@ def main(argv: list[str] | None = None) -> int:
     calendar_parser = sub.add_parser("calendar")
     calendar_parser.add_argument("--start", required=True)
     calendar_parser.add_argument("--end", required=True)
+    session_parser = sub.add_parser("xnys-last-completed")
+    session_parser.add_argument("--now-utc", required=True)
     forward_parser = sub.add_parser("forward-raw-only")
     forward_parser.add_argument("--raw", type=pathlib.Path, required=True)
     forward_parser.add_argument("--output-id", required=True)
@@ -418,6 +451,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "calendar":
             result = make_calendar(args.start, args.end)
+        elif args.command == "xnys-last-completed":
+            result = last_completed_xnys_session(args.now_utc)
         elif args.command == "prepare":
             result = prepare(args.raw, args.csv, args.calendar, args.start, args.end)
         elif args.command == "verify":

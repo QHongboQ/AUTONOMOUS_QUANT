@@ -48,6 +48,24 @@ class BarsValidationTests(unittest.TestCase):
 
 
 class ForwardRawIsolationTests(unittest.TestCase):
+    def test_xnys_last_completed_session_handles_close_dst_weekends_holidays_and_early_close(self):
+        # October is EDT (20:00 UTC close); January is EST (21:00 UTC close).
+        self.assertEqual(refresh.last_completed_xnys_session("2026-10-20T19:59:00Z")["status"], "SKIPPED_SESSION_NOT_COMPLETE")
+        self.assertEqual(refresh.last_completed_xnys_session("2026-10-20T20:01:00Z")["session"], "2026-10-20")
+        self.assertEqual(refresh.last_completed_xnys_session("2026-01-05T20:30:00Z")["status"], "SKIPPED_SESSION_NOT_COMPLETE")
+        # Weekend and Thanksgiving do not fall back to a prior session.
+        self.assertEqual(refresh.last_completed_xnys_session("2026-10-24T16:00:00Z")["status"], "SKIPPED_NON_TRADING_DAY")
+        self.assertEqual(refresh.last_completed_xnys_session("2026-11-26T17:00:00Z")["status"], "SKIPPED_NON_TRADING_DAY")
+        # Black Friday is an early close at 18:00 UTC, not 21:00 UTC.
+        self.assertEqual(refresh.last_completed_xnys_session("2026-11-27T17:59:00Z")["status"], "SKIPPED_SESSION_NOT_COMPLETE")
+        self.assertEqual(refresh.last_completed_xnys_session("2026-11-27T18:01:00Z")["session"], "2026-11-27")
+
+    def test_xnys_last_completed_rejects_naive_or_invalid_time(self):
+        with self.assertRaisesRegex(ValueError, "XNYS_NOW_UTC_MUST_BE_TIMEZONE_AWARE"):
+            refresh.last_completed_xnys_session("2026-10-20T20:01:00")
+        with self.assertRaisesRegex(ValueError, "XNYS_NOW_UTC_INVALID"):
+            refresh.last_completed_xnys_session("not-a-time")
+
     def write_payload(self, directory: pathlib.Path, symbol: str, bars: list[dict]) -> bytes:
         raw = json.dumps({"bars": bars}, separators=(",", ":")).encode()
         (directory / f"{symbol}.json").write_bytes(raw)
