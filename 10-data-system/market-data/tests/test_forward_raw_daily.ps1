@@ -6,19 +6,26 @@ function Assert-True([bool]$Condition, [string]$Message) {
     if (!$Condition) { throw "ASSERTION_FAILED:$Message" }
 }
 
-function Write-MockForwardOutput([string]$Root, [string]$OutputId, [string]$SessionDate) {
+function Write-MockForwardOutput([string]$Root, [string]$OutputId, [string]$SessionDate, [string]$StartDate = $SessionDate, [string]$EndDate = $SessionDate) {
     $destination = Join-Path $Root $OutputId
     $null = New-Item -ItemType Directory -Path $destination
     $symbols = @()
     $responses = @()
+    $barDates = @()
+    $rangeStart = [datetime]::ParseExact($StartDate, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    $rangeEnd = [datetime]::ParseExact($EndDate, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    for ($date = $rangeStart; $date -le $rangeEnd; $date = $date.AddDays(1)) {
+        if ($date.DayOfWeek -notin @([DayOfWeek]::Saturday, [DayOfWeek]::Sunday)) { $barDates += $date.ToString('yyyy-MM-dd') }
+    }
     foreach ($symbol in @('AAPL', 'MSFT')) {
-        $payload = @{ bars = @(@{ t = "${SessionDate}T00:00:00Z"; o = 100.0; h = 101.0; l = 99.0; c = 100.5; v = 1000.0 }) } | ConvertTo-Json -Compress -Depth 4
+        $bars = @($barDates | ForEach-Object { @{ t = "${_}T00:00:00Z"; o = 100.0; h = 101.0; l = 99.0; c = 100.5; v = 1000.0 } })
+        $payload = @{ bars = $bars } | ConvertTo-Json -Compress -Depth 4
         $bytes = [Text.Encoding]::UTF8.GetBytes($payload)
         $path = Join-Path $destination ($symbol + '.json')
         [IO.File]::WriteAllBytes($path, $bytes)
         $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-        $symbols += [pscustomobject]@{ symbol = $symbol; bars = 1; first_date = $SessionDate; last_date = $SessionDate; bytes = $bytes.Length; sha256 = $hash }
-        $responses += [pscustomobject]@{ symbol = $symbol; http_status = 200; bar_count = 1; first_date = $SessionDate; last_date = $SessionDate; response_bytes = $bytes.Length; response_sha256 = $hash }
+        $symbols += [pscustomobject]@{ symbol = $symbol; bars = $bars.Count; first_date = $barDates[0]; last_date = $barDates[-1]; bytes = $bytes.Length; sha256 = $hash }
+        $responses += [pscustomobject]@{ symbol = $symbol; http_status = 200; bar_count = $bars.Count; first_date = $barDates[0]; last_date = $barDates[-1]; response_bytes = $bytes.Length; response_sha256 = $hash }
     }
     $manifest = [ordered]@{
         status = 'FORWARD_RAW_FETCH_COMPLETE'
@@ -28,8 +35,8 @@ function Write-MockForwardOutput([string]$Root, [string]$OutputId, [string]$Sess
         p3_research_access = $false
         p2_certification_authority = $false
         training_or_trading_authority = $false
-        start = $SessionDate
-        end = $SessionDate
+        start = $StartDate
+        end = $EndDate
         symbols = $symbols
         acquisition = [ordered]@{
             provider = 'Alpaca Market Data API'
@@ -92,6 +99,24 @@ try {
     $legacySkip = Invoke-ForwardRawDaily -NowUtc ([datetimeoffset]'2026-10-20T20:01:00Z') -ForwardRawRoot $legacyRoot -SessionResolver $resolver -FetchAction $fetch -MutexName ($mutexName + 'legacy')
     Assert-True ($legacySkip.Status -eq 'SKIPPED_ALREADY_COMPLETE' -and $legacySkip.OutputId -eq $legacyId) 'existing valid same-day output is found regardless of its original output id'
     Assert-True ($calls -eq $callsBefore) 'legacy same-day output is not fetched again'
+    $tests += 1
+
+    $overlapRoot = Join-Path $root 'overlapping-multiday-output'
+    $overlapId = 'forwardraw-range-2026-10-19_2026-10-23'
+    Write-MockForwardOutput -Root $overlapRoot -OutputId $overlapId -SessionDate '2026-10-21' -StartDate '2026-10-19' -EndDate '2026-10-23'
+    $overlapManifestPath = Join-Path $overlapRoot "$overlapId\manifest.json"
+    $overlapDataPath = Join-Path $overlapRoot "$overlapId\AAPL.json"
+    $overlapManifestHash = (Get-FileHash -LiteralPath $overlapManifestPath -Algorithm SHA256).Hash
+    $overlapDataHash = (Get-FileHash -LiteralPath $overlapDataPath -Algorithm SHA256).Hash
+    $callsBefore = $calls
+    try {
+        Invoke-ForwardRawDaily -NowUtc ([datetimeoffset]'2026-10-22T20:01:00Z') -ForwardRawRoot $overlapRoot -SessionResolver { param($NowUtc) '2026-10-21' } -FetchAction $fetch -MutexName ($mutexName + 'overlap') | Out-Null
+        throw 'EXPECTED_DATE_COVERAGE_CONFLICT'
+    }
+    catch { Assert-True ($_.Exception.Message -match 'FORWARD_RAW_DAILY_EXISTING_DATE_COVERAGE_CONFLICT:.*2026-10-19\.\.2026-10-23:2026-10-21') 'overlapping multi-day output fails closed with the covered range' }
+    Assert-True ($calls -eq $callsBefore) 'overlapping multi-day output performs no fetch'
+    Assert-True ((Get-FileHash -LiteralPath $overlapManifestPath -Algorithm SHA256).Hash -eq $overlapManifestHash) 'overlap detection preserves the existing manifest'
+    Assert-True ((Get-FileHash -LiteralPath $overlapDataPath -Algorithm SHA256).Hash -eq $overlapDataHash) 'overlap detection preserves existing raw data'
     $tests += 1
 
     $incompleteId = Get-ForwardRawDailyOutputId -SessionDate '2026-10-16'

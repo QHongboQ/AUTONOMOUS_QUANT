@@ -167,8 +167,14 @@ function Find-ExistingForwardRawDailyOutput {
             $manifestEnd = [datetime]::ParseExact((ConvertTo-ForwardRawDateText $manifest.end), 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture).ToString('yyyy-MM-dd')
         }
         catch { throw "FORWARD_RAW_DAILY_EXISTING_MANIFEST_DATE_INVALID:$($item.Name)" }
-        if ($manifestStart -eq $SessionDate -or $manifestEnd -eq $SessionDate) {
-            if ($manifestStart -ne $SessionDate -or $manifestEnd -ne $SessionDate) { throw 'FORWARD_RAW_DAILY_EXISTING_MANIFEST_RANGE_INVALID' }
+        $targetDate = [datetime]::ParseExact($SessionDate, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+        $rangeStart = [datetime]::ParseExact($manifestStart, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+        $rangeEnd = [datetime]::ParseExact($manifestEnd, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+        if ($rangeStart -gt $rangeEnd) { throw "FORWARD_RAW_DAILY_EXISTING_MANIFEST_RANGE_INVALID:$($item.Name)" }
+        if ($rangeStart -le $targetDate -and $targetDate -le $rangeEnd) {
+            if ($manifestStart -ne $SessionDate -or $manifestEnd -ne $SessionDate) {
+                throw "FORWARD_RAW_DAILY_EXISTING_DATE_COVERAGE_CONFLICT:$($item.Name):${manifestStart}..${manifestEnd}:$SessionDate"
+            }
             if (!(Test-ForwardRawDailyOutput -ForwardRawRoot $rootPath -OutputId $item.Name -SessionDate $SessionDate)) {
                 throw 'FORWARD_RAW_DAILY_EXISTING_OUTPUT_UNEXPECTEDLY_MISSING'
             }
