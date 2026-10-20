@@ -224,29 +224,49 @@ function Fetch-ForwardRawResponses {
     }
 }
 
+function Get-ForwardRawStagingDirectory {
+    param([Parameter(Mandatory)][string]$ForwardRawRoot)
+    return Join-Path (Join-Path $ForwardRawRoot '.staging') ([guid]::NewGuid().ToString('N'))
+}
+
 function Invoke-ForwardRawFetch {
     param(
         [Parameter(Mandatory)][string]$OutputId,
         [Parameter(Mandatory)][string]$Start,
         [Parameter(Mandatory)][string]$End,
-        [string]$RawDirectory = (Join-Path $env:TEMP ('aq-forward-raw-' + [guid]::NewGuid().ToString('N'))),
         [string]$ForwardRawRoot = 'D:\AQ_DATA\FORWARD_RAW_ONLY',
+        [string]$StagingDirectory,
         [Net.Http.HttpClient]$Client,
         $Credential,
         [scriptblock]$StoreAction
     )
     if ($OutputId -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$' -or $OutputId -in @('.', '..')) { throw 'FORWARD_RAW_OUTPUT_ID_INVALID' }
-    $destination = Join-Path $ForwardRawRoot $OutputId
+    $rootPath = [IO.Path]::GetFullPath($ForwardRawRoot)
+    if (!(Test-Path -LiteralPath $rootPath)) { $null = New-Item -ItemType Directory -Path $rootPath }
+    if ((Get-Item -LiteralPath $rootPath -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'FORWARD_RAW_ROOT_MUST_NOT_BE_REPARSE_POINT' }
+    $stagingParent = Join-Path $rootPath '.staging'
+    if (Test-Path -LiteralPath $stagingParent) {
+        if ((Get-Item -LiteralPath $stagingParent -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'FORWARD_RAW_STAGING_PARENT_MUST_NOT_BE_REPARSE_POINT' }
+    }
+    else { $null = New-Item -ItemType Directory -Path $stagingParent }
+    $destination = Join-Path $rootPath $OutputId
     if (Test-Path -LiteralPath $destination) { throw 'FORWARD_RAW_OUTPUT_ALREADY_EXISTS' }
-    $null = New-Item -ItemType Directory -Path $RawDirectory
+    if (!$StagingDirectory) { $StagingDirectory = Get-ForwardRawStagingDirectory -ForwardRawRoot $rootPath }
+    $stagePath = [IO.Path]::GetFullPath($StagingDirectory)
+    $stageParentPath = [IO.Path]::GetFullPath($stagingParent)
+    if ([IO.Path]::GetDirectoryName($stagePath) -ne $stageParentPath) { throw 'FORWARD_RAW_STAGING_OUTSIDE_ROOT' }
+    if (Test-Path -LiteralPath $stagePath) { throw 'FORWARD_RAW_STAGING_ALREADY_EXISTS' }
+    $ownsStagingDirectory = $false
     try {
-        $fetch = Fetch-ForwardRawResponses -Start $Start -End $End -RawDirectory $RawDirectory -Client $Client -Credential $Credential
+        $null = New-Item -ItemType Directory -Path $stagePath -ErrorAction Stop
+        $ownsStagingDirectory = $true
+        $fetch = Fetch-ForwardRawResponses -Start $Start -End $End -RawDirectory $stagePath -Client $Client -Credential $Credential
         if ($StoreAction) {
-            $storeResult = & $StoreAction $RawDirectory $OutputId $Start $End $ExpectedSymbols $ForwardRawRoot
+            $storeResult = & $StoreAction $stagePath $OutputId $Start $End $ExpectedSymbols $rootPath
         }
         else {
             $scriptLinux = Convert-WindowsPathToWsl $ScriptDir
-            $rawLinux = Convert-WindowsPathToWsl $RawDirectory
+            $rawLinux = Convert-WindowsPathToWsl $stagePath
             $args = @('-e', $CalendarPython, ($scriptLinux + '/verify_alpaca_qlib_refresh.py'), 'forward-raw-only', '--raw', $rawLinux, '--output-id', $OutputId, '--start', $Start, '--end', $End, '--symbols') + $ExpectedSymbols
             $storeOutput = & wsl.exe @args 2>&1
             if ($LASTEXITCODE -ne 0) { throw "FORWARD_RAW_VALIDATION_FAILED_EXIT_$LASTEXITCODE" }
@@ -282,7 +302,7 @@ function Invoke-ForwardRawFetch {
         return [pscustomobject]@{ Status = 'FORWARD_RAW_FETCH_COMPLETE'; OutputPath = $destination; Acquisition = $manifest.acquisition }
     }
     finally {
-        if (Test-Path -LiteralPath $RawDirectory) { Remove-Item -LiteralPath $RawDirectory -Recurse -Force }
+        if ($ownsStagingDirectory -and (Test-Path -LiteralPath $stagePath)) { Remove-Item -LiteralPath $stagePath -Recurse -Force }
     }
 }
 

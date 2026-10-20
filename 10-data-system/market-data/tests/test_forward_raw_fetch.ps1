@@ -45,6 +45,10 @@ function New-TestClient([object[]]$Items) {
     return [pscustomobject]@{ Client = [HttpClient]::new($handler); Handler = $handler }
 }
 
+function New-TestStagePath([string]$Root, [string]$Name) {
+    return Join-Path (Join-Path $Root '.staging') $Name
+}
+
 function New-BarPayload([string]$Symbol) {
     $bar = @{ t = '2026-09-14T00:00:00Z'; o = 100; h = 101; l = 99; c = 100.5; v = 1234 }
     return @{ bars = @($bar) } | ConvertTo-Json -Compress -Depth 4
@@ -75,7 +79,9 @@ function New-TestStoreAction {
 $testsRun = 0
 $root = Join-Path ([IO.Path]::GetTempPath()) ('aq-forward-raw-tests-' + [guid]::NewGuid().ToString('N'))
 $successfulOutputId = 'mock-200-' + [guid]::NewGuid().ToString('N')
-$successfulDestination = Join-Path 'D:\AQ_DATA\FORWARD_RAW_ONLY' $successfulOutputId
+$forwardRoot = 'D:\AQ_DATA\FORWARD_RAW_ONLY'
+$successfulDestination = Join-Path $forwardRoot $successfulOutputId
+$successfulStage = New-TestStagePath $forwardRoot ('test-' + [guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $root
 try {
     # A successful mocked pair reaches the existing raw-only storage step and
@@ -84,7 +90,7 @@ try {
         (New-TestResponse 200 (New-BarPayload 'AAPL')),
         (New-TestResponse 200 (New-BarPayload 'MSFT'))
     )
-    $result = Invoke-ForwardRawFetch -OutputId $successfulOutputId -Start '2026-09-14' -End '2026-09-14' -RawDirectory (Join-Path $root 'stage-200') -Client $clientInfo.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' })
+    $result = Invoke-ForwardRawFetch -OutputId $successfulOutputId -Start '2026-09-14' -End '2026-09-14' -StagingDirectory $successfulStage -Client $clientInfo.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' })
     $manifest = Get-Content -LiteralPath (Join-Path $successfulDestination 'manifest.json') -Raw | ConvertFrom-Json
     Assert-True ($result.Status -eq 'FORWARD_RAW_FETCH_COMPLETE') 'success result status'
     Assert-True ($clientInfo.Handler.Requests.Count -eq 2) 'one request per approved symbol'
@@ -105,33 +111,78 @@ try {
         Assert-True ($response.symbol -eq $entry.symbol) "symbol matches $($entry.symbol)"
     }
     Assert-True (!(Test-Path (Join-Path $successfulDestination 'qlib-provider'))) 'no Qlib provider created'
+    Assert-True (!(Test-Path $successfulStage)) 'successful fetch removes only its staging directory'
     $testsRun += 1
     $clientInfo.Client.Dispose()
+
+    $defaultStageA = Get-ForwardRawStagingDirectory -ForwardRawRoot $forwardRoot
+    $defaultStageB = Get-ForwardRawStagingDirectory -ForwardRawRoot $forwardRoot
+    $expectedStageParent = [IO.Path]::GetFullPath((Join-Path $forwardRoot '.staging'))
+    Assert-True ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($defaultStageA)) -eq $expectedStageParent) 'default staging is inside the forward-raw-only staging root'
+    Assert-True ($defaultStageA -ne $defaultStageB) 'default staging paths are unique'
+    $testsRun += 1
+
+    $defaultRoot = Join-Path $root 'default-staging-root'
+    $defaultOutputId = 'default-stage-' + [guid]::NewGuid().ToString('N')
+    $defaultClient = New-TestClient @(
+        (New-TestResponse 200 (New-BarPayload 'AAPL')),
+        (New-TestResponse 200 (New-BarPayload 'MSFT'))
+    )
+    $script:ObservedStagingDirectory = $null
+    $defaultStore = {
+        param($RawDir, $OutputId, $Start, $End, $Symbols, $Root)
+        $script:ObservedStagingDirectory = $RawDir
+        $action = New-TestStoreAction
+        & $action $RawDir $OutputId $Start $End $Symbols $Root
+    }
+    $null = Invoke-ForwardRawFetch -OutputId $defaultOutputId -Start '2026-09-14' -End '2026-09-14' -ForwardRawRoot $defaultRoot -Client $defaultClient.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' }) -StoreAction $defaultStore
+    Assert-True ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($script:ObservedStagingDirectory)) -eq [IO.Path]::GetFullPath((Join-Path $defaultRoot '.staging'))) 'Invoke-ForwardRawFetch defaults to the isolated staging parent'
+    Assert-True (!(Test-Path -LiteralPath $script:ObservedStagingDirectory)) 'default staging is cleaned after successful storage'
+    if (Test-Path -LiteralPath (Join-Path $defaultRoot $defaultOutputId)) { Remove-Item -LiteralPath (Join-Path $defaultRoot $defaultOutputId) -Recurse -Force }
+    $defaultClient.Client.Dispose(); $testsRun += 1
 
     foreach ($failure in @(@{ Name = '403'; Status = 403 }, @{ Name = '429'; Status = 429 })) {
         $failureRoot = Join-Path $root ('failure-' + $failure.Name)
         $badClient = New-TestClient @((New-TestResponse $failure.Status '{"bars":[]}'))
         $shouldNotStore = { throw 'STORE_MUST_NOT_RUN' }
         try {
-            Invoke-ForwardRawFetch -OutputId ('http-' + $failure.Name) -Start '2026-09-14' -End '2026-09-14' -RawDirectory (Join-Path $root ('stage-' + $failure.Name)) -ForwardRawRoot $failureRoot -Client $badClient.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' }) -StoreAction $shouldNotStore | Out-Null
+            $failureStage = New-TestStagePath $failureRoot ('test-' + [guid]::NewGuid().ToString('N'))
+            Invoke-ForwardRawFetch -OutputId ('http-' + $failure.Name) -Start '2026-09-14' -End '2026-09-14' -StagingDirectory $failureStage -ForwardRawRoot $failureRoot -Client $badClient.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' }) -StoreAction $shouldNotStore | Out-Null
             throw "EXPECTED_HTTP_FAILURE_$($failure.Status)"
         }
         catch { Assert-True ($_.Exception.Message -match "ALPACA_HTTP_$($failure.Status)") "HTTP $($failure.Status) classified" }
         Assert-True ($badClient.Handler.Requests.Count -eq 1) "HTTP $($failure.Status) counted once"
-        Assert-True (!(Test-Path $failureRoot)) "HTTP $($failure.Status) creates no completed manifest"
+        Assert-True (!(Test-Path (Join-Path $failureRoot ('http-' + $failure.Name)))) "HTTP $($failure.Status) creates no completed manifest"
+        Assert-True (!(Test-Path $failureStage)) "HTTP $($failure.Status) removes only its staging directory"
         $badClient.Client.Dispose(); $testsRun += 1
     }
 
     $exceptionRoot = Join-Path $root 'failure-transport'
     $exceptionClient = New-TestClient @([HttpRequestException]::new('synthetic transport failure'))
+    $exceptionStage = New-TestStagePath $exceptionRoot ('test-' + [guid]::NewGuid().ToString('N'))
     try {
-        Invoke-ForwardRawFetch -OutputId 'transport-error' -Start '2026-09-14' -End '2026-09-14' -RawDirectory (Join-Path $root 'stage-transport') -ForwardRawRoot $exceptionRoot -Client $exceptionClient.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' }) -StoreAction { throw 'STORE_MUST_NOT_RUN' } | Out-Null
+        Invoke-ForwardRawFetch -OutputId 'transport-error' -Start '2026-09-14' -End '2026-09-14' -StagingDirectory $exceptionStage -ForwardRawRoot $exceptionRoot -Client $exceptionClient.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' }) -StoreAction { throw 'STORE_MUST_NOT_RUN' } | Out-Null
         throw 'EXPECTED_TRANSPORT_FAILURE'
     }
     catch { Assert-True ($_.Exception.Message -match 'synthetic transport failure') 'transport failure preserved' }
     Assert-True ($exceptionClient.Handler.Requests.Count -eq 1) 'transport failure attempted once'
-    Assert-True (!(Test-Path $exceptionRoot)) 'transport failure creates no completed manifest'
+    Assert-True (!(Test-Path (Join-Path $exceptionRoot 'transport-error'))) 'transport failure creates no completed manifest'
+    Assert-True (!(Test-Path $exceptionStage)) 'transport failure removes its staging directory'
     $exceptionClient.Client.Dispose(); $testsRun += 1
+
+    $protectedDirectory = Join-Path $root 'must-not-delete'
+    $null = New-Item -ItemType Directory -Path $protectedDirectory
+    Set-Content -LiteralPath (Join-Path $protectedDirectory 'sentinel.txt') -Value 'preserve'
+    $outsideRoot = Join-Path $root 'outside-root'
+    $protectedClient = New-TestClient @()
+    try {
+        Invoke-ForwardRawFetch -OutputId 'outside-stage' -Start '2026-09-14' -End '2026-09-14' -ForwardRawRoot $outsideRoot -StagingDirectory $protectedDirectory -Client $protectedClient.Client -Credential ([pscustomobject]@{ Key = 'TEST'; Secret = 'TEST' }) -StoreAction { throw 'STORE_MUST_NOT_RUN' } | Out-Null
+        throw 'EXPECTED_OUTSIDE_STAGING_REJECTION'
+    }
+    catch { Assert-True ($_.Exception.Message -match 'FORWARD_RAW_STAGING_OUTSIDE_ROOT') 'outside staging path rejected' }
+    Assert-True (Test-Path -LiteralPath (Join-Path $protectedDirectory 'sentinel.txt')) 'unowned directory is never deleted'
+    Assert-True ($protectedClient.Handler.Requests.Count -eq 0) 'invalid staging rejected before request'
+    $protectedClient.Client.Dispose(); $testsRun += 1
 
     $duplicateRoot = Join-Path $root 'duplicate'
     $null = New-Item -ItemType Directory -Path (Join-Path $duplicateRoot 'existing-id') -Force
