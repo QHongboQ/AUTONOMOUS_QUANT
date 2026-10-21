@@ -8,6 +8,7 @@ import os
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import uuid
 from datetime import datetime, timezone
@@ -315,6 +316,179 @@ def _durable_output_write(output_directory: Path, name: str, content: str) -> No
         except OSError:
             pass
         raise
+
+
+def _hash_regular_file(path: Path, root: Path) -> tuple[str, int]:
+    resolved_root = root.resolve(strict=True)
+    parent = path.parent.resolve(strict=True)
+    if not parent.is_relative_to(resolved_root) or parent != path.parent:
+        raise ValueError("research evidence path escaped or traversed a symlink")
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError("research evidence entry is not a regular file")
+        while True:
+            block = os.read(fd, 1024 * 1024)
+            if not block:
+                break
+            digest.update(block)
+            size += len(block)
+    finally:
+        os.close(fd)
+    return digest.hexdigest(), size
+
+
+def _native_file_manifest(root: Path, *, suffixes: set[str] | None = None) -> dict[str, Any]:
+    """Return path and byte identities only; never read or persist file contents."""
+    try:
+        root_info = root.lstat()
+    except FileNotFoundError:
+        return {"status": "UNAVAILABLE", "reason": "SOURCE_DIRECTORY_MISSING", "files": []}
+    if stat.S_ISLNK(root_info.st_mode):
+        return {"status": "UNAVAILABLE", "reason": "SOURCE_ROOT_SYMLINK", "files": []}
+    resolved_root = root.resolve(strict=True)
+    if root != resolved_root or not resolved_root.is_dir():
+        return {"status": "UNAVAILABLE", "reason": "SOURCE_ROOT_SYMLINK_OR_NOT_DIRECTORY", "files": []}
+    entries: list[dict[str, Any]] = []
+    try:
+        paths = sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix())
+        for path in paths:
+            info = path.lstat()
+            if stat.S_ISLNK(info.st_mode):
+                raise ValueError("SYMLINK_IN_RESEARCH_SOURCE")
+            if stat.S_ISDIR(info.st_mode):
+                continue
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("NON_REGULAR_RESEARCH_SOURCE")
+            if suffixes is not None and path.suffix.lower() not in suffixes:
+                continue
+            digest, size = _hash_regular_file(path, root)
+            entries.append({
+                "relative_path": path.relative_to(root).as_posix(),
+                "size_bytes": size,
+                "sha256": digest,
+            })
+    except (OSError, ValueError) as exc:
+        return {"status": "UNAVAILABLE", "reason": str(exc), "files": []}
+    if not entries:
+        return {"status": "UNAVAILABLE", "reason": "NO_ELIGIBLE_REGULAR_FILES", "files": []}
+    canonical = json.dumps(entries, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return {
+        "status": "OBSERVED",
+        "files": entries,
+        "manifest_sha256": hashlib.sha256(canonical).hexdigest(),
+    }
+
+
+def _sha256_file(path: Path) -> str:
+    digest, _ = _hash_regular_file(path, path.parent)
+    return digest
+
+
+def build_native_research_evidence(
+    *, request_id: str, attempt_id: str, run_namespace: str,
+    output: Path, observed_worker: dict[str, Any], qlib_evidence: dict[str, Any],
+    artifact_volume: str, llm_evidence_sha256: str | None = None,
+    llm_evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a minimal identity manifest from native evidence already inspected."""
+    runs = output / "runs" / run_namespace
+    trace = _native_file_manifest(runs / "trace")
+    workspace = _native_file_manifest(runs / "workspaces", suffixes={".py"})
+    source = Path(__file__).with_name("docker-rdagent-smoke")
+    config_files = {
+        name: _sha256_file(source / name)
+        for name in ("compose.persistent-test.yaml", "compose.deepseek-staging.yaml", "config.deepseek-staging.yaml")
+    }
+    llm_evidence = llm_evidence or {}
+    proxy_config_sha = llm_evidence.get("proxy_config_sha256")
+    configured_models = llm_evidence.get("configured_allowed_models")
+    proxy_identity = {
+        "status": (
+            "OBSERVED"
+            if isinstance(proxy_config_sha, str) and re.fullmatch(r"[0-9a-f]{64}", proxy_config_sha)
+            and llm_evidence.get("litellm_proxy_version") == "1.105.1"
+            and isinstance(llm_evidence.get("litellm_proxy_image"), str)
+            and isinstance(configured_models, list)
+            and all(isinstance(model, str) and model for model in configured_models)
+            else "UNAVAILABLE"
+        ),
+        "proxy_config_sha256": proxy_config_sha if isinstance(proxy_config_sha, str) else None,
+        "proxy_version": llm_evidence.get("litellm_proxy_version"),
+        "proxy_image": llm_evidence.get("litellm_proxy_image"),
+        "configured_model_groups": configured_models if isinstance(configured_models, list) else None,
+    }
+    safe_effective_config = {
+        "rdagent_runtime_version": {"status": "CONFIGURED", "value": "1.0.0"},
+        "rdagent_source_git_sha": {"status": "CONFIGURED", "value": "484776c211e4fbbeef03e0ec00d6bbee7362a4f4"},
+        "qlib_runtime_version": {"status": "CONFIGURED", "value": "0.9.8.dev26"},
+        "qlib_source_git_sha": {"status": "CONFIGURED", "value": "2fb9380b342556ddb50a4b24e4fe8655d548b2b8"},
+        "worker_image_id_observed": observed_worker.get("image_id"),
+        "worker_entrypoint_verified": observed_worker.get("entrypoint_verified") is True,
+        "worker_command_verified": observed_worker.get("command_verified") is True,
+        "worker_mounts_valid": observed_worker.get("mounts_valid") is True,
+        "artifact_volume": artifact_volume,
+        "litellm_proxy_configuration": proxy_identity,
+        "config_file_sha256": config_files,
+        "observed_nonsecret_worker_settings": {
+            "chat_max_tokens": 8192,
+            "chat_model_map": "{}",
+            "workspace_path": f"/workspace/runs/{run_namespace}/workspaces",
+        },
+    }
+    config_bytes = json.dumps(
+        safe_effective_config, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+    qlib_status = qlib_evidence.get("classification", "RESEARCH_EVIDENCE_INCOMPLETE")
+    qlib_identity_complete = (
+        qlib_status == "RESEARCH_EVIDENCE_COMPLETE"
+        and isinstance(qlib_evidence.get("experiment_id"), str)
+        and isinstance(qlib_evidence.get("recorder_id"), str)
+        and isinstance(qlib_evidence.get("artifact_manifest"), dict)
+    )
+    research_identity = {
+        "status": "PARTIAL",
+        "hypothesis": {"status": "UNAVAILABLE", "reason": "NO_TRUSTED_STRUCTURED_SERIALIZATION_READER"},
+        "task_semantics": {"status": "UNAVAILABLE", "reason": "TASK_OBJECT_NOT_SAFELY_EXTRACTED"},
+        "experiment_lineage": {"status": "UNAVAILABLE", "reason": "RDAGENT_LINEAGE_NOT_SAFELY_EXTRACTED"},
+        "generated_code": {
+            "status": "CONTENT_IDENTITIES_ONLY" if workspace["status"] == "OBSERVED" else "UNAVAILABLE",
+            "files": workspace["files"],
+            "semantic_binding": "UNAVAILABLE",
+        },
+    }
+    return {
+        "format_version": "P12_NATIVE_RESEARCH_EVIDENCE_V1",
+        "request_id": request_id,
+        "attempt_id": attempt_id,
+        "provenance_status": "PARTIAL",
+        "qlib_research_status": "QLIB_RESEARCH_COMPLETE" if qlib_identity_complete else "QLIB_RESEARCH_INCOMPLETE",
+        "qlib": {
+            "experiment_id": qlib_evidence.get("experiment_id"),
+            "recorder_id": qlib_evidence.get("recorder_id"),
+            "recorder_status": qlib_evidence.get("recorder_status"),
+            "artifact_volume": artifact_volume,
+            "artifact_uri": qlib_evidence.get("artifact_uri"),
+            "artifact_manifest": qlib_evidence.get("artifact_manifest", {}),
+            "metric_names": qlib_evidence.get("metric_names", []),
+        },
+        "rdagent_provenance_status": "PARTIAL",
+        "rdagent": {
+            "runtime_image": PINNED_FINQUANT_IMAGE,
+            "runtime_image_id": observed_worker.get("image_id"),
+            "trace_manifest": trace,
+            "research_identity": research_identity,
+        },
+        "llm_evidence_status_observed": "COMPLETE" if llm_evidence_sha256 else "PARTIAL",
+        "llm_evidence_sha256": llm_evidence_sha256,
+        "effective_config_identity": {
+            "status": "OBSERVED" if observed_worker.get("image_id") else "CONFIGURED",
+            "sha256": hashlib.sha256(config_bytes).hexdigest(),
+            "identity": safe_effective_config,
+        },
+    }
 
 
 def _redact_diagnostics(text: str, secrets_to_redact: tuple[str, ...]) -> str:
@@ -1213,6 +1387,28 @@ def run_docker_rdagent_owner_oneshot(
         except Exception as exc:
             evidence_write_error = type(exc).__name__
             call_evidence_digest = None
+        native_evidence_write_error = None
+        native_evidence_digest = None
+        try:
+            native_evidence = build_native_research_evidence(
+                request_id=request_id, attempt_id=attempt_id, run_namespace=run_namespace,
+                output=output, observed_worker=observed, qlib_evidence=research_evidence,
+                artifact_volume=artifact_volume, llm_evidence_sha256=call_evidence_digest,
+                llm_evidence=call_evidence,
+            )
+            native_evidence["process_status"] = (
+                "PROCESS_EXIT_SUCCESS" if launched.returncode == 0 else "PROCESS_EXIT_FAILED"
+            )
+            native_evidence["llm_evidence_status_observed"] = call_evidence.get("evidence_status", "PARTIAL")
+            native_text = json.dumps(
+                native_evidence, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ) + "\n"
+            _durable_output_write(output, "p12-native-research-evidence.json", native_text)
+            native_evidence_digest, _ = _hash_regular_file(
+                output / "p12-native-research-evidence.json", output
+            )
+        except Exception as exc:
+            native_evidence_write_error = type(exc).__name__
         remove = subprocess.run(["docker", "container", "rm", worker_name], capture_output=True, text=True, env=_owner_safe_environment(), timeout=30)
         if remove.returncode != 0:
             raise DockerDispatchAmbiguous("Owner worker cleanup was not verified")
@@ -1235,6 +1431,25 @@ def run_docker_rdagent_owner_oneshot(
             "llm_call_evidence_write_error_type": evidence_write_error,
             "llm_call_evidence_sha256_observed": call_evidence_digest,
             "llm_call_evidence_status_observed": call_evidence.get("evidence_status", "PARTIAL"),
+            "native_research_evidence_status": (
+                "PARTIAL"
+            ),
+            "native_research_evidence_path": (
+                "p12-native-research-evidence.json" if native_evidence_digest else None
+            ),
+            "native_research_evidence_sha256_observed": native_evidence_digest,
+            "native_research_evidence_write_error_type": native_evidence_write_error,
+            "qlib_research_status": (
+                "QLIB_RESEARCH_COMPLETE"
+                if research_evidence.get("classification") == "RESEARCH_EVIDENCE_COMPLETE"
+                else "QLIB_RESEARCH_INCOMPLETE"
+            ),
+            "rdagent_provenance_status": "PARTIAL",
+            "llm_provenance_status": call_evidence.get("evidence_status", "PARTIAL"),
+            "effective_config_identity_status": (
+                native_evidence.get("effective_config_identity", {}).get("status", "UNAVAILABLE")
+                if native_evidence_write_error is None else "UNAVAILABLE"
+            ),
             "output_directory": str(output),
             "mlflow_artifact_volume": artifact_volume,
             "chat_max_tokens": 8192,
