@@ -99,15 +99,19 @@ services:
         case "$${P12_FINQUANT_OUTPUT_DIR}" in /mnt/d/AQ/OPERATIONS/P12/finquant-output/*/*) ;; *) echo 'durable per-attempt output path required' >&2; exit 64;; esac
         case "$${P12_MLFLOW_ARTIFACT_VOLUME}" in aq-p12-owner-artifacts-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;; *) echo 'per-attempt persistent MLflow artifact volume required' >&2; exit 64;; esac
         test -f /workspace/p12-attempt.json
-        exec rdagent "$@"
+        exec "$@"
       - --
-    command: ["fin_quant", "--loop-n", "1"]
+    command: ["python", "/opt/aq/p3/binding/aq_rdagent_semantic_bridge.py", "--loop-n", "1"]
     volumes:
       - type: bind
         source: ${P12_FINQUANT_OUTPUT_DIR:-/tmp/p12-worker-disabled}
         target: /workspace
         bind:
           create_host_path: false
+      - type: bind
+        source: ../../../30-research-system/rd-agent/binding/aq_rdagent_semantic_bridge.py
+        target: /opt/aq/p3/binding/aq_rdagent_semantic_bridge.py
+        read_only: true
       - type: bind
         source: /mnt/d/AQ_DATA/P3/rdagent-us-ragged/factor-source
         target: /data/factor-source

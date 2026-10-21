@@ -29,6 +29,12 @@ class DockerDispatchFailed(RuntimeError):
         self.evidence = evidence
 
 
+_SEMANTIC_EVIDENCE_NAME = "p12-rdagent-semantic-evidence.json"
+_SEMANTIC_EVIDENCE_VERSION = "P12_RDAGENT_SEMANTIC_EVIDENCE_V1"
+_SEMANTIC_BRIDGE_CONTAINER_PATH = "/opt/aq/p3/binding/aq_rdagent_semantic_bridge.py"
+_SEMANTIC_BRIDGE_HOST_PATH = Path(__file__).resolve().parents[2] / "30-research-system/rd-agent/binding/aq_rdagent_semantic_bridge.py"
+
+
 _FILES = (
     "compose.yaml",
     "config.yaml",
@@ -387,16 +393,113 @@ def _sha256_file(path: Path) -> str:
     return digest
 
 
+def _read_semantic_evidence(
+    output: Path, *, request_id: str, attempt_id: str,
+) -> tuple[dict[str, Any] | None, str | None, str | None]:
+    """Read a bounded regular worker artifact and bind it to this P12 attempt."""
+    path = output / _SEMANTIC_EVIDENCE_NAME
+    try:
+        fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    except FileNotFoundError:
+        return None, None, "SEMANTIC_EVIDENCE_MISSING"
+    digest = hashlib.sha256()
+    chunks: list[bytes] = []
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 8 * 1024 * 1024:
+            return None, None, "SEMANTIC_EVIDENCE_NOT_BOUNDED_REGULAR_FILE"
+        while True:
+            block = os.read(fd, 65536)
+            if not block:
+                break
+            digest.update(block)
+            chunks.append(block)
+    except OSError:
+        return None, None, "SEMANTIC_EVIDENCE_READ_ERROR"
+    finally:
+        os.close(fd)
+    raw = b"".join(chunks)
+    try:
+        value = json.loads(raw.decode("utf-8"))
+        canonical = json.dumps(
+            value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        ).encode("utf-8") + b"\n"
+    except (ValueError, TypeError, UnicodeDecodeError):
+        return None, digest.hexdigest(), "SEMANTIC_EVIDENCE_INVALID_JSON"
+    if raw != canonical:
+        return None, digest.hexdigest(), "SEMANTIC_EVIDENCE_NOT_CANONICAL"
+    if (
+        not isinstance(value, dict)
+        or value.get("format_version") != _SEMANTIC_EVIDENCE_VERSION
+        or value.get("request_id") != request_id
+        or value.get("attempt_id") != attempt_id
+        or value.get("status") not in {"OBSERVED", "PARTIAL"}
+    ):
+        return None, digest.hexdigest(), "SEMANTIC_EVIDENCE_ATTEMPT_MISMATCH_OR_MALFORMED"
+    return value, digest.hexdigest(), None
+
+
+def _semantic_workspace_files_match(
+    payload: dict[str, Any], workspace_manifest: dict[str, Any],
+) -> bool:
+    """Require every semantic file claim to match the host-side workspace hash manifest."""
+    if workspace_manifest.get("status") != "OBSERVED" or not isinstance(workspace_manifest.get("files"), list):
+        return False
+    observed = {
+        item.get("relative_path"): item.get("sha256")
+        for item in workspace_manifest["files"] if isinstance(item, dict)
+    }
+    experiments = payload.get("experiments")
+    if not isinstance(experiments, list):
+        return False
+    for experiment in experiments:
+        if not isinstance(experiment, dict):
+            return False
+        collections = [
+            experiment.get("generated_code", {}).get("files")
+            if isinstance(experiment.get("generated_code"), dict) else None,
+            experiment.get("experiment_template", {}).get("files")
+            if isinstance(experiment.get("experiment_template"), dict) else None,
+        ]
+        based = experiment.get("based_experiments")
+        if not isinstance(based, list):
+            return False
+        collections.extend(item.get("files") if isinstance(item, dict) else None for item in based)
+        for files in collections:
+            if not isinstance(files, list):
+                return False
+            for item in files:
+                if not isinstance(item, dict):
+                    return False
+                relative = item.get("workspace_relative_path")
+                digest = item.get("sha256")
+                if (
+                    not isinstance(relative, str) or relative.startswith("/") or "\\" in relative
+                    or any(part in {"", ".", ".."} for part in relative.split("/"))
+                    or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)
+                    or observed.get(relative) != digest
+                ):
+                    return False
+    return True
+
+
 def build_native_research_evidence(
     *, request_id: str, attempt_id: str, run_namespace: str,
     output: Path, observed_worker: dict[str, Any], qlib_evidence: dict[str, Any],
     artifact_volume: str, llm_evidence_sha256: str | None = None,
     llm_evidence: dict[str, Any] | None = None,
+    semantic_evidence: dict[str, Any] | None = None,
+    semantic_evidence_sha256: str | None = None,
+    semantic_evidence_error: str | None = None,
 ) -> dict[str, Any]:
     """Build a minimal identity manifest from native evidence already inspected."""
     runs = output / "runs" / run_namespace
     trace = _native_file_manifest(runs / "trace")
-    workspace = _native_file_manifest(runs / "workspaces", suffixes={".py"})
+    workspace = _native_file_manifest(runs / "workspaces", suffixes={".py", ".yaml", ".yml", ".md"})
+    if semantic_evidence is not None and not _semantic_workspace_files_match(semantic_evidence, workspace):
+        semantic_evidence = None
+        semantic_evidence_sha256 = None
+        semantic_evidence_error = "SEMANTIC_EVIDENCE_WORKSPACE_CROSSCHECK_FAILED"
     source = Path(__file__).with_name("docker-rdagent-smoke")
     config_files = {
         name: _sha256_file(source / name)
@@ -448,17 +551,63 @@ def build_native_research_evidence(
         and isinstance(qlib_evidence.get("recorder_id"), str)
         and isinstance(qlib_evidence.get("artifact_manifest"), dict)
     )
+    selected = None
+    semantic_status = "UNAVAILABLE"
+    crosscheck = False
+    if semantic_evidence is not None:
+        experiments = semantic_evidence.get("experiments")
+        selected_id = semantic_evidence.get("selected_experiment_identity_sha256")
+        if isinstance(experiments, list):
+            selected = next((item for item in experiments if item.get("identity_sha256") == selected_id), None)
+            host_code = {
+                item.get("relative_path"): item.get("sha256")
+                for item in workspace.get("files", []) if isinstance(item, dict)
+            }
+            semantic_code = selected.get("generated_code", {}).get("files", []) if selected else []
+            crosscheck = bool(semantic_code) and all(
+                isinstance(item, dict)
+                and host_code.get(item.get("workspace_relative_path")) == item.get("sha256")
+                for item in semantic_code
+            )
+            semantic_status = "OBSERVED" if selected is not None else "PARTIAL"
+    lineage = selected.get("lineage", {}) if selected else {}
     research_identity = {
-        "status": "PARTIAL",
-        "hypothesis": {"status": "UNAVAILABLE", "reason": "NO_TRUSTED_STRUCTURED_SERIALIZATION_READER"},
-        "task_semantics": {"status": "UNAVAILABLE", "reason": "TASK_OBJECT_NOT_SAFELY_EXTRACTED"},
-        "experiment_lineage": {"status": "UNAVAILABLE", "reason": "RDAGENT_LINEAGE_NOT_SAFELY_EXTRACTED"},
+        "status": "OBSERVED" if selected is not None else "PARTIAL",
+        "selected_experiment_identity_sha256": selected.get("identity_sha256") if selected else None,
+        "hypothesis": (
+            {"status": "OBSERVED", **selected["hypothesis"]}
+            if selected and isinstance(selected.get("hypothesis"), dict)
+            else {"status": "UNAVAILABLE", "reason": semantic_evidence_error or "TRUSTED_IN_MEMORY_HYPOTHESIS_UNAVAILABLE"}
+        ),
+        "task_semantics": (
+            {"status": "OBSERVED", "tasks": selected["tasks"]}
+            if selected and isinstance(selected.get("tasks"), list) and selected["tasks"]
+            else {"status": "UNAVAILABLE", "reason": "TRUSTED_IN_MEMORY_TASKS_UNAVAILABLE"}
+        ),
+        "experiment_lineage": (
+            {"status": lineage.get("status"), "identity_sha256": lineage.get("identity_sha256"),
+             "parent_experiment_ids": lineage.get("parent_experiment_ids", [])}
+            if selected and isinstance(lineage, dict)
+            else {"status": "UNAVAILABLE", "reason": "TRACE_LINEAGE_UNAVAILABLE"}
+        ),
         "generated_code": {
-            "status": "CONTENT_IDENTITIES_ONLY" if workspace["status"] == "OBSERVED" else "UNAVAILABLE",
-            "files": workspace["files"],
-            "semantic_binding": "UNAVAILABLE",
+            "status": "OBSERVED" if crosscheck else "CONTENT_IDENTITIES_ONLY" if workspace["status"] == "OBSERVED" else "UNAVAILABLE",
+            "files": selected.get("generated_code", {}).get("files", []) if selected else workspace.get("files", []),
+            "manifest_sha256": selected.get("generated_code", {}).get("manifest_sha256") if selected else None,
+            "semantic_binding": "OBSERVED" if crosscheck else "PARTIAL",
         },
+        "qlib_recorder_binding": (
+            semantic_evidence.get("qlib_recorder_binding") if semantic_evidence is not None
+            else {"status": "SEMANTIC_BINDING_PARTIAL", "reason": "RDAGENT_SEMANTIC_EVIDENCE_UNAVAILABLE"}
+        ),
     }
+    # Even complete semantic identities remain partial overall until a direct
+    # RD-Agent Experiment -> Qlib Recorder link is emitted by the pinned upstream.
+    semantic_status = (
+        "UNAVAILABLE" if semantic_evidence is None
+        else "OBSERVED" if semantic_evidence.get("status") == "OBSERVED" and selected is not None and crosscheck
+        else "PARTIAL"
+    )
     return {
         "format_version": "P12_NATIVE_RESEARCH_EVIDENCE_V1",
         "request_id": request_id,
@@ -479,7 +628,14 @@ def build_native_research_evidence(
             "runtime_image": PINNED_FINQUANT_IMAGE,
             "runtime_image_id": observed_worker.get("image_id"),
             "trace_manifest": trace,
+            "workspace_manifest": workspace,
             "research_identity": research_identity,
+            "semantic_evidence": {
+                "status": semantic_status,
+                "sha256": semantic_evidence_sha256,
+                "payload": semantic_evidence,
+                "error": semantic_evidence_error,
+            },
         },
         "llm_evidence_status_observed": "COMPLETE" if llm_evidence_sha256 else "PARTIAL",
         "llm_evidence_sha256": llm_evidence_sha256,
@@ -1050,7 +1206,7 @@ def run_docker_rdagent_finquant(
 def validate_owner_worker_inspection(
     inspection: dict[str, Any], *, expected_key: str, expected_output: Path,
     run_namespace: str, expected_artifact_volume: str,
-    expected_command: tuple[str, ...] = ("fin_quant", "--loop-n", "1"),
+    expected_command: tuple[str, ...] = ("python", _SEMANTIC_BRIDGE_CONTAINER_PATH, "--loop-n", "1"),
 ) -> dict[str, Any]:
     """Validate the actual profiled worker configuration, including its shell gate."""
     config = inspection.get("Config", {})
@@ -1064,7 +1220,8 @@ def validate_owner_worker_inspection(
     if (
         entrypoint[0:2] != ["/bin/sh", "-ec"] or entrypoint[3] != "--"
         or not isinstance(script, str)
-        or 'exec rdagent "$@"' not in script
+        or 'exec "$@"' not in script
+        or 'exec rdagent "$@"' in script
         or "test -f /workspace/p12-attempt.json" not in script
         or "LITELLM_CHAT_MAX_TOKENS" not in script
         or "LITELLM_CHAT_MODEL_MAP" not in script
@@ -1114,13 +1271,19 @@ def validate_owner_worker_inspection(
         and artifact_mount.get("RW") is True
         and artifact_mount.get("Type") == "volume"
     )
+    semantic_bridge_mount = mounted.get(_SEMANTIC_BRIDGE_CONTAINER_PATH, {})
+    semantic_bridge_valid = (
+        semantic_bridge_mount.get("Source") == str(_SEMANTIC_BRIDGE_HOST_PATH.resolve())
+        and semantic_bridge_mount.get("RW") is False
+        and semantic_bridge_mount.get("Type") == "bind"
+    )
     sensitive_names = {
         "DEEPSEEK_API_KEY", "LITELLM_DEEPSEEK_STAGING_MASTER_KEY",
         "POSTGRES_PASSWORD", "LITELLM_MASTER_KEY", "OWNER_SIGNING_PRIVATE_KEY",
     }
     if (
-        not data_mounts_valid or len(mounted) != len(FINQUANT_DATA_MOUNTS) + 2
-        or not output_valid or not artifact_volume_valid
+        not data_mounts_valid or len(mounted) != len(FINQUANT_DATA_MOUNTS) + 3
+        or not output_valid or not artifact_volume_valid or not semantic_bridge_valid
         or list(networks) != [PERSISTENT_LITELLM_NETWORK]
         or environment.get("OPENAI_API_BASE") != "http://litellm-deepseek-staging:4000/v1"
         or environment.get("OPENAI_API_KEY") != expected_key
@@ -1139,6 +1302,7 @@ def validate_owner_worker_inspection(
         "mounts_valid": True,
         "artifact_volume": expected_artifact_volume,
         "artifact_volume_valid": True,
+        "semantic_bridge_mount_valid": True,
         "network_valid": True,
         "credential_isolation": True,
     }
@@ -1210,7 +1374,7 @@ def run_docker_rdagent_owner_oneshot(
     artifact_volume = _owner_artifact_volume_name(request_id, attempt_id)
     attempt = {
         "request_id": request_id, "attempt_id": attempt_id,
-        "run_namespace": run_namespace, "native_cli_command": "rdagent fin_quant --loop-n 1",
+        "run_namespace": run_namespace, "native_cli_command": "rdagent fin_quant --loop-n 1 (upstream quant.main via thin record hook)",
         "image": PINNED_FINQUANT_IMAGE, "image_id": PINNED_FINQUANT_IMAGE_ID,
         "mlflow_artifact_volume": artifact_volume,
         "p2_status": "NOT_EVALUATED_NO_CANDIDATE",
@@ -1358,6 +1522,9 @@ def run_docker_rdagent_owner_oneshot(
             raise DockerDispatchAmbiguous("Native Qlib Recorder evidence could not be read") from None
         if evidence_result.returncode not in (0, 2):
             raise DockerDispatchAmbiguous("Native Qlib Recorder evidence inspection failed")
+        semantic_evidence, semantic_evidence_digest, semantic_evidence_error = _read_semantic_evidence(
+            output, request_id=request_id, attempt_id=attempt_id,
+        )
         blocked = subprocess.run(
             [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
             input=json.dumps({
@@ -1398,6 +1565,9 @@ def run_docker_rdagent_owner_oneshot(
                 output=output, observed_worker=observed, qlib_evidence=research_evidence,
                 artifact_volume=artifact_volume, llm_evidence_sha256=call_evidence_digest,
                 llm_evidence=call_evidence,
+                semantic_evidence=semantic_evidence,
+                semantic_evidence_sha256=semantic_evidence_digest,
+                semantic_evidence_error=semantic_evidence_error,
             )
             native_evidence["process_status"] = (
                 "PROCESS_EXIT_SUCCESS" if launched.returncode == 0 else "PROCESS_EXIT_FAILED"
