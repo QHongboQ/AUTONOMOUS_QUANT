@@ -5583,3 +5583,28 @@ BROKER_MUTATIONS = 0
 
 See [P9 execution-safety evidence rollup 001](p9-execution-safety-evidence-rollup-001.md)
 and [P9 safe-write upstream patch review 001](p9-safe-write-upstream-review-001.md).
+
+## 33. P9 no-upstream-patch safe-execution public-seam feasibility (2026-10-16)
+
+The pinned Lumibot 4.6.18 + alpaca-py 0.44.0 public APIs do not expose a
+supported composition for finite write transport timeouts, no automatic replay
+of non-idempotent writes, durable pre-submit intent, and fail-closed recovery.
+Lumibot's source-visible `Alpaca.api` setter is not documented as a supported
+extension contract; alpaca-py owns its Session and its public TradingClient
+constructor has no timeout/retry/transport injection parameters. The
+conditional integration POC was therefore not run. No private hook, patch,
+proxy, or AQ execution engine was used.
+
+```text
+P9_SAFE_WRITE_PUBLIC_PATH = BLOCKED_NO_PUBLIC_SEAM
+CONDITIONAL_POC = NOT_RUN_NO_SUPPORTED_PUBLIC_SEAM
+P9_SUPERVISED_PAPER_LIFECYCLE = PASS (ENGINEERING_TEST_ONLY; PR #153)
+P9_FORWARD_PAPER_READY = NO
+P9_CONTINUOUS_PAPER_READY = NO
+P9_PRODUCTION_AUTHORIZED = NO
+P2_V2_SEALED_OOS_ACCESSED = NO
+BROKER_API_CALLS = 0
+BROKER_MUTATIONS = 0
+```
+
+See [P9 no-upstream-patch safe-execution public-seam feasibility 001](p9-no-upstream-patch-safe-execution-poc-001.md).
