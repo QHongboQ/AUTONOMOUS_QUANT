@@ -26,9 +26,13 @@ _REQUIRED_FILES = {
 }
 
 
+class ArtifactListingDepthExceeded(ValueError):
+    """Raised when MLflow artifact traversal cannot produce a complete listing."""
+
+
 def _artifact_files(client: Any, run_id: str, path: str = "", depth: int = 0) -> dict[str, int | None]:
     if depth > 8:
-        return {}
+        raise ArtifactListingDepthExceeded("MLflow artifact listing exceeded maximum depth 8")
     found: dict[str, int | None] = {}
     for item in client.list_artifacts(run_id, path or None):
         artifact_path = item.path.strip("/")
@@ -208,6 +212,7 @@ def inspect_research_evidence(
         }
 
     candidates = []
+    depth_limited_runs: list[str] = []
     for run in finished:
         if (
             str(run.info.experiment_id) != str(experiment.experiment_id)
@@ -216,6 +221,9 @@ def inspect_research_evidence(
             continue
         try:
             names = _artifact_files(client, run.info.run_id)
+        except ArtifactListingDepthExceeded:
+            depth_limited_runs.append(str(run.info.run_id))
+            continue
         except Exception:
             continue
         metrics = getattr(run.data, "metrics", {}) or {}
@@ -223,6 +231,15 @@ def inspect_research_evidence(
         if not _metrics_are_complete(metrics):
             missing.append("native_signal_and_portfolio_metrics")
         candidates.append((run, names, metrics, missing))
+    if depth_limited_runs:
+        return {
+            "classification": "RESEARCH_EVIDENCE_INCOMPLETE",
+            "reason": "ARTIFACT_LISTING_INCOMPLETE_DEPTH_LIMIT",
+            "experiment_id": experiment.experiment_id,
+            "recorder_ids": sorted(depth_limited_runs),
+            "artifact_volume": artifact_volume,
+            "attempt_id": attempt_id,
+        }
     complete = [candidate for candidate in candidates if not candidate[3]]
     if len(complete) == 1:
         run, names, metrics, _ = complete[0]

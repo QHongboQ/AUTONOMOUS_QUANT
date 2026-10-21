@@ -1137,6 +1137,11 @@ class OwnerOneShotTests(unittest.TestCase):
             empty_folder = inspect_research_evidence(
                 Client(files={"sig_analysis": True, "portfolio_analysis": True}), **args
             )
+        deep_artifacts = dict(artifacts)
+        deep_artifacts[
+            "deep/one/two/three/four/five/six/seven/eight/nine/unexpected.bin"
+        ] = False
+        depth_limited = inspect_research_evidence(Client(files=deep_artifacts), **args)
         self.assertEqual(complete["classification"], "RESEARCH_EVIDENCE_COMPLETE")
         self.assertEqual(complete["experiment_id"], "1")
         self.assertEqual(complete["recorder_id"], "recorder-1")
@@ -1147,6 +1152,8 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertEqual(missing_model["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
         self.assertIn("model_parameters", missing_model["missing"])
         self.assertEqual(empty_folder["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertEqual(depth_limited["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertEqual(depth_limited["reason"], "ARTIFACT_LISTING_INCOMPLETE_DEPTH_LIMIT")
 
         mismatched = Client()
         mismatched.get_experiment_by_name = lambda name: type("Experiment", (), {
@@ -1258,7 +1265,24 @@ class OwnerOneShotTests(unittest.TestCase):
             self.assertEqual(first["rdagent"]["research_identity"]["generated_code"]["status"], "CONTENT_IDENTITIES_ONLY")
             self.assertEqual(first["provenance_status"], "PARTIAL")
             self.assertEqual(first["qlib"]["experiment_id"], "exp-1")
+            self.assertEqual(first["effective_config_identity"]["status"], "CONFIGURED")
+            self.assertEqual(
+                first["effective_config_identity"]["identity"]["worker_image_id_observed"],
+                "sha256:" + "a" * 64,
+            )
+            self.assertTrue(
+                first["effective_config_identity"]["identity"]["worker_entrypoint_verified"]
+            )
             self.assertTrue(oneshot.p12._native_research_evidence_shape_valid(first))
+            unavailable_worker = docker_rdagent_target.build_native_research_evidence(
+                **{**args, "observed_worker": {}}
+            )
+            self.assertEqual(
+                unavailable_worker["effective_config_identity"]["status"], "CONFIGURED"
+            )
+            self.assertIsNone(
+                unavailable_worker["effective_config_identity"]["identity"]["worker_image_id_observed"]
+            )
             malformed = json.loads(json.dumps(first))
             malformed["qlib"]["artifact_manifest"]["task"]["relative_path"] = "../escape"
             self.assertFalse(oneshot.p12._native_research_evidence_shape_valid(malformed))

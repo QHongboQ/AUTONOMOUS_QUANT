@@ -484,7 +484,10 @@ def build_native_research_evidence(
         "llm_evidence_status_observed": "COMPLETE" if llm_evidence_sha256 else "PARTIAL",
         "llm_evidence_sha256": llm_evidence_sha256,
         "effective_config_identity": {
-            "status": "OBSERVED" if observed_worker.get("image_id") else "CONFIGURED",
+            # Some runtime facts are observed above, but the full effective config is
+            # not. Keep the aggregate grade configured until every relevant value is
+            # independently observed from the running worker.
+            "status": "CONFIGURED",
             "sha256": hashlib.sha256(config_bytes).hexdigest(),
             "identity": safe_effective_config,
         },
