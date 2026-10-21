@@ -1444,6 +1444,210 @@ class OwnerOneShotTests(unittest.TestCase):
             self.assertEqual(symlink_result["rdagent"]["trace_manifest"]["status"], "UNAVAILABLE")
             self.assertIn("SYMLINK", symlink_result["rdagent"]["trace_manifest"]["reason"])
 
+    def test_populated_parent_factor_model_baseline_and_legacy_workspace_are_recursively_verified(self):
+        request_id = identity("populated-parent-request")
+        attempt_id = identity("populated-parent-attempt")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            class Workspace:
+                def __init__(self, path, files, target_task=None):
+                    self.workspace_path = path
+                    self.file_dict = files
+                    self.target_task = target_task
+
+            class Hypothesis:
+                pass
+
+            def make_task(branch, name):
+                if branch == "factor":
+                    task_type = type("FactorTask", (), {
+                        "__module__": "rdagent.components.coder.factor_coder.factor",
+                    })
+                    values = {
+                        "name": name, "version": 1, "description": "synthetic",
+                        "base_code": None, "user_instructions": None,
+                        "factor_name": name, "factor_formulation": "$close",
+                        "variables": {"close": "$close"}, "factor_resources": None,
+                        "factor_implementation": False,
+                    }
+                else:
+                    task_type = type("ModelTask", (), {
+                        "__module__": "rdagent.components.coder.model_coder.model",
+                    })
+                    values = {
+                        "name": name, "version": 1, "description": "synthetic",
+                        "base_code": None, "user_instructions": None,
+                        "architecture": "GRU", "formulation": None,
+                        "variables": "features", "hyperparameters": {"hidden": "8"},
+                        "training_hyperparameters": {"epochs": "1"}, "model_type": "synthetic",
+                    }
+                task = task_type()
+                vars(task).update(values)
+                return task
+
+            def make_experiment(name, branch, parents=()):
+                path = root / name
+                path.mkdir()
+                template_path = path / "template"
+                template_path.mkdir()
+                code = f"value = {name!r}\n"
+                config = f"experiment: {name}\n"
+                (path / "generated.py").write_text(code, encoding="utf-8")
+                (template_path / "config.yaml").write_text(config, encoding="utf-8")
+                task = make_task(branch, name)
+                workspace = Workspace(path, {"generated.py": code}, task)
+                template = Workspace(template_path, {"config.yaml": config})
+                hypothesis = Hypothesis()
+                for key in semantic_bridge._HYPOTHESIS_FIELDS:
+                    setattr(hypothesis, key, "factor" if key == "action" and branch == "factor" else
+                            "model" if key == "action" else f"{name}-{key}")
+                experiment_type = type("SyntheticExperiment", (), {})
+                experiment = experiment_type()
+                experiment.hypothesis = hypothesis
+                experiment.sub_tasks = [task]
+                experiment.sub_workspace_list = [workspace]
+                experiment.experiment_workspace = template
+                experiment.based_experiments = list(parents)
+                experiment.plan = {"name": name}
+                experiment.base_features = {"close": "$close"}
+                experiment.base_feature_codes = {}
+                return experiment
+
+            baseline_path = root / "baseline"
+            baseline_path.mkdir()
+            baseline_config = "provider: baseline\n"
+            baseline_code = "def read_exp_res():\n    return None\n"
+            (baseline_path / "config.yaml").write_text(baseline_config, encoding="utf-8")
+            (baseline_path / "read_exp_res.py").write_text(baseline_code, encoding="utf-8")
+            baseline_template = Workspace(
+                baseline_path,
+                {"config.yaml": baseline_config, "read_exp_res.py": baseline_code},
+            )
+            baseline_type = type("QlibFactorExperiment", (), {
+                "__module__": "rdagent.scenarios.qlib.experiment.factor_experiment",
+            })
+            baseline = baseline_type()
+            baseline.hypothesis = None
+            baseline.sub_tasks = []
+            baseline.experiment_workspace = baseline_template
+            baseline.based_experiments = []
+            baseline.sub_workspace_list = []
+            baseline.plan = None
+            baseline.base_features = {}
+            baseline.base_feature_codes = {}
+
+            historical_factor = make_experiment("historical-factor", "factor", [baseline])
+            historical_model = make_experiment("historical-model", "model", [historical_factor])
+            legacy_path = root / "legacy-workspace"
+            legacy_path.mkdir()
+            legacy_code = "legacy = True\n"
+            (legacy_path / "legacy.py").write_text(legacy_code, encoding="utf-8")
+            legacy_workspace = Workspace(legacy_path, {"legacy.py": legacy_code}, make_task("factor", "legacy"))
+            selected = make_experiment(
+                "selected-current", "factor", [baseline, historical_factor, historical_model, legacy_workspace],
+            )
+            payload = semantic_bridge.capture_trace_semantics(
+                SimpleNamespace(hist=[(selected, None)], dag_parent=[()]),
+                request_id=request_id, attempt_id=attempt_id, workspace_root=root,
+            )
+
+            referenced: dict[str, tuple[int, str]] = {}
+
+            def collect_files(experiment):
+                for item in experiment.get("files", []):
+                    referenced[item["workspace_relative_path"]] = (item["size_bytes"], item["sha256"])
+                for collection in (
+                    experiment.get("generated_code", {}).get("files", []),
+                    experiment.get("experiment_template", {}).get("files", []),
+                ):
+                    for item in collection:
+                        referenced[item["workspace_relative_path"]] = (item["size_bytes"], item["sha256"])
+                for parent in experiment.get("based_experiments", []):
+                    if "hypothesis" in parent and isinstance(parent.get("hypothesis"), dict):
+                        collect_files(parent)
+                    else:
+                        for item in parent.get("files", []):
+                            referenced[item["workspace_relative_path"]] = (item["size_bytes"], item["sha256"])
+
+            for experiment in payload["experiments"]:
+                collect_files(experiment)
+            manifest = {
+                "status": "OBSERVED",
+                "files": [
+                    {"relative_path": relative, "size_bytes": size, "sha256": digest}
+                    for relative, (size, digest) in sorted(referenced.items())
+                ],
+            }
+
+            def bind(body):
+                raw = (json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode()
+                return {"status": "OBSERVED", "sha256": hashlib.sha256(raw).hexdigest(), "payload": body}
+
+            bound = bind(payload)
+            self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
+                bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+            self.assertTrue(docker_rdagent_target._semantic_workspace_files_match(payload, manifest))
+            parents = payload["experiments"][0]["based_experiments"]
+            self.assertEqual([parent.get("identity_kind", "EXPERIMENT" if "hypothesis" in parent else "WORKSPACE")
+                              for parent in parents], ["BASELINE", "EXPERIMENT", "EXPERIMENT", "WORKSPACE"])
+            self.assertEqual(parents[2]["tasks"][0]["branch"], "model")
+            self.assertEqual(parents[1]["based_experiments"][0]["identity_kind"], "BASELINE")
+
+            tampered = json.loads(json.dumps(payload))
+            tampered_parent = tampered["experiments"][0]["based_experiments"][1]
+            tampered_parent["generated_code"]["files"][0]["sha256"] = "0" * 64
+            self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+                bind(tampered), request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+            self.assertFalse(docker_rdagent_target._semantic_workspace_files_match(tampered, manifest))
+            # A parent Recorder identity is not interchangeable with the selected
+            # current experiment's native Qlib correlation marker.
+            selected = payload["experiments"][0]
+            parent = parents[1]
+            parent_marker_body = {
+                "request_id": request_id,
+                "attempt_id": attempt_id,
+                "rdagent_experiment_identity_sha256": parent["identity_sha256"],
+                "rdagent_task_identity_sha256s": [task["identity_sha256"] for task in parent["tasks"]],
+                "generated_code_manifest_sha256": parent["generated_code"]["manifest_sha256"],
+                "experiment_template_identity_sha256": parent["experiment_template"]["identity_sha256"],
+                "qlib_config_template_sha256": hashlib.sha256(b"synthetic-parent-config").hexdigest(),
+                "execution_index": 0,
+            }
+            parent_marker = {
+                **parent_marker_body,
+                "correlation_sha256": hashlib.sha256(json.dumps(
+                    parent_marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode()).hexdigest(),
+            }
+            parent_bound = json.loads(json.dumps(payload))
+            parent_bound["qlib_recorder_binding"] = {"status": "PARTIAL", "matches": [{
+                "status": "RECORDER_CREATED_BY_NATIVE_QRUN",
+                "request_id": request_id,
+                "attempt_id": attempt_id,
+                "rdagent_experiment_identity_sha256": parent["identity_sha256"],
+                "qlib_experiment_name": "synthetic-parent-exp",
+                "qlib_experiment_id": "synthetic-parent-exp-id",
+                "qlib_recorder_run_id": "synthetic-parent-run-id",
+                "recorder_status_at_hook": "RUNNING",
+                "execution_index": 0,
+                "marker": parent_marker,
+                "marker_sha256": parent_marker["correlation_sha256"],
+                "receipt_sha256": hashlib.sha256(b"synthetic-parent-receipt").hexdigest(),
+                "artifact_volume": "synthetic-parent-volume",
+            }], "failures": []}
+            self.assertNotEqual(parent["identity_sha256"], selected["identity_sha256"])
+            self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+                bind(parent_bound), request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+            # Revalidation of the same immutable payload is the historical replay path;
+            # it does not dispatch or bind a parent's Recorder to the selected experiment.
+            self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
+                bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+
     def test_semantic_bridge_identity_is_bound_to_request_attempt_and_recorder_link_stays_partial(self):
         request_id = identity("semantic-evidence-request")
         attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"

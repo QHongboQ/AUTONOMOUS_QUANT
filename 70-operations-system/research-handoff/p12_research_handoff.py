@@ -409,6 +409,7 @@ def _safe_relative_evidence_path(value: Any) -> bool:
 
 def _semantic_evidence_shape_valid(
     value: Any, *, request_id: str, attempt_id: str, trace_manifest: dict[str, Any],
+    _parent_depth: int = 0, _parent_ancestors: frozenset[str] = frozenset(),
 ) -> bool:
     if (
         not isinstance(trace_manifest, dict)
@@ -639,6 +640,63 @@ def _semantic_evidence_shape_valid(
         for based in experiment["based_experiments"]:
             if isinstance(based, dict) and based.get("identity_kind") == "BASELINE":
                 if not baseline_identity_valid(based):
+                    return False
+                continue
+            # Current RD-Agent emits completed Factor/Model experiments recursively,
+            # while older evidence projected based_experiments as an FBWorkspace.
+            # Validate the full recursive identity through the same validator used
+            # for a selected Trace experiment; do not reduce it to a Workspace hash.
+            if isinstance(based, dict) and any(
+                key in based for key in ("hypothesis", "tasks", "experiment_template", "generated_code")
+            ):
+                if not isinstance(based.get("hypothesis"), dict):
+                    return False
+                parent_id = based.get("identity_sha256")
+                if (
+                    _parent_depth >= 64
+                    or not isinstance(parent_id, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", parent_id)
+                    or parent_id in _parent_ancestors
+                ):
+                    return False
+                parent = dict(based)
+                # Nested identities are not Trace history entries and therefore
+                # legitimately lack Trace locators / dag_parent lineage. The
+                # recursive envelope validates content identity only; it never
+                # grants a parent Recorder binding to the selected experiment.
+                parent["lineage"] = {"status": "UNAVAILABLE"}
+                parent["trace_locator"] = {"history_index": 0}
+                parent_payload = {
+                    "format_version": "P12_RDAGENT_SEMANTIC_EVIDENCE_V1",
+                    "request_id": request_id,
+                    "attempt_id": attempt_id,
+                    "upstream_release_sha": payload["upstream_release_sha"],
+                    "trace_history_length": 1,
+                    "status": (
+                        "OBSERVED"
+                        if parent.get("generated_code", {}).get("status") == "OBSERVED"
+                        and parent.get("experiment_template", {}).get("status") == "OBSERVED"
+                        else "PARTIAL"
+                    ),
+                    "experiments": [parent],
+                    "selected_experiment_identity_sha256": parent_id,
+                    "qlib_recorder_binding": {"status": "PARTIAL", "matches": [], "failures": []},
+                }
+                try:
+                    parent_digest = hashlib.sha256((json.dumps(
+                        parent_payload, sort_keys=True, separators=(",", ":"),
+                        ensure_ascii=False, allow_nan=False,
+                    ) + "\n").encode("utf-8")).hexdigest()
+                except (TypeError, ValueError):
+                    return False
+                if not _semantic_evidence_shape_valid(
+                    {"status": parent_payload["status"], "sha256": parent_digest, "payload": parent_payload},
+                    request_id=request_id,
+                    attempt_id=attempt_id,
+                    trace_manifest=trace_manifest,
+                    _parent_depth=_parent_depth + 1,
+                    _parent_ancestors=_parent_ancestors | {parent_id},
+                ):
                     return False
                 continue
             if (

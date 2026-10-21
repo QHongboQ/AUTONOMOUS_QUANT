@@ -452,9 +452,13 @@ def _semantic_workspace_files_match(
     experiments = payload.get("experiments")
     if not isinstance(experiments, list):
         return False
-    for experiment in experiments:
-        if not isinstance(experiment, dict):
+    pending = [(item, 0) for item in experiments]
+    visited: set[int] = set()
+    while pending:
+        experiment, depth = pending.pop()
+        if not isinstance(experiment, dict) or id(experiment) in visited or depth >= 64:
             return False
+        visited.add(id(experiment))
         collections = [
             experiment.get("generated_code", {}).get("files")
             if isinstance(experiment.get("generated_code"), dict) else None,
@@ -464,7 +468,17 @@ def _semantic_workspace_files_match(
         based = experiment.get("based_experiments")
         if not isinstance(based, list):
             return False
-        collections.extend(item.get("files") if isinstance(item, dict) else None for item in based)
+        for parent in based:
+            if not isinstance(parent, dict):
+                return False
+            if any(key in parent for key in ("hypothesis", "tasks", "experiment_template", "generated_code")):
+                if "hypothesis" not in parent or "tasks" not in parent:
+                    return False
+                pending.append((parent, depth + 1))
+            else:
+                # Native empty BASELINE and legacy Workspace projections expose
+                # their directly observed files here.
+                collections.append(parent.get("files"))
         for files in collections:
             if not isinstance(files, list):
                 return False
