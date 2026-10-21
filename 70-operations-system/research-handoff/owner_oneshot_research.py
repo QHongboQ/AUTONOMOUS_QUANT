@@ -37,6 +37,11 @@ from docker_rdagent_target import (  # noqa: E402
 )
 
 MAX_POLICY_LIFETIME = timedelta(hours=24)
+OWNER_RESEARCH_RESOURCE_CAPS = {
+    "maximum_runtime_seconds": 3600,
+    "maximum_memory_mb": 4096,
+    "maximum_storage_bytes": 100_000_000_000,
+}
 OWNER_MODEL_ROUTES = frozenset({
     ("deepseek", "deepseek/deepseek-flash", "PAID"),
     ("ollama", "ollama/qwen3-embedding:0.6b", "LOCAL"),
@@ -79,6 +84,10 @@ def _validate_policy_object(policy: Any, request: Any, now: datetime | None = No
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     effective, expires = policy.effective_at.astimezone(timezone.utc), policy.expires_at.astimezone(timezone.utc)
     routes = frozenset((route.provider, route.model, route.billing_class) for route in policy.allowed_llm_routes)
+    owner_research_over_cap = getattr(request, "request_origin", None) == p12.OWNER_RESEARCH_ORIGIN and any(
+        getattr(policy, field) > maximum
+        for field, maximum in OWNER_RESEARCH_RESOURCE_CAPS.items()
+    )
     if (
         policy.authorization_status != "APPROVED"
         or policy.evidence_classification != "HUMAN_APPROVED"
@@ -89,6 +98,7 @@ def _validate_policy_object(policy: Any, request: Any, now: datetime | None = No
         or policy.maximum_run_spend_usd != 5
         or policy.maximum_concurrent_runs != 1
         or policy.spending_limit_semantics != "TRACKED_SPEND_LIMIT_ONLY"
+        or owner_research_over_cap
         or routes != OWNER_MODEL_ROUTES
         or policy.research_budget_identity != request.research_budget_identity
         or policy.allowed_universe_scope_identities != (request.asset_universe_scope_identity,)
@@ -440,11 +450,18 @@ def run_one_shot(request_path: Path, policy_path: Path | None, state_dir: Path, 
         if origin == p12.OWNER_RESEARCH_ORIGIN else f"RUN $5 ONCE {request.request_id}"
     )
     expiry = policy.expires_at.isoformat() if policy is not None else "24 hours after this exact confirmation"
+    run_spend_limit = policy.maximum_run_spend_usd if policy is not None else Decimal("5.00")
+    runtime_limit = policy.maximum_runtime_seconds if policy is not None else OWNER_RESEARCH_RESOURCE_CAPS["maximum_runtime_seconds"]
+    memory_limit = policy.maximum_memory_mb if policy is not None else OWNER_RESEARCH_RESOURCE_CAPS["maximum_memory_mb"]
+    storage_limit = policy.maximum_storage_bytes if policy is not None else OWNER_RESEARCH_RESOURCE_CAPS["maximum_storage_bytes"]
     print(
         "Review before confirming: "
         f"origin={origin}; scope={request.asset_universe_scope_identity}; families={','.join(request.allowed_research_families)}; "
-        "models=DeepSeek Flash + local Ollama; total cap=USD 5.00; "
-        f"policy expires={expiry}; runs=1; concurrency=1; P2/trading authority=none."
+        "models=DeepSeek Flash + local Ollama; "
+        f"tracked-spend limit=USD {run_spend_limit:.2f} (not a worst-case charge guarantee); "
+        f"maximum runtime={runtime_limit}s; memory={memory_limit}MB; "
+        f"storage={storage_limit} bytes; policy expires={expiry}; "
+        "runs=1; concurrency=1; P2/trading authority=none."
     )
     try:
         response = input(f"To activate exactly one run, type: {phrase}\n> ")

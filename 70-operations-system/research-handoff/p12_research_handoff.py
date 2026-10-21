@@ -52,6 +52,7 @@ P4_LIFECYCLE_ORIGIN = "P4_LIFECYCLE"
 OWNER_BOOTSTRAP_ORIGIN = "OWNER_INITIAL_BOOTSTRAP"
 OWNER_RESEARCH_ORIGIN = "OWNER_AUTHORIZED_RESEARCH"
 OWNER_RESEARCH_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-research-state")
+OWNER_ONESHOT_GLOBAL_LOCK = Path("/mnt/d/AQ/OPERATIONS/P12/owner-oneshot-global-active.lock")
 
 
 def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) -> bool:
@@ -1853,11 +1854,30 @@ def process_owner_oneshot(
         return ({"classification": classification, "dispatch_count_added": 0}, _EXIT_BLOCKED)
 
     state_dir.mkdir(parents=True, exist_ok=True)
-    lock_path = state_dir / "owner-oneshot-active.lock"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    global_lock_path = OWNER_ONESHOT_GLOBAL_LOCK
+    global_lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        global_lock_fd = os.open(global_lock_path, flags, 0o600)
+    except FileExistsError:
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_GLOBAL_CONCURRENT_RUN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    os.write(global_lock_fd, json.dumps({
+        "request_id": request_id,
+        "request_origin": request_origin,
+        "research_budget_identity": budget_identity,
+        "pid": os.getpid(),
+    }, sort_keys=True).encode())
+    os.fsync(global_lock_fd)
+    _fsync_directory(global_lock_path.parent)
+
+    lock_path = state_dir / "owner-oneshot-active.lock"
     try:
         lock_fd = os.open(lock_path, flags, 0o600)
     except FileExistsError:
+        # An existing per-origin lock may belong to a still-running or
+        # ambiguous legacy worker. Keep the newly acquired global lock so a
+        # different origin cannot bypass that unresolved execution.
+        os.close(global_lock_fd)
         return ({"classification": "BLOCKED_OWNER_ONESHOT_CONCURRENT_RUN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     os.write(lock_fd, json.dumps({"request_id": request_id, "pid": os.getpid()}, sort_keys=True).encode())
     os.fsync(lock_fd)
@@ -1916,14 +1936,15 @@ def process_owner_oneshot(
 
         dispatch = {**claim, "state": "DISPATCHING_OWNER_ONESHOT"}
         _durable_json_create(_dispatch_file(state_dir, request_id), dispatch)
+        # Preserve both locks after dispatch begins unless a stopped worker and
+        # its terminal are verified and durably recorded.
+        keep_lock = True
         try:
             evidence = target(claim["attempt_id"])
         except Exception as exc:
-            keep_lock = True
             return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "request_id": request_id, "error_type": type(exc).__name__, "dispatch_count_added": 0}, _EXIT_BLOCKED)
         code = evidence.get("target_return_code") if isinstance(evidence, dict) else None
         if type(code) is not int or evidence.get("key_blocked_after_attempt") is not True:
-            keep_lock = True
             return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_UNVERIFIED", "request_id": request_id, "dispatch_count_added": 0}, _EXIT_BLOCKED)
         process_status = "PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED"
         evidence_status = evidence.get("research_evidence_status")
@@ -1956,6 +1977,7 @@ def process_owner_oneshot(
             "sealed_oos_accessed": False,
         }
         _durable_json_create(_status_file(state_dir, request_id), terminal)
+        keep_lock = False
         return (
             {"classification": terminal["state"], "request_id": request_id, "status": terminal, "dispatch_count_added": 1},
             0 if terminal_state == "SUCCEEDED_OWNER_ONESHOT" else _EXIT_FAILED,
@@ -1966,6 +1988,13 @@ def process_owner_oneshot(
             try:
                 lock_path.unlink()
                 _fsync_directory(state_dir)
+            except FileNotFoundError:
+                pass
+        os.close(global_lock_fd)
+        if not keep_lock:
+            try:
+                global_lock_path.unlink()
+                _fsync_directory(global_lock_path.parent)
             except FileNotFoundError:
                 pass
 
