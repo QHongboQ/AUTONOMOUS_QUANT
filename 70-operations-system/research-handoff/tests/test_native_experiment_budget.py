@@ -21,6 +21,14 @@ def identity(seed: str = "experiment") -> budget.P12ExperimentIdentity:
     )
 
 
+def _matches_strptime(value: str, fmt: str) -> bool:
+    try:
+        datetime.strptime(value, fmt)
+        return True
+    except ValueError:
+        return False
+
+
 class FakeNativeAPI:
     def __init__(self):
         self.users = {}
@@ -105,8 +113,8 @@ class NativeExperimentBudgetTests(unittest.TestCase):
                 seen.append((method, path, body))
                 return 200, {"data": [], "page": 2, "page_size": 25, "total": 0, "total_pages": 0}
         result = QueryAPI().spend_logs_v2(
-            user_id="p12-user", api_key_hash="native-hash", start_date="2026-10-19T00:00:00Z",
-            end_date="2026-10-20T00:00:00Z", page=2, page_size=25,
+            user_id="p12-user", api_key_hash="native-hash", start_date="2026-10-19 00:00:00",
+            end_date="2026-10-20 00:00:00", page=2, page_size=25,
         )
         self.assertEqual(result["total_pages"], 0)
         method, path, _ = seen[0]
@@ -117,8 +125,21 @@ class NativeExperimentBudgetTests(unittest.TestCase):
         self.assertEqual(query["api_key"], ["native-hash"])
         self.assertEqual(query["page"], ["2"])
         self.assertEqual(query["page_size"], ["25"])
-        self.assertEqual(query["start_date"], ["2026-10-19T00:00:00Z"])
-        self.assertEqual(query["end_date"], ["2026-10-20T00:00:00Z"])
+        self.assertEqual(query["start_date"], ["2026-10-19 00:00:00"])
+        self.assertEqual(query["end_date"], ["2026-10-20 00:00:00"])
+
+    def test_pinned_spend_logs_date_parser_accepts_only_supported_shapes(self):
+        accepted = ("2026-10-19", "2026-10-19 23:59:59")
+        rejected = (
+            "2026-10-19T23:59:59Z",
+            "2026-10-19 23:59:59.123456",
+            "2026-10-19 23:59:59+00:00",
+        )
+        formats = ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d")
+        for value in accepted:
+            self.assertTrue(any(_matches_strptime(value, fmt) for fmt in formats), value)
+        for value in rejected:
+            self.assertFalse(any(_matches_strptime(value, fmt) for fmt in formats), value)
 
     def test_p12_request_policy_budget_identity_must_match(self):
         with self.assertRaisesRegex(budget.BudgetBoundaryDenied, "IDENTITY_MISMATCH"):

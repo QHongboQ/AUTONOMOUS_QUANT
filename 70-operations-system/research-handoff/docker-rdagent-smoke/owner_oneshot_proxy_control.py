@@ -8,7 +8,7 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -69,6 +69,23 @@ def _row_time(row: dict[str, Any]) -> str | None:
         except ValueError:
             return None
     return None
+
+
+def _spend_log_api_time(value: datetime, *, end: bool) -> str:
+    """Format a conservative UTC bound accepted by LiteLLM 1.105.1.
+
+    The v2 endpoint parses second-resolution UTC strings. Floor the lower bound
+    and ceil the upper bound so fractional-second calls remain queryable; rows
+    are still checked against the original precise attempt window afterwards.
+    """
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("SpendLogs bounds must be timezone-aware")
+    utc_value = value.astimezone(timezone.utc)
+    has_fraction = utc_value.microsecond != 0
+    utc_value = utc_value.replace(microsecond=0)
+    if end and has_fraction:
+        utc_value += timedelta(seconds=1)
+    return utc_value.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _safe_row(row: dict[str, Any], *, expected_user: str, expected_key_hash: str,
@@ -143,8 +160,8 @@ def _safe_row(row: dict[str, Any], *, expected_user: str, expected_key_hash: str
 
 def _spend_snapshot(api: LiteLLMNativeAPI, *, user_id: str, key_hash: str,
                     started_at: datetime, ended_at: datetime) -> tuple[list[dict[str, Any]], Decimal]:
-    start = started_at.isoformat().replace("+00:00", "Z")
-    end = ended_at.isoformat().replace("+00:00", "Z")
+    start = _spend_log_api_time(started_at, end=False)
+    end = _spend_log_api_time(ended_at, end=True)
     rows: list[dict[str, Any]] = []
     page = 1
     declared_pages = None

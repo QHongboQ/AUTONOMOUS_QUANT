@@ -749,6 +749,53 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertNotIn("DO_NOT_PERSIST", json.dumps(evidence))
         self.assertNotIn(key_hash, json.dumps(evidence))
 
+    def test_spendlog_query_bounds_use_pinned_format_and_cover_fractional_seconds(self):
+        local_start = datetime(2026, 10, 20, 16, 59, 59, 999999, tzinfo=timezone(timedelta(hours=-7)))
+        local_end = datetime(2026, 10, 20, 17, 0, 0, 1, tzinfo=timezone(timedelta(hours=-7)))
+        start_text = proxy_control._spend_log_api_time(local_start, end=False)
+        end_text = proxy_control._spend_log_api_time(local_end, end=True)
+        self.assertEqual(start_text, "2026-10-20 23:59:59")
+        self.assertEqual(end_text, "2026-10-21 00:00:01")
+        # Mirror the pinned v1.105.1 v2 parser and reject ISO/offset/fractional strings.
+        for value in (start_text, end_text):
+            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        for invalid in ("2026-10-20T23:59:59Z", "2026-10-20 23:59:59.123456", "2026-10-20 23:59:59+00:00"):
+            with self.assertRaises(ValueError):
+                datetime.strptime(invalid, "%Y-%m-%d %H:%M:%S")
+        with self.assertRaisesRegex(ValueError, "timezone-aware"):
+            proxy_control._spend_log_api_time(datetime(2026, 10, 20), end=False)
+
+        class QueryAPI:
+            def __init__(self): self.args = None
+            def spend_logs_v2(self, **kwargs):
+                self.args = kwargs
+                return {"data": [], "total": 0, "total_pages": 0}
+        query = QueryAPI()
+        proxy_control._spend_snapshot(
+            query, user_id="u", key_hash="k", started_at=local_start.astimezone(timezone.utc),
+            ended_at=local_end.astimezone(timezone.utc),
+        )
+        self.assertEqual(query.args["start_date"], start_text)
+        self.assertEqual(query.args["end_date"], end_text)
+
+    def test_spendlog_exact_attempt_window_keeps_microseconds_after_broad_query(self):
+        start = datetime(2026, 10, 20, 23, 59, 59, 123456, tzinfo=timezone.utc)
+        end = datetime(2026, 10, 21, 0, 0, 0, 456789, tzinfo=timezone.utc)
+        base = {
+            "request_id": "row", "litellm_call_id": "call", "user": "u", "api_key": "k",
+            "startTime": start.isoformat(), "status": "success", "model_group": "routed",
+            "spend": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+            "metadata": {"attempted_fallbacks": 0, "attempted_retries": 0},
+        }
+        args = {"expected_user": "u", "expected_key_hash": "k", "started_at": start, "ended_at": end}
+        self.assertEqual(proxy_control._safe_row(base, **args)["observed_at_utc"], start.isoformat().replace("+00:00", "Z"))
+        at_end = {**base, "startTime": end.isoformat()}
+        self.assertEqual(proxy_control._safe_row(at_end, **args)["observed_at_utc"], end.isoformat().replace("+00:00", "Z"))
+        for outside in (start - timedelta(microseconds=1), end + timedelta(microseconds=1)):
+            with self.subTest(outside=outside):
+                with self.assertRaisesRegex(ValueError, "outside attempt window"):
+                    proxy_control._safe_row({**base, "startTime": outside.isoformat()}, **args)
+
     def test_spendlog_rejects_foreign_key_user_duplicate_ids_and_spend_mismatch(self):
         now = datetime.now(timezone.utc)
         user = identity("expected-user")
