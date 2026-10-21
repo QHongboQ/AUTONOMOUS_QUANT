@@ -1506,7 +1506,30 @@ class OwnerOneShotTests(unittest.TestCase):
             experiment.sub_tasks = [task]
             experiment.sub_workspace_list = [workspace]
             experiment.experiment_workspace = template_workspace
-            experiment.based_experiments = []
+            baseline_path = source / "native-empty-baseline"
+            baseline_path.mkdir()
+            baseline_config = b"provider: native-empty-factor-baseline\n"
+            baseline_code = b"def read_exp_res():\n    return None\n"
+            (baseline_path / "conf_baseline.yaml").write_bytes(baseline_config)
+            (baseline_path / "read_exp_res.py").write_bytes(baseline_code)
+            baseline_template = Workspace()
+            baseline_template.target_task = None
+            baseline_template.workspace_path = baseline_path
+            baseline_template.file_dict = {
+                "conf_baseline.yaml": baseline_config.decode("utf-8"),
+                "read_exp_res.py": baseline_code.decode("utf-8"),
+            }
+            NativeEmptyBaseline = type("QlibFactorExperiment", (), {})
+            NativeEmptyBaseline.__module__ = "rdagent.scenarios.qlib.experiment.factor_experiment"
+            baseline = NativeEmptyBaseline()
+            baseline.sub_tasks = []
+            baseline.experiment_workspace = baseline_template
+            baseline.based_experiments = []
+            baseline.sub_workspace_list = []
+            baseline.plan = None
+            baseline.base_features = {}
+            baseline.base_feature_codes = {}
+            experiment.based_experiments = [baseline]
             experiment.plan = {"features": {"close": "$close"}}
             experiment.base_features = {"close": "$close"}
             experiment.base_feature_codes = {}
@@ -1529,6 +1552,16 @@ class OwnerOneShotTests(unittest.TestCase):
                         "size_bytes": (template_path / "conf_baseline.yaml").stat().st_size,
                         "sha256": hashlib.sha256((template_path / "conf_baseline.yaml").read_bytes()).hexdigest(),
                     },
+                    {
+                        "relative_path": "workspace-1/native-empty-baseline/conf_baseline.yaml",
+                        "size_bytes": len(baseline_config),
+                        "sha256": hashlib.sha256(baseline_config).hexdigest(),
+                    },
+                    {
+                        "relative_path": "workspace-1/native-empty-baseline/read_exp_res.py",
+                        "size_bytes": len(baseline_code),
+                        "sha256": hashlib.sha256(baseline_code).hexdigest(),
+                    },
                 ],
             }
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode() + b"\n"
@@ -1536,6 +1569,20 @@ class OwnerOneShotTests(unittest.TestCase):
         bound = {"status": "OBSERVED", "sha256": digest, "payload": payload}
         self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
             bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
+        ))
+        baseline_identity = payload["experiments"][0]["based_experiments"][0]
+        self.assertEqual(baseline_identity["identity_kind"], "BASELINE")
+        self.assertIsNone(baseline_identity["hypothesis"])
+        self.assertEqual(baseline_identity["tasks"], [])
+        tampered_baseline = json.loads(json.dumps(payload))
+        tampered_baseline["experiments"][0]["based_experiments"][0]["baseline_content"]["code_files"][0]["sha256"] = "0" * 64
+        tampered_raw = json.dumps(
+            tampered_baseline, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode() + b"\n"
+        self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+            {"status": "OBSERVED", "sha256": hashlib.sha256(tampered_raw).hexdigest(),
+             "payload": tampered_baseline},
+            request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
         ))
         self.assertTrue(docker_rdagent_target._semantic_workspace_files_match(payload, workspace_manifest))
         mismatched_workspace = json.loads(json.dumps(payload))
@@ -1635,9 +1682,12 @@ class OwnerOneShotTests(unittest.TestCase):
             run_root = output / "runs" / "namespace"
             (run_root / "trace").mkdir(parents=True)
             (run_root / "workspaces" / "workspace-1" / "template").mkdir(parents=True)
+            (run_root / "workspaces" / "workspace-1" / "native-empty-baseline").mkdir(parents=True)
             (run_root / "trace" / "trace.jsonl").write_text("synthetic trace\n", encoding="utf-8")
             (run_root / "workspaces" / "workspace-1" / "factor.py").write_text(code, encoding="utf-8")
             (run_root / "workspaces" / "workspace-1" / "template" / "conf_baseline.yaml").write_bytes(template_bytes)
+            (run_root / "workspaces" / "workspace-1" / "native-empty-baseline" / "conf_baseline.yaml").write_bytes(baseline_config)
+            (run_root / "workspaces" / "workspace-1" / "native-empty-baseline" / "read_exp_res.py").write_bytes(baseline_code)
             qlib_evidence = {
                 "classification": "RESEARCH_EVIDENCE_COMPLETE",
                 "experiment_id": "exp-correlation", "recorder_id": "run-correlation",

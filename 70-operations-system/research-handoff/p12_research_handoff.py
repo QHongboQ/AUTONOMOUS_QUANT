@@ -454,13 +454,87 @@ def _semantic_evidence_shape_valid(
         for item in trace_manifest.get("files", [])
         if isinstance(item, dict)
     }
+
+    def baseline_identity_valid(experiment: dict[str, Any]) -> bool:
+        template = experiment.get("experiment_template")
+        files = template.get("files") if isinstance(template, dict) else None
+        if (
+            experiment.get("identity_kind") != "BASELINE"
+            or experiment.get("type") != (
+                "rdagent.scenarios.qlib.experiment.factor_experiment.QlibFactorExperiment"
+            )
+            or experiment.get("hypothesis") is not None
+            or experiment.get("tasks") != []
+            or experiment.get("based_experiments") != []
+            or experiment.get("generated_code") != {
+                "status": "UNAVAILABLE", "files": [], "manifest_sha256": None,
+            }
+            or experiment.get("feature_inputs_sha256") is not None
+            or not isinstance(template, dict)
+            or template.get("status") != "OBSERVED"
+            or not isinstance(files, list)
+            or experiment.get("files") != files
+        ):
+            return False
+        stable_files = []
+        prior_path = ""
+        config_files = []
+        code_files = []
+        for item in files:
+            if (
+                not isinstance(item, dict)
+                or not _safe_relative_evidence_path(item.get("relative_path"))
+                or item["relative_path"] <= prior_path
+                or not _safe_relative_evidence_path(item.get("workspace_relative_path"))
+                or type(item.get("size_bytes")) is not int
+                or item["size_bytes"] < 0
+                or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                or observed_workspace.get(item["workspace_relative_path"]) != item["sha256"]
+            ):
+                return False
+            prior_path = item["relative_path"]
+            stable_file = {key: item[key] for key in ("relative_path", "size_bytes", "sha256")}
+            stable_files.append(stable_file)
+            suffix = Path(item["relative_path"]).suffix.lower()
+            if suffix in {".yaml", ".yml"}:
+                config_files.append(stable_file)
+            elif suffix == ".py":
+                code_files.append(stable_file)
+        stable_template = {"task_identity_sha256": None, "files": stable_files}
+        template_id = hashlib.sha256(json.dumps(
+            stable_template, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")).hexdigest()
+        expected_content = {
+            "type": experiment["type"],
+            "experiment_template_type": template.get("type"),
+            "experiment_template_identity_sha256": template_id,
+            "config_files": config_files,
+            "code_files": code_files,
+        }
+        stable_baseline = {"identity_kind": "BASELINE", **expected_content}
+        return (
+            bool(config_files)
+            and bool(code_files)
+            and isinstance(expected_content["experiment_template_type"], str)
+            and bool(expected_content["experiment_template_type"])
+            and template.get("identity_sha256") == template_id
+            and template.get("task_identity_sha256") is None
+            and experiment.get("baseline_content") == expected_content
+            and hashlib.sha256(json.dumps(
+                stable_baseline, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() == experiment.get("identity_sha256")
+        )
+
     for experiment in experiments:
+        is_baseline = isinstance(experiment, dict) and experiment.get("identity_kind") == "BASELINE"
         if (
             not isinstance(experiment, dict)
             or not re.fullmatch(r"[0-9a-f]{64}", str(experiment.get("identity_sha256", "")))
-            or not isinstance(experiment.get("hypothesis"), dict)
+            or (is_baseline and not baseline_identity_valid(experiment))
+            or (not is_baseline and not isinstance(experiment.get("hypothesis"), dict))
             or not isinstance(experiment.get("tasks"), list)
-            or not experiment["tasks"]
+            or (not is_baseline and not experiment["tasks"])
+            or (is_baseline and experiment["tasks"])
             or not isinstance(experiment.get("based_experiments"), list)
             or not isinstance(experiment.get("lineage"), dict)
         ):
@@ -476,21 +550,22 @@ def _semantic_evidence_shape_valid(
             return False
         history_indexes.append(locator["history_index"])
         hypothesis = experiment["hypothesis"]
-        field_hashes = hypothesis.get("field_sha256s")
-        field_names = hypothesis.get("field_names")
-        if (
-            not isinstance(hypothesis.get("type"), str)
-            or not isinstance(field_names, list)
-            or field_names != sorted(set(field_names))
-            or not isinstance(field_hashes, dict)
-            or sorted(field_hashes) != field_names
-            or any(not re.fullmatch(r"[0-9a-f]{64}", str(item)) for item in field_hashes.values())
-            or hashlib.sha256(json.dumps(
-                {"type": hypothesis["type"], "field_sha256s": field_hashes},
-                sort_keys=True, separators=(",", ":"), ensure_ascii=False,
-            ).encode("utf-8")).hexdigest() != hypothesis.get("content_sha256")
-        ):
-            return False
+        if not is_baseline:
+            field_hashes = hypothesis.get("field_sha256s")
+            field_names = hypothesis.get("field_names")
+            if (
+                not isinstance(hypothesis.get("type"), str)
+                or not isinstance(field_names, list)
+                or field_names != sorted(set(field_names))
+                or not isinstance(field_hashes, dict)
+                or sorted(field_hashes) != field_names
+                or any(not re.fullmatch(r"[0-9a-f]{64}", str(item)) for item in field_hashes.values())
+                or hashlib.sha256(json.dumps(
+                    {"type": hypothesis["type"], "field_sha256s": field_hashes},
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != hypothesis.get("content_sha256")
+            ):
+                return False
         seen_ids.add(experiment["identity_sha256"])
         if experiment["identity_sha256"] == selected_id:
             selected = experiment
@@ -562,6 +637,10 @@ def _semantic_evidence_shape_valid(
         elif template.get("identity_sha256") is not None or template["files"]:
             return False
         for based in experiment["based_experiments"]:
+            if isinstance(based, dict) and based.get("identity_kind") == "BASELINE":
+                if not baseline_identity_valid(based):
+                    return False
+                continue
             if (
                 not isinstance(based, dict)
                 or not re.fullmatch(r"[0-9a-f]{64}", str(based.get("identity_sha256", "")))
@@ -638,25 +717,26 @@ def _semantic_evidence_shape_valid(
                 stable_code_files, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
             ).encode("utf-8")).hexdigest() != generated.get("manifest_sha256"):
                 return False
-        stable_experiment = {
-            "type": experiment.get("type"),
-            "hypothesis_sha256": hypothesis.get("content_sha256"),
-            "task_identity_sha256s": [task.get("identity_sha256") for task in experiment["tasks"]],
-            "experiment_template_identity_sha256": template.get("identity_sha256"),
-            "based_experiment_identity_sha256s": [
-                item.get("identity_sha256") for item in experiment["based_experiments"]
-            ],
-            "generated_code_manifest_sha256": generated.get("manifest_sha256"),
-            "feature_inputs_sha256": experiment.get("feature_inputs_sha256"),
-        }
-        if (
-            not isinstance(stable_experiment["type"], str)
-            or not re.fullmatch(r"[0-9a-f]{64}", str(stable_experiment["feature_inputs_sha256"] or ""))
-            or hashlib.sha256(json.dumps(
-                stable_experiment, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
-            ).encode("utf-8")).hexdigest() != experiment["identity_sha256"]
-        ):
-            return False
+        if not is_baseline:
+            stable_experiment = {
+                "type": experiment.get("type"),
+                "hypothesis_sha256": hypothesis.get("content_sha256"),
+                "task_identity_sha256s": [task.get("identity_sha256") for task in experiment["tasks"]],
+                "experiment_template_identity_sha256": template.get("identity_sha256"),
+                "based_experiment_identity_sha256s": [
+                    item.get("identity_sha256") for item in experiment["based_experiments"]
+                ],
+                "generated_code_manifest_sha256": generated.get("manifest_sha256"),
+                "feature_inputs_sha256": experiment.get("feature_inputs_sha256"),
+            }
+            if (
+                not isinstance(stable_experiment["type"], str)
+                or not re.fullmatch(r"[0-9a-f]{64}", str(stable_experiment["feature_inputs_sha256"] or ""))
+                or hashlib.sha256(json.dumps(
+                    stable_experiment, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != experiment["identity_sha256"]
+            ):
+                return False
     if selected_id is not None and selected is None:
         return False
     if payload.get("status") == "OBSERVED" and history_indexes != list(range(payload["trace_history_length"])):

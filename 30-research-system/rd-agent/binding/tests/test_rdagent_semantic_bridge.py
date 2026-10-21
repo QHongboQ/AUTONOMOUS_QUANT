@@ -109,6 +109,52 @@ class SemanticBridgeTests(unittest.TestCase):
             exp.based_experiments = [parent]
         return exp
 
+    def _native_empty_factor_baseline(self, root: Path):
+        try:
+            from rdagent.core.conf import RD_AGENT_SETTINGS
+            from rdagent.scenarios.qlib.experiment.factor_experiment import QlibFactorExperiment
+        except ImportError:
+            return None
+        # Keep the pinned upstream constructor's actual template loading inside
+        # this temporary fixture root; no research loop or Qlib execution occurs.
+        with patch.object(RD_AGENT_SETTINGS, "workspace_path", root / "rdagent-workspaces"):
+            baseline = QlibFactorExperiment(sub_tasks=[])
+        return baseline
+
+    def test_pinned_native_empty_factor_baseline_has_content_identity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = self._native_empty_factor_baseline(root)
+            if baseline is None:
+                self.skipTest("pinned RD-Agent package is unavailable in this test environment")
+            self.assertEqual(
+                f"{type(baseline).__module__}.{type(baseline).__qualname__}",
+                "rdagent.scenarios.qlib.experiment.factor_experiment.QlibFactorExperiment",
+            )
+            self.assertIsNone(vars(baseline).get("hypothesis"))
+            self.assertEqual(vars(baseline)["sub_tasks"], [])
+            identity = _experiment_identity(baseline, root)
+            self.assertEqual(identity["identity_kind"], "BASELINE")
+            self.assertIsNone(identity["hypothesis"])
+            self.assertEqual(identity["tasks"], [])
+            self.assertTrue(identity["experiment_template"]["files"])
+            self.assertTrue(any(item["relative_path"].endswith((".yaml", ".yml"))
+                                for item in identity["experiment_template"]["files"]))
+            self.assertTrue(any(item["relative_path"].endswith(".py")
+                                for item in identity["experiment_template"]["files"]))
+            self.assertRegex(identity["identity_sha256"], r"^[0-9a-f]{64}$")
+            # Workspace UUID/path is only a locator; identical pinned template
+            # bytes produce the same baseline identity in a second temp root.
+            second_root = root / "second"
+            second_root.mkdir()
+            second = self._native_empty_factor_baseline(second_root)
+            self.assertEqual(identity["identity_sha256"], _experiment_identity(second, second_root)["identity_sha256"])
+            code_path = second.experiment_workspace.workspace_path / "read_exp_res.py"
+            changed_code = code_path.read_text(encoding="utf-8") + "\n# content change\n"
+            code_path.write_text(changed_code, encoding="utf-8")
+            second.experiment_workspace.file_dict["read_exp_res.py"] = changed_code
+            self.assertNotEqual(identity["identity_sha256"], _experiment_identity(second, second_root)["identity_sha256"])
+
     def test_hypothesis_task_and_experiment_content_identities(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -303,7 +349,7 @@ class SemanticBridgeTests(unittest.TestCase):
         config = "task:\n    record:\n        - class: Existing\n          module_path: existing.module\n"
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            baseline = self._experiment(root, "baseline")
+            baseline = self._native_empty_factor_baseline(root) or self._experiment(root, "baseline")
             selected = self._experiment(root, "selected", action="model")
             selected.based_experiments = [baseline]
             selected.result = None
@@ -355,7 +401,7 @@ class SemanticBridgeTests(unittest.TestCase):
                         raise RuntimeError("synthetic experiment failure")
                     workspace = experiment.experiment_workspace
                     (workspace.workspace_path / "conf_baseline.yaml").write_bytes(config.encode("utf-8"))
-                    workspace.file_dict = {"conf_baseline.yaml": config}
+                    workspace.file_dict["conf_baseline.yaml"] = config
                     workspace.execute("conf_baseline.yaml", {})
                     experiment.result = "completed"
                     return experiment

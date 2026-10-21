@@ -44,6 +44,9 @@ _MODEL_TASK_FIELDS = (
     "training_hyperparameters", "model_type",
 )
 _DEFAULT_WORKSPACE_SUFFIXES = frozenset({".py"})
+_NATIVE_EMPTY_FACTOR_BASELINE_TYPE = (
+    "rdagent.scenarios.qlib.experiment.factor_experiment.QlibFactorExperiment"
+)
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -191,10 +194,60 @@ def _experiment_identity(
     ancestor_ids = _ancestor_ids | {id(experiment)}
     attributes = vars(experiment)
     hypothesis = attributes.get("hypothesis")
+    tasks_value = attributes.get("sub_tasks")
+    if (
+        _type_name(experiment) == _NATIVE_EMPTY_FACTOR_BASELINE_TYPE
+        and hypothesis is None
+        and isinstance(tasks_value, (list, tuple))
+        and not tasks_value
+    ):
+        template_workspace = attributes.get("experiment_workspace")
+        if template_workspace is None:
+            raise ValueError("BASELINE_TEMPLATE_UNAVAILABLE")
+        template_identity = _workspace_identity(
+            template_workspace, workspace_root, suffixes=None, exclude_test_files=False
+        )
+        files = template_identity["files"]
+        config_files = [item for item in files if Path(item["relative_path"]).suffix.lower() in {".yaml", ".yml"}]
+        code_files = [item for item in files if Path(item["relative_path"]).suffix.lower() == ".py"]
+        if not config_files or not code_files:
+            raise ValueError("BASELINE_TEMPLATE_CONFIG_OR_CODE_UNAVAILABLE")
+        baseline_content = {
+            "type": _type_name(experiment),
+            "experiment_template_type": template_identity["type"],
+            "experiment_template_identity_sha256": template_identity["identity_sha256"],
+            "config_files": [
+                {key: item[key] for key in ("relative_path", "size_bytes", "sha256")}
+                for item in config_files
+            ],
+            "code_files": [
+                {key: item[key] for key in ("relative_path", "size_bytes", "sha256")}
+                for item in code_files
+            ],
+        }
+        stable_baseline = {"identity_kind": "BASELINE", **baseline_content}
+        based_value = attributes.get("based_experiments", ())
+        if not isinstance(based_value, (list, tuple)) or based_value:
+            raise ValueError("BASELINE_LINEAGE_UNSUPPORTED")
+        return {
+            "identity_kind": "BASELINE",
+            "identity_sha256": _sha256(_canonical_bytes(stable_baseline)),
+            "type": stable_baseline["type"],
+            # A native empty baseline has neither Hypothesis nor Task. Keep those
+            # facts explicit; do not invent semantic objects to satisfy the schema.
+            "hypothesis": None,
+            "tasks": [],
+            "experiment_template": {"status": "OBSERVED", **template_identity},
+            "based_experiments": [],
+            "generated_code": {"status": "UNAVAILABLE", "files": [], "manifest_sha256": None},
+            "feature_inputs_sha256": None,
+            "baseline_content": baseline_content,
+            # The P12 host cross-check consumes these exact observed template files.
+            "files": files,
+        }
     if hypothesis is None:
         raise ValueError("EXPERIMENT_HYPOTHESIS_MISSING")
     hypothesis_identity = _field_identity(hypothesis, _HYPOTHESIS_FIELDS)
-    tasks_value = attributes.get("sub_tasks")
     if not isinstance(tasks_value, (list, tuple)) or not tasks_value:
         raise ValueError("EXPERIMENT_TASKS_MISSING")
     task_identities = [_task_identity(task) for task in tasks_value]
@@ -211,7 +264,10 @@ def _experiment_identity(
         raise ValueError("BASED_EXPERIMENTS_INVALID")
     based_identities = []
     for item in based_value:
-        if hasattr(item, "hypothesis") and isinstance(vars(item).get("sub_tasks"), (list, tuple)):
+        if (
+            _type_name(item) == _NATIVE_EMPTY_FACTOR_BASELINE_TYPE
+            or hasattr(item, "hypothesis") and isinstance(vars(item).get("sub_tasks"), (list, tuple))
+        ):
             based_identities.append(
                 _experiment_identity(item, workspace_root, _ancestor_ids=ancestor_ids)
             )
