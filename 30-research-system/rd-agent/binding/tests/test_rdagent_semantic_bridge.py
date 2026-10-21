@@ -16,7 +16,9 @@ from aq_rdagent_semantic_bridge import (
     P12QlibCorrelationRecord,
     _CURRENT_EXECUTION,
     _correlation_config_text,
+    _experiment_identity,
     _install_qlib_execute_hook,
+    _install_runner_develop_hook,
     build_semantic_loop_class,
     capture_trace_semantics,
     invoke_upstream_main,
@@ -95,6 +97,8 @@ class SemanticBridgeTests(unittest.TestCase):
         (path / "factor.py").write_bytes(code.encode("utf-8"))
         workspace = Workspace(task, path, code)
         exp = Experiment(task, Hypothesis(f"test {name}", action), workspace)
+        exp.name = name
+        exp.result = None
         template_path = root / f"template-{name}"
         template_path.mkdir()
         template = "provider: pinned-qlib-template\n"
@@ -102,7 +106,7 @@ class SemanticBridgeTests(unittest.TestCase):
         exp.experiment_workspace = Workspace(None, template_path, "")
         exp.experiment_workspace.file_dict = {"conf_baseline.yaml": template}
         if parent is not None:
-            exp.based_experiments = [parent.sub_workspace_list[0]]
+            exp.based_experiments = [parent]
         return exp
 
     def test_hypothesis_task_and_experiment_content_identities(self):
@@ -217,7 +221,8 @@ class SemanticBridgeTests(unittest.TestCase):
         context = {
             "request_id": request_id, "attempt_id": attempt_id,
             "experiment_identity": experiment_identity,
-            "execution_count": 0, "trace": trace,
+            "experiment_workspace": None,
+            "state": {"execution_count": 0, "failures": []}, "trace": trace,
         }
         config = "task:\n    record:\n        - class: Existing\n          module_path: existing.module\n"
 
@@ -245,6 +250,7 @@ class SemanticBridgeTests(unittest.TestCase):
             root = Path(tmp)
             (root / "conf.yaml").write_bytes(config.encode("utf-8"))
             workspace = SimpleNamespace(file_dict={"conf.yaml": config}, workspace_path=root)
+            context["experiment_workspace"] = workspace
             client_module = types.ModuleType("mlflow.tracking")
             client_module.MlflowClient = Client
             mlflow_module = types.ModuleType("mlflow")
@@ -286,6 +292,231 @@ class SemanticBridgeTests(unittest.TestCase):
         self.assertEqual(binding["attempt_id"], attempt_id)
         self.assertEqual(recorder.tags["aq.p12.correlation_sha256"], binding["marker_sha256"])
         self.assertRegex(binding["receipt_sha256"], r"^[0-9a-f]{64}$")
+
+    def test_recursive_based_and_selected_experiments_bind_their_own_recorders(self):
+        import os
+        import re
+        import types
+
+        request_id = "sha256:" + hashlib.sha256(b"recursive-request").hexdigest()
+        attempt_id = "recursive-attempt"
+        config = "task:\n    record:\n        - class: Existing\n          module_path: existing.module\n"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = self._experiment(root, "baseline")
+            selected = self._experiment(root, "selected", action="model")
+            selected.based_experiments = [baseline]
+            selected.result = None
+
+            class Recorder:
+                def __init__(self, experiment_id, run_id):
+                    self.info = {"experiment_id": experiment_id, "id": run_id, "status": "RUNNING"}
+                    self.tags = {}
+                def set_tags(self, **tags):
+                    self.tags.update(tags)
+
+            class Client:
+                def __init__(self, tracking_uri):
+                    self.next_id = 0
+                    self.experiments = {}
+                def get_experiment_by_name(self, name):
+                    return None
+                def create_experiment(self, name, artifact_location, tags):
+                    self.next_id += 1
+                    experiment_id = f"exp-{self.next_id}"
+                    self.experiments[experiment_id] = SimpleNamespace(
+                        name=name, artifact_location=artifact_location, tags=tags,
+                    )
+                    return experiment_id
+                def get_experiment(self, experiment_id):
+                    value = self.experiments[experiment_id]
+                    return SimpleNamespace(name=value.name, artifact_location=value.artifact_location, tags=value.tags)
+
+            active_client = [Client("sqlite:///offline")]
+            recorders = {}
+
+            def execute(workspace, config_name, run_env, *args, **kwargs):
+                augmented = (workspace.workspace_path / config_name).read_text(encoding="utf-8")
+                marker_json = json.loads(re.search(r"marker_json: (\".*\")", augmented).group(1))
+                experiment_id = f"exp-{len(recorders) + 1}"
+                recorder = Recorder(experiment_id, f"run-{len(recorders) + 1}")
+                recorders[experiment_id] = recorder
+                receipt_name = json.loads(re.search(r"receipt_name: (\".*\")", augmented).group(1))
+                with patch("pathlib.Path.cwd", return_value=workspace.workspace_path):
+                    P12QlibCorrelationRecord(recorder, marker_json, receipt_name).generate()
+                return "offline-qrun"
+
+            class FakeRunner:
+                fail_name = None
+                def develop(self, experiment):
+                    if experiment.based_experiments and experiment.based_experiments[-1].result is None:
+                        experiment.based_experiments[-1] = self.develop(experiment.based_experiments[-1])
+                    if self.fail_name is experiment:
+                        raise RuntimeError("synthetic experiment failure")
+                    workspace = experiment.experiment_workspace
+                    (workspace.workspace_path / "conf_baseline.yaml").write_bytes(config.encode("utf-8"))
+                    workspace.file_dict = {"conf_baseline.yaml": config}
+                    workspace.execute("conf_baseline.yaml", {})
+                    experiment.result = "completed"
+                    return experiment
+
+            trace = SimpleNamespace(_p12_qlib_recorder_bindings=[], _p12_qlib_correlation_failures=[])
+            root_context = {
+                "request_id": request_id,
+                "attempt_id": attempt_id,
+                "state": {"execution_count": 0, "failures": []},
+                "trace": trace,
+            }
+            original_develop = FakeRunner.develop
+            FakeRunner.develop = _install_runner_develop_hook(original_develop, root)
+            import sys as _sys
+            client_module = types.ModuleType("mlflow.tracking")
+            client_module.MlflowClient = lambda tracking_uri: active_client[0]
+            mlflow_module = types.ModuleType("mlflow")
+            mlflow_module.tracking = client_module
+            with patch.dict(os.environ, {
+                "QLIB_MLFLOW_URI": "sqlite:///offline",
+                "P12_MLFLOW_ARTIFACT_VOLUME": "offline-volume",
+            }), patch.dict(_sys.modules, {"mlflow": mlflow_module, "mlflow.tracking": client_module}):
+                runner = FakeRunner()
+                execute_hook = _install_qlib_execute_hook(execute)
+                for experiment in (baseline, selected):
+                    workspace = experiment.experiment_workspace
+                    workspace.execute = lambda name, env, *a, _workspace=workspace, **k: execute_hook(
+                        _workspace, name, env, *a, **k
+                    )
+                token = _CURRENT_EXECUTION.set(root_context)
+                try:
+                    runner.develop(selected)
+                finally:
+                    _CURRENT_EXECUTION.reset(token)
+
+            baseline_identity = _experiment_identity(baseline, root)["identity_sha256"]
+            selected_identity = _experiment_identity(selected, root)["identity_sha256"]
+            self.assertEqual(
+                [item["rdagent_experiment_identity_sha256"] for item in trace._p12_qlib_recorder_bindings],
+                [baseline_identity, selected_identity],
+            )
+            self.assertEqual(
+                [recorders[f"exp-{index}"].tags["aq.p12.rdagent_experiment_identity_sha256"] for index in (1, 2)],
+                [baseline_identity, selected_identity],
+            )
+            trace.hist = [(baseline, None), (selected, None)]
+            trace.dag_parent = [(), (0,)]
+            semantic = capture_trace_semantics(
+                trace, request_id=request_id, attempt_id=attempt_id, workspace_root=root,
+            )
+            self.assertEqual(semantic["qlib_recorder_binding"]["status"], "PARTIAL")
+            self.assertEqual(len(semantic["qlib_recorder_binding"]["matches"]), 1)
+            self.assertEqual(
+                semantic["qlib_recorder_binding"]["matches"][0]["rdagent_experiment_identity_sha256"],
+                selected_identity,
+            )
+
+            # Running selected then baseline produces the same identity-to-run mapping.
+            selected.based_experiments = []
+            selected.result = None
+            baseline.result = None
+            selected_without_parent_identity = _experiment_identity(selected, root)["identity_sha256"]
+            active_client[0] = Client("sqlite:///offline-reordered")
+            recorders.clear()
+            reordered_trace = SimpleNamespace(_p12_qlib_recorder_bindings=[], _p12_qlib_correlation_failures=[])
+            reordered_context = {
+                "request_id": request_id, "attempt_id": attempt_id,
+                "state": {"execution_count": 0, "failures": []}, "trace": reordered_trace,
+            }
+            with patch.dict(os.environ, {
+                "QLIB_MLFLOW_URI": "sqlite:///offline-reordered",
+                "P12_MLFLOW_ARTIFACT_VOLUME": "offline-volume",
+            }), patch.dict(_sys.modules, {"mlflow": mlflow_module, "mlflow.tracking": client_module}):
+                token = _CURRENT_EXECUTION.set(reordered_context)
+                try:
+                    runner = FakeRunner()
+                    runner.develop(selected)
+                    runner.develop(baseline)
+                finally:
+                    _CURRENT_EXECUTION.reset(token)
+            self.assertEqual(
+                [item["rdagent_experiment_identity_sha256"] for item in reordered_trace._p12_qlib_recorder_bindings],
+                [selected_without_parent_identity, baseline_identity],
+            )
+
+            # A cached baseline skips its own qrun and cannot satisfy the selected Experiment binding.
+            selected.based_experiments = [baseline]
+            selected.result = None
+            baseline.result = "cached"
+            active_client[0] = Client("sqlite:///offline-cached")
+            recorders.clear()
+            cached_trace = SimpleNamespace(_p12_qlib_recorder_bindings=[], _p12_qlib_correlation_failures=[])
+            cached_context = {
+                "request_id": request_id, "attempt_id": attempt_id,
+                "state": {"execution_count": 0, "failures": []}, "trace": cached_trace,
+            }
+            with patch.dict(os.environ, {
+                "QLIB_MLFLOW_URI": "sqlite:///offline-cached",
+                "P12_MLFLOW_ARTIFACT_VOLUME": "offline-volume",
+            }), patch.dict(_sys.modules, {"mlflow": mlflow_module, "mlflow.tracking": client_module}):
+                token = _CURRENT_EXECUTION.set(cached_context)
+                try:
+                    FakeRunner().develop(selected)
+                finally:
+                    _CURRENT_EXECUTION.reset(token)
+            self.assertEqual(len(cached_trace._p12_qlib_recorder_bindings), 1)
+            self.assertEqual(
+                cached_trace._p12_qlib_recorder_bindings[0]["rdagent_experiment_identity_sha256"],
+                selected_identity,
+            )
+
+            # A failed baseline aborts recursion and leaves explicit PARTIAL evidence.
+            selected.result = None
+            baseline.result = None
+            active_client[0] = Client("sqlite:///offline-failed")
+            recorders.clear()
+            failed_trace = SimpleNamespace(_p12_qlib_recorder_bindings=[], _p12_qlib_correlation_failures=[])
+            failed_context = {
+                "request_id": request_id, "attempt_id": attempt_id,
+                "state": {"execution_count": 0, "failures": []}, "trace": failed_trace,
+            }
+            with patch.dict(os.environ, {
+                "QLIB_MLFLOW_URI": "sqlite:///offline-failed",
+                "P12_MLFLOW_ARTIFACT_VOLUME": "offline-volume",
+            }), patch.dict(_sys.modules, {"mlflow": mlflow_module, "mlflow.tracking": client_module}):
+                token = _CURRENT_EXECUTION.set(failed_context)
+                try:
+                    runner = FakeRunner()
+                    runner.fail_name = baseline
+                    with self.assertRaisesRegex(RuntimeError, "synthetic experiment failure"):
+                        runner.develop(selected)
+                finally:
+                    _CURRENT_EXECUTION.reset(token)
+            self.assertEqual(failed_trace._p12_qlib_recorder_bindings, [])
+            self.assertTrue(failed_trace._p12_qlib_correlation_failures)
+            self.assertTrue(all(
+                item["reason"] in {
+                    "UPSTREAM_EXPERIMENT_EXECUTION_FAILED",
+                }
+                for item in failed_trace._p12_qlib_correlation_failures
+            ))
+            FakeRunner.develop = original_develop
+
+    def test_runner_context_initialization_failure_is_explicitly_partial(self):
+        class BaseLoop:
+            def running(self, value):
+                return "upstream-result"
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            experiment = self._experiment(root, "context-failure")
+            trace = SimpleNamespace(hist=[(experiment, None)], dag_parent=[()])
+            loop = build_semantic_loop_class(BaseLoop, lambda _: None)()
+            loop.trace = trace
+            with patch.dict("os.environ", {}, clear=True):
+                self.assertEqual(loop.running({"coding": experiment}), "upstream-result")
+            semantic = capture_trace_semantics(
+                trace, request_id="request", attempt_id="attempt", workspace_root=root,
+            )
+        self.assertEqual(semantic["qlib_recorder_binding"]["status"], "PARTIAL")
+        self.assertIn("EXECUTION_CONTEXT_INITIALIZATION_FAILED", semantic["qlib_recorder_binding"]["reason"])
 
     def test_correlation_config_rejects_unbounded_or_ambiguous_yaml_shape(self):
         marker = {"request_id": "r", "attempt_id": "a", "correlation_sha256": "0" * 64}

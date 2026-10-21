@@ -26,6 +26,9 @@ CORRELATION_RECORD_CLASS = "P12QlibCorrelationRecord"
 _CURRENT_EXECUTION: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
     "p12_qlib_execution_correlation", default=None
 )
+_RUNNER_HOOKS_AVAILABLE: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "p12_qlib_runner_correlation_hooks_available", default=False
+)
 _HYPOTHESIS_FIELDS = (
     "hypothesis", "reason", "concise_reason", "concise_observation",
     "concise_justification", "concise_knowledge", "action",
@@ -180,7 +183,12 @@ def _workspace_identity(
     }
 
 
-def _experiment_identity(experiment: Any, workspace_root: Path) -> dict[str, Any]:
+def _experiment_identity(
+    experiment: Any, workspace_root: Path, *, _ancestor_ids: frozenset[int] = frozenset(),
+) -> dict[str, Any]:
+    if id(experiment) in _ancestor_ids or len(_ancestor_ids) >= 64:
+        raise ValueError("EXPERIMENT_BASED_LINEAGE_CYCLE_OR_DEPTH_LIMIT")
+    ancestor_ids = _ancestor_ids | {id(experiment)}
     attributes = vars(experiment)
     hypothesis = attributes.get("hypothesis")
     if hypothesis is None:
@@ -201,7 +209,15 @@ def _experiment_identity(experiment: Any, workspace_root: Path) -> dict[str, Any
     based_value = attributes.get("based_experiments", ())
     if not isinstance(based_value, (list, tuple)):
         raise ValueError("BASED_EXPERIMENTS_INVALID")
-    based_identities = [_workspace_identity(item, workspace_root) for item in based_value]
+    based_identities = []
+    for item in based_value:
+        if hasattr(item, "hypothesis") and isinstance(vars(item).get("sub_tasks"), (list, tuple)):
+            based_identities.append(
+                _experiment_identity(item, workspace_root, _ancestor_ids=ancestor_ids)
+            )
+        else:
+            # Compatibility for earlier projected fixtures that stored an FBWorkspace here.
+            based_identities.append(_workspace_identity(item, workspace_root))
     workspaces = attributes.get("sub_workspace_list")
     if not isinstance(workspaces, (list, tuple)):
         raise ValueError("EXPERIMENT_WORKSPACES_MISSING")
@@ -321,27 +337,45 @@ def capture_trace_semantics(trace: Any, *, request_id: str, attempt_id: str, wor
         (item for item in reversed(experiments) if item["identity_sha256"] == final_identity),
         None,
     )
+    failures = vars(trace).get("_p12_qlib_correlation_failures", [])
+    if not isinstance(failures, list):
+        failures = [{"reason": "CORRELATION_FAILURE_RECORD_INVALID"}]
+    selected_failures = [
+        item for item in failures
+        if isinstance(item, dict)
+        and item.get("experiment_identity_sha256") in (None, final_identity)
+    ]
     selected_bindings = [
         item for item in vars(trace).get("_p12_qlib_recorder_bindings", [])
         if isinstance(item, dict) and item.get("rdagent_experiment_identity_sha256") == final_identity
     ]
-    if len(selected_bindings) == 1:
+    if selected_failures:
+        recorder_binding = {
+            "status": "PARTIAL",
+            "reason": selected_failures[-1].get("reason", "QLIB_CORRELATION_CONTEXT_UNAVAILABLE"),
+            "matches": selected_bindings,
+            "failures": selected_failures,
+        }
+    elif len(selected_bindings) == 1:
         recorder_binding = {
             "status": "PARTIAL",
             "reason": "QLIB_RECORDER_ARTIFACTS_REQUIRE_HOST_VERIFICATION",
             "matches": selected_bindings,
+            "failures": [],
         }
     elif len(selected_bindings) > 1:
         recorder_binding = {
             "status": "REJECTED",
             "reason": "MULTIPLE_QLIB_RECORDER_BINDINGS_FOR_SELECTED_EXPERIMENT",
             "matches": selected_bindings,
+            "failures": [],
         }
     else:
         recorder_binding = {
             "status": "PARTIAL",
             "reason": "NO_NATIVE_QLIB_RECORDER_BINDING_FOR_SELECTED_EXPERIMENT",
             "matches": [],
+            "failures": [],
         }
     return {
         "format_version": "P12_RDAGENT_SEMANTIC_EVIDENCE_V1",
@@ -490,10 +524,87 @@ def _read_correlation_receipt(path: Path, expected_marker: dict[str, Any]) -> di
     return value
 
 
+def _record_correlation_failure(
+    context: dict[str, Any], reason: str, experiment_identity: dict[str, Any] | None
+) -> None:
+    state = context.get("state")
+    trace = context.get("trace")
+    if not isinstance(state, dict) or trace is None:
+        return
+    failure = {
+        "reason": reason,
+        "experiment_identity_sha256": (
+            experiment_identity.get("identity_sha256") if isinstance(experiment_identity, dict) else None
+        ),
+    }
+    state.setdefault("failures", []).append(failure)
+    vars(trace).setdefault("_p12_qlib_correlation_failures", []).append(failure)
+
+
+def _install_runner_develop_hook(original_develop: Callable[..., Any], workspace_root: Path) -> Callable[..., Any]:
+    """Scope the active identity to each upstream develop(exp), including recursive parents."""
+    def develop(runner: Any, experiment: Any, *args: Any, **kwargs: Any) -> Any:
+        parent_context = _CURRENT_EXECUTION.get()
+        if parent_context is None:
+            return original_develop(runner, experiment, *args, **kwargs)
+        try:
+            experiment_workspace = vars(experiment).get("experiment_workspace")
+            if experiment_workspace is None:
+                raise ValueError("EXPERIMENT_QLIB_WORKSPACE_MISSING")
+        except Exception:
+            experiment_workspace = None
+            _record_correlation_failure(parent_context, "EXECUTING_EXPERIMENT_WORKSPACE_UNAVAILABLE", None)
+        scoped_context = {
+            **parent_context,
+            "experiment": experiment,
+            "experiment_workspace": experiment_workspace,
+            "workspace_root": workspace_root,
+        }
+        token = _CURRENT_EXECUTION.set(scoped_context)
+        try:
+            return original_develop(runner, experiment, *args, **kwargs)
+        except Exception:
+            try:
+                failed_identity = _experiment_identity(experiment, workspace_root)
+            except Exception:
+                failed_identity = None
+            _record_correlation_failure(parent_context, "UPSTREAM_EXPERIMENT_EXECUTION_FAILED", failed_identity)
+            raise
+        finally:
+            _CURRENT_EXECUTION.reset(token)
+
+    return develop
+
+
 def _install_qlib_execute_hook(original_execute: Callable[..., Any]) -> Callable[..., Any]:
     def execute(workspace: Any, qlib_config_name: str = "conf.yaml", run_env: dict = {}, *args: Any, **kwargs: Any) -> Any:
         context = _CURRENT_EXECUTION.get()
         if context is None:
+            return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
+        experiment = context.get("experiment")
+        workspace_root = context.get("workspace_root")
+        if experiment is not None:
+            if context.get("experiment_workspace") is not workspace:
+                _record_correlation_failure(context, "ACTUAL_EXECUTING_EXPERIMENT_UNPROVEN", None)
+                return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
+            try:
+                experiment_identity = _experiment_identity(experiment, workspace_root)
+            except Exception as exc:
+                _record_correlation_failure(
+                    context, f"EXECUTING_EXPERIMENT_IDENTITY_UNAVAILABLE:{type(exc).__name__}", None,
+                )
+                return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
+            context = {**context, "experiment_identity": experiment_identity}
+        else:
+            experiment_identity = context.get("experiment_identity")
+            if (
+                not isinstance(experiment_identity, dict)
+                or context.get("experiment_workspace") is not workspace
+            ):
+                _record_correlation_failure(context, "ACTUAL_EXECUTING_EXPERIMENT_UNPROVEN", experiment_identity)
+                return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
+        if not isinstance(experiment_identity, dict):
+            _record_correlation_failure(context, "ACTUAL_EXECUTING_EXPERIMENT_UNPROVEN", None)
             return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
         if (
             not isinstance(qlib_config_name, str)
@@ -506,15 +617,19 @@ def _install_qlib_execute_hook(original_execute: Callable[..., Any]) -> Callable
         file_dict = vars(workspace).get("file_dict")
         workspace_path = vars(workspace).get("workspace_path")
         if type(file_dict) is not dict or not isinstance(workspace_path, (str, Path)):
+            _record_correlation_failure(context, "QLIB_WORKSPACE_CONTEXT_UNAVAILABLE", experiment_identity)
             return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
         source_text = file_dict.get(qlib_config_name)
         if not isinstance(source_text, str):
+            _record_correlation_failure(context, "QLIB_CONFIG_CONTEXT_UNAVAILABLE", experiment_identity)
             return original_execute(workspace, qlib_config_name, run_env, *args, **kwargs)
         config_path = Path(workspace_path) / qlib_config_name
         if config_path.is_symlink() or not config_path.is_file() or config_path.read_bytes() != source_text.encode("utf-8"):
+            _record_correlation_failure(context, "QLIB_CONFIG_WORKSPACE_BYTES_MISMATCH", experiment_identity)
             raise ValueError("QLIB_CONFIG_WORKSPACE_BYTES_MISMATCH")
-        execution_index = context["execution_count"]
-        context["execution_count"] += 1
+        state = context["state"]
+        execution_index = state["execution_count"]
+        state["execution_count"] += 1
         marker = _execution_marker(context, execution_index, _sha256(source_text.encode("utf-8")))
         execution_identity = {
             "request_id": context["request_id"],
@@ -583,6 +698,9 @@ def _install_qlib_execute_hook(original_execute: Callable[..., Any]) -> Callable
                 "artifact_volume": artifact_volume,
             })
             return result
+        except Exception:
+            _record_correlation_failure(context, "NATIVE_QLIB_RECORDER_CORRELATION_INCOMPLETE", experiment_identity)
+            raise
         finally:
             for path in (temp_path, receipt_path):
                 try:
@@ -638,12 +756,12 @@ def build_semantic_loop_class(base_loop_class: type, emitter: Callable[[Any], No
     """Override the existing final record step without adding/reordering steps."""
     class SemanticQuantRDLoop(base_loop_class):
         def running(self, prev_out: dict[str, Any]) -> Any:
-            experiment = prev_out.get("coding")
+            if not hasattr(self.trace, "_p12_qlib_correlation_failures"):
+                self.trace._p12_qlib_correlation_failures = []
             try:
                 output = Path(os.environ["P12_FINQUANT_OUTPUT_DIR"])
                 attempt_value = json.loads((output / "p12-attempt.json").read_text(encoding="utf-8"))
                 workspace_root = Path(os.environ["WORKSPACE_PATH"])
-                experiment_identity = _experiment_identity(experiment, workspace_root)
                 request_id = attempt_value.get("request_id")
                 attempt_id = attempt_value.get("attempt_id")
                 if not isinstance(request_id, str) or not isinstance(attempt_id, str):
@@ -651,13 +769,19 @@ def build_semantic_loop_class(base_loop_class: type, emitter: Callable[[Any], No
                 context = {
                     "request_id": request_id,
                     "attempt_id": attempt_id,
-                    "experiment_identity": experiment_identity,
-                    "execution_count": 0,
+                    "workspace_root": workspace_root,
+                    "state": {"execution_count": 0, "failures": []},
                     "trace": self.trace,
                 }
                 if not hasattr(self.trace, "_p12_qlib_recorder_bindings"):
                     self.trace._p12_qlib_recorder_bindings = []
-            except Exception:
+                if not _RUNNER_HOOKS_AVAILABLE.get():
+                    _record_correlation_failure(context, "PINNED_RDAGENT_RUNNER_HOOK_UNAVAILABLE", None)
+            except Exception as exc:
+                self.trace._p12_qlib_correlation_failures.append({
+                    "reason": f"EXECUTION_CONTEXT_INITIALIZATION_FAILED:{type(exc).__name__}",
+                    "experiment_identity_sha256": None,
+                })
                 return super().running(prev_out)
             token = _CURRENT_EXECUTION.set(context)
             try:
@@ -691,20 +815,34 @@ def run_native_quant(loop_n: int = 1, *, quant_module: Any | None = None) -> Any
     quant_module.QuantRDLoop = build_semantic_loop_class(original_loop)
     workspace_class = None
     original_execute = None
+    runner_classes: list[tuple[type, Callable[..., Any]]] = []
+    runner_hooks_token = _RUNNER_HOOKS_AVAILABLE.set(False)
     try:
         try:
             from rdagent.scenarios.qlib.experiment.workspace import QlibFBWorkspace
             workspace_class = QlibFBWorkspace
             original_execute = workspace_class.execute
             workspace_class.execute = _install_qlib_execute_hook(original_execute)
+            from rdagent.scenarios.qlib.developer.factor_runner import QlibFactorRunner
+            from rdagent.scenarios.qlib.developer.model_runner import QlibModelRunner
+            workspace_root = Path(os.environ["WORKSPACE_PATH"])
+            for runner_class in (QlibFactorRunner, QlibModelRunner):
+                original_develop = runner_class.develop
+                runner_classes.append((runner_class, original_develop))
+                runner_class.develop = _install_runner_develop_hook(original_develop, workspace_root)
+            _RUNNER_HOOKS_AVAILABLE.set(True)
         except ImportError:
-            # Test doubles and non-QLib uses retain the original semantic-only path.
-            workspace_class = None
+            # Preserve upstream execution if a pinned runner seam is unavailable,
+            # but make the missing semantic correlation explicit in the evidence.
+            pass
         return invoke_upstream_main(quant_module, loop_n=loop_n)
     finally:
+        for runner_class, original_develop in reversed(runner_classes):
+            runner_class.develop = original_develop
         if workspace_class is not None and original_execute is not None:
             workspace_class.execute = original_execute
         quant_module.QuantRDLoop = original_loop
+        _RUNNER_HOOKS_AVAILABLE.reset(runner_hooks_token)
 
 
 def invoke_upstream_main(quant_module: Any, *, loop_n: int = 1) -> Any:

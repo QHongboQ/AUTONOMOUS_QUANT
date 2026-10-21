@@ -331,7 +331,9 @@ def _read_semantic_correlation(path: Path, *, request_id: str, attempt_id: str) 
     selected = value.get("selected_experiment_identity_sha256")
     matches = binding.get("matches") if isinstance(binding, dict) else None
     if (
-        binding.get("status") != "PARTIAL" or not isinstance(matches, list) or len(matches) != 1
+        not isinstance(binding, dict)
+        or binding.get("status") != "PARTIAL" or not isinstance(matches, list) or len(matches) != 1
+        or binding.get("failures", []) != []
         or not isinstance(selected, str)
     ):
         raise ValueError("SEMANTIC_CORRELATION_NOT_UNIQUE")

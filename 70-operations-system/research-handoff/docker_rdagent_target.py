@@ -575,6 +575,10 @@ def build_native_research_evidence(
         semantic_evidence.get("qlib_recorder_binding", {})
         if isinstance(semantic_evidence, dict) else {}
     )
+    semantic_qlib_failures = (
+        semantic_qlib_binding.get("failures", [])
+        if isinstance(semantic_qlib_binding, dict) else None
+    )
     verified_qlib_binding = qlib_evidence.get("correlation_binding")
     binding_match = None
     matches = semantic_qlib_binding.get("matches") if isinstance(semantic_qlib_binding, dict) else None
@@ -584,6 +588,8 @@ def build_native_research_evidence(
         selected is not None
         and isinstance(verified_qlib_binding, dict)
         and verified_qlib_binding.get("status") == "VERIFIED"
+        and semantic_qlib_binding.get("status") == "PARTIAL"
+        and semantic_qlib_failures == []
         and verified_qlib_binding.get("request_id") == request_id
         and verified_qlib_binding.get("attempt_id") == attempt_id
         and verified_qlib_binding.get("rdagent_experiment_identity_sha256") == selected.get("identity_sha256")

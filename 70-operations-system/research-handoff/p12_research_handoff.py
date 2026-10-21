@@ -675,7 +675,21 @@ def _semantic_evidence_shape_valid(
     if matches is None and binding.get("status") == "SEMANTIC_BINDING_PARTIAL":
         # Backward compatibility for the pre-correlation semantic evidence shape.
         matches = []
+    failures = binding.get("failures", [])
     if not isinstance(matches, list):
+        return False
+    if not isinstance(failures, list):
+        return False
+    for failure in failures:
+        if (
+            not isinstance(failure, dict)
+            or not isinstance(failure.get("reason"), str)
+            or not failure["reason"]
+            or failure.get("experiment_identity_sha256") is not None
+            and not re.fullmatch(r"[0-9a-f]{64}", str(failure.get("experiment_identity_sha256")))
+        ):
+            return False
+    if failures and binding.get("status") != "PARTIAL":
         return False
     if binding["status"] == "REJECTED":
         if len(matches) < 2 or selected is None:
@@ -893,6 +907,8 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
             match = matches[0] if isinstance(matches, list) and len(matches) == 1 else None
             qlib_binding_ok = (
                 isinstance(match, dict)
+                and isinstance(semantic_payload.get("qlib_recorder_binding"), dict)
+                and semantic_payload["qlib_recorder_binding"].get("failures", []) == []
                 and value.get("qlib_research_status") == "QLIB_RESEARCH_COMPLETE"
                 and recorder_binding.get("rdagent_experiment_identity_sha256") == selected_id
                 and recorder_binding.get("qlib_experiment_id") == qlib.get("experiment_id")

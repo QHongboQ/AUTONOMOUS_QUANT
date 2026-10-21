@@ -1308,12 +1308,23 @@ class OwnerOneShotTests(unittest.TestCase):
                 foreign = mlflow_evidence.inspect_correlated_research_evidence(
                     Client(tags=wrong_tags), **args,
                 )
+                failure_payload = json.loads(semantic_bytes)
+                failure_payload["qlib_recorder_binding"]["failures"] = [{
+                    "reason": "EXECUTING_EXPERIMENT_IDENTITY_UNAVAILABLE:ValueError",
+                    "experiment_identity_sha256": None,
+                }]
+                semantic_path.write_text(json.dumps(
+                    failure_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ) + "\n", encoding="utf-8")
+                context_failure = mlflow_evidence.inspect_correlated_research_evidence(Client(), **args)
             self.assertEqual(verified["classification"], "RESEARCH_EVIDENCE_COMPLETE")
             self.assertEqual(verified["correlation_binding"]["status"], "VERIFIED")
             self.assertEqual(verified["correlation_binding"]["qlib_recorder_run_id"], "run-correlation-1")
             self.assertEqual(failed["reason"], "CORRELATED_RECORDER_NOT_FINISHED_OR_MISMATCHED")
             self.assertEqual(multiple["reason"], "CORRELATED_EXPERIMENT_RECORDER_NOT_UNIQUE")
             self.assertEqual(foreign["reason"], "CORRELATED_RECORDER_TAG_MISMATCH")
+            self.assertEqual(context_failure["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+            self.assertEqual(context_failure["reason"], "SEMANTIC_CORRELATION_NOT_UNIQUE")
 
     def test_mlflow_artifact_content_hashes_actual_bytes_and_directory_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1644,6 +1655,27 @@ class OwnerOneShotTests(unittest.TestCase):
             )
             self.assertEqual(native["rdagent"]["research_identity"]["qlib_recorder_binding"]["status"], "VERIFIED")
             self.assertTrue(oneshot.p12._native_research_evidence_shape_valid(native))
+            failed_context_payload = json.loads(json.dumps(correlated_payload))
+            failed_context_payload["qlib_recorder_binding"]["failures"] = [{
+                "reason": "EXECUTING_EXPERIMENT_IDENTITY_UNAVAILABLE:ValueError",
+                "experiment_identity_sha256": None,
+            }]
+            failed_context_digest = hashlib.sha256(json.dumps(
+                failed_context_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode() + b"\n").hexdigest()
+            unverified_native = docker_rdagent_target.build_native_research_evidence(
+                request_id=request_id, attempt_id=attempt_id, run_namespace="namespace",
+                output=output,
+                observed_worker={"image_id": "sha256:" + "b" * 64, "entrypoint_verified": True,
+                                 "command_verified": True, "mounts_valid": True},
+                qlib_evidence=qlib_evidence, artifact_volume=recorder_match["artifact_volume"],
+                semantic_evidence=failed_context_payload, semantic_evidence_sha256=failed_context_digest,
+            )
+            self.assertEqual(
+                unverified_native["rdagent"]["research_identity"]["qlib_recorder_binding"]["status"],
+                "PARTIAL",
+            )
+            self.assertEqual(unverified_native["provenance_status"], "PARTIAL")
             tampered_native = json.loads(json.dumps(native))
             tampered_native["rdagent"]["research_identity"]["qlib_recorder_binding"]["qlib_recorder_run_id"] = "foreign-run"
             self.assertFalse(oneshot.p12._native_research_evidence_shape_valid(tampered_native))
