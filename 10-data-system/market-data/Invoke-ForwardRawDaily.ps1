@@ -8,6 +8,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $script:ForwardRawDailyRoot = 'D:\AQ_DATA\FORWARD_RAW_ONLY'
 $script:ForwardRawDailyMutexName = 'Global\AQ.ForwardRawOnly.Daily'
+$script:ForwardRawDailyAnchorDate = '2026-10-19'
+$script:ForwardRawDailyCloseBufferMinutes = 15
+$script:ForwardRawDailyMaxMissingSessions = 5
+$script:ForwardRawDailyMaxFetchSessionsPerRun = 3
 $script:ForwardRawDailyCalendarPython = '/home/zhou/AQ_ENVS/p6-macro-v1/bin/python'
 $script:ForwardRawDailySource = Join-Path $PSScriptRoot 'Update-AlpacaQlibResearchData.ps1'
 $script:ForwardRawDailyRunner = $PSCommandPath
@@ -40,6 +44,43 @@ function Get-LastCompletedXnysSession {
     $close = [datetimeoffset]::Parse((ConvertTo-ForwardRawTimestampText $result.close_utc), [Globalization.CultureInfo]::InvariantCulture).ToUniversalTime()
     if ($close -gt $instant -or $session.Date -gt $instant.UtcDateTime.Date) { throw 'XNYS_SESSION_NOT_COMPLETED' }
     return $result
+}
+
+function Get-CompletedXnysSessions {
+    param(
+        [datetimeoffset]$NowUtc = [datetimeoffset]::UtcNow,
+        [string]$StartDate = $script:ForwardRawDailyAnchorDate,
+        [int]$CloseBufferMinutes = $script:ForwardRawDailyCloseBufferMinutes,
+        [string]$CalendarPython = $script:ForwardRawDailyCalendarPython,
+        [string]$Validator = $script:ForwardRawDailyValidator
+    )
+    $start = [datetime]::ParseExact($StartDate, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    $instant = $NowUtc.ToUniversalTime()
+    $nowText = $instant.ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ', [Globalization.CultureInfo]::InvariantCulture)
+    $validatorLinux = Convert-WindowsPathToWsl $Validator
+    $arguments = @('-e', $CalendarPython, $validatorLinux, 'xnys-completed-sessions', '--start-date', $StartDate, '--now-utc', $nowText, '--close-buffer-minutes', [string]$CloseBufferMinutes)
+    $output = & wsl.exe @arguments 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "XNYS_SESSION_ENUMERATION_FAILED_EXIT_$LASTEXITCODE" }
+    $jsonLine = $output | Where-Object { [string]$_ -match '^\s*\{' } | Select-Object -Last 1
+    if (!$jsonLine) { throw 'XNYS_SESSION_ENUMERATION_RESULT_MISSING' }
+    $result = [string]$jsonLine | ConvertFrom-Json -ErrorAction Stop
+    if ($result.calendar -ne 'XNYS' -or $result.package -ne 'exchange_calendars' -or
+        $result.start_date -ne $StartDate -or $result.close_buffer_minutes -ne $CloseBufferMinutes -or
+        $result.status -notin @('SESSIONS_READY', 'NO_COMPLETED_SESSIONS') -or $null -eq $result.sessions) {
+        throw 'XNYS_SESSION_ENUMERATION_RESULT_INVALID'
+    }
+    $sessions = @($result.sessions)
+    if ($result.status -eq 'NO_COMPLETED_SESSIONS' -and $sessions.Count -ne 0) { throw 'XNYS_SESSION_ENUMERATION_RESULT_INVALID' }
+    if ($result.status -eq 'SESSIONS_READY' -and $sessions.Count -eq 0) { throw 'XNYS_SESSION_ENUMERATION_RESULT_INVALID' }
+    $previous = $null
+    foreach ($session in $sessions) {
+        $parsed = [datetime]::ParseExact([string]$session, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+        if ($parsed -lt $start -or $parsed.Date -gt $instant.UtcDateTime.Date -or ($null -ne $previous -and $parsed -le $previous)) {
+            throw 'XNYS_SESSION_ENUMERATION_ORDER_OR_RANGE_INVALID'
+        }
+        $previous = $parsed
+    }
+    return $sessions
 }
 
 function Get-ForwardRawDailyOutputId {
@@ -205,26 +246,45 @@ function Invoke-ForwardRawDaily {
         }
         if (!$ownsMutex) { throw 'FORWARD_RAW_DAILY_ALREADY_RUNNING' }
 
-        if ($SessionResolver) { $resolution = & $SessionResolver $NowUtc }
-        else { $resolution = Get-LastCompletedXnysSession -NowUtc $NowUtc }
-        if ($resolution -is [string]) { $sessionDate = $resolution }
+        if ($SessionResolver) { $resolution = & $SessionResolver $NowUtc $script:ForwardRawDailyAnchorDate $script:ForwardRawDailyCloseBufferMinutes }
+        else { $resolution = [pscustomobject]@{ status = 'SESSIONS_READY'; sessions = @(Get-CompletedXnysSessions -NowUtc $NowUtc) } }
+        if ($resolution -is [string]) { $sessionDates = @($resolution) }
         elseif ($resolution.status -in @('SKIPPED_NON_TRADING_DAY', 'SKIPPED_SESSION_NOT_COMPLETE')) {
-            return [pscustomobject]@{ Status = $resolution.status; SessionDate = $null; OutputId = $null; OutputPath = $null }
+            return [pscustomobject]@{ Status = $resolution.status; SessionDate = $null; OutputId = $null; OutputPath = $null; FetchedSessions = @(); SkippedSessions = @() }
         }
-        elseif ($resolution.status -eq 'SESSION_COMPLETE') { $sessionDate = ConvertTo-ForwardRawDateText $resolution.session }
+        elseif ($resolution.status -eq 'SESSION_COMPLETE') { $sessionDates = @((ConvertTo-ForwardRawDateText $resolution.session)) }
+        elseif ($resolution.status -eq 'NO_COMPLETED_SESSIONS') {
+            return [pscustomobject]@{ Status = 'SKIPPED_NO_COMPLETED_SESSIONS'; SessionDate = $null; OutputId = $null; OutputPath = $null; FetchedSessions = @(); SkippedSessions = @() }
+        }
+        elseif ($resolution.status -eq 'SESSIONS_READY') { $sessionDates = @($resolution.sessions) }
         else { throw 'XNYS_SESSION_SELECTION_RESULT_INVALID' }
-        $parsedDate = [datetime]::ParseExact($sessionDate, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
-        if ($parsedDate.Date -gt $NowUtc.UtcDateTime.Date) { throw 'FORWARD_RAW_DAILY_SESSION_IN_FUTURE' }
-        $outputId = Get-ForwardRawDailyOutputId -SessionDate $sessionDate
+        if ($sessionDates.Count -eq 0) { return [pscustomobject]@{ Status = 'SKIPPED_NO_COMPLETED_SESSIONS'; SessionDate = $null; OutputId = $null; OutputPath = $null; FetchedSessions = @(); SkippedSessions = @() } }
+        $previousDate = $null
+        foreach ($dateText in $sessionDates) {
+            $parsed = [datetime]::ParseExact([string]$dateText, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+            $anchor = [datetime]::ParseExact($script:ForwardRawDailyAnchorDate, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+            if ($parsed.Date -lt $anchor.Date -or $parsed.Date -gt $NowUtc.UtcDateTime.Date -or ($null -ne $previousDate -and $parsed -le $previousDate)) {
+                throw 'FORWARD_RAW_DAILY_SESSION_ORDER_OR_ANCHOR_INVALID'
+            }
+            $previousDate = $parsed
+        }
         $rootPath = [IO.Path]::GetFullPath($ForwardRawRoot)
         if (!(Test-Path -LiteralPath $rootPath)) { $null = New-Item -ItemType Directory -Path $rootPath }
         $rootItem = Get-Item -LiteralPath $rootPath -Force
         if (!$rootItem.PSIsContainer -or ($rootItem.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'FORWARD_RAW_DAILY_ROOT_UNTRUSTED' }
-        $outputPath = Join-Path $rootPath $outputId
-
-        $existing = Find-ExistingForwardRawDailyOutput -ForwardRawRoot $ForwardRawRoot -SessionDate $sessionDate
-        if ($existing) {
-            return [pscustomobject]@{ Status = 'SKIPPED_ALREADY_COMPLETE'; SessionDate = $sessionDate; OutputId = $existing.OutputId; OutputPath = $existing.OutputPath }
+        # Inspect every eligible session and every existing manifest before performing any fetch.
+        $missing = @()
+        $existing = @()
+        foreach ($sessionDate in $sessionDates) {
+            $found = Find-ExistingForwardRawDailyOutput -ForwardRawRoot $ForwardRawRoot -SessionDate ([string]$sessionDate)
+            if ($found) { $existing += [pscustomobject]@{ SessionDate = [string]$sessionDate; Output = $found } }
+            else { $missing += [string]$sessionDate }
+        }
+        if ($missing.Count -gt $script:ForwardRawDailyMaxMissingSessions) {
+            throw "FORWARD_RAW_DAILY_MISSING_SESSION_LIMIT_EXCEEDED:$($missing.Count):$script:ForwardRawDailyMaxMissingSessions"
+        }
+        if ($missing.Count -eq 0) {
+            return [pscustomobject]@{ Status = 'SKIPPED_ALREADY_COMPLETE'; SessionDate = $sessionDates[-1]; OutputId = $existing[-1].Output.OutputId; OutputPath = $existing[-1].Output.OutputPath; FetchedSessions = @(); SkippedSessions = @($sessionDates) }
         }
 
         $stagingPath = Join-Path $rootPath '.staging'
@@ -234,18 +294,31 @@ function Invoke-ForwardRawDaily {
             if (@(Get-ChildItem -LiteralPath $stagingPath -Force).Count -gt 0) { throw 'FORWARD_RAW_DAILY_STAGING_LEFTOVER_FAIL_CLOSED' }
         }
 
-        if ($FetchAction) {
-            $null = & $FetchAction $outputId $sessionDate $rootPath
+        $fetchDates = @($missing | Select-Object -First $script:ForwardRawDailyMaxFetchSessionsPerRun)
+        $fetched = @()
+        foreach ($sessionDate in $fetchDates) {
+            $outputId = Get-ForwardRawDailyOutputId -SessionDate $sessionDate
+            $outputPath = Join-Path $rootPath $outputId
+            if (Test-Path -LiteralPath $outputPath) { throw "FORWARD_RAW_DAILY_OUTPUT_ALREADY_EXISTS_FAIL_CLOSED:$sessionDate" }
+            if ($FetchAction) {
+                $null = & $FetchAction $outputId $sessionDate $rootPath
+            }
+            else {
+                $pwsh = (Get-Command pwsh.exe -ErrorAction Stop).Source
+                & $pwsh -NoLogo -NoProfile -File $Entrypoint -Mode ForwardRawFetch -StartDate $sessionDate -EndDate $sessionDate -ForwardRawOutputId $outputId
+                if ($LASTEXITCODE -ne 0) { throw "FORWARD_RAW_DAILY_FETCH_FAILED_EXIT_${LASTEXITCODE}:$sessionDate" }
+            }
+            if (!(Test-ForwardRawDailyOutput -ForwardRawRoot $ForwardRawRoot -OutputId $outputId -SessionDate $sessionDate)) {
+                throw "FORWARD_RAW_DAILY_FETCH_DID_NOT_PUBLISH_OUTPUT:$sessionDate"
+            }
+            $fetched += [pscustomobject]@{ SessionDate = $sessionDate; OutputId = $outputId; OutputPath = $outputPath }
         }
-        else {
-            $pwsh = (Get-Command pwsh.exe -ErrorAction Stop).Source
-            & $pwsh -NoLogo -NoProfile -File $Entrypoint -Mode ForwardRawFetch -StartDate $sessionDate -EndDate $sessionDate -ForwardRawOutputId $outputId
-            if ($LASTEXITCODE -ne 0) { throw "FORWARD_RAW_DAILY_FETCH_FAILED_EXIT_$LASTEXITCODE" }
+        $stillMissing = $missing.Count - $fetched.Count
+        if ($stillMissing -gt 0) {
+            return [pscustomobject]@{ Status = 'PARTIAL_BACKFILL_PENDING'; SessionDate = $fetched[-1].SessionDate; OutputId = $fetched[-1].OutputId; OutputPath = $fetched[-1].OutputPath; FetchedSessions = @($fetched); SkippedSessions = @($existing | ForEach-Object SessionDate); MissingSessions = @($missing | Select-Object -Skip $fetched.Count) }
         }
-        if (!(Test-ForwardRawDailyOutput -ForwardRawRoot $ForwardRawRoot -OutputId $outputId -SessionDate $sessionDate)) {
-            throw 'FORWARD_RAW_DAILY_FETCH_DID_NOT_PUBLISH_OUTPUT'
-        }
-        return [pscustomobject]@{ Status = 'FORWARD_RAW_DAILY_FETCH_COMPLETE'; SessionDate = $sessionDate; OutputId = $outputId; OutputPath = $outputPath }
+        $status = if ($fetched.Count -eq 1) { 'FORWARD_RAW_DAILY_FETCH_COMPLETE' } else { 'FORWARD_RAW_DAILY_BACKFILL_COMPLETE' }
+        return [pscustomobject]@{ Status = $status; SessionDate = $fetched[-1].SessionDate; OutputId = $fetched[-1].OutputId; OutputPath = $fetched[-1].OutputPath; FetchedSessions = @($fetched); SkippedSessions = @($existing | ForEach-Object SessionDate); MissingSessions = @() }
     }
     finally {
         if ($ownsMutex) { $mutex.ReleaseMutex() }

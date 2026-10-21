@@ -66,6 +66,37 @@ class ForwardRawIsolationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "XNYS_NOW_UTC_INVALID"):
             refresh.last_completed_xnys_session("not-a-time")
 
+    def test_xnys_completed_sessions_uses_anchor_close_buffer_dst_holiday_and_early_close(self):
+        anchor = "2026-10-19"
+        self.assertEqual(
+            refresh.completed_xnys_sessions(anchor, "2026-10-20T20:14:00Z")["sessions"],
+            ["2026-10-19"],
+        )
+        self.assertEqual(
+            refresh.completed_xnys_sessions(anchor, "2026-10-20T20:15:00Z")["sessions"],
+            ["2026-10-19", "2026-10-20"],
+        )
+        weekend = refresh.completed_xnys_sessions(anchor, "2026-10-24T16:00:00Z")
+        self.assertEqual(weekend["sessions"][-2:], ["2026-10-22", "2026-10-23"])
+        self.assertEqual(
+            refresh.completed_xnys_sessions("2026-11-25", "2026-11-27T18:14:00Z")["sessions"],
+            ["2026-11-25"],
+        )
+        self.assertEqual(
+            refresh.completed_xnys_sessions("2026-11-25", "2026-11-27T18:15:00Z")["sessions"],
+            ["2026-11-25", "2026-11-27"],
+        )
+        self.assertEqual(
+            refresh.completed_xnys_sessions("2026-01-05", "2026-01-05T21:15:00Z")["sessions"],
+            ["2026-01-05"],
+        )
+
+    def test_xnys_completed_sessions_rejects_invalid_bounds(self):
+        with self.assertRaisesRegex(ValueError, "XNYS_NOW_UTC_MUST_BE_TIMEZONE_AWARE"):
+            refresh.completed_xnys_sessions("2026-10-19", "2026-10-20T20:15:00")
+        with self.assertRaisesRegex(ValueError, "XNYS_CLOSE_BUFFER_MINUTES_INVALID"):
+            refresh.completed_xnys_sessions("2026-10-19", "2026-10-20T20:15:00Z", 121)
+
     def write_payload(self, directory: pathlib.Path, symbol: str, bars: list[dict]) -> bytes:
         raw = json.dumps({"bars": bars}, separators=(",", ":")).encode()
         (directory / f"{symbol}.json").write_bytes(raw)
