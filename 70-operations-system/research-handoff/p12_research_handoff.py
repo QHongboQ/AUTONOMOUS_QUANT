@@ -13,10 +13,12 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 import uuid
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Callable
 
@@ -33,7 +35,7 @@ sys.path.insert(0, str(Path(__file__).with_name("docker-rdagent-smoke")))
 import aq_p4_policy as p4  # noqa: E402
 import owner_bootstrap_request as bootstrap  # noqa: E402
 import standing_policy as policy_gate  # noqa: E402
-from native_experiment_budget import experiment_user_id  # noqa: E402
+from native_experiment_budget import OWNER_ONESHOT_MODELS, experiment_user_id  # noqa: E402
 
 _REQUEST_ID_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TERMINAL_STATES = {"SUCCEEDED_SYNTHETIC", "FAILED_SYNTHETIC"}
@@ -63,6 +65,9 @@ def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) ->
 # Real bootstrap admission is pinned to this single durable control namespace.
 # Tests replace this constant with an isolated temporary directory.
 OWNER_BOOTSTRAP_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-one-shot-state")
+OWNER_FINQUANT_OUTPUT_ROOT = Path("/mnt/d/AQ/OPERATIONS/P12/finquant-output")
+OWNER_LITELLM_EVIDENCE_NAME = "p12-litellm-call-evidence.json"
+OWNER_LITELLM_PROXY_IMAGE = "ghcr.io/berriai/litellm@sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802"
 _DOCKER_TARGETS = {TARGET_DOCKER_RDAGENT, TARGET_DOCKER_FINQUANT}
 _TARGETS = {TARGET_INERT, *_DOCKER_TARGETS}
 
@@ -202,6 +207,185 @@ def _valid_attempt_id(value: Any) -> bool:
     try:
         return str(uuid.UUID(value)) == value
     except ValueError:
+        return False
+
+
+def _owner_litellm_evidence_path(request_id: str, attempt_id: str) -> tuple[Path, str]:
+    if not _REQUEST_ID_RE.fullmatch(request_id) or not _valid_attempt_id(attempt_id):
+        raise ValueError("invalid P12 evidence identity")
+    relative = f"{request_id.removeprefix('sha256:')}/{attempt_id}/{OWNER_LITELLM_EVIDENCE_NAME}"
+    return OWNER_FINQUANT_OUTPUT_ROOT / relative, relative
+
+
+def _read_owner_litellm_evidence(
+    request_id: str, attempt_id: str, budget_identity: str, *, verify_runtime_identity: bool = True,
+) -> tuple[dict[str, Any], str, str]:
+    """Read and hash the one expected immutable evidence file without following symlinks."""
+    path, relative = _owner_litellm_evidence_path(request_id, attempt_id)
+    root = OWNER_FINQUANT_OUTPUT_ROOT.resolve(strict=True)
+    parent = path.parent.resolve(strict=True)
+    if not parent.is_relative_to(root) or parent != path.parent:
+        raise ValueError("P12 evidence path escaped or traversed a symlink")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("P12 evidence is not a regular file")
+        chunks: list[bytes] = []
+        digest = hashlib.sha256()
+        while True:
+            block = os.read(fd, 65536)
+            if not block:
+                break
+            digest.update(block)
+            chunks.append(block)
+        raw = b"".join(chunks)
+        value = json.loads(raw.decode("utf-8"))
+    finally:
+        os.close(fd)
+    expected_user_id = experiment_user_id(budget_identity)
+    if (
+        not isinstance(value, dict)
+        or value.get("request_id") != request_id
+        or value.get("attempt_id") != attempt_id
+        or value.get("format_version") != "P12_LITELLM_CALL_EVIDENCE_V1"
+        or value.get("evidence_status") not in {"COMPLETE", "PARTIAL"}
+        or value.get("native_experiment_user_id") not in {expected_user_id, None}
+    ):
+        raise ValueError("P12 evidence identity or status mismatch")
+    if value.get("scoped_key_identity") is not None and not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", value["scoped_key_identity"]
+    ):
+        raise ValueError("P12 evidence key identity malformed")
+    if value["evidence_status"] == "COMPLETE":
+        calls = value.get("calls")
+        # Runtime identity is compared to the currently approved deployment only
+        # when first sealing a terminal. Replays verify the immutable values that
+        # were sealed in the evidence file and its terminal-bound digest, without
+        # making historical evidence depend on today's config/image/model list.
+        runtime_identity = (
+            isinstance(value.get("proxy_config_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", value["proxy_config_sha256"]) is not None
+            and value.get("litellm_proxy_version") == "1.105.1"
+            and isinstance(value.get("litellm_proxy_image"), str)
+            and bool(value["litellm_proxy_image"])
+            and isinstance(value.get("configured_allowed_models"), list)
+            and bool(value["configured_allowed_models"])
+            and all(isinstance(model, str) and model for model in value["configured_allowed_models"])
+        )
+        if verify_runtime_identity:
+            config_path = REPO_ROOT / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+            expected_config_sha256 = hashlib.sha256(config_path.read_bytes()).hexdigest()
+            runtime_identity = (
+                runtime_identity
+                and value.get("proxy_config_sha256") == expected_config_sha256
+                and value.get("litellm_proxy_image") == OWNER_LITELLM_PROXY_IMAGE
+                and value.get("configured_allowed_models") == list(OWNER_ONESHOT_MODELS)
+            )
+        if (
+            value.get("native_experiment_user_id") != expected_user_id
+            or value.get("scoped_key_identity") is None
+            or not runtime_identity
+            or not isinstance(calls, list)
+            or not calls
+            or type(value.get("call_count")) is not int
+            or value["call_count"] != len(calls)
+            or value.get("missing_fields") != []
+        ):
+            raise ValueError("P12 complete evidence summary malformed")
+        request_ids, call_ids, row_spend = [], [], Decimal("0")
+        for call in calls:
+            if not isinstance(call, dict):
+                raise ValueError("P12 complete evidence call malformed")
+            row_id, call_id = call.get("spend_log_request_id"), call.get("litellm_call_id")
+            if (
+                not isinstance(row_id, str) or not row_id
+                or not isinstance(call_id, str) or not call_id
+                or type(call.get("attempted_fallbacks")) is not int or call["attempted_fallbacks"] < 0
+                or type(call.get("attempted_retries")) is not int or call["attempted_retries"] < 0
+                or call.get("status") not in {"success", "failure", "failed", "error"}
+                or not isinstance(call.get("call_type"), str) or not call["call_type"]
+                or not isinstance(call.get("routed_model_group"), str) or not call["routed_model_group"]
+                or call.get("provider_model_identity_kind") != "UNAVAILABLE"
+                or any(type(call.get(field)) is not int or call[field] < 0 for field in ("prompt_tokens", "completion_tokens", "total_tokens"))
+                or (call["attempted_fallbacks"] > 0 and not isinstance(call.get("original_model_group"), str))
+            ):
+                raise ValueError("P12 complete evidence call fields malformed")
+            request_ids.append(row_id)
+            call_ids.append(call_id)
+            try:
+                amount = Decimal(call.get("spend_usd"))
+            except (InvalidOperation, TypeError):
+                raise ValueError("P12 complete evidence spend malformed") from None
+            if not amount.is_finite() or amount < 0:
+                raise ValueError("P12 complete evidence spend malformed")
+            row_spend += amount
+        if len(set(request_ids)) != len(request_ids) or len(set(call_ids)) != len(call_ids):
+            raise ValueError("P12 complete evidence call IDs duplicate")
+        try:
+            key_spend = Decimal(value.get("total_spend_usd"))
+            logs_spend = Decimal(value.get("spend_logs_total_usd"))
+        except (InvalidOperation, TypeError):
+            raise ValueError("P12 complete evidence totals malformed") from None
+        if (
+            not key_spend.is_finite() or not logs_spend.is_finite()
+            or abs(key_spend - logs_spend) > Decimal("0.00000001")
+            or abs(row_spend - logs_spend) > Decimal("0.00000001")
+        ):
+            raise ValueError("P12 complete evidence totals inconsistent")
+    return value, relative, digest.hexdigest()
+
+
+def _terminal_owner_litellm_binding(
+    request_id: str, attempt_id: str, budget_identity: str,
+) -> dict[str, Any]:
+    try:
+        value, relative, digest = _read_owner_litellm_evidence(request_id, attempt_id, budget_identity)
+        return {
+            "llm_provenance_evidence_status": value["evidence_status"],
+            "llm_provenance_evidence_path": relative,
+            "llm_provenance_evidence_sha256": digest,
+        }
+    except Exception as exc:
+        # The research and process gates remain independent. Failure to seal
+        # provenance is explicit and never converted into complete evidence.
+        return {
+            "llm_provenance_evidence_status": "PARTIAL",
+            "llm_provenance_evidence_path": None,
+            "llm_provenance_evidence_sha256": None,
+            "llm_provenance_evidence_error_type": type(exc).__name__,
+        }
+
+
+def _verify_terminal_owner_litellm_binding(terminal: dict[str, Any]) -> bool:
+    fields = (
+        "llm_provenance_evidence_status",
+        "llm_provenance_evidence_path",
+        "llm_provenance_evidence_sha256",
+    )
+    if not any(field in terminal for field in fields):
+        return True  # pre-seal terminals remain read-only and compatible
+    if not all(field in terminal for field in fields):
+        return False
+    status = terminal.get(fields[0])
+    relative = terminal.get(fields[1])
+    digest = terminal.get(fields[2])
+    if status == "PARTIAL" and relative is None and digest is None:
+        return True
+    if status not in {"COMPLETE", "PARTIAL"} or not isinstance(relative, str) or not isinstance(digest, str):
+        return False
+    try:
+        evidence, expected_relative, observed_digest = _read_owner_litellm_evidence(
+            terminal["request_id"], terminal["attempt_id"], terminal["research_budget_identity"],
+            verify_runtime_identity=False,
+        )
+        return (
+            relative == expected_relative
+            and digest == observed_digest
+            and status == evidence["evidence_status"]
+        )
+    except Exception:
         return False
 
 
@@ -724,6 +908,8 @@ def _owner_oneshot_replay(
         or terminal.get("sealed_oos_accessed") is not False
     ):
         return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    if not _verify_terminal_owner_litellm_binding(terminal):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     state, code = terminal.get("state"), terminal.get("target_return_code")
     process_status = terminal.get("process_exit_status")
     evidence_status = terminal.get("research_evidence_status")
@@ -911,6 +1097,7 @@ def process_owner_oneshot(
         terminal = {
             **dispatch,
             **evidence,
+            **_terminal_owner_litellm_binding(request_id, claim["attempt_id"], budget_identity),
             "state": terminal_state,
             "target_return_code": code,
             "process_exit_status": process_status,

@@ -161,6 +161,30 @@ class LiteLLMNativeAPI:
             raise BudgetBoundaryDenied("DENIED_NATIVE_KEY_RECORD_INVALID")
         return info
 
+    def spend_logs_v2(
+        self, *, user_id: str, api_key_hash: str, start_date: str, end_date: str,
+        page: int, page_size: int = 100,
+    ) -> dict[str, Any]:
+        """Read one bounded page from LiteLLM's native SpendLogs endpoint."""
+        if (
+            not user_id or not api_key_hash or type(page) is not int or page < 1
+            or type(page_size) is not int or not 1 <= page_size <= 1000
+            or not start_date or not end_date
+        ):
+            raise BudgetBoundaryDenied("DENIED_NATIVE_SPEND_LOG_QUERY_INVALID")
+        query = urllib.parse.urlencode({
+            "user_id": user_id,
+            "api_key": api_key_hash,
+            "start_date": start_date,
+            "end_date": end_date,
+            "page": page,
+            "page_size": page_size,
+        })
+        status, payload = self.request("GET", f"/spend/logs/v2?{query}")
+        if status != 200:
+            raise BudgetBoundaryDenied("DENIED_NATIVE_SPEND_LOG_LOOKUP_FAILED")
+        return payload
+
 
 class NativeExperimentBudgetController:
     def __init__(self, api: LiteLLMNativeAPI):

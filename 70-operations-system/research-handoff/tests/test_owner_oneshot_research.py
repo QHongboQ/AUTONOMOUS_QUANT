@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -23,6 +24,8 @@ for directory in (str(P4_DIR), str(HANDOFF), str(SMOKE)):
 import aq_p4_policy as p4  # noqa: E402
 import owner_oneshot_research as oneshot  # noqa: E402
 import owner_bootstrap_request as bootstrap  # noqa: E402
+import owner_oneshot_proxy_control as proxy_control  # noqa: E402
+import docker_rdagent_target  # noqa: E402
 import standing_policy  # noqa: E402
 from native_experiment_budget import (  # noqa: E402
     OWNER_ONESHOT_MODELS,
@@ -37,6 +40,7 @@ from docker_rdagent_target import (  # noqa: E402
     PERSISTENT_LITELLM_NETWORK,
     validate_owner_worker_inspection,
     _owner_artifact_volume_name,
+    _owner_artifact_container_command,
 )
 from p12_mlflow_evidence import inspect_research_evidence  # noqa: E402
 
@@ -52,6 +56,33 @@ def completed_owner_evidence(return_code: int = 0):
         "research_evidence_status": (
             "RESEARCH_EVIDENCE_COMPLETE" if return_code == 0 else "RESEARCH_EVIDENCE_INCOMPLETE"
         ),
+    }
+
+
+def complete_litellm_evidence_payload(request_id: str, attempt_id: str, budget_identity: str):
+    config_path = oneshot.p12.REPO_ROOT / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+    return {
+        "format_version": "P12_LITELLM_CALL_EVIDENCE_V1",
+        "request_id": request_id,
+        "attempt_id": attempt_id,
+        "evidence_status": "COMPLETE",
+        "native_experiment_user_id": oneshot.p12.experiment_user_id(budget_identity),
+        "scoped_key_identity": identity("scoped-key"),
+        "proxy_config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        "litellm_proxy_version": "1.105.1",
+        "litellm_proxy_image": oneshot.p12.OWNER_LITELLM_PROXY_IMAGE,
+        "configured_allowed_models": list(proxy_control.OWNER_ONESHOT_MODELS),
+        "calls": [{
+            "spend_log_request_id": "native-row-1", "litellm_call_id": "native-call-1",
+            "attempted_fallbacks": 0, "attempted_retries": 0,
+            "status": "success", "call_type": "completion",
+            "routed_model_group": "deepseek/deepseek-flash",
+            "provider_model_identity_kind": "UNAVAILABLE",
+            "prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5,
+            "spend_usd": "0.25",
+        }],
+        "call_count": 1, "total_spend_usd": "0.25", "spend_logs_total_usd": "0.25",
+        "missing_fields": [],
     }
 
 
@@ -574,6 +605,389 @@ class OwnerOneShotTests(unittest.TestCase):
         self.assertEqual(result["dispatch_count_added"], 1)
         self.assertEqual(replay[1], 0)
         self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_owner_artifact_inspection_command_binds_request_and_attempt(self):
+        request_id, attempt_id = identity("artifact-command-request"), "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        completed = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+        with patch.object(docker_rdagent_target.subprocess, "run", return_value=completed) as run:
+            observed = _owner_artifact_container_command(
+                output=Path("/tmp/attempt-output"), volume="aq-p12-owner-artifacts-0123456789abcdef",
+                tracking_uri="sqlite:////workspace/runs/run/mlflow.db", helper="p12_mlflow_evidence.py",
+                prepare=False, request_id=request_id, attempt_id=attempt_id,
+            )
+        self.assertIs(observed, completed)
+        argv = run.call_args.args[0]
+        self.assertIn("--request-id", argv)
+        self.assertEqual(argv[argv.index("--request-id") + 1], request_id)
+        self.assertEqual(argv[argv.index("--attempt-id") + 1], attempt_id)
+
+    def test_new_terminal_binds_immutable_litellm_evidence_and_replay_verifies_hash(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "output"
+            state = Path(tmp) / "state"
+
+            def target(attempt_id):
+                output = root / request.request_id.removeprefix("sha256:") / attempt_id
+                output.mkdir(parents=True)
+                payload = {
+                    "format_version": "P12_LITELLM_CALL_EVIDENCE_V1",
+                    "request_id": request.request_id,
+                    "attempt_id": attempt_id,
+                    "evidence_status": "PARTIAL",
+                    "calls": [],
+                    "missing_fields": ["synthetic_fixture"],
+                }
+                (output / "p12-litellm-call-evidence.json").write_text(json.dumps(payload))
+                return completed_owner_evidence()
+
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root):
+                result, code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                    owner_confirmed=True, target=target,
+                )
+                terminal = oneshot.p12._read_json_nofollow(oneshot.p12._status_file(state, request.request_id))
+                replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                )
+                self.assertEqual(terminal["llm_provenance_evidence_status"], "PARTIAL")
+                self.assertEqual(len(terminal["llm_provenance_evidence_sha256"]), 64)
+                self.assertEqual(replay[0]["dispatch_count_added"], 0)
+                evidence_path = root / terminal["llm_provenance_evidence_path"]
+                evidence_path.write_text("tampered")
+                tampered_replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                )
+        self.assertEqual(code, 0)
+        self.assertEqual(result["dispatch_count_added"], 1)
+        self.assertEqual(tampered_replay[0]["classification"], "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH")
+        self.assertEqual(tampered_replay[0]["dispatch_count_added"], 0)
+
+    def test_terminal_without_evidence_is_explicit_partial_and_old_terminal_replay_stays_safe(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", Path(tmp) / "output"
+        ):
+            state = Path(tmp) / "state"
+            result, _ = oneshot.p12.process_owner_oneshot(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+                owner_confirmed=True, target=lambda _: completed_owner_evidence(),
+            )
+            self.assertEqual(result["status"]["llm_provenance_evidence_status"], "PARTIAL")
+            self.assertIsNone(result["status"]["llm_provenance_evidence_path"])
+            replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_complete_native_evidence_is_bound_only_to_matching_p12_user_and_attempt(self):
+        envelope, request, policy = owner_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "output"
+            state = Path(tmp) / "state"
+            def target(attempt_id):
+                output = root / request.request_id.removeprefix("sha256:") / attempt_id
+                output.mkdir(parents=True)
+                payload = complete_litellm_evidence_payload(
+                    request.request_id, attempt_id, request.research_budget_identity
+                )
+                (output / "p12-litellm-call-evidence.json").write_text(json.dumps(payload))
+                return completed_owner_evidence()
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root):
+                result, _ = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                    owner_confirmed=True, target=target,
+                )
+            self.assertEqual(result["status"]["llm_provenance_evidence_status"], "COMPLETE")
+            payload_path = root / result["status"]["llm_provenance_evidence_path"]
+            # A terminal replay is bound to its original immutable evidence, not
+            # to mutable deployment configuration or current image/model constants.
+            changed_repo = Path(tmp) / "upgraded-deployment"
+            changed_config = changed_repo / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+            changed_config.parent.mkdir(parents=True)
+            changed_config.write_text("changed deployment config")
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root), patch.object(
+                oneshot.p12, "REPO_ROOT", changed_repo
+            ), patch.object(oneshot.p12, "OWNER_LITELLM_PROXY_IMAGE", "new/proxy-image:future"), patch.object(
+                oneshot.p12, "OWNER_ONESHOT_MODELS", ("future-model",)
+            ):
+                historical_replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                )
+            self.assertEqual(historical_replay[1], 0)
+            self.assertEqual(historical_replay[0]["dispatch_count_added"], 0)
+            terminal_path = oneshot.p12._status_file(state, request.request_id)
+            sealed_terminal = oneshot.p12._read_json_nofollow(terminal_path)
+            altered_terminal = dict(sealed_terminal)
+            altered_terminal["llm_provenance_evidence_sha256"] = "0" * 64
+            terminal_path.write_text(json.dumps(altered_terminal))
+            digest_mismatch_replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+            terminal_path.write_text(json.dumps(sealed_terminal))
+            self.assertEqual(
+                digest_mismatch_replay[0]["classification"],
+                "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH",
+            )
+            self.assertEqual(digest_mismatch_replay[0]["dispatch_count_added"], 0)
+            value = json.loads(payload_path.read_text())
+            value["native_experiment_user_id"] = "foreign-user"
+            payload_path.write_text(json.dumps(value))
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root):
+                replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                )
+        self.assertEqual(replay[0]["classification"], "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH")
+        self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_initial_terminal_seal_rejects_evidence_from_wrong_runtime_config(self):
+        envelope, request, _ = owner_fixture()
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "output"
+            evidence_dir = root / request.request_id.removeprefix("sha256:") / attempt_id
+            evidence_dir.mkdir(parents=True)
+            evidence = complete_litellm_evidence_payload(
+                request.request_id, attempt_id, request.research_budget_identity
+            )
+            (evidence_dir / "p12-litellm-call-evidence.json").write_text(json.dumps(evidence))
+            changed_repo = Path(tmp) / "changed-deployment"
+            changed_config = changed_repo / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+            changed_config.parent.mkdir(parents=True)
+            changed_config.write_text("not the running config")
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root), patch.object(
+                oneshot.p12, "REPO_ROOT", changed_repo
+            ):
+                sealed = oneshot.p12._terminal_owner_litellm_binding(
+                    request.request_id, attempt_id, request.research_budget_identity
+                )
+        self.assertEqual(sealed["llm_provenance_evidence_status"], "PARTIAL")
+        self.assertIsNone(sealed["llm_provenance_evidence_path"])
+        self.assertEqual(sealed["llm_provenance_evidence_error_type"], "ValueError")
+
+    def test_spendlog_projection_redacts_payload_and_preserves_fallback_unknown(self):
+        now = datetime.now(timezone.utc)
+        request_id = identity("litellm-request")
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        budget_id = identity("litellm-budget")
+        user_id = oneshot.p12.experiment_user_id(budget_id)
+        key_hash = "native-hash-only-for-fixture"
+        class SpendAPI:
+            def __init__(self, row):
+                self.row = row
+                self.key = {"user_id": user_id, "key_alias": "aq-p12-owner-once-" + hashlib.sha256((request_id + ":key").encode()).hexdigest()[:20], "blocked": True, "spend": 0.25, "models": list(proxy_control.OWNER_ONESHOT_MODELS)}
+                self.pages = 0
+            def key_info(self, token):
+                return dict(self.key)
+            def user_info(self, value):
+                return {"user_id": value}
+            def spend_logs_v2(self, **kwargs):
+                self.pages += 1
+                return {"data": [self.row], "total": 1, "total_pages": 1}
+        row = {
+            "request_id": "native-row-1", "litellm_call_id": "call-1", "user": user_id,
+            "api_key": key_hash, "startTime": now.isoformat(), "status": "success",
+            "model_group": "deepseek/deepseek-flash", "model": "deepseek/deepseek-flash",
+            "call_type": "completion", "spend": 0.25, "prompt_tokens": 10,
+            "completion_tokens": 4, "total_tokens": 14,
+            "metadata": {"attempted_fallbacks": None, "attempted_retries": 0,
+                         "messages": "DO_NOT_PERSIST", "response": "DO_NOT_PERSIST"},
+        }
+        api = SpendAPI(row)
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yaml"
+            config.write_text("synthetic config")
+            with patch.object(proxy_control, "_native_key_hash", return_value=key_hash), patch.object(
+                proxy_control, "PROXY_CONFIG_PATH", config
+            ):
+                evidence = proxy_control.collect_call_evidence(
+                    api, token="sk-fixture", request_id=request_id, attempt_id=attempt_id,
+                    research_budget_identity=budget_id, attempt_started_at_utc=(now - timedelta(seconds=1)).isoformat(),
+                    now=lambda: now + timedelta(seconds=1), sleep=lambda _: None,
+                )
+        self.assertEqual(evidence["evidence_status"], "PARTIAL")
+        self.assertEqual(evidence["calls"][0]["attempted_fallbacks"], "UNKNOWN")
+        self.assertNotIn("DO_NOT_PERSIST", json.dumps(evidence))
+        self.assertNotIn(key_hash, json.dumps(evidence))
+
+    def test_spendlog_query_bounds_use_pinned_format_and_cover_fractional_seconds(self):
+        local_start = datetime(2026, 10, 20, 16, 59, 59, 999999, tzinfo=timezone(timedelta(hours=-7)))
+        local_end = datetime(2026, 10, 20, 17, 0, 0, 1, tzinfo=timezone(timedelta(hours=-7)))
+        start_text = proxy_control._spend_log_api_time(local_start, end=False)
+        end_text = proxy_control._spend_log_api_time(local_end, end=True)
+        self.assertEqual(start_text, "2026-10-20 23:59:59")
+        self.assertEqual(end_text, "2026-10-21 00:00:01")
+        # Mirror the pinned v1.105.1 v2 parser and reject ISO/offset/fractional strings.
+        for value in (start_text, end_text):
+            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        for invalid in ("2026-10-20T23:59:59Z", "2026-10-20 23:59:59.123456", "2026-10-20 23:59:59+00:00"):
+            with self.assertRaises(ValueError):
+                datetime.strptime(invalid, "%Y-%m-%d %H:%M:%S")
+        with self.assertRaisesRegex(ValueError, "timezone-aware"):
+            proxy_control._spend_log_api_time(datetime(2026, 10, 20), end=False)
+
+        class QueryAPI:
+            def __init__(self): self.args = None
+            def spend_logs_v2(self, **kwargs):
+                self.args = kwargs
+                return {"data": [], "total": 0, "total_pages": 0}
+        query = QueryAPI()
+        proxy_control._spend_snapshot(
+            query, user_id="u", key_hash="k", started_at=local_start.astimezone(timezone.utc),
+            ended_at=local_end.astimezone(timezone.utc),
+        )
+        self.assertEqual(query.args["start_date"], start_text)
+        self.assertEqual(query.args["end_date"], end_text)
+
+    def test_spendlog_exact_attempt_window_keeps_microseconds_after_broad_query(self):
+        start = datetime(2026, 10, 20, 23, 59, 59, 123456, tzinfo=timezone.utc)
+        end = datetime(2026, 10, 21, 0, 0, 0, 456789, tzinfo=timezone.utc)
+        base = {
+            "request_id": "row", "litellm_call_id": "call", "user": "u", "api_key": "k",
+            "startTime": start.isoformat(), "status": "success", "model_group": "routed",
+            "spend": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0,
+            "metadata": {"attempted_fallbacks": 0, "attempted_retries": 0},
+        }
+        args = {"expected_user": "u", "expected_key_hash": "k", "started_at": start, "ended_at": end}
+        self.assertEqual(proxy_control._safe_row(base, **args)["observed_at_utc"], start.isoformat().replace("+00:00", "Z"))
+        at_end = {**base, "startTime": end.isoformat()}
+        self.assertEqual(proxy_control._safe_row(at_end, **args)["observed_at_utc"], end.isoformat().replace("+00:00", "Z"))
+        for outside in (start - timedelta(microseconds=1), end + timedelta(microseconds=1)):
+            with self.subTest(outside=outside):
+                with self.assertRaisesRegex(ValueError, "outside attempt window"):
+                    proxy_control._safe_row({**base, "startTime": outside.isoformat()}, **args)
+
+    def test_spendlog_rejects_foreign_key_user_duplicate_ids_and_spend_mismatch(self):
+        now = datetime.now(timezone.utc)
+        user = identity("expected-user")
+        base = {
+            "request_id": "row", "litellm_call_id": "call", "user": user, "api_key": "hash",
+            "startTime": now.isoformat(), "status": "success", "model_group": "routed",
+            "spend": 1, "prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2,
+            "metadata": {"attempted_fallbacks": 0, "attempted_retries": 0},
+        }
+        args = {"expected_user": user, "expected_key_hash": "hash", "started_at": now - timedelta(seconds=1), "ended_at": now + timedelta(seconds=1)}
+        self.assertEqual(proxy_control._safe_row(base, **args)["attempted_fallbacks"], 0)
+        for changed in ({**base, "user": "foreign"}, {**base, "api_key": "foreign"},
+                        {**base, "litellm_call_id": None}):
+            with self.subTest(changed=changed.get("user", changed.get("api_key", "missing"))):
+                with self.assertRaises(ValueError):
+                    proxy_control._safe_row(changed, **args)
+        class DuplicateAPI:
+            def spend_logs_v2(self, **kwargs):
+                return {"data": [base, {**base, "request_id": "row-2"}], "total": 2, "total_pages": 1}
+        with self.assertRaisesRegex(ValueError, "duplicate native call identity"):
+            proxy_control._spend_snapshot(
+                DuplicateAPI(), user_id=user, key_hash="hash",
+                started_at=now - timedelta(seconds=1), ended_at=now + timedelta(seconds=1),
+            )
+        with self.assertRaisesRegex(ValueError, "metadata ownership"):
+            proxy_control._safe_row({**base, "metadata": {
+                "attempted_fallbacks": 0, "attempted_retries": 0,
+                "user_api_key_user_id": "attacker-controlled-user",
+            }}, **args)
+
+    def test_native_fallback_positive_is_preserved_and_spend_total_mismatch_is_partial(self):
+        now = datetime.now(timezone.utc)
+        request_id, attempt_id, budget_id = identity("fallback-request"), "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1", identity("fallback-budget")
+        user_id = oneshot.p12.experiment_user_id(budget_id)
+        key_hash = "fixture-native-hash"
+        row = {
+            "request_id": "row", "litellm_call_id": "call", "user": user_id, "api_key": key_hash,
+            "startTime": now.isoformat(), "status": "failure", "model_group": "deepseek/deepseek-flash",
+            "model": "proxy-routed-model", "call_type": "completion", "spend": 0.25,
+            "prompt_tokens": 2, "completion_tokens": 0, "total_tokens": 2,
+            "metadata": {"attempted_fallbacks": 1, "original_model_group": "deepseek/deepseek-flash", "attempted_retries": 0},
+        }
+        class SpendAPI:
+            def __init__(self, key_spend): self.key_spend = key_spend
+            def key_info(self, token):
+                return {"user_id": user_id, "key_alias": "aq-p12-owner-once-" + hashlib.sha256((request_id + ":key").encode()).hexdigest()[:20], "blocked": True, "spend": self.key_spend, "models": list(proxy_control.OWNER_ONESHOT_MODELS)}
+            def user_info(self, value): return {"user_id": value}
+            def spend_logs_v2(self, **kwargs): return {"data": [row], "total": 1, "total_pages": 1}
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yaml"
+            config.write_text("synthetic")
+            with patch.object(proxy_control, "_native_key_hash", return_value=key_hash), patch.object(proxy_control, "PROXY_CONFIG_PATH", config):
+                complete = proxy_control.collect_call_evidence(
+                    SpendAPI(0.25), token="sk-fixture", request_id=request_id, attempt_id=attempt_id,
+                    research_budget_identity=budget_id, attempt_started_at_utc=(now - timedelta(seconds=1)).isoformat(),
+                    now=lambda: now + timedelta(seconds=1), sleep=lambda _: None,
+                )
+                mismatch = proxy_control.collect_call_evidence(
+                    SpendAPI(0.26), token="sk-fixture", request_id=request_id, attempt_id=attempt_id,
+                    research_budget_identity=budget_id, attempt_started_at_utc=(now - timedelta(seconds=1)).isoformat(),
+                    now=lambda: now + timedelta(seconds=1), sleep=lambda _: None,
+                )
+        self.assertEqual(complete["evidence_status"], "COMPLETE")
+        self.assertEqual(complete["calls"][0]["attempted_fallbacks"], 1)
+        self.assertEqual(complete["calls"][0]["provider_model_identity_kind"], "UNAVAILABLE")
+        self.assertEqual(complete["calls"][0]["proxy_model_field"], "proxy-routed-model")
+        self.assertEqual(mismatch["evidence_status"], "PARTIAL")
+        self.assertIn("spend_logs_not_settled_or_totals_mismatch", mismatch["missing_fields"])
+
+    def test_delayed_spendlog_settlement_is_bounded_and_waits_for_stable_rows(self):
+        now = datetime.now(timezone.utc)
+        request_id, attempt_id, budget_id = identity("delayed-request"), "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1", identity("delayed-budget")
+        user_id = oneshot.p12.experiment_user_id(budget_id)
+        key_hash = "delayed-native-hash"
+        row = {
+            "request_id": "delayed-row", "litellm_call_id": "delayed-call", "user": user_id,
+            "api_key": key_hash, "startTime": now.isoformat(), "status": "success",
+            "model_group": "deepseek/deepseek-flash", "call_type": "completion", "spend": 0.125,
+            "prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5,
+            "metadata": {"attempted_fallbacks": 0, "attempted_retries": 0},
+        }
+        class DelayedAPI:
+            def __init__(self): self.polls = 0
+            def key_info(self, token):
+                return {"user_id": user_id, "key_alias": "aq-p12-owner-once-" + hashlib.sha256((request_id + ":key").encode()).hexdigest()[:20], "blocked": True, "spend": 0.125, "models": list(proxy_control.OWNER_ONESHOT_MODELS)}
+            def user_info(self, value): return {"user_id": value}
+            def spend_logs_v2(self, **kwargs):
+                self.polls += 1
+                rows = [] if self.polls == 1 else [row]
+                return {"data": rows, "total": len(rows), "total_pages": 1 if rows else 0}
+        api = DelayedAPI()
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yaml"
+            config.write_text("synthetic")
+            with patch.object(proxy_control, "_native_key_hash", return_value=key_hash), patch.object(proxy_control, "PROXY_CONFIG_PATH", config):
+                result = proxy_control.collect_call_evidence(
+                    api, token="sk-fixture", request_id=request_id, attempt_id=attempt_id,
+                    research_budget_identity=budget_id, attempt_started_at_utc=(now - timedelta(seconds=1)).isoformat(),
+                    now=lambda: now + timedelta(seconds=1), sleep=lambda _: None,
+                )
+        self.assertEqual(result["evidence_status"], "COMPLETE")
+        self.assertEqual(result["call_count"], 1)
+        self.assertGreaterEqual(api.polls, 3)
+        self.assertLessEqual(api.polls, proxy_control.MAX_SETTLEMENT_POLLS)
+
+    def test_empty_zero_spend_ledger_is_partial_not_false_complete(self):
+        request_id, budget_id = identity("empty-ledger-request"), identity("empty-ledger-budget")
+        user_id = oneshot.p12.experiment_user_id(budget_id)
+        class EmptyAPI:
+            timeout = 10
+            def __init__(self): self.polls = 0
+            def key_info(self, token):
+                return {"user_id": user_id, "key_alias": "aq-p12-owner-once-" + hashlib.sha256((request_id + ":key").encode()).hexdigest()[:20], "blocked": True, "spend": 0, "models": list(proxy_control.OWNER_ONESHOT_MODELS)}
+            def user_info(self, value): return {"user_id": value}
+            def spend_logs_v2(self, **kwargs):
+                self.polls += 1
+                return {"data": [], "total": 0, "total_pages": 0}
+        api = EmptyAPI()
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "config.yaml"
+            config.write_text("synthetic")
+            with patch.object(proxy_control, "_native_key_hash", return_value="empty-fixture-hash"), patch.object(
+                proxy_control, "PROXY_CONFIG_PATH", config
+            ):
+                result = proxy_control.collect_call_evidence(
+                    api, token="sk-fixture", request_id=request_id, attempt_id="d1feb58c-7b86-41f1-8eef-7bd54b1bffd1",
+                    research_budget_identity=budget_id, attempt_started_at_utc=datetime.now(timezone.utc).isoformat(),
+                    now=lambda: datetime.now(timezone.utc), sleep=lambda _: None,
+                )
+        self.assertEqual(result["evidence_status"], "PARTIAL")
+        self.assertIn("no_native_call_rows_to_seal", result["missing_fields"])
 
     def test_legacy_owner_terminal_replay_is_not_verified_and_never_redispatches(self):
         envelope, request, policy = owner_fixture()
