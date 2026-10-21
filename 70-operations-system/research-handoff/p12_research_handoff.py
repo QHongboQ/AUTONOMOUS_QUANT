@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).with_name("docker-rdagent-smoke")))
 
 import aq_p4_policy as p4  # noqa: E402
 import owner_bootstrap_request as bootstrap  # noqa: E402
+import owner_research_request as owner_request  # noqa: E402
 import standing_policy as policy_gate  # noqa: E402
 from native_experiment_budget import OWNER_ONESHOT_MODELS, experiment_user_id  # noqa: E402
 
@@ -49,6 +50,8 @@ TARGET_DOCKER_FINQUANT = "DOCKER_RDAGENT_FINQUANT_TEST_ONLY"
 TARGET_OWNER_ONESHOT = "DOCKER_RDAGENT_FINQUANT_OWNER_ONESHOT"
 P4_LIFECYCLE_ORIGIN = "P4_LIFECYCLE"
 OWNER_BOOTSTRAP_ORIGIN = "OWNER_INITIAL_BOOTSTRAP"
+OWNER_RESEARCH_ORIGIN = "OWNER_AUTHORIZED_RESEARCH"
+OWNER_RESEARCH_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-research-state")
 
 
 def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) -> bool:
@@ -1825,6 +1828,14 @@ def process_owner_oneshot(
             canonical_state = OWNER_BOOTSTRAP_STATE_DIR.resolve()
             if state_dir.resolve() != canonical_state:
                 raise ValueError("bootstrap requires the canonical P12 owner-control state directory")
+        elif set(request_envelope) == {"owner_research_request"}:
+            request = owner_request.validate_owner_research_envelope(request_envelope)
+            owner_request.verify_current_frozen_inputs(request, REPO_ROOT)
+            request_origin = OWNER_RESEARCH_ORIGIN
+            request_id = request.request_id
+            budget_identity = request.research_budget_identity
+            if state_dir.resolve() != OWNER_RESEARCH_STATE_DIR.resolve():
+                raise ValueError("owner research requires its canonical P12 state directory")
         else:
             raise ValueError("unsupported owner request origin")
         request_digest = _canonical_digest(request_envelope)
@@ -1835,6 +1846,8 @@ def process_owner_oneshot(
         classification = (
             "DENIED_OWNER_BOOTSTRAP_REQUEST_IDENTITY"
             if isinstance(request_envelope, dict) and set(request_envelope) == {"bootstrap_request"}
+            else "DENIED_OWNER_RESEARCH_REQUEST_IDENTITY"
+            if isinstance(request_envelope, dict) and set(request_envelope) == {"owner_research_request"}
             else "DENIED_OWNER_ONESHOT_P4_IDENTITY"
         )
         return ({"classification": classification, "dispatch_count_added": 0}, _EXIT_BLOCKED)
@@ -1874,7 +1887,7 @@ def process_owner_oneshot(
             "standing_policy_id": policy_id,
             "native_experiment_user_id": user_id,
         }
-        if request_origin == OWNER_BOOTSTRAP_ORIGIN:
+        if request_origin in {OWNER_BOOTSTRAP_ORIGIN, OWNER_RESEARCH_ORIGIN}:
             identity["request_origin"] = request_origin
         if identity_path.exists():
             if _read_json_nofollow(identity_path) != identity:
@@ -1971,6 +1984,12 @@ def owner_oneshot_replay_if_claimed(
             request_origin = OWNER_BOOTSTRAP_ORIGIN
             if state_dir.resolve() != OWNER_BOOTSTRAP_STATE_DIR.resolve():
                 return ({"classification": "BLOCKED_OWNER_BOOTSTRAP_NONCANONICAL_STATE", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        elif set(request_envelope) == {"owner_research_request"}:
+            request = owner_request.validate_owner_research_envelope(request_envelope)
+            owner_request.verify_current_frozen_inputs(request, REPO_ROOT)
+            request_origin = OWNER_RESEARCH_ORIGIN
+            if state_dir.resolve() != OWNER_RESEARCH_STATE_DIR.resolve():
+                return ({"classification": "BLOCKED_OWNER_RESEARCH_NONCANONICAL_STATE", "dispatch_count_added": 0}, _EXIT_BLOCKED)
         else:
             return ({"classification": "DENIED_OWNER_ONESHOT_REQUEST_ORIGIN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
         request_id = request.request_id
