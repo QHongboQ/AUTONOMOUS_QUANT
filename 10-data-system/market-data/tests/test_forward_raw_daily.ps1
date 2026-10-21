@@ -65,6 +65,15 @@ $isolatedRoots.Add($overlapRoot)
 $mutexName = 'Local\AQ.ForwardRawDaily.Tests.' + [guid]::NewGuid().ToString('N')
 $null = New-Item -ItemType Directory -Path $root
 try {
+    $pwshExecutable = Get-ForwardRawDailyPowerShellExecutable
+    Assert-True ([IO.Path]::GetFullPath($pwshExecutable) -eq [IO.Path]::GetFullPath((Join-Path $PSHOME 'pwsh.exe'))) 'internal child process path is resolved from the active PowerShell 7 installation, not PATH'
+    Assert-True (Test-Path -LiteralPath $pwshExecutable -PathType Leaf) 'resolved PowerShell 7 executable exists'
+    try { Get-ForwardRawDailyPowerShellExecutable -Edition Desktop -Version ([version]'5.1') | Out-Null; throw 'EXPECTED_WINDOWS_POWERSHELL_REJECTION' }
+    catch { Assert-True ($_.Exception.Message -match 'POWERSHELL_7_REQUIRED') 'Windows PowerShell 5.1 is rejected without fallback' }
+    try { Get-ForwardRawDailyPowerShellExecutable -PowerShellHome (Join-Path $root 'missing-powershell-home') | Out-Null; throw 'EXPECTED_MISSING_PWSH_REJECTION' }
+    catch { Assert-True ($_.Exception.Message -match 'POWERSHELL_7_EXECUTABLE_MISSING') 'missing PowerShell 7 executable fails closed' }
+    $tests += 1
+
     $calendarSelection = Get-LastCompletedXnysSession -NowUtc ([datetimeoffset]'2026-10-20T20:01:00Z')
     Assert-True ($calendarSelection.status -eq 'SESSION_COMPLETE') 'PowerShell invokes the pinned XNYS helper and recognizes a completed close'
     Assert-True ((ConvertTo-ForwardRawDateText $calendarSelection.session) -eq '2026-10-20') 'calendar CLI returns the expected session date'
@@ -303,7 +312,7 @@ finally { $m.ReleaseMutex(); $m.Dispose() }
     $releasePath = Join-Path $root 'mutex-release'
     $concurrentRoot = New-IsolatedForwardRawTestRoot 'concurrent'
     $info = [Diagnostics.ProcessStartInfo]::new()
-    $info.FileName = (Get-Command pwsh.exe).Source
+    $info.FileName = $pwshExecutable
     foreach ($arg in @('-NoLogo', '-NoProfile', '-File', $holderScript, $mutexName, $readyPath, $releasePath)) { $info.ArgumentList.Add($arg) }
     $holder = [Diagnostics.Process]::Start($info)
     try {
@@ -324,15 +333,85 @@ finally { $m.ReleaseMutex(); $m.Dispose() }
         if (!$holder.WaitForExit(10000)) { $holder.Kill(); throw 'MUTEX_HOLDER_DID_NOT_EXIT' }
     }
 
-    $plan = [xml](New-ForwardRawDailyTaskPlan -DailyAt '17:30')
+    $deploymentRoot = Join-Path $root 'Stable Deployment & Owner Review'
+    $null = New-Item -ItemType Directory -Path $deploymentRoot -Force
+    $plannedPwsh = Join-Path $deploymentRoot 'PowerShell 7\pwsh.exe'
+    $plannedPwshDirectory = Split-Path $plannedPwsh -Parent
+    $null = New-Item -ItemType Directory -Path $plannedPwshDirectory -Force
+    [IO.File]::WriteAllText($plannedPwsh, 'task-plan path fixture; not executed')
+    $plannedRunner = Join-Path $deploymentRoot 'Invoke ForwardRawDaily & Recovery.ps1'
+    [IO.File]::WriteAllText($plannedRunner, '# disabled TaskPlan path fixture')
+    $plan = [xml](New-ForwardRawDailyTaskPlan -DailyAt '17:30' -PowerShellExecutablePath $plannedPwsh -RunnerScriptPath $plannedRunner)
     $ns = [Xml.XmlNamespaceManager]::new($plan.NameTable)
     $ns.AddNamespace('t', 'http://schemas.microsoft.com/windows/2004/02/mit/task')
+    Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:Command', $ns).InnerText -eq [IO.Path]::GetFullPath($plannedPwsh)) 'TaskPlan command is the explicit absolute PowerShell 7 path'
+    Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:Arguments', $ns).InnerText.Contains('"' + [IO.Path]::GetFullPath($plannedRunner) + '"')) 'TaskPlan arguments preserve the absolute runner path with spaces'
+    Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:WorkingDirectory', $ns).InnerText -eq [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($plannedRunner))) 'TaskPlan working directory exists and is the runner directory'
     Assert-True ($plan.SelectSingleNode('//t:MultipleInstancesPolicy', $ns).InnerText -eq 'IgnoreNew') 'Task Scheduler uses native IgnoreNew'
     Assert-True ($plan.SelectSingleNode('//t:Principal/t:LogonType', $ns).InnerText -eq 'InteractiveToken') 'task runs only in the original interactive user context'
     Assert-True ($plan.SelectSingleNode('//t:Principal/t:UserId', $ns).InnerText -eq [Security.Principal.WindowsIdentity]::GetCurrent().User.Value) 'task principal is the current user SID'
     Assert-True ($plan.SelectSingleNode('//t:Settings/t:Enabled', $ns).InnerText -eq 'false') 'plan is disabled and unregistered'
     Assert-True ($plan.SelectSingleNode('//t:Triggers/t:CalendarTrigger/t:Enabled', $ns).InnerText -eq 'false') 'plan trigger is disabled'
     Assert-True ($plan.SelectSingleNode('//t:Triggers/t:CalendarTrigger/t:ScheduleByDay/t:DaysInterval', $ns).InnerText -eq '1') 'plan describes a daily trigger'
+    $tests += 1
+
+    foreach ($invalid in @(
+        @{ exe = 'pwsh.exe'; runner = $plannedRunner; expected = 'PATH_MUST_BE_ABSOLUTE' },
+        @{ exe = (Join-Path $deploymentRoot 'missing\pwsh.exe'); runner = $plannedRunner; expected = 'FILE_MISSING' },
+        @{ exe = $pwshExecutable; runner = $plannedRunner; expected = 'CODEX_TEMPORARY_POWERSHELLEXECUTABLE_PATH_REJECTED' },
+        @{ exe = $plannedPwsh; runner = $runner; expected = 'CODEX_TEMPORARY_RUNNERSCRIPT_PATH_REJECTED' }
+    )) {
+        try {
+            New-ForwardRawDailyTaskPlan -DailyAt '17:30' -PowerShellExecutablePath $invalid.exe -RunnerScriptPath $invalid.runner | Out-Null
+            throw "EXPECTED_TASKPLAN_REJECTION:$($invalid.expected)"
+        }
+        catch { Assert-True ($_.Exception.Message -match $invalid.expected) "TaskPlan rejects invalid deployment path: $($invalid.expected)" }
+        $tests += 1
+    }
+
+    $exitHarness = Join-Path $root 'probe-process-exit-code.ps1'
+    @'
+param([string]$RunnerPath, [string]$Status)
+. $RunnerPath -Mode Run
+$result = [pscustomobject]@{ Status = $Status; SessionDate = '2026-10-20' }
+try { exit (Write-ForwardRawDailyResult -Result $result) }
+catch { [Console]::Error.WriteLine('PROBE_FAILED'); exit 1 }
+'@ | Set-Content -LiteralPath $exitHarness -Encoding utf8
+    foreach ($probe in @(
+        @{ status = 'FORWARD_RAW_DAILY_FETCH_COMPLETE'; expected = 0 },
+        @{ status = 'FORWARD_RAW_DAILY_BACKFILL_COMPLETE'; expected = 0 },
+        @{ status = 'SKIPPED_ALREADY_COMPLETE'; expected = 0 },
+        @{ status = 'PARTIAL_BACKFILL_PENDING'; expected = 2 },
+        @{ status = 'UNKNOWN_TEST_STATUS'; expected = 1 }
+    )) {
+        $probeInfo = [Diagnostics.ProcessStartInfo]::new()
+        $probeInfo.FileName = $pwshExecutable
+        $probeInfo.UseShellExecute = $false
+        $probeInfo.RedirectStandardOutput = $true
+        $probeInfo.RedirectStandardError = $true
+        foreach ($arg in @('-NoLogo', '-NoProfile', '-File', $exitHarness, $runner, $probe.status)) { $probeInfo.ArgumentList.Add($arg) }
+        $probeProcess = [Diagnostics.Process]::Start($probeInfo)
+        $probeStdout = $probeProcess.StandardOutput.ReadToEnd()
+        $probeStderr = $probeProcess.StandardError.ReadToEnd()
+        $probeProcess.WaitForExit()
+        Assert-True ($probeProcess.ExitCode -eq $probe.expected) "separate PowerShell process exits $($probe.expected) for $($probe.status); stderr=$probeStderr"
+        Assert-True ($probeStdout -match ('"Status"\s*:\s*"' + [regex]::Escape($probe.status) + '"')) "process preserves JSON status $($probe.status)"
+        $probeProcess.Dispose()
+        $tests += 1
+    }
+
+    $taskPlanProbe = [Diagnostics.ProcessStartInfo]::new()
+    $taskPlanProbe.FileName = $pwshExecutable
+    $taskPlanProbe.UseShellExecute = $false
+    $taskPlanProbe.RedirectStandardOutput = $true
+    $taskPlanProbe.RedirectStandardError = $true
+    foreach ($arg in @('-NoLogo', '-NoProfile', '-File', $runner, '-Mode', 'TaskPlan', '-DailyAt', '17:30')) { $taskPlanProbe.ArgumentList.Add($arg) }
+    $taskPlanProcess = [Diagnostics.Process]::Start($taskPlanProbe)
+    $taskPlanStdout = $taskPlanProcess.StandardOutput.ReadToEnd()
+    $taskPlanStderr = $taskPlanProcess.StandardError.ReadToEnd()
+    $taskPlanProcess.WaitForExit()
+    Assert-True ($taskPlanProcess.ExitCode -ne 0 -and $taskPlanStderr -match 'TASK_PLAN_NOT_READY_STABLE_DEPLOYMENT_PATHS_REQUIRED' -and !$taskPlanStdout.Contains('<Task')) 'TaskPlan without explicit stable paths fails closed and emits no deployable XML'
+    $taskPlanProcess.Dispose()
     $tests += 1
 
     Write-Output "FORWARD_RAW_DAILY_TESTS_PASS:$tests"
