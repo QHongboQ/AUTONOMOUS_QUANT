@@ -67,6 +67,7 @@ def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) ->
 OWNER_BOOTSTRAP_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-one-shot-state")
 OWNER_FINQUANT_OUTPUT_ROOT = Path("/mnt/d/AQ/OPERATIONS/P12/finquant-output")
 OWNER_LITELLM_EVIDENCE_NAME = "p12-litellm-call-evidence.json"
+OWNER_NATIVE_RESEARCH_EVIDENCE_NAME = "p12-native-research-evidence.json"
 OWNER_LITELLM_PROXY_IMAGE = "ghcr.io/berriai/litellm@sha256:b7b9e2c306343721802253d0dd9436b9634a2eb4e14da7c7cf06c5c7b7530802"
 _DOCKER_TARGETS = {TARGET_DOCKER_RDAGENT, TARGET_DOCKER_FINQUANT}
 _TARGETS = {TARGET_INERT, *_DOCKER_TARGETS}
@@ -384,6 +385,256 @@ def _verify_terminal_owner_litellm_binding(terminal: dict[str, Any]) -> bool:
             relative == expected_relative
             and digest == observed_digest
             and status == evidence["evidence_status"]
+        )
+    except Exception:
+        return False
+
+
+def _owner_native_research_evidence_path(request_id: str, attempt_id: str) -> tuple[Path, str]:
+    if not _REQUEST_ID_RE.fullmatch(request_id) or not _valid_attempt_id(attempt_id):
+        raise ValueError("invalid P12 native research evidence identity")
+    relative = (
+        f"{request_id.removeprefix('sha256:')}/{attempt_id}/"
+        f"{OWNER_NATIVE_RESEARCH_EVIDENCE_NAME}"
+    )
+    return OWNER_FINQUANT_OUTPUT_ROOT / relative, relative
+
+
+def _safe_relative_evidence_path(value: Any) -> bool:
+    if not isinstance(value, str) or not value or "\\" in value:
+        return False
+    parts = value.split("/")
+    return not value.startswith("/") and all(part not in {"", ".", ".."} for part in parts)
+
+
+def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
+    qlib = value.get("qlib")
+    rdagent = value.get("rdagent")
+    effective = value.get("effective_config_identity")
+    if not isinstance(qlib, dict) or not isinstance(rdagent, dict) or not isinstance(effective, dict):
+        return False
+    artifact_paths = {
+        "task": "task", "dataset": "dataset", "model_parameters": "params.pkl",
+        "predictions": "pred.pkl", "signal_ic": "sig_analysis/ic.pkl",
+        "signal_rank_ic": "sig_analysis/ric.pkl",
+        "portfolio_report": "portfolio_analysis/report_normal_1day.pkl",
+        "portfolio_analysis": "portfolio_analysis/port_analysis_1day.pkl",
+    }
+    if value["qlib_research_status"] == "QLIB_RESEARCH_COMPLETE":
+        manifest = qlib.get("artifact_manifest")
+        if (
+            not isinstance(qlib.get("experiment_id"), str) or not qlib["experiment_id"]
+            or not isinstance(qlib.get("recorder_id"), str) or not qlib["recorder_id"]
+            or qlib.get("recorder_status") != "FINISHED"
+            or not isinstance(qlib.get("artifact_volume"), str) or not qlib["artifact_volume"]
+            or not isinstance(qlib.get("artifact_uri"), str)
+            or not isinstance(manifest, dict) or set(manifest) != set(artifact_paths)
+        ):
+            return False
+        for logical_name, expected_path in artifact_paths.items():
+            entry = manifest.get(logical_name)
+            if (
+                not isinstance(entry, dict)
+                or entry.get("relative_path") != expected_path
+                or not re.fullmatch(r"[0-9a-f]{64}", str(entry.get("sha256", "")))
+                or entry.get("entry_type") not in {"file", "directory"}
+            ):
+                return False
+            if entry["entry_type"] == "file":
+                if type(entry.get("size_bytes")) is not int or entry["size_bytes"] < 0:
+                    return False
+            else:
+                files = entry.get("files")
+                if (
+                    not isinstance(files, list) or not files
+                    or entry.get("digest_semantics") != "SHA256_OF_CANONICAL_CHILD_MANIFEST"
+                    or entry.get("file_count") != len(files)
+                ):
+                    return False
+                normalized = []
+                for child in files:
+                    if (
+                        not isinstance(child, dict)
+                        or not _safe_relative_evidence_path(child.get("relative_path"))
+                        or not re.fullmatch(r"[0-9a-f]{64}", str(child.get("sha256", "")))
+                        or type(child.get("size_bytes")) is not int or child["size_bytes"] < 0
+                    ):
+                        return False
+                    normalized.append(child)
+                canonical = json.dumps(
+                    normalized, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+                ).encode("utf-8")
+                if hashlib.sha256(canonical).hexdigest() != entry["sha256"]:
+                    return False
+    trace = rdagent.get("trace_manifest")
+    if not isinstance(trace, dict) or trace.get("status") not in {"OBSERVED", "UNAVAILABLE"}:
+        return False
+    trace_files = trace.get("files")
+    if not isinstance(trace_files, list):
+        return False
+    prior = ""
+    for item in trace_files:
+        if (
+            not isinstance(item, dict)
+            or not _safe_relative_evidence_path(item.get("relative_path"))
+            or item["relative_path"] <= prior
+            or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+            or type(item.get("size_bytes")) is not int or item["size_bytes"] < 0
+        ):
+            return False
+        prior = item["relative_path"]
+    if trace["status"] == "OBSERVED" and not trace_files:
+        return False
+    if trace["status"] == "OBSERVED":
+        canonical_trace = json.dumps(
+            trace_files, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode("utf-8")
+        if hashlib.sha256(canonical_trace).hexdigest() != trace.get("manifest_sha256"):
+            return False
+    identity = effective.get("identity")
+    llm_status = value.get("llm_evidence_status_observed")
+    llm_digest = value.get("llm_evidence_sha256")
+    if (
+        effective.get("status") not in {"OBSERVED", "CONFIGURED", "UNAVAILABLE"}
+        or not isinstance(identity, dict)
+        or not re.fullmatch(r"[0-9a-f]{64}", str(effective.get("sha256", "")))
+        or llm_status not in {"COMPLETE", "PARTIAL", "UNAVAILABLE"}
+        or (
+            llm_digest is not None
+            and (not isinstance(llm_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", llm_digest))
+        )
+        or (llm_status == "COMPLETE" and not isinstance(llm_digest, str))
+    ):
+        return False
+    canonical_config = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    if hashlib.sha256(canonical_config).hexdigest() != effective["sha256"]:
+        return False
+    if value["provenance_status"] == "COMPLETE":
+        research_identity = rdagent.get("research_identity")
+        return (
+            value["qlib_research_status"] == "QLIB_RESEARCH_COMPLETE"
+            and value["rdagent_provenance_status"] == "COMPLETE"
+            and isinstance(research_identity, dict)
+            and research_identity.get("status") == "COMPLETE"
+            and research_identity.get("hypothesis", {}).get("status") == "OBSERVED"
+            and research_identity.get("task_semantics", {}).get("status") == "OBSERVED"
+            and research_identity.get("experiment_lineage", {}).get("status") == "OBSERVED"
+            and research_identity.get("generated_code", {}).get("semantic_binding") == "OBSERVED"
+            and trace["status"] == "OBSERVED"
+            and effective["status"] == "OBSERVED"
+            and llm_status == "COMPLETE"
+            and isinstance(llm_digest, str)
+        )
+    return True
+
+
+def _read_owner_native_research_evidence(
+    request_id: str, attempt_id: str,
+) -> tuple[dict[str, Any], str, str]:
+    path, relative = _owner_native_research_evidence_path(request_id, attempt_id)
+    root = OWNER_FINQUANT_OUTPUT_ROOT.resolve(strict=True)
+    parent = path.parent.resolve(strict=True)
+    if not parent.is_relative_to(root) or parent != path.parent:
+        raise ValueError("P12 native evidence path escaped or traversed a symlink")
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    digest = hashlib.sha256()
+    chunks: list[bytes] = []
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 16 * 1024 * 1024:
+            raise ValueError("P12 native evidence is not a bounded regular file")
+        while True:
+            block = os.read(fd, 65536)
+            if not block:
+                break
+            digest.update(block)
+            chunks.append(block)
+        value = json.loads(b"".join(chunks).decode("utf-8"))
+    finally:
+        os.close(fd)
+    if (
+        not isinstance(value, dict)
+        or value.get("format_version") != "P12_NATIVE_RESEARCH_EVIDENCE_V1"
+        or value.get("request_id") != request_id
+        or value.get("attempt_id") != attempt_id
+        or value.get("provenance_status") not in {"COMPLETE", "PARTIAL"}
+        or value.get("qlib_research_status") not in {"QLIB_RESEARCH_COMPLETE", "QLIB_RESEARCH_INCOMPLETE"}
+        or value.get("rdagent_provenance_status") not in {"COMPLETE", "PARTIAL", "UNAVAILABLE"}
+        or value.get("llm_evidence_status_observed") not in {"COMPLETE", "PARTIAL", "UNAVAILABLE"}
+        or value.get("effective_config_identity", {}).get("status") not in {"OBSERVED", "CONFIGURED", "UNAVAILABLE"}
+        or not _native_research_evidence_shape_valid(value)
+    ):
+        raise ValueError("P12 native research evidence identity or statuses malformed")
+    return value, relative, digest.hexdigest()
+
+
+def _terminal_owner_native_research_binding(
+    request_id: str, attempt_id: str,
+) -> dict[str, Any]:
+    try:
+        value, relative, digest = _read_owner_native_research_evidence(request_id, attempt_id)
+        return {
+            "native_research_evidence_status": value["provenance_status"],
+            "native_research_evidence_path": relative,
+            "native_research_evidence_sha256": digest,
+            "qlib_research_status": value["qlib_research_status"],
+            "rdagent_provenance_status": value["rdagent_provenance_status"],
+            "effective_config_identity_status": value["effective_config_identity"]["status"],
+        }
+    except Exception as exc:
+        return {
+            "native_research_evidence_status": "PARTIAL",
+            "native_research_evidence_path": None,
+            "native_research_evidence_sha256": None,
+            "native_research_evidence_error_type": type(exc).__name__,
+            "rdagent_provenance_status": "UNAVAILABLE",
+            "llm_provenance_status": "UNAVAILABLE",
+            "effective_config_identity_status": "UNAVAILABLE",
+        }
+
+
+def _verify_terminal_owner_native_research_binding(terminal: dict[str, Any]) -> bool:
+    fields = (
+        "native_research_evidence_status",
+        "native_research_evidence_path",
+        "native_research_evidence_sha256",
+    )
+    if not any(field in terminal for field in fields):
+        return True  # pre-seal terminals remain read-only and compatible
+    if not all(field in terminal for field in fields):
+        return False
+    status, relative, expected_digest = (terminal.get(field) for field in fields)
+    if status == "PARTIAL" and relative is None and expected_digest is None:
+        try:
+            path, _ = _owner_native_research_evidence_path(
+                terminal["request_id"], terminal["attempt_id"]
+            )
+            root = OWNER_FINQUANT_OUTPUT_ROOT.resolve(strict=True)
+            parent = path.parent.resolve(strict=True)
+            if not parent.is_relative_to(root) or parent != path.parent:
+                return False
+            path.lstat()
+            return False  # an unbound evidence file must never be silently accepted
+        except FileNotFoundError:
+            return True  # the first attempt explicitly sealed missing evidence as PARTIAL
+        except Exception:
+            return False
+    if status not in {"COMPLETE", "PARTIAL"} or not isinstance(relative, str):
+        return False
+    if not isinstance(expected_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
+        return False
+    try:
+        evidence, expected_relative, observed_digest = _read_owner_native_research_evidence(
+            terminal["request_id"], terminal["attempt_id"]
+        )
+        return (
+            relative == expected_relative
+            and expected_digest == observed_digest
+            and status == evidence["provenance_status"]
+            and terminal.get("qlib_research_status") == evidence["qlib_research_status"]
+            and terminal.get("rdagent_provenance_status") == evidence["rdagent_provenance_status"]
+            and terminal.get("effective_config_identity_status")
+            == evidence["effective_config_identity"]["status"]
         )
     except Exception:
         return False
@@ -910,6 +1161,8 @@ def _owner_oneshot_replay(
         return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     if not _verify_terminal_owner_litellm_binding(terminal):
         return ({"classification": "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    if not _verify_terminal_owner_native_research_binding(terminal):
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_NATIVE_EVIDENCE_MISMATCH", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     state, code = terminal.get("state"), terminal.get("target_return_code")
     process_status = terminal.get("process_exit_status")
     evidence_status = terminal.get("research_evidence_status")
@@ -1094,14 +1347,22 @@ def process_owner_oneshot(
             else "SUCCEEDED_OWNER_ONESHOT" if evidence_status == "RESEARCH_EVIDENCE_COMPLETE"
             else "INCOMPLETE_OWNER_ONESHOT"
         )
+        llm_terminal_binding = _terminal_owner_litellm_binding(
+            request_id, claim["attempt_id"], budget_identity
+        )
+        native_terminal_binding = _terminal_owner_native_research_binding(
+            request_id, claim["attempt_id"]
+        )
         terminal = {
             **dispatch,
             **evidence,
-            **_terminal_owner_litellm_binding(request_id, claim["attempt_id"], budget_identity),
+            **llm_terminal_binding,
+            **native_terminal_binding,
             "state": terminal_state,
             "target_return_code": code,
             "process_exit_status": process_status,
             "research_evidence_status": evidence_status,
+            "llm_provenance_status": llm_terminal_binding["llm_provenance_evidence_status"],
             "real_dispatch_permission": "LOCAL_INTERACTIVE_OWNER_CONFIRMED",
             "candidate_count": 0,
             "broker_actions": 0,

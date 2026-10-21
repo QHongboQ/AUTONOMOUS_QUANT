@@ -26,6 +26,7 @@ import owner_oneshot_research as oneshot  # noqa: E402
 import owner_bootstrap_request as bootstrap  # noqa: E402
 import owner_oneshot_proxy_control as proxy_control  # noqa: E402
 import docker_rdagent_target  # noqa: E402
+import p12_mlflow_evidence as mlflow_evidence  # noqa: E402
 import standing_policy  # noqa: E402
 from native_experiment_budget import (  # noqa: E402
     OWNER_ONESHOT_MODELS,
@@ -1091,9 +1092,10 @@ class OwnerOneShotTests(unittest.TestCase):
                 self.file_size = 0 if is_dir else 128
 
         class Client:
-            def __init__(self, status="FINISHED", files=None):
+            def __init__(self, status="FINISHED", files=None, runs=None):
                 self.run = Run(status)
                 self.files = files or artifacts
+                self.runs = runs or [self.run]
             def get_experiment_by_name(self, name):
                 return type("Experiment", (), {
                     "experiment_id": "1", "artifact_location": "file:///qlib-artifacts",
@@ -1101,7 +1103,7 @@ class OwnerOneShotTests(unittest.TestCase):
                              "aq.p12.artifact_volume": volume},
                 })()
             def search_runs(self, experiment_ids, max_results):
-                return [self.run]
+                return self.runs
             def list_artifacts(self, run_id, path=None):
                 prefix = f"{path}/" if path else ""
                 direct = {}
@@ -1114,19 +1116,44 @@ class OwnerOneShotTests(unittest.TestCase):
                 return [Artifact(name, is_dir) for name, is_dir in direct.items()]
 
         args = {"request_id": request_id, "attempt_id": attempt_id, "artifact_volume": volume}
-        complete = inspect_research_evidence(Client(), **args)
-        failed = inspect_research_evidence(Client(status="FAILED"), **args)
+        artifact_hash = identity("artifact-content").removeprefix("sha256:")
+        artifact_entry = {"relative_path": "task", "entry_type": "file", "size_bytes": 4, "sha256": artifact_hash}
+        with patch.object(
+            mlflow_evidence, "_artifact_content_identity",
+            return_value=artifact_entry,
+        ):
+            complete = inspect_research_evidence(Client(), **args)
+            failed = inspect_research_evidence(Client(status="FAILED"), **args)
+            running = inspect_research_evidence(Client(status="RUNNING"), **args)
+            multiple_client = Client()
+            multiple_client.runs = [multiple_client.run, Run("FINISHED")]
+            multiple = inspect_research_evidence(multiple_client, **args)
         missing_params = dict(artifacts)
         missing_params.pop("params.pkl")
-        missing_model = inspect_research_evidence(Client(files=missing_params), **args)
-        empty_folder = inspect_research_evidence(
-            Client(files={"sig_analysis": True, "portfolio_analysis": True}), **args
-        )
+        with patch.object(
+            mlflow_evidence, "_artifact_content_identity", return_value=artifact_entry,
+        ):
+            missing_model = inspect_research_evidence(Client(files=missing_params), **args)
+            empty_folder = inspect_research_evidence(
+                Client(files={"sig_analysis": True, "portfolio_analysis": True}), **args
+            )
+        deep_artifacts = dict(artifacts)
+        deep_artifacts[
+            "deep/one/two/three/four/five/six/seven/eight/nine/unexpected.bin"
+        ] = False
+        depth_limited = inspect_research_evidence(Client(files=deep_artifacts), **args)
         self.assertEqual(complete["classification"], "RESEARCH_EVIDENCE_COMPLETE")
+        self.assertEqual(complete["experiment_id"], "1")
+        self.assertEqual(complete["recorder_id"], "recorder-1")
+        self.assertEqual(complete["artifact_manifest"]["task"]["sha256"], artifact_hash)
         self.assertEqual(failed["reason"], "NO_FINISHED_RECORDER")
+        self.assertEqual(running["reason"], "NO_FINISHED_RECORDER")
+        self.assertEqual(multiple["reason"], "MULTIPLE_COMPLETE_RECORDERS")
         self.assertEqual(missing_model["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
         self.assertIn("model_parameters", missing_model["missing"])
         self.assertEqual(empty_folder["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertEqual(depth_limited["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+        self.assertEqual(depth_limited["reason"], "ARTIFACT_LISTING_INCOMPLETE_DEPTH_LIMIT")
 
         mismatched = Client()
         mismatched.get_experiment_by_name = lambda name: type("Experiment", (), {
@@ -1138,6 +1165,173 @@ class OwnerOneShotTests(unittest.TestCase):
             inspect_research_evidence(mismatched, **args)["reason"],
             "ATTEMPT_OR_ARTIFACT_VOLUME_MISMATCH",
         )
+        wrong_experiment = Client()
+        wrong_experiment.run.info.experiment_id = "other"
+        with patch.object(
+            mlflow_evidence, "_artifact_content_identity", return_value=artifact_entry,
+        ):
+            self.assertEqual(
+                inspect_research_evidence(wrong_experiment, **args)["reason"],
+                "NO_ATTEMPT_BOUND_RECORDER",
+            )
+
+    def test_mlflow_artifact_content_hashes_actual_bytes_and_directory_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "task").write_bytes(b"task bytes")
+            (root / "dataset").mkdir()
+            (root / "dataset" / "part.bin").write_bytes(b"dataset bytes")
+            file_identity = mlflow_evidence._artifact_content_identity_at_root(
+                root=root, artifact_path="task", listed_files={"task": 10},
+            )
+            directory_identity = mlflow_evidence._artifact_content_identity_at_root(
+                root=root, artifact_path="dataset", listed_files={"dataset/part.bin": 13},
+            )
+            self.assertEqual(file_identity["sha256"], hashlib.sha256(b"task bytes").hexdigest())
+            self.assertEqual(directory_identity["entry_type"], "directory")
+            self.assertEqual(directory_identity["files"][0]["sha256"], hashlib.sha256(b"dataset bytes").hexdigest())
+            before = file_identity["sha256"]
+            (root / "task").write_bytes(b"changed")
+            changed = mlflow_evidence._artifact_content_identity_at_root(
+                root=root, artifact_path="task", listed_files={"task": 10},
+            )
+            self.assertNotEqual(before, changed["sha256"])
+            outside = root.parent / f"{root.name}-outside"
+            outside.write_bytes(b"outside")
+            (root / "unsafe").symlink_to(outside)
+            with self.assertRaises(OSError):
+                mlflow_evidence._artifact_content_identity_at_root(
+                    root=root, artifact_path="unsafe", listed_files={"unsafe": 7},
+                )
+            outside.unlink()
+
+    def test_native_trace_and_workspace_manifests_are_deterministic_and_semantics_stay_partial(self):
+        request_id = identity("native-evidence-request")
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        namespace = "aq-p12-owner-test"
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            run = output / "runs" / namespace
+            (run / "trace").mkdir(parents=True)
+            (run / "workspaces" / "workspace-1").mkdir(parents=True)
+            (run / "trace" / "trace.jsonl").write_text('{"event":"fixture"}\n', encoding="utf-8")
+            (run / "workspaces" / "workspace-1" / "factor.py").write_text("x = 1\n", encoding="utf-8")
+            artifact_root = output / "artifact-volume" / "run-1" / "artifacts"
+            artifact_root.mkdir(parents=True)
+            listed_files = {}
+            for _, artifact_path in mlflow_evidence._REQUIRED_FILES.items():
+                path = artifact_root.joinpath(*Path(artifact_path).parts)
+                if artifact_path == "dataset":
+                    path.mkdir(parents=True)
+                    child = path / "dataset.bin"
+                    child.write_bytes(b"dataset")
+                    listed_files["dataset/dataset.bin"] = len(b"dataset")
+                else:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_bytes(artifact_path.encode())
+                    listed_files[artifact_path] = path.stat().st_size
+            artifact_manifest = {
+                logical_name: mlflow_evidence._artifact_content_identity_at_root(
+                    root=artifact_root, artifact_path=artifact_path, listed_files=listed_files,
+                )
+                for logical_name, artifact_path in mlflow_evidence._REQUIRED_FILES.items()
+            }
+            args = {
+                "request_id": request_id, "attempt_id": attempt_id, "run_namespace": namespace,
+                "output": output,
+                "observed_worker": {"image_id": "sha256:" + "a" * 64, "entrypoint_verified": True,
+                                    "command_verified": True, "mounts_valid": True},
+                "qlib_evidence": {
+                    "classification": "RESEARCH_EVIDENCE_COMPLETE", "experiment_id": "exp-1",
+                    "recorder_id": "run-1", "recorder_status": "FINISHED",
+                    "artifact_uri": "file:///qlib-artifacts/run-1/artifacts",
+                    "artifact_manifest": artifact_manifest,
+                    "metric_names": ["IC"],
+                },
+                "artifact_volume": "aq-p12-owner-artifacts-0123456789abcdef",
+            }
+            first = docker_rdagent_target.build_native_research_evidence(**args)
+            second = docker_rdagent_target.build_native_research_evidence(**args)
+            self.assertEqual(first["rdagent"]["trace_manifest"], second["rdagent"]["trace_manifest"])
+            self.assertEqual(first["rdagent"]["trace_manifest"]["status"], "OBSERVED")
+            self.assertEqual(
+                first["rdagent"]["trace_manifest"]["manifest_sha256"],
+                hashlib.sha256(json.dumps(
+                    first["rdagent"]["trace_manifest"]["files"],
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode()).hexdigest(),
+            )
+            self.assertEqual(first["rdagent"]["research_identity"]["hypothesis"]["status"], "UNAVAILABLE")
+            self.assertEqual(first["rdagent"]["research_identity"]["generated_code"]["status"], "CONTENT_IDENTITIES_ONLY")
+            self.assertEqual(first["provenance_status"], "PARTIAL")
+            self.assertEqual(first["qlib"]["experiment_id"], "exp-1")
+            self.assertEqual(first["effective_config_identity"]["status"], "CONFIGURED")
+            self.assertEqual(
+                first["effective_config_identity"]["identity"]["worker_image_id_observed"],
+                "sha256:" + "a" * 64,
+            )
+            self.assertTrue(
+                first["effective_config_identity"]["identity"]["worker_entrypoint_verified"]
+            )
+            self.assertTrue(oneshot.p12._native_research_evidence_shape_valid(first))
+            unavailable_worker = docker_rdagent_target.build_native_research_evidence(
+                **{**args, "observed_worker": {}}
+            )
+            self.assertEqual(
+                unavailable_worker["effective_config_identity"]["status"], "CONFIGURED"
+            )
+            self.assertIsNone(
+                unavailable_worker["effective_config_identity"]["identity"]["worker_image_id_observed"]
+            )
+            malformed = json.loads(json.dumps(first))
+            malformed["qlib"]["artifact_manifest"]["task"]["relative_path"] = "../escape"
+            self.assertFalse(oneshot.p12._native_research_evidence_shape_valid(malformed))
+            trace_file = run / "trace" / "trace.jsonl"
+            trace_file = run / "trace" / "linked-code.py"
+            trace_file.symlink_to(run / "workspaces" / "workspace-1" / "factor.py")
+            symlink_result = docker_rdagent_target.build_native_research_evidence(**args)
+            self.assertEqual(symlink_result["rdagent"]["trace_manifest"]["status"], "UNAVAILABLE")
+            self.assertIn("SYMLINK", symlink_result["rdagent"]["trace_manifest"]["reason"])
+
+    def test_native_research_evidence_terminal_hash_binding_and_replay_tamper_rejection(self):
+        request_id = identity("terminal-native-evidence")
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        evidence = {
+            "format_version": "P12_NATIVE_RESEARCH_EVIDENCE_V1",
+            "request_id": request_id, "attempt_id": attempt_id,
+            "provenance_status": "PARTIAL",
+            "qlib_research_status": "QLIB_RESEARCH_INCOMPLETE",
+            "qlib": {"artifact_manifest": {}},
+            "rdagent": {"trace_manifest": {"status": "UNAVAILABLE", "files": []}},
+            "rdagent_provenance_status": "PARTIAL",
+            "llm_evidence_status_observed": "PARTIAL",
+            "effective_config_identity": {
+                "status": "OBSERVED", "identity": {},
+                "sha256": hashlib.sha256(b"{}").hexdigest(),
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", Path(tmp)):
+                path, relative = oneshot.p12._owner_native_research_evidence_path(request_id, attempt_id)
+                path.parent.mkdir(parents=True)
+                partial_without_file = {
+                    "request_id": request_id, "attempt_id": attempt_id,
+                    "native_research_evidence_status": "PARTIAL",
+                    "native_research_evidence_path": None,
+                    "native_research_evidence_sha256": None,
+                }
+                self.assertTrue(oneshot.p12._verify_terminal_owner_native_research_binding(partial_without_file))
+                path.write_text("unbound\n", encoding="utf-8")
+                self.assertFalse(oneshot.p12._verify_terminal_owner_native_research_binding(partial_without_file))
+                path.write_text(json.dumps(evidence, sort_keys=True) + "\n", encoding="utf-8")
+                binding = oneshot.p12._terminal_owner_native_research_binding(request_id, attempt_id)
+                terminal = {"request_id": request_id, "attempt_id": attempt_id, **binding}
+                self.assertEqual(binding["native_research_evidence_path"], relative)
+                self.assertTrue(oneshot.p12._verify_terminal_owner_native_research_binding(terminal))
+                path.write_text(json.dumps({**evidence, "llm_evidence_status_observed": "UNAVAILABLE"}, sort_keys=True) + "\n", encoding="utf-8")
+                self.assertFalse(oneshot.p12._verify_terminal_owner_native_research_binding(terminal))
+                with self.assertRaises(OSError):
+                    oneshot.p12._read_owner_native_research_evidence(identity("wrong-request"), attempt_id)
 
     def test_failed_terminal_is_persisted_and_replayed_nonzero(self):
         envelope, request, policy = owner_fixture()
