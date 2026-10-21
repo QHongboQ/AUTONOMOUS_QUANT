@@ -10,6 +10,7 @@ import secrets
 import shutil
 import subprocess
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -994,6 +995,7 @@ def _owner_artifact_volume_name(request_id: str, attempt_id: str) -> str:
 
 def _owner_artifact_container_command(
     *, output: Path, volume: str, tracking_uri: str, helper: str, prepare: bool,
+    request_id: str, attempt_id: str,
 ) -> subprocess.CompletedProcess[str]:
     image_python = "/opt/conda/envs/rdagent4qlib/bin/python"
     return subprocess.run(
@@ -1146,6 +1148,7 @@ def run_docker_rdagent_owner_oneshot(
         ):
             raise DockerDispatchAmbiguous("Native LiteLLM user/key scope verification failed")
         env["P12_OWNER_SCOPED_PROXY_KEY"] = key
+        attempt_started_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         worker_started = True
         launched = subprocess.run(
             [*compose, "run", "--no-deps", "--name", worker_name, "rdagent-owner-oneshot-worker"],
@@ -1180,13 +1183,36 @@ def run_docker_rdagent_owner_oneshot(
             raise DockerDispatchAmbiguous("Native Qlib Recorder evidence inspection failed")
         blocked = subprocess.run(
             [*compose, "exec", "-T", "litellm-deepseek-staging", "python", "/app/owner_oneshot_proxy_control.py"],
-            input=json.dumps({"operation": "block", "token": key}), capture_output=True, text=True,
+            input=json.dumps({
+                "operation": "block", "token": key, "request_id": request_id,
+                "attempt_id": attempt_id, "research_budget_identity": research_budget_identity,
+                "attempt_started_at_utc": attempt_started_at,
+            }), capture_output=True, text=True,
             env=env, cwd=runtime, timeout=60,
         )
         blocked_record = json.loads(blocked.stdout.strip().splitlines()[-1]) if blocked.stdout.strip() else {}
         if blocked.returncode != 0 or blocked_record.get("blocked") is not True:
             raise DockerDispatchAmbiguous("Native one-shot key blocking was not verified")
         key_blocked = True
+        call_evidence = blocked_record.get("call_evidence")
+        if not isinstance(call_evidence, dict):
+            call_evidence = {
+                "format_version": "P12_LITELLM_CALL_EVIDENCE_V1",
+                "request_id": request_id, "attempt_id": attempt_id,
+                "native_experiment_user_id": None, "scoped_key_identity": None,
+                "litellm_proxy_version": "1.105.1", "calls": [], "call_count": None,
+                "total_spend_usd": None, "provider_model_identity_kind": "UNAVAILABLE",
+                "missing_fields": ["native_spend_logs_response_missing"], "evidence_status": "PARTIAL",
+            }
+        evidence_write_error = None
+        try:
+            evidence_text = json.dumps(call_evidence, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
+            _durable_output_write(output, "p12-litellm-call-evidence.json", evidence_text)
+            evidence_bytes = (output / "p12-litellm-call-evidence.json").read_bytes()
+            call_evidence_digest = hashlib.sha256(evidence_bytes).hexdigest()
+        except Exception as exc:
+            evidence_write_error = type(exc).__name__
+            call_evidence_digest = None
         remove = subprocess.run(["docker", "container", "rm", worker_name], capture_output=True, text=True, env=_owner_safe_environment(), timeout=30)
         if remove.returncode != 0:
             raise DockerDispatchAmbiguous("Owner worker cleanup was not verified")
@@ -1206,6 +1232,9 @@ def run_docker_rdagent_owner_oneshot(
             "native_user_budget_usd": record["user_budget_usd"],
             "native_key_budget_usd": record["key_budget_usd"],
             "native_user_spend_usd": blocked_record.get("spend"),
+            "llm_call_evidence_write_error_type": evidence_write_error,
+            "llm_call_evidence_sha256_observed": call_evidence_digest,
+            "llm_call_evidence_status_observed": call_evidence.get("evidence_status", "PARTIAL"),
             "output_directory": str(output),
             "mlflow_artifact_volume": artifact_volume,
             "chat_max_tokens": 8192,

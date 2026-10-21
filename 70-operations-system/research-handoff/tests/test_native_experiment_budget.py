@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import urllib.parse
 import sys
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -94,6 +95,30 @@ class NativeExperimentBudgetTests(unittest.TestCase):
         )
         self.assertEqual(self.identity.user_id, another_request.user_id)
         self.assertNotEqual(self.identity.user_id, identity("different-experiment").user_id)
+
+    def test_spend_logs_v2_uses_bounded_native_filters_and_pagination(self):
+        seen = []
+        class QueryAPI(budget.LiteLLMNativeAPI):
+            def __init__(self):
+                pass
+            def request(self, method, path, body=None):
+                seen.append((method, path, body))
+                return 200, {"data": [], "page": 2, "page_size": 25, "total": 0, "total_pages": 0}
+        result = QueryAPI().spend_logs_v2(
+            user_id="p12-user", api_key_hash="native-hash", start_date="2026-10-19T00:00:00Z",
+            end_date="2026-10-20T00:00:00Z", page=2, page_size=25,
+        )
+        self.assertEqual(result["total_pages"], 0)
+        method, path, _ = seen[0]
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(path).query)
+        self.assertEqual(method, "GET")
+        self.assertEqual(urllib.parse.urlsplit(path).path, "/spend/logs/v2")
+        self.assertEqual(query["user_id"], ["p12-user"])
+        self.assertEqual(query["api_key"], ["native-hash"])
+        self.assertEqual(query["page"], ["2"])
+        self.assertEqual(query["page_size"], ["25"])
+        self.assertEqual(query["start_date"], ["2026-10-19T00:00:00Z"])
+        self.assertEqual(query["end_date"], ["2026-10-20T00:00:00Z"])
 
     def test_p12_request_policy_budget_identity_must_match(self):
         with self.assertRaisesRegex(budget.BudgetBoundaryDenied, "IDENTITY_MISMATCH"):
