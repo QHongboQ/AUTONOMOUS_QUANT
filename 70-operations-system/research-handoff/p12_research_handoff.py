@@ -409,6 +409,7 @@ def _safe_relative_evidence_path(value: Any) -> bool:
 
 def _semantic_evidence_shape_valid(
     value: Any, *, request_id: str, attempt_id: str, trace_manifest: dict[str, Any],
+    _parent_depth: int = 0, _parent_ancestors: frozenset[str] = frozenset(),
 ) -> bool:
     if (
         not isinstance(trace_manifest, dict)
@@ -454,13 +455,87 @@ def _semantic_evidence_shape_valid(
         for item in trace_manifest.get("files", [])
         if isinstance(item, dict)
     }
+
+    def baseline_identity_valid(experiment: dict[str, Any]) -> bool:
+        template = experiment.get("experiment_template")
+        files = template.get("files") if isinstance(template, dict) else None
+        if (
+            experiment.get("identity_kind") != "BASELINE"
+            or experiment.get("type") != (
+                "rdagent.scenarios.qlib.experiment.factor_experiment.QlibFactorExperiment"
+            )
+            or experiment.get("hypothesis") is not None
+            or experiment.get("tasks") != []
+            or experiment.get("based_experiments") != []
+            or experiment.get("generated_code") != {
+                "status": "UNAVAILABLE", "files": [], "manifest_sha256": None,
+            }
+            or experiment.get("feature_inputs_sha256") is not None
+            or not isinstance(template, dict)
+            or template.get("status") != "OBSERVED"
+            or not isinstance(files, list)
+            or experiment.get("files") != files
+        ):
+            return False
+        stable_files = []
+        prior_path = ""
+        config_files = []
+        code_files = []
+        for item in files:
+            if (
+                not isinstance(item, dict)
+                or not _safe_relative_evidence_path(item.get("relative_path"))
+                or item["relative_path"] <= prior_path
+                or not _safe_relative_evidence_path(item.get("workspace_relative_path"))
+                or type(item.get("size_bytes")) is not int
+                or item["size_bytes"] < 0
+                or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                or observed_workspace.get(item["workspace_relative_path"]) != item["sha256"]
+            ):
+                return False
+            prior_path = item["relative_path"]
+            stable_file = {key: item[key] for key in ("relative_path", "size_bytes", "sha256")}
+            stable_files.append(stable_file)
+            suffix = Path(item["relative_path"]).suffix.lower()
+            if suffix in {".yaml", ".yml"}:
+                config_files.append(stable_file)
+            elif suffix == ".py":
+                code_files.append(stable_file)
+        stable_template = {"task_identity_sha256": None, "files": stable_files}
+        template_id = hashlib.sha256(json.dumps(
+            stable_template, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")).hexdigest()
+        expected_content = {
+            "type": experiment["type"],
+            "experiment_template_type": template.get("type"),
+            "experiment_template_identity_sha256": template_id,
+            "config_files": config_files,
+            "code_files": code_files,
+        }
+        stable_baseline = {"identity_kind": "BASELINE", **expected_content}
+        return (
+            bool(config_files)
+            and bool(code_files)
+            and isinstance(expected_content["experiment_template_type"], str)
+            and bool(expected_content["experiment_template_type"])
+            and template.get("identity_sha256") == template_id
+            and template.get("task_identity_sha256") is None
+            and experiment.get("baseline_content") == expected_content
+            and hashlib.sha256(json.dumps(
+                stable_baseline, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() == experiment.get("identity_sha256")
+        )
+
     for experiment in experiments:
+        is_baseline = isinstance(experiment, dict) and experiment.get("identity_kind") == "BASELINE"
         if (
             not isinstance(experiment, dict)
             or not re.fullmatch(r"[0-9a-f]{64}", str(experiment.get("identity_sha256", "")))
-            or not isinstance(experiment.get("hypothesis"), dict)
+            or (is_baseline and not baseline_identity_valid(experiment))
+            or (not is_baseline and not isinstance(experiment.get("hypothesis"), dict))
             or not isinstance(experiment.get("tasks"), list)
-            or not experiment["tasks"]
+            or (not is_baseline and not experiment["tasks"])
+            or (is_baseline and experiment["tasks"])
             or not isinstance(experiment.get("based_experiments"), list)
             or not isinstance(experiment.get("lineage"), dict)
         ):
@@ -476,21 +551,22 @@ def _semantic_evidence_shape_valid(
             return False
         history_indexes.append(locator["history_index"])
         hypothesis = experiment["hypothesis"]
-        field_hashes = hypothesis.get("field_sha256s")
-        field_names = hypothesis.get("field_names")
-        if (
-            not isinstance(hypothesis.get("type"), str)
-            or not isinstance(field_names, list)
-            or field_names != sorted(set(field_names))
-            or not isinstance(field_hashes, dict)
-            or sorted(field_hashes) != field_names
-            or any(not re.fullmatch(r"[0-9a-f]{64}", str(item)) for item in field_hashes.values())
-            or hashlib.sha256(json.dumps(
-                {"type": hypothesis["type"], "field_sha256s": field_hashes},
-                sort_keys=True, separators=(",", ":"), ensure_ascii=False,
-            ).encode("utf-8")).hexdigest() != hypothesis.get("content_sha256")
-        ):
-            return False
+        if not is_baseline:
+            field_hashes = hypothesis.get("field_sha256s")
+            field_names = hypothesis.get("field_names")
+            if (
+                not isinstance(hypothesis.get("type"), str)
+                or not isinstance(field_names, list)
+                or field_names != sorted(set(field_names))
+                or not isinstance(field_hashes, dict)
+                or sorted(field_hashes) != field_names
+                or any(not re.fullmatch(r"[0-9a-f]{64}", str(item)) for item in field_hashes.values())
+                or hashlib.sha256(json.dumps(
+                    {"type": hypothesis["type"], "field_sha256s": field_hashes},
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != hypothesis.get("content_sha256")
+            ):
+                return False
         seen_ids.add(experiment["identity_sha256"])
         if experiment["identity_sha256"] == selected_id:
             selected = experiment
@@ -562,6 +638,67 @@ def _semantic_evidence_shape_valid(
         elif template.get("identity_sha256") is not None or template["files"]:
             return False
         for based in experiment["based_experiments"]:
+            if isinstance(based, dict) and based.get("identity_kind") == "BASELINE":
+                if not baseline_identity_valid(based):
+                    return False
+                continue
+            # Current RD-Agent emits completed Factor/Model experiments recursively,
+            # while older evidence projected based_experiments as an FBWorkspace.
+            # Validate the full recursive identity through the same validator used
+            # for a selected Trace experiment; do not reduce it to a Workspace hash.
+            if isinstance(based, dict) and any(
+                key in based for key in ("hypothesis", "tasks", "experiment_template", "generated_code")
+            ):
+                if not isinstance(based.get("hypothesis"), dict):
+                    return False
+                parent_id = based.get("identity_sha256")
+                if (
+                    _parent_depth >= 64
+                    or not isinstance(parent_id, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", parent_id)
+                    or parent_id in _parent_ancestors
+                ):
+                    return False
+                parent = dict(based)
+                # Nested identities are not Trace history entries and therefore
+                # legitimately lack Trace locators / dag_parent lineage. The
+                # recursive envelope validates content identity only; it never
+                # grants a parent Recorder binding to the selected experiment.
+                parent["lineage"] = {"status": "UNAVAILABLE"}
+                parent["trace_locator"] = {"history_index": 0}
+                parent_payload = {
+                    "format_version": "P12_RDAGENT_SEMANTIC_EVIDENCE_V1",
+                    "request_id": request_id,
+                    "attempt_id": attempt_id,
+                    "upstream_release_sha": payload["upstream_release_sha"],
+                    "trace_history_length": 1,
+                    "status": (
+                        "OBSERVED"
+                        if parent.get("generated_code", {}).get("status") == "OBSERVED"
+                        and parent.get("experiment_template", {}).get("status") == "OBSERVED"
+                        else "PARTIAL"
+                    ),
+                    "experiments": [parent],
+                    "selected_experiment_identity_sha256": parent_id,
+                    "qlib_recorder_binding": {"status": "PARTIAL", "matches": [], "failures": []},
+                }
+                try:
+                    parent_digest = hashlib.sha256((json.dumps(
+                        parent_payload, sort_keys=True, separators=(",", ":"),
+                        ensure_ascii=False, allow_nan=False,
+                    ) + "\n").encode("utf-8")).hexdigest()
+                except (TypeError, ValueError):
+                    return False
+                if not _semantic_evidence_shape_valid(
+                    {"status": parent_payload["status"], "sha256": parent_digest, "payload": parent_payload},
+                    request_id=request_id,
+                    attempt_id=attempt_id,
+                    trace_manifest=trace_manifest,
+                    _parent_depth=_parent_depth + 1,
+                    _parent_ancestors=_parent_ancestors | {parent_id},
+                ):
+                    return False
+                continue
             if (
                 not isinstance(based, dict)
                 or not re.fullmatch(r"[0-9a-f]{64}", str(based.get("identity_sha256", "")))
@@ -638,25 +775,26 @@ def _semantic_evidence_shape_valid(
                 stable_code_files, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
             ).encode("utf-8")).hexdigest() != generated.get("manifest_sha256"):
                 return False
-        stable_experiment = {
-            "type": experiment.get("type"),
-            "hypothesis_sha256": hypothesis.get("content_sha256"),
-            "task_identity_sha256s": [task.get("identity_sha256") for task in experiment["tasks"]],
-            "experiment_template_identity_sha256": template.get("identity_sha256"),
-            "based_experiment_identity_sha256s": [
-                item.get("identity_sha256") for item in experiment["based_experiments"]
-            ],
-            "generated_code_manifest_sha256": generated.get("manifest_sha256"),
-            "feature_inputs_sha256": experiment.get("feature_inputs_sha256"),
-        }
-        if (
-            not isinstance(stable_experiment["type"], str)
-            or not re.fullmatch(r"[0-9a-f]{64}", str(stable_experiment["feature_inputs_sha256"] or ""))
-            or hashlib.sha256(json.dumps(
-                stable_experiment, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
-            ).encode("utf-8")).hexdigest() != experiment["identity_sha256"]
-        ):
-            return False
+        if not is_baseline:
+            stable_experiment = {
+                "type": experiment.get("type"),
+                "hypothesis_sha256": hypothesis.get("content_sha256"),
+                "task_identity_sha256s": [task.get("identity_sha256") for task in experiment["tasks"]],
+                "experiment_template_identity_sha256": template.get("identity_sha256"),
+                "based_experiment_identity_sha256s": [
+                    item.get("identity_sha256") for item in experiment["based_experiments"]
+                ],
+                "generated_code_manifest_sha256": generated.get("manifest_sha256"),
+                "feature_inputs_sha256": experiment.get("feature_inputs_sha256"),
+            }
+            if (
+                not isinstance(stable_experiment["type"], str)
+                or not re.fullmatch(r"[0-9a-f]{64}", str(stable_experiment["feature_inputs_sha256"] or ""))
+                or hashlib.sha256(json.dumps(
+                    stable_experiment, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != experiment["identity_sha256"]
+            ):
+                return False
     if selected_id is not None and selected is None:
         return False
     if payload.get("status") == "OBSERVED" and history_indexes != list(range(payload["trace_history_length"])):
@@ -667,7 +805,78 @@ def _semantic_evidence_shape_valid(
     elif payload.get("status") != "PARTIAL" or payload["trace_history_length"] - 1 in history_indexes:
         return False
     binding = payload.get("qlib_recorder_binding")
-    if not isinstance(binding, dict) or binding.get("status") != "SEMANTIC_BINDING_PARTIAL":
+    if not isinstance(binding, dict) or binding.get("status") not in {
+        "PARTIAL", "REJECTED", "SEMANTIC_BINDING_PARTIAL",
+    }:
+        return False
+    matches = binding.get("matches")
+    if matches is None and binding.get("status") == "SEMANTIC_BINDING_PARTIAL":
+        # Backward compatibility for the pre-correlation semantic evidence shape.
+        matches = []
+    failures = binding.get("failures", [])
+    if not isinstance(matches, list):
+        return False
+    if not isinstance(failures, list):
+        return False
+    for failure in failures:
+        if (
+            not isinstance(failure, dict)
+            or not isinstance(failure.get("reason"), str)
+            or not failure["reason"]
+            or failure.get("experiment_identity_sha256") is not None
+            and not re.fullmatch(r"[0-9a-f]{64}", str(failure.get("experiment_identity_sha256")))
+        ):
+            return False
+    if failures and binding.get("status") != "PARTIAL":
+        return False
+    if binding["status"] == "REJECTED":
+        if len(matches) < 2 or selected is None:
+            return False
+    else:
+        if len(matches) > 1 or (matches and selected is None):
+            return False
+    selected_task_ids = (
+        [item.get("identity_sha256") for item in selected.get("tasks", [])]
+        if selected is not None else []
+    )
+    for match in matches:
+        if not isinstance(match, dict):
+            return False
+        marker = match.get("marker")
+        if (
+            match.get("status") != "RECORDER_CREATED_BY_NATIVE_QRUN"
+            or match.get("request_id") != request_id
+            or match.get("attempt_id") != attempt_id
+            or match.get("rdagent_experiment_identity_sha256") != selected_id
+            or match.get("recorder_status_at_hook") != "RUNNING"
+            or not isinstance(match.get("qlib_experiment_name"), str)
+            or not match["qlib_experiment_name"]
+            or not isinstance(match.get("qlib_experiment_id"), str)
+            or not match["qlib_experiment_id"]
+            or not isinstance(match.get("qlib_recorder_run_id"), str)
+            or not match["qlib_recorder_run_id"]
+            or not isinstance(match.get("artifact_volume"), str)
+            or not match["artifact_volume"]
+            or type(match.get("execution_index")) is not int
+            or match["execution_index"] < 0
+            or not isinstance(marker, dict)
+            or marker.get("request_id") != request_id
+            or marker.get("attempt_id") != attempt_id
+            or marker.get("rdagent_experiment_identity_sha256") != selected_id
+            or marker.get("rdagent_task_identity_sha256s") != selected_task_ids
+            or marker.get("correlation_sha256") != match.get("marker_sha256")
+            or not re.fullmatch(r"[0-9a-f]{64}", str(match.get("marker_sha256", "")))
+            or not re.fullmatch(r"[0-9a-f]{64}", str(match.get("receipt_sha256", "")))
+            or not re.fullmatch(r"[0-9a-f]{64}", str(marker.get("qlib_config_template_sha256", "")))
+        ):
+            return False
+        marker_body = dict(marker)
+        marker_digest = marker_body.pop("correlation_sha256", None)
+        if hashlib.sha256(json.dumps(
+            marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")).hexdigest() != marker_digest:
+            return False
+    if binding["status"] == "REJECTED" and not binding.get("reason"):
         return False
     expected_status = (
         "OBSERVED"
@@ -816,8 +1025,64 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
     canonical_config = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     if hashlib.sha256(canonical_config).hexdigest() != effective["sha256"]:
         return False
+    research_identity = rdagent.get("research_identity")
+    recorder_binding = (
+        research_identity.get("qlib_recorder_binding")
+        if isinstance(research_identity, dict) else None
+    )
+    if recorder_binding is not None:
+        if not isinstance(recorder_binding, dict) or recorder_binding.get("status") not in {
+            "VERIFIED", "PARTIAL", "REJECTED", "OBSERVED",
+        }:
+            return False
+        if recorder_binding.get("status") == "VERIFIED":
+            semantic_payload = (semantic or {}).get("payload") if isinstance(semantic, dict) else None
+            matches = (
+                semantic_payload.get("qlib_recorder_binding", {}).get("matches", [])
+                if isinstance(semantic_payload, dict) else []
+            )
+            selected_id = semantic_payload.get("selected_experiment_identity_sha256") if isinstance(semantic_payload, dict) else None
+            match = matches[0] if isinstance(matches, list) and len(matches) == 1 else None
+            qlib_binding_ok = (
+                isinstance(match, dict)
+                and isinstance(semantic_payload.get("qlib_recorder_binding"), dict)
+                and semantic_payload["qlib_recorder_binding"].get("failures", []) == []
+                and value.get("qlib_research_status") == "QLIB_RESEARCH_COMPLETE"
+                and recorder_binding.get("rdagent_experiment_identity_sha256") == selected_id
+                and recorder_binding.get("qlib_experiment_id") == qlib.get("experiment_id")
+                and recorder_binding.get("qlib_recorder_run_id") == qlib.get("recorder_id")
+                and recorder_binding.get("recorder_artifact_manifest") == qlib.get("artifact_manifest")
+                and match.get("qlib_experiment_id") == qlib.get("experiment_id")
+                and match.get("qlib_recorder_run_id") == qlib.get("recorder_id")
+                and match.get("marker_sha256") == recorder_binding.get("marker_sha256")
+                and match.get("receipt_sha256") == recorder_binding.get("receipt_sha256")
+            )
+            if not qlib_binding_ok:
+                return False
+            correlation_body = {
+                "request_id": value.get("request_id"),
+                "attempt_id": value.get("attempt_id"),
+                "rdagent_experiment_identity_sha256": selected_id,
+                "marker_sha256": match["marker_sha256"],
+                "receipt_sha256": match["receipt_sha256"],
+                "qlib_experiment_id": qlib.get("experiment_id"),
+                "qlib_recorder_run_id": qlib.get("recorder_id"),
+                "recorder_status": qlib.get("recorder_status"),
+                "artifact_manifest": qlib.get("artifact_manifest"),
+            }
+            expected_correlation_sha = hashlib.sha256(json.dumps(
+                correlation_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest()
+            if (
+                recorder_binding.get("correlation_evidence_sha256") != expected_correlation_sha
+                or not re.fullmatch(r"[0-9a-f]{64}", expected_correlation_sha)
+            ):
+                return False
+        elif recorder_binding.get("status") in {"PARTIAL", "REJECTED"} and not isinstance(
+            recorder_binding.get("reason"), str
+        ):
+            return False
     if value["provenance_status"] == "COMPLETE":
-        research_identity = rdagent.get("research_identity")
         return (
             value["qlib_research_status"] == "QLIB_RESEARCH_COMPLETE"
             and value["rdagent_provenance_status"] == "COMPLETE"
@@ -828,7 +1093,7 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
             and research_identity.get("experiment_lineage", {}).get("status") == "OBSERVED"
             and research_identity.get("generated_code", {}).get("semantic_binding") == "OBSERVED"
             and isinstance(research_identity.get("qlib_recorder_binding"), dict)
-            and research_identity["qlib_recorder_binding"].get("status") == "OBSERVED"
+            and research_identity["qlib_recorder_binding"].get("status") in {"VERIFIED", "OBSERVED"}
             and trace["status"] == "OBSERVED"
             and effective["status"] == "OBSERVED"
             and llm_status == "COMPLETE"

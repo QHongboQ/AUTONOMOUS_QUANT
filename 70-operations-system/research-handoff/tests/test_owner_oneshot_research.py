@@ -1178,6 +1178,154 @@ class OwnerOneShotTests(unittest.TestCase):
                 "NO_ATTEMPT_BOUND_RECORDER",
             )
 
+    def test_native_qrun_correlation_requires_exact_attempt_experiment_and_finished_run(self):
+        request_id = identity("correlation-request")
+        attempt_id = "correlation-attempt-1"
+        volume = "aq-p12-owner-artifacts-correlation"
+        rdagent_identity = hashlib.sha256(b"rdagent-experiment").hexdigest()
+        task_identity = hashlib.sha256(b"rdagent-task").hexdigest()
+        marker_body = {
+            "request_id": request_id,
+            "attempt_id": attempt_id,
+            "rdagent_experiment_identity_sha256": rdagent_identity,
+            "rdagent_task_identity_sha256s": [task_identity],
+            "generated_code_manifest_sha256": hashlib.sha256(b"code").hexdigest(),
+            "experiment_template_identity_sha256": hashlib.sha256(b"template").hexdigest(),
+            "qlib_config_template_sha256": hashlib.sha256(b"config").hexdigest(),
+            "execution_index": 0,
+        }
+        marker = {
+            **marker_body,
+            "correlation_sha256": hashlib.sha256(
+                json.dumps(marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+            ).hexdigest(),
+        }
+        match = {
+            "status": "RECORDER_CREATED_BY_NATIVE_QRUN",
+            "request_id": request_id,
+            "attempt_id": attempt_id,
+            "rdagent_experiment_identity_sha256": rdagent_identity,
+            "qlib_experiment_name": "aq-p12-correlation-test",
+            "qlib_experiment_id": "exp-correlation-1",
+            "qlib_recorder_run_id": "run-correlation-1",
+            "recorder_status_at_hook": "RUNNING",
+            "execution_index": 0,
+            "marker": marker,
+            "marker_sha256": marker["correlation_sha256"],
+            "receipt_sha256": hashlib.sha256(b"native receipt").hexdigest(),
+            "artifact_volume": volume,
+        }
+        semantic_payload = {
+            "request_id": request_id,
+            "attempt_id": attempt_id,
+            "selected_experiment_identity_sha256": rdagent_identity,
+            "qlib_recorder_binding": {"status": "PARTIAL", "matches": [match]},
+        }
+        semantic_bytes = (
+            json.dumps(semantic_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
+        ).encode()
+        expected_tags = {
+            "aq.p12.request_id": request_id,
+            "aq.p12.attempt_id": attempt_id,
+            "aq.p12.artifact_volume": volume,
+        }
+        run_tags = {
+            **expected_tags,
+            "aq.p12.rdagent_experiment_identity_sha256": rdagent_identity,
+            "aq.p12.correlation_sha256": marker["correlation_sha256"],
+        }
+        metrics = {
+            "IC": 0.1, "ICIR": 0.2, "Rank IC": 0.3, "Rank ICIR": 0.4,
+            **{
+                f"1day.{kind}.{metric}": 0.1
+                for kind in ("excess_return_without_cost", "excess_return_with_cost")
+                for metric in ("annualized_return", "information_ratio", "max_drawdown")
+            },
+        }
+        artifacts = {
+            "task": False, "dataset": False,
+            "params.pkl": False, "pred.pkl": False,
+            "sig_analysis": True, "sig_analysis/ic.pkl": False,
+            "sig_analysis/ric.pkl": False,
+            "portfolio_analysis": True,
+            "portfolio_analysis/report_normal_1day.pkl": False,
+            "portfolio_analysis/port_analysis_1day.pkl": False,
+        }
+
+        class Client:
+            def __init__(self, *, status="FINISHED", recorder_ids=None, tags=None):
+                self.status = status
+                self.recorder_ids = recorder_ids or ["run-correlation-1"]
+                self.tags = tags or run_tags
+            def get_experiment(self, experiment_id):
+                if experiment_id != "exp-correlation-1":
+                    return None
+                return SimpleNamespace(
+                    experiment_id=experiment_id,
+                    name="aq-p12-correlation-test",
+                    artifact_location="file:///qlib-artifacts",
+                    tags=expected_tags,
+                )
+            def search_runs(self, experiment_ids, max_results):
+                return [
+                    SimpleNamespace(info=SimpleNamespace(
+                        run_id=run_id, experiment_id="exp-correlation-1", status=self.status,
+                        artifact_uri=f"file:///qlib-artifacts/{run_id}/artifacts",
+                    ), data=SimpleNamespace(tags=self.tags, metrics=metrics))
+                    for run_id in self.recorder_ids
+                ]
+            def list_artifacts(self, run_id, path=None):
+                prefix = f"{path}/" if path else ""
+                found = {}
+                for name, is_dir in artifacts.items():
+                    if not name.startswith(prefix):
+                        continue
+                    remainder = name[len(prefix):]
+                    head, separator, _ = remainder.partition("/")
+                    found[prefix + head] = True if separator else is_dir
+                return [SimpleNamespace(path=name, is_dir=is_dir, file_size=1) for name, is_dir in found.items()]
+
+        artifact_entry = {
+            "relative_path": "task", "entry_type": "file", "size_bytes": 1,
+            "sha256": hashlib.sha256(b"artifact").hexdigest(),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            semantic_path = Path(tmp) / "semantic.json"
+            semantic_path.write_bytes(semantic_bytes)
+            args = {
+                "request_id": request_id, "attempt_id": attempt_id,
+                "artifact_volume": volume, "semantic_evidence_path": semantic_path,
+            }
+            with patch.object(mlflow_evidence, "_artifact_content_identity", return_value=artifact_entry):
+                verified = mlflow_evidence.inspect_correlated_research_evidence(Client(), **args)
+                failed = mlflow_evidence.inspect_correlated_research_evidence(
+                    Client(status="FAILED"), **args,
+                )
+                multiple = mlflow_evidence.inspect_correlated_research_evidence(
+                    Client(recorder_ids=["run-correlation-1", "run-other"]), **args,
+                )
+                wrong_tags = dict(run_tags, **{"aq.p12.attempt_id": "foreign-attempt"})
+                foreign = mlflow_evidence.inspect_correlated_research_evidence(
+                    Client(tags=wrong_tags), **args,
+                )
+                failure_payload = json.loads(semantic_bytes)
+                failure_payload["qlib_recorder_binding"]["failures"] = [{
+                    "reason": "EXECUTING_EXPERIMENT_IDENTITY_UNAVAILABLE:ValueError",
+                    "experiment_identity_sha256": None,
+                }]
+                semantic_path.write_text(json.dumps(
+                    failure_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ) + "\n", encoding="utf-8")
+                context_failure = mlflow_evidence.inspect_correlated_research_evidence(Client(), **args)
+            self.assertEqual(verified["classification"], "RESEARCH_EVIDENCE_COMPLETE")
+            self.assertEqual(verified["correlation_binding"]["status"], "VERIFIED")
+            self.assertEqual(verified["correlation_binding"]["qlib_recorder_run_id"], "run-correlation-1")
+            self.assertEqual(failed["reason"], "CORRELATED_RECORDER_NOT_FINISHED_OR_MISMATCHED")
+            self.assertEqual(multiple["reason"], "CORRELATED_EXPERIMENT_RECORDER_NOT_UNIQUE")
+            self.assertEqual(foreign["reason"], "CORRELATED_RECORDER_TAG_MISMATCH")
+            self.assertEqual(context_failure["classification"], "RESEARCH_EVIDENCE_INCOMPLETE")
+            self.assertEqual(context_failure["reason"], "SEMANTIC_CORRELATION_NOT_UNIQUE")
+
     def test_mlflow_artifact_content_hashes_actual_bytes_and_directory_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1296,6 +1444,210 @@ class OwnerOneShotTests(unittest.TestCase):
             self.assertEqual(symlink_result["rdagent"]["trace_manifest"]["status"], "UNAVAILABLE")
             self.assertIn("SYMLINK", symlink_result["rdagent"]["trace_manifest"]["reason"])
 
+    def test_populated_parent_factor_model_baseline_and_legacy_workspace_are_recursively_verified(self):
+        request_id = identity("populated-parent-request")
+        attempt_id = identity("populated-parent-attempt")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            class Workspace:
+                def __init__(self, path, files, target_task=None):
+                    self.workspace_path = path
+                    self.file_dict = files
+                    self.target_task = target_task
+
+            class Hypothesis:
+                pass
+
+            def make_task(branch, name):
+                if branch == "factor":
+                    task_type = type("FactorTask", (), {
+                        "__module__": "rdagent.components.coder.factor_coder.factor",
+                    })
+                    values = {
+                        "name": name, "version": 1, "description": "synthetic",
+                        "base_code": None, "user_instructions": None,
+                        "factor_name": name, "factor_formulation": "$close",
+                        "variables": {"close": "$close"}, "factor_resources": None,
+                        "factor_implementation": False,
+                    }
+                else:
+                    task_type = type("ModelTask", (), {
+                        "__module__": "rdagent.components.coder.model_coder.model",
+                    })
+                    values = {
+                        "name": name, "version": 1, "description": "synthetic",
+                        "base_code": None, "user_instructions": None,
+                        "architecture": "GRU", "formulation": None,
+                        "variables": "features", "hyperparameters": {"hidden": "8"},
+                        "training_hyperparameters": {"epochs": "1"}, "model_type": "synthetic",
+                    }
+                task = task_type()
+                vars(task).update(values)
+                return task
+
+            def make_experiment(name, branch, parents=()):
+                path = root / name
+                path.mkdir()
+                template_path = path / "template"
+                template_path.mkdir()
+                code = f"value = {name!r}\n"
+                config = f"experiment: {name}\n"
+                (path / "generated.py").write_text(code, encoding="utf-8")
+                (template_path / "config.yaml").write_text(config, encoding="utf-8")
+                task = make_task(branch, name)
+                workspace = Workspace(path, {"generated.py": code}, task)
+                template = Workspace(template_path, {"config.yaml": config})
+                hypothesis = Hypothesis()
+                for key in semantic_bridge._HYPOTHESIS_FIELDS:
+                    setattr(hypothesis, key, "factor" if key == "action" and branch == "factor" else
+                            "model" if key == "action" else f"{name}-{key}")
+                experiment_type = type("SyntheticExperiment", (), {})
+                experiment = experiment_type()
+                experiment.hypothesis = hypothesis
+                experiment.sub_tasks = [task]
+                experiment.sub_workspace_list = [workspace]
+                experiment.experiment_workspace = template
+                experiment.based_experiments = list(parents)
+                experiment.plan = {"name": name}
+                experiment.base_features = {"close": "$close"}
+                experiment.base_feature_codes = {}
+                return experiment
+
+            baseline_path = root / "baseline"
+            baseline_path.mkdir()
+            baseline_config = "provider: baseline\n"
+            baseline_code = "def read_exp_res():\n    return None\n"
+            (baseline_path / "config.yaml").write_text(baseline_config, encoding="utf-8")
+            (baseline_path / "read_exp_res.py").write_text(baseline_code, encoding="utf-8")
+            baseline_template = Workspace(
+                baseline_path,
+                {"config.yaml": baseline_config, "read_exp_res.py": baseline_code},
+            )
+            baseline_type = type("QlibFactorExperiment", (), {
+                "__module__": "rdagent.scenarios.qlib.experiment.factor_experiment",
+            })
+            baseline = baseline_type()
+            baseline.hypothesis = None
+            baseline.sub_tasks = []
+            baseline.experiment_workspace = baseline_template
+            baseline.based_experiments = []
+            baseline.sub_workspace_list = []
+            baseline.plan = None
+            baseline.base_features = {}
+            baseline.base_feature_codes = {}
+
+            historical_factor = make_experiment("historical-factor", "factor", [baseline])
+            historical_model = make_experiment("historical-model", "model", [historical_factor])
+            legacy_path = root / "legacy-workspace"
+            legacy_path.mkdir()
+            legacy_code = "legacy = True\n"
+            (legacy_path / "legacy.py").write_text(legacy_code, encoding="utf-8")
+            legacy_workspace = Workspace(legacy_path, {"legacy.py": legacy_code}, make_task("factor", "legacy"))
+            selected = make_experiment(
+                "selected-current", "factor", [baseline, historical_factor, historical_model, legacy_workspace],
+            )
+            payload = semantic_bridge.capture_trace_semantics(
+                SimpleNamespace(hist=[(selected, None)], dag_parent=[()]),
+                request_id=request_id, attempt_id=attempt_id, workspace_root=root,
+            )
+
+            referenced: dict[str, tuple[int, str]] = {}
+
+            def collect_files(experiment):
+                for item in experiment.get("files", []):
+                    referenced[item["workspace_relative_path"]] = (item["size_bytes"], item["sha256"])
+                for collection in (
+                    experiment.get("generated_code", {}).get("files", []),
+                    experiment.get("experiment_template", {}).get("files", []),
+                ):
+                    for item in collection:
+                        referenced[item["workspace_relative_path"]] = (item["size_bytes"], item["sha256"])
+                for parent in experiment.get("based_experiments", []):
+                    if "hypothesis" in parent and isinstance(parent.get("hypothesis"), dict):
+                        collect_files(parent)
+                    else:
+                        for item in parent.get("files", []):
+                            referenced[item["workspace_relative_path"]] = (item["size_bytes"], item["sha256"])
+
+            for experiment in payload["experiments"]:
+                collect_files(experiment)
+            manifest = {
+                "status": "OBSERVED",
+                "files": [
+                    {"relative_path": relative, "size_bytes": size, "sha256": digest}
+                    for relative, (size, digest) in sorted(referenced.items())
+                ],
+            }
+
+            def bind(body):
+                raw = (json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode()
+                return {"status": "OBSERVED", "sha256": hashlib.sha256(raw).hexdigest(), "payload": body}
+
+            bound = bind(payload)
+            self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
+                bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+            self.assertTrue(docker_rdagent_target._semantic_workspace_files_match(payload, manifest))
+            parents = payload["experiments"][0]["based_experiments"]
+            self.assertEqual([parent.get("identity_kind", "EXPERIMENT" if "hypothesis" in parent else "WORKSPACE")
+                              for parent in parents], ["BASELINE", "EXPERIMENT", "EXPERIMENT", "WORKSPACE"])
+            self.assertEqual(parents[2]["tasks"][0]["branch"], "model")
+            self.assertEqual(parents[1]["based_experiments"][0]["identity_kind"], "BASELINE")
+
+            tampered = json.loads(json.dumps(payload))
+            tampered_parent = tampered["experiments"][0]["based_experiments"][1]
+            tampered_parent["generated_code"]["files"][0]["sha256"] = "0" * 64
+            self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+                bind(tampered), request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+            self.assertFalse(docker_rdagent_target._semantic_workspace_files_match(tampered, manifest))
+            # A parent Recorder identity is not interchangeable with the selected
+            # current experiment's native Qlib correlation marker.
+            selected = payload["experiments"][0]
+            parent = parents[1]
+            parent_marker_body = {
+                "request_id": request_id,
+                "attempt_id": attempt_id,
+                "rdagent_experiment_identity_sha256": parent["identity_sha256"],
+                "rdagent_task_identity_sha256s": [task["identity_sha256"] for task in parent["tasks"]],
+                "generated_code_manifest_sha256": parent["generated_code"]["manifest_sha256"],
+                "experiment_template_identity_sha256": parent["experiment_template"]["identity_sha256"],
+                "qlib_config_template_sha256": hashlib.sha256(b"synthetic-parent-config").hexdigest(),
+                "execution_index": 0,
+            }
+            parent_marker = {
+                **parent_marker_body,
+                "correlation_sha256": hashlib.sha256(json.dumps(
+                    parent_marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode()).hexdigest(),
+            }
+            parent_bound = json.loads(json.dumps(payload))
+            parent_bound["qlib_recorder_binding"] = {"status": "PARTIAL", "matches": [{
+                "status": "RECORDER_CREATED_BY_NATIVE_QRUN",
+                "request_id": request_id,
+                "attempt_id": attempt_id,
+                "rdagent_experiment_identity_sha256": parent["identity_sha256"],
+                "qlib_experiment_name": "synthetic-parent-exp",
+                "qlib_experiment_id": "synthetic-parent-exp-id",
+                "qlib_recorder_run_id": "synthetic-parent-run-id",
+                "recorder_status_at_hook": "RUNNING",
+                "execution_index": 0,
+                "marker": parent_marker,
+                "marker_sha256": parent_marker["correlation_sha256"],
+                "receipt_sha256": hashlib.sha256(b"synthetic-parent-receipt").hexdigest(),
+                "artifact_volume": "synthetic-parent-volume",
+            }], "failures": []}
+            self.assertNotEqual(parent["identity_sha256"], selected["identity_sha256"])
+            self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+                bind(parent_bound), request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+            # Revalidation of the same immutable payload is the historical replay path;
+            # it does not dispatch or bind a parent's Recorder to the selected experiment.
+            self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
+                bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=manifest,
+            ))
+
     def test_semantic_bridge_identity_is_bound_to_request_attempt_and_recorder_link_stays_partial(self):
         request_id = identity("semantic-evidence-request")
         attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
@@ -1358,7 +1710,30 @@ class OwnerOneShotTests(unittest.TestCase):
             experiment.sub_tasks = [task]
             experiment.sub_workspace_list = [workspace]
             experiment.experiment_workspace = template_workspace
-            experiment.based_experiments = []
+            baseline_path = source / "native-empty-baseline"
+            baseline_path.mkdir()
+            baseline_config = b"provider: native-empty-factor-baseline\n"
+            baseline_code = b"def read_exp_res():\n    return None\n"
+            (baseline_path / "conf_baseline.yaml").write_bytes(baseline_config)
+            (baseline_path / "read_exp_res.py").write_bytes(baseline_code)
+            baseline_template = Workspace()
+            baseline_template.target_task = None
+            baseline_template.workspace_path = baseline_path
+            baseline_template.file_dict = {
+                "conf_baseline.yaml": baseline_config.decode("utf-8"),
+                "read_exp_res.py": baseline_code.decode("utf-8"),
+            }
+            NativeEmptyBaseline = type("QlibFactorExperiment", (), {})
+            NativeEmptyBaseline.__module__ = "rdagent.scenarios.qlib.experiment.factor_experiment"
+            baseline = NativeEmptyBaseline()
+            baseline.sub_tasks = []
+            baseline.experiment_workspace = baseline_template
+            baseline.based_experiments = []
+            baseline.sub_workspace_list = []
+            baseline.plan = None
+            baseline.base_features = {}
+            baseline.base_feature_codes = {}
+            experiment.based_experiments = [baseline]
             experiment.plan = {"features": {"close": "$close"}}
             experiment.base_features = {"close": "$close"}
             experiment.base_feature_codes = {}
@@ -1381,6 +1756,16 @@ class OwnerOneShotTests(unittest.TestCase):
                         "size_bytes": (template_path / "conf_baseline.yaml").stat().st_size,
                         "sha256": hashlib.sha256((template_path / "conf_baseline.yaml").read_bytes()).hexdigest(),
                     },
+                    {
+                        "relative_path": "workspace-1/native-empty-baseline/conf_baseline.yaml",
+                        "size_bytes": len(baseline_config),
+                        "sha256": hashlib.sha256(baseline_config).hexdigest(),
+                    },
+                    {
+                        "relative_path": "workspace-1/native-empty-baseline/read_exp_res.py",
+                        "size_bytes": len(baseline_code),
+                        "sha256": hashlib.sha256(baseline_code).hexdigest(),
+                    },
                 ],
             }
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode() + b"\n"
@@ -1388,6 +1773,20 @@ class OwnerOneShotTests(unittest.TestCase):
         bound = {"status": "OBSERVED", "sha256": digest, "payload": payload}
         self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
             bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
+        ))
+        baseline_identity = payload["experiments"][0]["based_experiments"][0]
+        self.assertEqual(baseline_identity["identity_kind"], "BASELINE")
+        self.assertIsNone(baseline_identity["hypothesis"])
+        self.assertEqual(baseline_identity["tasks"], [])
+        tampered_baseline = json.loads(json.dumps(payload))
+        tampered_baseline["experiments"][0]["based_experiments"][0]["baseline_content"]["code_files"][0]["sha256"] = "0" * 64
+        tampered_raw = json.dumps(
+            tampered_baseline, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode() + b"\n"
+        self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+            {"status": "OBSERVED", "sha256": hashlib.sha256(tampered_raw).hexdigest(),
+             "payload": tampered_baseline},
+            request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
         ))
         self.assertTrue(docker_rdagent_target._semantic_workspace_files_match(payload, workspace_manifest))
         mismatched_workspace = json.loads(json.dumps(payload))
@@ -1410,6 +1809,130 @@ class OwnerOneShotTests(unittest.TestCase):
              "payload": unproven_pair},
             request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
         ))
+
+        selected = payload["experiments"][0]
+        marker_body = {
+            "request_id": request_id,
+            "attempt_id": attempt_id,
+            "rdagent_experiment_identity_sha256": selected["identity_sha256"],
+            "rdagent_task_identity_sha256s": [task["identity_sha256"] for task in selected["tasks"]],
+            "generated_code_manifest_sha256": selected["generated_code"]["manifest_sha256"],
+            "experiment_template_identity_sha256": selected["experiment_template"]["identity_sha256"],
+            "qlib_config_template_sha256": hashlib.sha256(b"runtime qlib config").hexdigest(),
+            "execution_index": 0,
+        }
+        marker = {
+            **marker_body,
+            "correlation_sha256": hashlib.sha256(json.dumps(
+                marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode()).hexdigest(),
+        }
+        recorder_match = {
+            "status": "RECORDER_CREATED_BY_NATIVE_QRUN",
+            "request_id": request_id, "attempt_id": attempt_id,
+            "rdagent_experiment_identity_sha256": selected["identity_sha256"],
+            "qlib_experiment_name": "aq-p12-correlation-exp",
+            "qlib_experiment_id": "exp-correlation", "qlib_recorder_run_id": "run-correlation",
+            "recorder_status_at_hook": "RUNNING", "execution_index": 0,
+            "marker": marker, "marker_sha256": marker["correlation_sha256"],
+            "receipt_sha256": hashlib.sha256(b"receipt").hexdigest(),
+            "artifact_volume": "aq-p12-owner-artifacts-0123456789abcdef",
+        }
+        correlated_payload = json.loads(json.dumps(payload))
+        correlated_payload["qlib_recorder_binding"] = {"status": "PARTIAL", "matches": [recorder_match]}
+        semantic_raw = json.dumps(
+            correlated_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode() + b"\n"
+        semantic_digest = hashlib.sha256(semantic_raw).hexdigest()
+        bound_correlation = {"status": "OBSERVED", "sha256": semantic_digest, "payload": correlated_payload}
+        self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
+            bound_correlation, request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
+        ))
+
+        artifact_manifest = {}
+        for logical_name, artifact_path in mlflow_evidence._REQUIRED_FILES.items():
+            if artifact_path == "dataset":
+                child_digest = hashlib.sha256(b"dataset").hexdigest()
+                children = [{"relative_path": "dataset.bin", "size_bytes": 7, "sha256": child_digest}]
+                artifact_manifest[logical_name] = {
+                    "relative_path": "dataset", "entry_type": "directory", "file_count": 1,
+                    "files": children,
+                    "sha256": hashlib.sha256(json.dumps(
+                        children, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                    ).encode()).hexdigest(),
+                    "digest_semantics": "SHA256_OF_CANONICAL_CHILD_MANIFEST",
+                }
+            else:
+                artifact_manifest[logical_name] = {
+                    "relative_path": artifact_path, "entry_type": "file", "size_bytes": 1,
+                    "sha256": hashlib.sha256(artifact_path.encode()).hexdigest(),
+                }
+        qlib_correlation_body = {
+            "request_id": request_id, "attempt_id": attempt_id,
+            "rdagent_experiment_identity_sha256": selected["identity_sha256"],
+            "marker_sha256": marker["correlation_sha256"],
+            "receipt_sha256": recorder_match["receipt_sha256"],
+            "qlib_experiment_id": "exp-correlation", "qlib_recorder_run_id": "run-correlation",
+            "recorder_status": "FINISHED", "artifact_manifest": artifact_manifest,
+        }
+        correlation_evidence = {
+            "status": "VERIFIED", **qlib_correlation_body,
+            "correlation_evidence_sha256": hashlib.sha256(json.dumps(
+                qlib_correlation_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode()).hexdigest(),
+        }
+        with tempfile.TemporaryDirectory() as tmp2:
+            output = Path(tmp2)
+            run_root = output / "runs" / "namespace"
+            (run_root / "trace").mkdir(parents=True)
+            (run_root / "workspaces" / "workspace-1" / "template").mkdir(parents=True)
+            (run_root / "workspaces" / "workspace-1" / "native-empty-baseline").mkdir(parents=True)
+            (run_root / "trace" / "trace.jsonl").write_text("synthetic trace\n", encoding="utf-8")
+            (run_root / "workspaces" / "workspace-1" / "factor.py").write_text(code, encoding="utf-8")
+            (run_root / "workspaces" / "workspace-1" / "template" / "conf_baseline.yaml").write_bytes(template_bytes)
+            (run_root / "workspaces" / "workspace-1" / "native-empty-baseline" / "conf_baseline.yaml").write_bytes(baseline_config)
+            (run_root / "workspaces" / "workspace-1" / "native-empty-baseline" / "read_exp_res.py").write_bytes(baseline_code)
+            qlib_evidence = {
+                "classification": "RESEARCH_EVIDENCE_COMPLETE",
+                "experiment_id": "exp-correlation", "recorder_id": "run-correlation",
+                "recorder_status": "FINISHED", "artifact_uri": "file:///qlib-artifacts/run-correlation/artifacts",
+                "artifact_manifest": artifact_manifest, "metric_names": ["IC"],
+                "correlation_binding": correlation_evidence,
+            }
+            native = docker_rdagent_target.build_native_research_evidence(
+                request_id=request_id, attempt_id=attempt_id, run_namespace="namespace",
+                output=output,
+                observed_worker={"image_id": "sha256:" + "b" * 64, "entrypoint_verified": True,
+                                 "command_verified": True, "mounts_valid": True},
+                qlib_evidence=qlib_evidence, artifact_volume=recorder_match["artifact_volume"],
+                semantic_evidence=correlated_payload, semantic_evidence_sha256=semantic_digest,
+            )
+            self.assertEqual(native["rdagent"]["research_identity"]["qlib_recorder_binding"]["status"], "VERIFIED")
+            self.assertTrue(oneshot.p12._native_research_evidence_shape_valid(native))
+            failed_context_payload = json.loads(json.dumps(correlated_payload))
+            failed_context_payload["qlib_recorder_binding"]["failures"] = [{
+                "reason": "EXECUTING_EXPERIMENT_IDENTITY_UNAVAILABLE:ValueError",
+                "experiment_identity_sha256": None,
+            }]
+            failed_context_digest = hashlib.sha256(json.dumps(
+                failed_context_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode() + b"\n").hexdigest()
+            unverified_native = docker_rdagent_target.build_native_research_evidence(
+                request_id=request_id, attempt_id=attempt_id, run_namespace="namespace",
+                output=output,
+                observed_worker={"image_id": "sha256:" + "b" * 64, "entrypoint_verified": True,
+                                 "command_verified": True, "mounts_valid": True},
+                qlib_evidence=qlib_evidence, artifact_volume=recorder_match["artifact_volume"],
+                semantic_evidence=failed_context_payload, semantic_evidence_sha256=failed_context_digest,
+            )
+            self.assertEqual(
+                unverified_native["rdagent"]["research_identity"]["qlib_recorder_binding"]["status"],
+                "PARTIAL",
+            )
+            self.assertEqual(unverified_native["provenance_status"], "PARTIAL")
+            tampered_native = json.loads(json.dumps(native))
+            tampered_native["rdagent"]["research_identity"]["qlib_recorder_binding"]["qlib_recorder_run_id"] = "foreign-run"
+            self.assertFalse(oneshot.p12._native_research_evidence_shape_valid(tampered_native))
 
     def test_native_research_evidence_terminal_hash_binding_and_replay_tamper_rejection(self):
         request_id = identity("terminal-native-evidence")

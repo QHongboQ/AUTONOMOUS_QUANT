@@ -452,9 +452,13 @@ def _semantic_workspace_files_match(
     experiments = payload.get("experiments")
     if not isinstance(experiments, list):
         return False
-    for experiment in experiments:
-        if not isinstance(experiment, dict):
+    pending = [(item, 0) for item in experiments]
+    visited: set[int] = set()
+    while pending:
+        experiment, depth = pending.pop()
+        if not isinstance(experiment, dict) or id(experiment) in visited or depth >= 64:
             return False
+        visited.add(id(experiment))
         collections = [
             experiment.get("generated_code", {}).get("files")
             if isinstance(experiment.get("generated_code"), dict) else None,
@@ -464,7 +468,17 @@ def _semantic_workspace_files_match(
         based = experiment.get("based_experiments")
         if not isinstance(based, list):
             return False
-        collections.extend(item.get("files") if isinstance(item, dict) else None for item in based)
+        for parent in based:
+            if not isinstance(parent, dict):
+                return False
+            if any(key in parent for key in ("hypothesis", "tasks", "experiment_template", "generated_code")):
+                if "hypothesis" not in parent or "tasks" not in parent:
+                    return False
+                pending.append((parent, depth + 1))
+            else:
+                # Native empty BASELINE and legacy Workspace projections expose
+                # their directly observed files here.
+                collections.append(parent.get("files"))
         for files in collections:
             if not isinstance(files, list):
                 return False
@@ -571,6 +585,57 @@ def build_native_research_evidence(
             )
             semantic_status = "OBSERVED" if selected is not None else "PARTIAL"
     lineage = selected.get("lineage", {}) if selected else {}
+    semantic_qlib_binding = (
+        semantic_evidence.get("qlib_recorder_binding", {})
+        if isinstance(semantic_evidence, dict) else {}
+    )
+    semantic_qlib_failures = (
+        semantic_qlib_binding.get("failures", [])
+        if isinstance(semantic_qlib_binding, dict) else None
+    )
+    verified_qlib_binding = qlib_evidence.get("correlation_binding")
+    binding_match = None
+    matches = semantic_qlib_binding.get("matches") if isinstance(semantic_qlib_binding, dict) else None
+    if isinstance(matches, list) and len(matches) == 1:
+        binding_match = matches[0]
+    recorder_binding_verified = bool(
+        selected is not None
+        and isinstance(verified_qlib_binding, dict)
+        and verified_qlib_binding.get("status") == "VERIFIED"
+        and semantic_qlib_binding.get("status") == "PARTIAL"
+        and semantic_qlib_failures == []
+        and verified_qlib_binding.get("request_id") == request_id
+        and verified_qlib_binding.get("attempt_id") == attempt_id
+        and verified_qlib_binding.get("rdagent_experiment_identity_sha256") == selected.get("identity_sha256")
+        and verified_qlib_binding.get("qlib_experiment_id") == qlib_evidence.get("experiment_id")
+        and verified_qlib_binding.get("qlib_recorder_run_id") == qlib_evidence.get("recorder_id")
+        and isinstance(binding_match, dict)
+        and binding_match.get("qlib_experiment_id") == qlib_evidence.get("experiment_id")
+        and binding_match.get("qlib_recorder_run_id") == qlib_evidence.get("recorder_id")
+        and binding_match.get("marker_sha256") == verified_qlib_binding.get("marker_sha256")
+        and isinstance(verified_qlib_binding.get("correlation_evidence_sha256"), str)
+        and bool(re.fullmatch(r"[0-9a-f]{64}", verified_qlib_binding["correlation_evidence_sha256"]))
+    )
+    if recorder_binding_verified:
+        qlib_recorder_binding = {
+            "status": "VERIFIED",
+            "rdagent_experiment_identity_sha256": selected["identity_sha256"],
+            "qlib_experiment_id": qlib_evidence["experiment_id"],
+            "qlib_recorder_run_id": qlib_evidence["recorder_id"],
+            "correlation_evidence_sha256": verified_qlib_binding["correlation_evidence_sha256"],
+            "marker_sha256": verified_qlib_binding["marker_sha256"],
+            "receipt_sha256": verified_qlib_binding["receipt_sha256"],
+            "recorder_artifact_manifest": verified_qlib_binding["artifact_manifest"],
+        }
+    elif semantic_qlib_binding.get("status") == "REJECTED":
+        qlib_recorder_binding = {
+            "status": "REJECTED", "reason": semantic_qlib_binding.get("reason"),
+        }
+    else:
+        qlib_recorder_binding = {
+            "status": "PARTIAL",
+            "reason": qlib_evidence.get("reason", "NATIVE_RECORDER_CORRELATION_UNVERIFIED"),
+        }
     research_identity = {
         "status": "OBSERVED" if selected is not None else "PARTIAL",
         "selected_experiment_identity_sha256": selected.get("identity_sha256") if selected else None,
@@ -596,13 +661,11 @@ def build_native_research_evidence(
             "manifest_sha256": selected.get("generated_code", {}).get("manifest_sha256") if selected else None,
             "semantic_binding": "OBSERVED" if crosscheck else "PARTIAL",
         },
-        "qlib_recorder_binding": (
-            semantic_evidence.get("qlib_recorder_binding") if semantic_evidence is not None
-            else {"status": "SEMANTIC_BINDING_PARTIAL", "reason": "RDAGENT_SEMANTIC_EVIDENCE_UNAVAILABLE"}
-        ),
+        "qlib_recorder_binding": qlib_recorder_binding,
     }
-    # Even complete semantic identities remain partial overall until a direct
-    # RD-Agent Experiment -> Qlib Recorder link is emitted by the pinned upstream.
+    # Semantic source identity and Qlib execution correlation remain separate:
+    # only the Qlib-native recorder tags plus host-side artifact verification
+    # can promote this particular Experiment/Recorder pair to VERIFIED.
     semantic_status = (
         "UNAVAILABLE" if semantic_evidence is None
         else "OBSERVED" if semantic_evidence.get("status") == "OBSERVED" and selected is not None and crosscheck
