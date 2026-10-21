@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).with_name("docker-rdagent-smoke")))
 
 import aq_p4_policy as p4  # noqa: E402
 import owner_bootstrap_request as bootstrap  # noqa: E402
+import owner_research_request as owner_request  # noqa: E402
 import standing_policy as policy_gate  # noqa: E402
 from native_experiment_budget import OWNER_ONESHOT_MODELS, experiment_user_id  # noqa: E402
 
@@ -49,6 +50,9 @@ TARGET_DOCKER_FINQUANT = "DOCKER_RDAGENT_FINQUANT_TEST_ONLY"
 TARGET_OWNER_ONESHOT = "DOCKER_RDAGENT_FINQUANT_OWNER_ONESHOT"
 P4_LIFECYCLE_ORIGIN = "P4_LIFECYCLE"
 OWNER_BOOTSTRAP_ORIGIN = "OWNER_INITIAL_BOOTSTRAP"
+OWNER_RESEARCH_ORIGIN = "OWNER_AUTHORIZED_RESEARCH"
+OWNER_RESEARCH_STATE_DIR = Path("/mnt/d/AQ/OPERATIONS/P12/owner-research-state")
+OWNER_ONESHOT_GLOBAL_LOCK = Path("/mnt/d/AQ/OPERATIONS/P12/owner-oneshot-global-active.lock")
 
 
 def _origin_records_match(records: tuple[dict[str, Any], ...], expected: str) -> bool:
@@ -1825,6 +1829,14 @@ def process_owner_oneshot(
             canonical_state = OWNER_BOOTSTRAP_STATE_DIR.resolve()
             if state_dir.resolve() != canonical_state:
                 raise ValueError("bootstrap requires the canonical P12 owner-control state directory")
+        elif set(request_envelope) == {"owner_research_request"}:
+            request = owner_request.validate_owner_research_envelope(request_envelope)
+            owner_request.verify_current_frozen_inputs(request, REPO_ROOT)
+            request_origin = OWNER_RESEARCH_ORIGIN
+            request_id = request.request_id
+            budget_identity = request.research_budget_identity
+            if state_dir.resolve() != OWNER_RESEARCH_STATE_DIR.resolve():
+                raise ValueError("owner research requires its canonical P12 state directory")
         else:
             raise ValueError("unsupported owner request origin")
         request_digest = _canonical_digest(request_envelope)
@@ -1835,16 +1847,37 @@ def process_owner_oneshot(
         classification = (
             "DENIED_OWNER_BOOTSTRAP_REQUEST_IDENTITY"
             if isinstance(request_envelope, dict) and set(request_envelope) == {"bootstrap_request"}
+            else "DENIED_OWNER_RESEARCH_REQUEST_IDENTITY"
+            if isinstance(request_envelope, dict) and set(request_envelope) == {"owner_research_request"}
             else "DENIED_OWNER_ONESHOT_P4_IDENTITY"
         )
         return ({"classification": classification, "dispatch_count_added": 0}, _EXIT_BLOCKED)
 
     state_dir.mkdir(parents=True, exist_ok=True)
-    lock_path = state_dir / "owner-oneshot-active.lock"
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    global_lock_path = OWNER_ONESHOT_GLOBAL_LOCK
+    global_lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        global_lock_fd = os.open(global_lock_path, flags, 0o600)
+    except FileExistsError:
+        return ({"classification": "BLOCKED_OWNER_ONESHOT_GLOBAL_CONCURRENT_RUN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+    os.write(global_lock_fd, json.dumps({
+        "request_id": request_id,
+        "request_origin": request_origin,
+        "research_budget_identity": budget_identity,
+        "pid": os.getpid(),
+    }, sort_keys=True).encode())
+    os.fsync(global_lock_fd)
+    _fsync_directory(global_lock_path.parent)
+
+    lock_path = state_dir / "owner-oneshot-active.lock"
     try:
         lock_fd = os.open(lock_path, flags, 0o600)
     except FileExistsError:
+        # An existing per-origin lock may belong to a still-running or
+        # ambiguous legacy worker. Keep the newly acquired global lock so a
+        # different origin cannot bypass that unresolved execution.
+        os.close(global_lock_fd)
         return ({"classification": "BLOCKED_OWNER_ONESHOT_CONCURRENT_RUN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
     os.write(lock_fd, json.dumps({"request_id": request_id, "pid": os.getpid()}, sort_keys=True).encode())
     os.fsync(lock_fd)
@@ -1874,7 +1907,7 @@ def process_owner_oneshot(
             "standing_policy_id": policy_id,
             "native_experiment_user_id": user_id,
         }
-        if request_origin == OWNER_BOOTSTRAP_ORIGIN:
+        if request_origin in {OWNER_BOOTSTRAP_ORIGIN, OWNER_RESEARCH_ORIGIN}:
             identity["request_origin"] = request_origin
         if identity_path.exists():
             if _read_json_nofollow(identity_path) != identity:
@@ -1903,14 +1936,15 @@ def process_owner_oneshot(
 
         dispatch = {**claim, "state": "DISPATCHING_OWNER_ONESHOT"}
         _durable_json_create(_dispatch_file(state_dir, request_id), dispatch)
+        # Preserve both locks after dispatch begins unless a stopped worker and
+        # its terminal are verified and durably recorded.
+        keep_lock = True
         try:
             evidence = target(claim["attempt_id"])
         except Exception as exc:
-            keep_lock = True
             return ({"classification": "BLOCKED_OWNER_ONESHOT_UNKNOWN_DISPATCH", "request_id": request_id, "error_type": type(exc).__name__, "dispatch_count_added": 0}, _EXIT_BLOCKED)
         code = evidence.get("target_return_code") if isinstance(evidence, dict) else None
         if type(code) is not int or evidence.get("key_blocked_after_attempt") is not True:
-            keep_lock = True
             return ({"classification": "BLOCKED_OWNER_ONESHOT_TERMINAL_UNVERIFIED", "request_id": request_id, "dispatch_count_added": 0}, _EXIT_BLOCKED)
         process_status = "PROCESS_EXIT_SUCCESS" if code == 0 else "PROCESS_EXIT_FAILED"
         evidence_status = evidence.get("research_evidence_status")
@@ -1943,6 +1977,7 @@ def process_owner_oneshot(
             "sealed_oos_accessed": False,
         }
         _durable_json_create(_status_file(state_dir, request_id), terminal)
+        keep_lock = False
         return (
             {"classification": terminal["state"], "request_id": request_id, "status": terminal, "dispatch_count_added": 1},
             0 if terminal_state == "SUCCEEDED_OWNER_ONESHOT" else _EXIT_FAILED,
@@ -1953,6 +1988,13 @@ def process_owner_oneshot(
             try:
                 lock_path.unlink()
                 _fsync_directory(state_dir)
+            except FileNotFoundError:
+                pass
+        os.close(global_lock_fd)
+        if not keep_lock:
+            try:
+                global_lock_path.unlink()
+                _fsync_directory(global_lock_path.parent)
             except FileNotFoundError:
                 pass
 
@@ -1971,6 +2013,12 @@ def owner_oneshot_replay_if_claimed(
             request_origin = OWNER_BOOTSTRAP_ORIGIN
             if state_dir.resolve() != OWNER_BOOTSTRAP_STATE_DIR.resolve():
                 return ({"classification": "BLOCKED_OWNER_BOOTSTRAP_NONCANONICAL_STATE", "dispatch_count_added": 0}, _EXIT_BLOCKED)
+        elif set(request_envelope) == {"owner_research_request"}:
+            request = owner_request.validate_owner_research_envelope(request_envelope)
+            owner_request.verify_current_frozen_inputs(request, REPO_ROOT)
+            request_origin = OWNER_RESEARCH_ORIGIN
+            if state_dir.resolve() != OWNER_RESEARCH_STATE_DIR.resolve():
+                return ({"classification": "BLOCKED_OWNER_RESEARCH_NONCANONICAL_STATE", "dispatch_count_added": 0}, _EXIT_BLOCKED)
         else:
             return ({"classification": "DENIED_OWNER_ONESHOT_REQUEST_ORIGIN", "dispatch_count_added": 0}, _EXIT_BLOCKED)
         request_id = request.request_id

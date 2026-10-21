@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -26,6 +27,7 @@ for directory in (str(P4_DIR), str(HANDOFF), str(SMOKE), str(BINDING_DIR)):
 import aq_p4_policy as p4  # noqa: E402
 import owner_oneshot_research as oneshot  # noqa: E402
 import owner_bootstrap_request as bootstrap  # noqa: E402
+import owner_research_request as owner_request  # noqa: E402
 import owner_oneshot_proxy_control as proxy_control  # noqa: E402
 import docker_rdagent_target  # noqa: E402
 import p12_mlflow_evidence as mlflow_evidence  # noqa: E402
@@ -182,6 +184,17 @@ class FakeNativeAPI:
 
 
 class OwnerOneShotTests(unittest.TestCase):
+    def setUp(self):
+        lock_root = tempfile.TemporaryDirectory()
+        self.addCleanup(lock_root.cleanup)
+        patcher = patch.object(
+            oneshot.p12,
+            "OWNER_ONESHOT_GLOBAL_LOCK",
+            Path(lock_root.name) / "owner-oneshot-global-active.lock",
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def bootstrap_fixture(self):
         inputs = tuple(
             bootstrap.InputIdentityV1(name=name, sha256=identity(name))
@@ -189,6 +202,325 @@ class OwnerOneShotTests(unittest.TestCase):
         )
         request = bootstrap.build_owner_bootstrap_request(inputs)
         return {"bootstrap_request": request.model_dump(mode="json")}, request
+
+    def owner_research_fixture(self, objective="Evaluate whether a volatility-aware factor improves US equity ranking"):
+        inputs = tuple(
+            bootstrap.InputIdentityV1(name=name, sha256=identity(name))
+            for name in ("p2_pit_inventory", "p3_materialization_report", "rdagent_qlib_pinned_image")
+        )
+        request = owner_request.build_owner_research_request(inputs, objective)
+        return {"owner_research_request": request.model_dump(mode="json")}, request
+
+    def owner_policy_fixture(self, request, now=None, *, revoked_at=None, expires_delta=timedelta(hours=23)):
+        now = now or datetime.now(timezone.utc)
+        base = standing_policy.create_synthetic_test_policy(request)
+        policy = base.model_copy(update={
+            "authorization_status": "APPROVED",
+            "evidence_classification": "HUMAN_APPROVED",
+            "approval_source_identity": identity("local-owner-source"),
+            "approval_record_identity": identity("local-owner-approval:" + request.request_id),
+            "effective_at": now - timedelta(minutes=1),
+            "expires_at": now + expires_delta,
+            "revoked_at": revoked_at,
+            "allowed_universe_scope_identities": (request.asset_universe_scope_identity,),
+            "allowed_request_provenance_identities": (request.request_provenance,),
+            "allowed_research_families": ("RD_AGENT",),
+            "allowed_llm_routes": (
+                standing_policy.LLMRouteV1(provider="deepseek", model="deepseek/deepseek-flash", billing_class="PAID"),
+                standing_policy.LLMRouteV1(provider="ollama", model="ollama/qwen3-embedding:0.6b", billing_class="LOCAL"),
+            ),
+            "research_budget_identity": request.research_budget_identity,
+            "maximum_period_spend_usd": Decimal("5.00"),
+            "maximum_run_spend_usd": Decimal("5.00"),
+            "spending_reset_window_seconds": 86400,
+            "spending_limit_semantics": "TRACKED_SPEND_LIMIT_ONLY",
+            "maximum_concurrent_runs": 1,
+            "maximum_runtime_seconds": 3600,
+            "maximum_memory_mb": 4096,
+            "maximum_storage_bytes": 100_000_000_000,
+        })
+        fields = policy.model_dump(mode="json", exclude={"policy_id"})
+        fields["policy_id"] = standing_policy.policy_identity(fields)
+        return standing_policy.P12StandingResearchPolicyV1.model_validate(fields)
+
+    def test_owner_research_request_is_independent_content_addressed_and_not_bootstrap(self):
+        envelope, request = self.owner_research_fixture()
+        duplicate_envelope, duplicate = self.owner_research_fixture()
+        other_envelope, other = self.owner_research_fixture("Study a separate liquidity feature under the same frozen scope")
+        bootstrap_envelope, bootstrap_request = self.bootstrap_fixture()
+        self.assertEqual(request.request_id, duplicate.request_id)
+        self.assertEqual(envelope, duplicate_envelope)
+        self.assertNotEqual(request.request_id, other.request_id)
+        self.assertNotEqual(request.research_budget_identity, bootstrap_request.research_budget_identity)
+        self.assertNotEqual(request.request_id, bootstrap_request.request_id)
+        with patch.object(owner_request, "verify_current_frozen_inputs"):
+            origin, decision, parsed = oneshot._parse_request_envelope(envelope)
+        self.assertEqual(origin, "OWNER_AUTHORIZED_RESEARCH")
+        self.assertIsNone(decision)
+        self.assertEqual(parsed.request_id, request.request_id)
+        self.assertEqual(request.p2_certification_authority, "NONE")
+        self.assertEqual(request.trading_authority, "NONE")
+        self.assertNotIn("p4_decision", other_envelope)
+        self.assertNotIn("p4_decision", bootstrap_envelope)
+        with self.assertRaisesRegex(ValueError, "must not contain P4"):
+            owner_request.validate_owner_research_envelope({**envelope, "p4_decision": {}})
+
+    def test_owner_research_review_package_is_unapproved_and_creates_no_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            review_root = root / "review"
+            package = review_root / "new-request"
+            with patch.object(oneshot, "OWNER_RESEARCH_REVIEW_ROOT", review_root), patch.object(
+                bootstrap, "collect_frozen_us_pit_inputs", return_value=tuple(
+                    bootstrap.InputIdentityV1(name=name, sha256=identity(name))
+                    for name in ("p2_pit_inventory", "p3_materialization_report")
+                )
+            ):
+                result = oneshot._prepare_owner_research_review_package(
+                    package, "Evaluate whether a volatility-aware factor improves US equity ranking"
+                )
+            review = json.loads((package / "owner-review.json").read_text())
+            self.assertEqual(result["classification"], "REVIEW_ONLY_NOT_APPROVED")
+            self.assertFalse(review["human_approved"])
+            self.assertEqual(review["paid_key_created"], False)
+            self.assertEqual(review["real_dispatch_permission"], "DENIED")
+            self.assertEqual(review["p4_lifecycle_evidence"], "NOT_ASSERTED_OR_REQUIRED")
+            with patch.object(oneshot, "OWNER_RESEARCH_REVIEW_ROOT", review_root), patch.object(
+                bootstrap, "collect_frozen_us_pit_inputs", return_value=tuple(
+                    bootstrap.InputIdentityV1(name=name, sha256=identity(name))
+                    for name in ("p2_pit_inventory", "p3_materialization_report")
+                )
+            ), self.assertRaises(FileExistsError):
+                oneshot._prepare_owner_research_review_package(package, "Evaluate whether a volatility-aware factor improves US equity ranking")
+
+    def test_owner_research_missing_approval_expired_and_revoked_are_denied(self):
+        envelope, request = self.owner_research_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = root / "canonical"
+            request_path = root / "request.json"
+            request_path.write_text(json.dumps(envelope))
+            with patch.object(oneshot.p12, "OWNER_RESEARCH_STATE_DIR", state), patch.object(
+                owner_request, "verify_current_frozen_inputs"
+            ), patch.object(oneshot, "_preflight", return_value={"classification": "PASS"}), patch.object(
+                oneshot, "_new_provider_secret_path", return_value=root / "secret"
+            ), patch.object(oneshot.sys.stdin, "isatty", return_value=False):
+                result, code = oneshot.run_one_shot(
+                    request_path, None, state, root / "runtime", root / "compose.env", root / "secret"
+                )
+            self.assertNotEqual(code, 0)
+            self.assertEqual(result["classification"], "DENIED_INTERACTIVE_OWNER_TTY_REQUIRED")
+            self.assertFalse(state.exists())
+            now = datetime.now(timezone.utc)
+            expired = self.owner_policy_fixture(request, now=now, expires_delta=-timedelta(seconds=1))
+            revoked = self.owner_policy_fixture(request, now=now, revoked_at=now - timedelta(seconds=1))
+            with self.assertRaisesRegex(ValueError, "bounded one-shot scope"):
+                oneshot._validate_policy_object(expired, request, now)
+            with self.assertRaisesRegex(ValueError, "bounded one-shot scope"):
+                oneshot._validate_policy_object(revoked, request, now)
+            valid = self.owner_policy_fixture(request, now=now)
+            self.assertEqual(oneshot._validate_policy_object(valid, request, now).policy_id, valid.policy_id)
+
+    def test_owner_research_policy_resource_caps_reject_rehashed_external_and_persisted_overrides(self):
+        envelope, request = self.owner_research_fixture()
+        valid = self.owner_policy_fixture(request)
+
+        for field, value in (
+            ("maximum_runtime_seconds", 7200),
+            ("maximum_memory_mb", 4097),
+            ("maximum_storage_bytes", 100_000_000_001),
+        ):
+            with self.subTest(field=field):
+                fields = valid.model_dump(mode="json", exclude={"policy_id"})
+                fields[field] = value
+                fields["policy_id"] = standing_policy.policy_identity(fields)
+                oversized = standing_policy.P12StandingResearchPolicyV1.model_validate(fields)
+                # A correctly recomputed identity cannot authorize a looser policy.
+                with self.assertRaisesRegex(ValueError, "bounded one-shot scope"):
+                    oneshot._validate_policy_object(oversized, request)
+
+                with tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    request_path = root / "request.json"
+                    policy_path = root / "policy.json"
+                    request_path.write_text(json.dumps(envelope), encoding="utf-8")
+                    policy_path.write_text(oversized.model_dump_json(), encoding="utf-8")
+                    with patch.object(owner_request, "verify_current_frozen_inputs"):
+                        with self.assertRaisesRegex(ValueError, "bounded one-shot scope"):
+                            oneshot._validate_inputs(request_path, policy_path)
+
+                    state = root / "owner-state"
+                    state.mkdir()
+                    persisted = state / ("owner-research-" + request.request_id.removeprefix("sha256:") + ".policy.json")
+                    persisted.write_text(oversized.model_dump_json(), encoding="utf-8")
+                    with patch.object(oneshot.p12, "OWNER_RESEARCH_STATE_DIR", state), patch.object(
+                        owner_request, "verify_current_frozen_inputs"
+                    ):
+                        with self.assertRaisesRegex(ValueError, "bounded one-shot scope"):
+                            oneshot.run_one_shot(
+                                request_path, None, state, root / "runtime", root / "env", root / "secret"
+                            )
+
+    def test_owner_research_policy_materializes_only_after_exact_request_confirmation(self):
+        _, request = self.owner_research_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            state.mkdir()
+            with patch.object(oneshot.p12, "OWNER_RESEARCH_STATE_DIR", state):
+                with self.assertRaisesRegex(ValueError, "CONFIRMATION_MISMATCH"):
+                    oneshot._materialize_owner_research_policy_after_confirmation(
+                        request, state_dir=state, confirmation="approve",
+                    )
+                self.assertEqual(list(state.iterdir()), [])
+                phrase = f"AUTHORIZE $5 RESEARCH REQUEST {request.request_id}"
+                policy = oneshot._materialize_owner_research_policy_after_confirmation(
+                    request, state_dir=state, confirmation=phrase,
+                    now=datetime(2026, 10, 20, tzinfo=timezone.utc),
+                )
+                persisted = state / ("owner-research-" + request.request_id.removeprefix("sha256:") + ".policy.json")
+                self.assertTrue(persisted.is_file())
+                self.assertEqual(json.loads(persisted.read_text())["policy_id"], policy.policy_id)
+                self.assertEqual(policy.evidence_classification, "HUMAN_APPROVED")
+                self.assertEqual(policy.research_budget_identity, request.research_budget_identity)
+                self.assertEqual(policy.maximum_run_spend_usd, Decimal("5.00"))
+                self.assertEqual(policy.spending_limit_semantics, "TRACKED_SPEND_LIMIT_ONLY")
+                self.assertFalse(oneshot.p12._claim_file(state, request.request_id).exists())
+
+    def test_owner_research_duplicate_request_replays_without_second_dispatch(self):
+        envelope, request = self.owner_research_fixture()
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            with patch.object(oneshot.p12, "OWNER_RESEARCH_STATE_DIR", state), patch.object(
+                owner_request, "verify_current_frozen_inputs"
+            ):
+                first, first_code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("owner-research-policy"),
+                    owner_confirmed=True,
+                    target=lambda _: calls.append("dispatch") or completed_owner_evidence(),
+                )
+                duplicate, duplicate_code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("owner-research-policy"),
+                    owner_confirmed=True,
+                    target=lambda _: self.fail("duplicate request must not dispatch"),
+                )
+                replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=identity("owner-research-policy"),
+                )
+            self.assertEqual(first_code, 0)
+            self.assertEqual(first["dispatch_count_added"], 1)
+            self.assertEqual(duplicate["dispatch_count_added"], 0)
+            self.assertEqual(replay[0]["dispatch_count_added"], 0)
+            self.assertEqual(oneshot.p12._read_json_nofollow(oneshot.p12._claim_file(state, request.request_id))["request_origin"], "OWNER_AUTHORIZED_RESEARCH")
+        self.assertEqual(calls, ["dispatch"])
+
+    def test_global_owner_lock_blocks_cross_origin_different_state_and_budget(self):
+        owner_envelope, owner_request_value = self.owner_research_fixture()
+        bootstrap_envelope, bootstrap_request_value = self.bootstrap_fixture()
+        p4_envelope, p4_request_value, _ = owner_fixture()
+        self.assertNotEqual(owner_request_value.research_budget_identity, bootstrap_request_value.research_budget_identity)
+        self.assertNotEqual(owner_request_value.research_budget_identity, p4_request_value.research_budget_identity)
+        entered_target = threading.Event()
+        release_target = threading.Event()
+        dispatched = []
+        first_result = {}
+        first_state = None
+        second_state = None
+        third_state = None
+        locks_released = False
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first_state = root / "owner-research-state"
+            second_state = root / "bootstrap-state"
+            third_state = root / "p4-state"
+
+            def first_target(_attempt_id):
+                dispatched.append("owner-research")
+                entered_target.set()
+                if not release_target.wait(timeout=10):
+                    raise TimeoutError("test target was not released")
+                return completed_owner_evidence()
+
+            def run_first():
+                first_result["value"] = oneshot.p12.process_owner_oneshot(
+                    owner_envelope,
+                    state_dir=first_state,
+                    policy_id=identity("owner-policy"),
+                    owner_confirmed=True,
+                    target=first_target,
+                )
+
+            with patch.object(oneshot.p12, "OWNER_RESEARCH_STATE_DIR", first_state), patch.object(
+                oneshot.p12, "OWNER_BOOTSTRAP_STATE_DIR", second_state
+            ), patch.object(owner_request, "verify_current_frozen_inputs"), patch.object(
+                bootstrap, "verify_current_frozen_inputs"
+            ):
+                first_thread = threading.Thread(target=run_first)
+                first_thread.start()
+                self.assertTrue(entered_target.wait(timeout=10), "first owner worker did not enter its target")
+                second_result, second_code = oneshot.p12.process_owner_oneshot(
+                    bootstrap_envelope,
+                    state_dir=second_state,
+                    policy_id=identity("bootstrap-policy"),
+                    owner_confirmed=True,
+                    target=lambda _attempt_id: self.fail("cross-origin concurrent worker must not dispatch"),
+                )
+                third_result, third_code = oneshot.p12.process_owner_oneshot(
+                    p4_envelope,
+                    state_dir=third_state,
+                    policy_id=identity("p4-policy"),
+                    owner_confirmed=True,
+                    target=lambda _attempt_id: self.fail("P4 concurrent worker must not dispatch"),
+                )
+                release_target.set()
+                first_thread.join(timeout=10)
+                self.assertFalse(first_thread.is_alive(), "first owner worker did not finish")
+                locks_released = (
+                    not (first_state / "owner-oneshot-active.lock").exists()
+                    and not (second_state / "owner-oneshot-active.lock").exists()
+                    and not (third_state / "owner-oneshot-active.lock").exists()
+                    and not oneshot.p12.OWNER_ONESHOT_GLOBAL_LOCK.exists()
+                )
+
+        self.assertEqual(first_result["value"][1], 0)
+        self.assertEqual(second_code, oneshot.p12._EXIT_BLOCKED)
+        self.assertEqual(second_result["classification"], "BLOCKED_OWNER_ONESHOT_GLOBAL_CONCURRENT_RUN")
+        self.assertEqual(third_code, oneshot.p12._EXIT_BLOCKED)
+        self.assertEqual(third_result["classification"], "BLOCKED_OWNER_ONESHOT_GLOBAL_CONCURRENT_RUN")
+        self.assertEqual(dispatched, ["owner-research"])
+        self.assertTrue(locks_released)
+
+    def test_owner_research_unknown_dispatch_state_fails_closed_without_retry(self):
+        envelope, request = self.owner_research_fixture()
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "canonical"
+            with patch.object(oneshot.p12, "OWNER_RESEARCH_STATE_DIR", state), patch.object(
+                owner_request, "verify_current_frozen_inputs"
+            ):
+                failed, code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("owner-research-policy"),
+                    owner_confirmed=True,
+                    target=lambda _: calls.append("dispatch") or (_ for _ in ()).throw(RuntimeError("ambiguous")),
+                )
+                replay, replay_code = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=identity("owner-research-policy"),
+                )
+                restarted, restart_code = oneshot.p12.process_owner_oneshot(
+                    envelope, state_dir=state, policy_id=identity("owner-research-policy"),
+                    owner_confirmed=True,
+                    target=lambda _: self.fail("unknown dispatch state must not redispatch"),
+                )
+            self.assertNotEqual(code, 0)
+            self.assertNotEqual(replay_code, 0)
+            self.assertNotEqual(restart_code, 0)
+            self.assertIn("BLOCKED_OWNER_ONESHOT", failed["classification"])
+            self.assertIn("BLOCKED_OWNER_ONESHOT", replay["classification"])
+            self.assertTrue(oneshot.p12.OWNER_ONESHOT_GLOBAL_LOCK.is_file())
+            self.assertTrue((state / "owner-oneshot-active.lock").is_file())
+            self.assertIn("BLOCKED_OWNER_ONESHOT", restarted["classification"])
+        self.assertEqual(calls, ["dispatch"])
 
     def test_bootstrap_contract_is_content_addressed_without_p4_claim(self):
         envelope, request = self.bootstrap_fixture()
@@ -2025,6 +2357,7 @@ class OwnerOneShotTests(unittest.TestCase):
                 envelope, state_dir=state, policy_id=policy.policy_id,
                 owner_confirmed=True, target=lambda _: self.fail("concurrent attempt must not dispatch"),
             )
+            self.assertTrue(oneshot.p12.OWNER_ONESHOT_GLOBAL_LOCK.is_file())
         self.assertNotEqual(concurrent_code, 0)
         self.assertEqual(concurrent["classification"], "BLOCKED_OWNER_ONESHOT_CONCURRENT_RUN")
 
