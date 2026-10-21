@@ -49,7 +49,7 @@ function Write-MockForwardOutput([string]$Root, [string]$OutputId, [string]$Sess
 }
 
 $tests = 0
-$root = Join-Path ([IO.Path]::GetTempPath()) ('aq-forward-raw-daily-tests-' + [guid]::NewGuid().ToString('N'))
+$root = Join-Path (Join-Path $env:LOCALAPPDATA 'Temp') ('aq-forward-raw-daily-tests-' + [guid]::NewGuid().ToString('N'))
 $isolatedRoots = [System.Collections.Generic.List[string]]::new()
 function New-IsolatedForwardRawTestRoot([string]$Name) {
     $path = Join-Path ([IO.Path]::GetTempPath()) ('aq-forward-raw-daily-' + $Name + '-' + [guid]::NewGuid().ToString('N'))
@@ -333,18 +333,56 @@ finally { $m.ReleaseMutex(); $m.Dispose() }
         if (!$holder.WaitForExit(10000)) { $holder.Kill(); throw 'MUTEX_HOLDER_DID_NOT_EXIT' }
     }
 
+    $stablePathSample = 'C:\Program Files\PowerShell\7\pwsh.exe'
+    Assert-True (!(Test-ForwardRawDailyCodexTemporaryPath -Path $stablePathSample)) 'stable installation paths are not rejected based on the current Codex execution location'
+    $stableRunnerDirectory = Join-Path $root 'Stable Deployment & Owner Review'
+    $null = New-Item -ItemType Directory -Path $stableRunnerDirectory -Force
+    $stableRunner = Join-Path $stableRunnerDirectory 'Invoke-ForwardRawDaily.ps1'
+    Copy-Item -LiteralPath $runner -Destination $stableRunner
+    Copy-Item -LiteralPath (Join-Path (Split-Path $runner -Parent) 'Update-AlpacaQlibResearchData.ps1') -Destination $stableRunnerDirectory
+    Copy-Item -LiteralPath (Join-Path (Split-Path $runner -Parent) 'verify_alpaca_qlib_refresh.py') -Destination $stableRunnerDirectory
+    Assert-True (!(Test-ForwardRawDailyCodexTemporaryPath -Path $stableRunner)) 'stable-style runner path is not rejected merely because tests execute from a Codex worktree'
+    Assert-True ((Resolve-ForwardRawDailyTaskPlanPath -Path $stableRunner -Kind RunnerScript) -eq [IO.Path]::GetFullPath($stableRunner)) 'stable daily runner and same-directory dependencies resolve'
+    foreach ($temporaryPath in @(
+        'C:\CodexFixture\.codex\worktrees\task\pwsh.exe',
+        'C:\CodexFixture\.cache\codex-runtimes\runtime\pwsh.exe'
+    )) {
+        Assert-True (Test-ForwardRawDailyCodexTemporaryPath -Path $temporaryPath) "temporary path is recognized independent of the active worktree: $temporaryPath"
+    }
+
     $deploymentRoot = Join-Path $root 'Stable Deployment & Owner Review'
     $null = New-Item -ItemType Directory -Path $deploymentRoot -Force
     $plannedPwsh = Join-Path $deploymentRoot 'PowerShell 7\pwsh.exe'
     $plannedPwshDirectory = Split-Path $plannedPwsh -Parent
     $null = New-Item -ItemType Directory -Path $plannedPwshDirectory -Force
-    [IO.File]::WriteAllText($plannedPwsh, 'task-plan path fixture; not executed')
-    $plannedRunner = Join-Path $deploymentRoot 'Invoke ForwardRawDaily & Recovery.ps1'
-    [IO.File]::WriteAllText($plannedRunner, '# disabled TaskPlan path fixture')
-    $plan = [xml](New-ForwardRawDailyTaskPlan -DailyAt '17:30' -PowerShellExecutablePath $plannedPwsh -RunnerScriptPath $plannedRunner)
+    [IO.File]::WriteAllText($plannedPwsh, 'test substitute; deliberately not executable')
+    $plannedRunner = Join-Path $deploymentRoot 'Invoke-ForwardRawDaily.ps1'
+    [IO.File]::WriteAllText($plannedRunner, '# test path fixture; not a deployment')
+    [IO.File]::WriteAllText((Join-Path $deploymentRoot 'Update-AlpacaQlibResearchData.ps1'), '# test dependency')
+    [IO.File]::WriteAllText((Join-Path $deploymentRoot 'verify_alpaca_qlib_refresh.py'), '# test dependency')
+
+    Assert-True (Test-ForwardRawDailyPowerShell7Executable -Path $pwshExecutable) 'actual active PowerShell 7 executable passes bounded local version and edition probe'
+    try {
+        New-ForwardRawDailyTaskPlan -DailyAt '17:30' -PowerShellExecutablePath $plannedPwsh -RunnerScriptPath $plannedRunner | Out-Null
+        throw 'EXPECTED_FAKE_PWSH_REJECTION'
+    }
+    catch { Assert-True ($_.Exception.Message -match 'VERSION_PROBE_FAILED') 'existing fake pwsh.exe is not accepted as a deployable runtime' }
+    try {
+        Resolve-ForwardRawDailyTaskPlanPath -Path $plannedRunner -Kind RunnerScript | Out-Null
+        throw 'EXPECTED_FAKE_RUNNER_REJECTION'
+    }
+    catch { Assert-True ($_.Exception.Message -match 'RUNNER_CONTENT_NOT_RECOGNIZED') 'test runner fixture is not accepted as the actual daily entrypoint' }
+    try {
+        Resolve-ForwardRawDailyTaskPlanPath -Path 'C:\CodexFixture\.codex\worktrees\task\Invoke-ForwardRawDaily.ps1' -Kind RunnerScript | Out-Null
+        throw 'EXPECTED_CODEX_RUNNER_PATH_REJECTION'
+    }
+    catch { Assert-True ($_.Exception.Message -match 'CODEX_TEMPORARY_RUNNERSCRIPT_PATH_REJECTED') 'explicit Codex worktree runner path is rejected independently of active worktree location' }
+
+    # Serializer-only fixture: this XML check does not claim that its test paths are deployment-ready.
+    $plan = [xml](New-ForwardRawDailyTaskPlanXml -DailyAt '17:30' -ExecutablePath 'C:\Program Files\PowerShell 7\pwsh.exe' -ScriptPath $plannedRunner -UserSid ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value))
     $ns = [Xml.XmlNamespaceManager]::new($plan.NameTable)
     $ns.AddNamespace('t', 'http://schemas.microsoft.com/windows/2004/02/mit/task')
-    Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:Command', $ns).InnerText -eq [IO.Path]::GetFullPath($plannedPwsh)) 'TaskPlan command is the explicit absolute PowerShell 7 path'
+    Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:Command', $ns).InnerText -eq 'C:\Program Files\PowerShell 7\pwsh.exe') 'serialized XML command is the explicit absolute PowerShell 7 path'
     Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:Arguments', $ns).InnerText.Contains('"' + [IO.Path]::GetFullPath($plannedRunner) + '"')) 'TaskPlan arguments preserve the absolute runner path with spaces'
     Assert-True ($plan.SelectSingleNode('//t:Actions/t:Exec/t:WorkingDirectory', $ns).InnerText -eq [IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($plannedRunner))) 'TaskPlan working directory exists and is the runner directory'
     Assert-True ($plan.SelectSingleNode('//t:MultipleInstancesPolicy', $ns).InnerText -eq 'IgnoreNew') 'Task Scheduler uses native IgnoreNew'
@@ -355,19 +393,41 @@ finally { $m.ReleaseMutex(); $m.Dispose() }
     Assert-True ($plan.SelectSingleNode('//t:Triggers/t:CalendarTrigger/t:ScheduleByDay/t:DaysInterval', $ns).InnerText -eq '1') 'plan describes a daily trigger'
     $tests += 1
 
-    foreach ($invalid in @(
-        @{ exe = 'pwsh.exe'; runner = $plannedRunner; expected = 'PATH_MUST_BE_ABSOLUTE' },
-        @{ exe = (Join-Path $deploymentRoot 'missing\pwsh.exe'); runner = $plannedRunner; expected = 'FILE_MISSING' },
-        @{ exe = $pwshExecutable; runner = $plannedRunner; expected = 'CODEX_TEMPORARY_POWERSHELLEXECUTABLE_PATH_REJECTED' },
-        @{ exe = $plannedPwsh; runner = $runner; expected = 'CODEX_TEMPORARY_RUNNERSCRIPT_PATH_REJECTED' }
-    )) {
+    $invalidExecutablePaths = @(
+        @{ path = 'pwsh.exe'; expected = 'PATH_MUST_BE_ABSOLUTE' },
+        @{ path = (Join-Path $deploymentRoot 'missing\pwsh.exe'); expected = 'FILE_MISSING' },
+        @{ path = 'C:\CodexFixture\.cache\codex-runtimes\runtime\pwsh.exe'; expected = 'CODEX_TEMPORARY_POWERSHELLEXECUTABLE_PATH_REJECTED' },
+        @{ path = 'C:\CodexFixture\.codex\worktrees\task\pwsh.exe'; expected = 'CODEX_TEMPORARY_POWERSHELLEXECUTABLE_PATH_REJECTED' }
+    )
+    foreach ($invalid in $invalidExecutablePaths) {
         try {
-            New-ForwardRawDailyTaskPlan -DailyAt '17:30' -PowerShellExecutablePath $invalid.exe -RunnerScriptPath $invalid.runner | Out-Null
-            throw "EXPECTED_TASKPLAN_REJECTION:$($invalid.expected)"
+            Resolve-ForwardRawDailyTaskPlanPath -Path $invalid.path -Kind PowerShellExecutable | Out-Null
+            throw "EXPECTED_EXECUTABLE_PATH_REJECTION:$($invalid.expected)"
         }
-        catch { Assert-True ($_.Exception.Message -match $invalid.expected) "TaskPlan rejects invalid deployment path: $($invalid.expected)" }
+        catch { Assert-True ($_.Exception.Message -match $invalid.expected) "TaskPlan rejects invalid executable path: $($invalid.expected); actual=$($_.Exception.Message)" }
         $tests += 1
     }
+    [IO.File]::WriteAllText((Join-Path $deploymentRoot 'other-runner.ps1'), '# not the daily runner')
+    $invalidRunnerPaths = @(
+        @{ path = 'C:\CodexFixture\.codex\worktrees\task\Invoke-ForwardRawDaily.ps1'; expected = 'CODEX_TEMPORARY_RUNNERSCRIPT_PATH_REJECTED' },
+        @{ path = (Join-Path $deploymentRoot 'missing-runner.ps1'); expected = 'FILE_MISSING' },
+        @{ path = (Join-Path $deploymentRoot 'other-runner.ps1'); expected = 'RUNNER_MUST_BE_DAILY_RUNNER' },
+        @{ path = $plannedRunner; expected = 'RUNNER_CONTENT_NOT_RECOGNIZED' }
+    )
+    foreach ($invalid in $invalidRunnerPaths) {
+        try {
+            Resolve-ForwardRawDailyTaskPlanPath -Path $invalid.path -Kind RunnerScript | Out-Null
+            throw "EXPECTED_RUNNER_PATH_REJECTION:$($invalid.expected)"
+        }
+        catch { Assert-True ($_.Exception.Message -match $invalid.expected) "TaskPlan rejects invalid runner path: $($invalid.expected); actual=$($_.Exception.Message)" }
+        $tests += 1
+    }
+    try {
+        New-ForwardRawDailyTaskPlan -DailyAt '17:30' -PowerShellExecutablePath $pwshExecutable -RunnerScriptPath $stableRunner | Out-Null
+        throw 'EXPECTED_CODEX_RUNTIME_NOT_READY'
+    }
+    catch { Assert-True ($_.Exception.Message -match 'CODEX_TEMPORARY_POWERSHELLEXECUTABLE_PATH_REJECTED') 'active Codex runtime cannot be emitted as a deployable TaskPlan executable' }
+    $tests += 1
 
     $exitHarness = Join-Path $root 'probe-process-exit-code.ps1'
     @'

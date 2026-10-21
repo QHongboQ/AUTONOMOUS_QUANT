@@ -346,6 +346,40 @@ function Test-ForwardRawDailyCodexTemporaryPath {
     return $normalized -match '(?i)(?:^|\\)\.codex\\worktrees(?:\\|$)|(?:^|\\)\.cache\\codex-runtimes(?:\\|$)'
 }
 
+function Test-ForwardRawDailyPowerShell7Executable {
+    param([Parameter(Mandatory)][string]$Path)
+    $startInfo = [Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $Path
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    foreach ($argument in @('-NoLogo', '-NoProfile', '-NonInteractive', '-Command')) { $startInfo.ArgumentList.Add($argument) }
+    $startInfo.ArgumentList.Add('if ($PSEdition -ne ''Core'' -or $PSVersionTable.PSVersion.Major -lt 7) { exit 79 }; [Console]::Out.WriteLine("$PSEdition|$($PSVersionTable.PSVersion.Major)")')
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+    try {
+        if (!$process.Start()) { throw 'START_FAILED' }
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+        if (!$process.WaitForExit(10000)) {
+            $process.Kill()
+            $process.WaitForExit()
+            throw 'VERSION_PROBE_TIMEOUT'
+        }
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $null = $stderrTask.GetAwaiter().GetResult()
+        if ($process.ExitCode -ne 0 -or $stdout.Trim() -notmatch '^Core\|([7-9]|[1-9][0-9]+)$') {
+            throw 'VERSION_OR_EDITION_INVALID'
+        }
+        return $true
+    }
+    catch {
+        throw "TASK_PLAN_POWERSHELL_7_VERSION_PROBE_FAILED:$($_.Exception.GetType().Name)"
+    }
+    finally { $process.Dispose() }
+}
+
 function Resolve-ForwardRawDailyTaskPlanPath {
     param(
         [Parameter(Mandatory)][string]$Path,
@@ -359,8 +393,46 @@ function Resolve-ForwardRawDailyTaskPlanPath {
     if ($Kind -eq 'PowerShellExecutable' -and [IO.Path]::GetFileName($fullPath) -ine 'pwsh.exe') {
         throw 'TASK_PLAN_REQUIRES_POWERSHELL_7_PWSH_EXE'
     }
-    if ($Kind -eq 'RunnerScript' -and [IO.Path]::GetExtension($fullPath) -ine '.ps1') { throw 'TASK_PLAN_RUNNER_MUST_BE_POWERSHELL_SCRIPT' }
+    if ($Kind -eq 'PowerShellExecutable') { $null = Test-ForwardRawDailyPowerShell7Executable -Path $fullPath }
+    if ($Kind -eq 'RunnerScript') {
+        if ([IO.Path]::GetFileName($fullPath) -ine 'Invoke-ForwardRawDaily.ps1') { throw 'TASK_PLAN_RUNNER_MUST_BE_DAILY_RUNNER' }
+        $runnerDirectory = [IO.Path]::GetDirectoryName($fullPath)
+        foreach ($requiredFile in @('Update-AlpacaQlibResearchData.ps1', 'verify_alpaca_qlib_refresh.py')) {
+            if (!(Test-Path -LiteralPath (Join-Path $runnerDirectory $requiredFile) -PathType Leaf)) {
+                throw "TASK_PLAN_RUNNER_DEPENDENCY_MISSING:$requiredFile"
+            }
+        }
+        $runnerText = [IO.File]::ReadAllText($fullPath)
+        foreach ($requiredMarker in @('$script:ForwardRawDailyAnchorDate', 'ForwardRawDailyMaxMissingSessions', 'ForwardRawDailySource')) {
+            if (!$runnerText.Contains($requiredMarker)) { throw 'TASK_PLAN_RUNNER_CONTENT_NOT_RECOGNIZED' }
+        }
+    }
     return $fullPath
+}
+
+function New-ForwardRawDailyTaskPlanXml {
+    param(
+        [Parameter(Mandatory)][string]$DailyAt,
+        [Parameter(Mandatory)][string]$ExecutablePath,
+        [Parameter(Mandatory)][string]$ScriptPath,
+        [Parameter(Mandatory)][string]$UserSid
+    )
+    $triggerTime = [datetime]::ParseExact($DailyAt, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture)
+    $startBoundary = (Get-Date -Hour $triggerTime.Hour -Minute $triggerTime.Minute -Second 0).ToString('yyyy-MM-ddTHH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
+    $escapedUser = [Security.SecurityElement]::Escape($UserSid)
+    $escapedExecutable = [Security.SecurityElement]::Escape($ExecutablePath)
+    $escapedWorkingDirectory = [Security.SecurityElement]::Escape([IO.Path]::GetDirectoryName($ScriptPath))
+    $arguments = [Security.SecurityElement]::Escape('-NoLogo -NoProfile -File "' + $ScriptPath + '" -Mode Run')
+    return @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo><Description>Review-only plan for AQ ForwardRawOnly daily collection. Disabled; do not register without separate approval.</Description></RegistrationInfo>
+  <Triggers><CalendarTrigger><StartBoundary>$startBoundary</StartBoundary><Enabled>false</Enabled><ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay></CalendarTrigger></Triggers>
+  <Principals><Principal id="Author"><UserId>$escapedUser</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
+  <Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><StartWhenAvailable>false</StartWhenAvailable><RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable><Enabled>false</Enabled><ExecutionTimeLimit>PT1H</ExecutionTimeLimit></Settings>
+  <Actions Context="Author"><Exec><Command>$escapedExecutable</Command><Arguments>$arguments</Arguments><WorkingDirectory>$escapedWorkingDirectory</WorkingDirectory></Exec></Actions>
+</Task>
+"@
 }
 
 function New-ForwardRawDailyTaskPlan {
@@ -374,22 +446,7 @@ function New-ForwardRawDailyTaskPlan {
     $scriptPath = Resolve-ForwardRawDailyTaskPlanPath -Path $RunnerScriptPath -Kind RunnerScript
     $workingDirectory = [IO.Path]::GetDirectoryName($scriptPath)
     if (!(Test-Path -LiteralPath $workingDirectory -PathType Container)) { throw 'TASK_PLAN_WORKING_DIRECTORY_MISSING' }
-    $triggerTime = [datetime]::ParseExact($DailyAt, 'HH:mm', [Globalization.CultureInfo]::InvariantCulture)
-    $startBoundary = (Get-Date -Hour $triggerTime.Hour -Minute $triggerTime.Minute -Second 0).ToString('yyyy-MM-ddTHH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
-    $escapedUser = [Security.SecurityElement]::Escape($UserSid)
-    $escapedExecutable = [Security.SecurityElement]::Escape($executablePath)
-    $escapedWorkingDirectory = [Security.SecurityElement]::Escape($workingDirectory)
-    $arguments = [Security.SecurityElement]::Escape('-NoLogo -NoProfile -File "' + $scriptPath + '" -Mode Run')
-    return @"
-<?xml version="1.0" encoding="UTF-16"?>
-<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>Review-only plan for AQ ForwardRawOnly daily collection. Disabled; do not register without separate approval.</Description></RegistrationInfo>
-  <Triggers><CalendarTrigger><StartBoundary>$startBoundary</StartBoundary><Enabled>false</Enabled><ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay></CalendarTrigger></Triggers>
-  <Principals><Principal id="Author"><UserId>$escapedUser</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
-  <Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><StartWhenAvailable>false</StartWhenAvailable><RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable><Enabled>false</Enabled><ExecutionTimeLimit>PT1H</ExecutionTimeLimit></Settings>
-  <Actions Context="Author"><Exec><Command>$escapedExecutable</Command><Arguments>$arguments</Arguments><WorkingDirectory>$escapedWorkingDirectory</WorkingDirectory></Exec></Actions>
-</Task>
-"@
+    return New-ForwardRawDailyTaskPlanXml -DailyAt $DailyAt -ExecutablePath $executablePath -ScriptPath $scriptPath -UserSid $UserSid
 }
 
 function Get-ForwardRawDailyProcessExitCode {
