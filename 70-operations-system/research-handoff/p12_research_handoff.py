@@ -407,6 +407,278 @@ def _safe_relative_evidence_path(value: Any) -> bool:
     return not value.startswith("/") and all(part not in {"", ".", ".."} for part in parts)
 
 
+def _semantic_evidence_shape_valid(
+    value: Any, *, request_id: str, attempt_id: str, trace_manifest: dict[str, Any],
+) -> bool:
+    if (
+        not isinstance(trace_manifest, dict)
+        or not isinstance(trace_manifest.get("files"), list)
+    ):
+        return False
+    if not isinstance(value, dict) or value.get("status") not in {"OBSERVED", "PARTIAL", "UNAVAILABLE"}:
+        return False
+    payload = value.get("payload")
+    digest = value.get("sha256")
+    if payload is None:
+        return value.get("status") == "UNAVAILABLE" and digest is None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("format_version") != "P12_RDAGENT_SEMANTIC_EVIDENCE_V1"
+        or payload.get("request_id") != request_id
+        or payload.get("attempt_id") != attempt_id
+        or payload.get("upstream_release_sha") != "484776c211e4fbbeef03e0ec00d6bbee7362a4f4"
+        or payload.get("status") not in {"OBSERVED", "PARTIAL"}
+        or type(payload.get("trace_history_length")) is not int
+        or payload["trace_history_length"] < 1
+        or not isinstance(digest, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", digest)
+    ):
+        return False
+    try:
+        canonical = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+        ).encode("utf-8") + b"\n"
+    except (TypeError, ValueError):
+        return False
+    if hashlib.sha256(canonical).hexdigest() != digest:
+        return False
+    experiments = payload.get("experiments")
+    selected_id = payload.get("selected_experiment_identity_sha256")
+    if not isinstance(experiments, list):
+        return False
+    selected = None
+    seen_ids: set[str] = set()
+    history_indexes: list[int] = []
+    observed_workspace = {
+        item.get("relative_path"): item.get("sha256")
+        for item in trace_manifest.get("files", [])
+        if isinstance(item, dict)
+    }
+    for experiment in experiments:
+        if (
+            not isinstance(experiment, dict)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(experiment.get("identity_sha256", "")))
+            or not isinstance(experiment.get("hypothesis"), dict)
+            or not isinstance(experiment.get("tasks"), list)
+            or not experiment["tasks"]
+            or not isinstance(experiment.get("based_experiments"), list)
+            or not isinstance(experiment.get("lineage"), dict)
+        ):
+            return False
+        locator = experiment.get("trace_locator")
+        if (
+            not isinstance(locator, dict)
+            or type(locator.get("history_index")) is not int
+            or locator["history_index"] < 0
+            or locator["history_index"] >= payload["trace_history_length"]
+            or (history_indexes and locator["history_index"] <= history_indexes[-1])
+        ):
+            return False
+        history_indexes.append(locator["history_index"])
+        hypothesis = experiment["hypothesis"]
+        field_hashes = hypothesis.get("field_sha256s")
+        field_names = hypothesis.get("field_names")
+        if (
+            not isinstance(hypothesis.get("type"), str)
+            or not isinstance(field_names, list)
+            or field_names != sorted(set(field_names))
+            or not isinstance(field_hashes, dict)
+            or sorted(field_hashes) != field_names
+            or any(not re.fullmatch(r"[0-9a-f]{64}", str(item)) for item in field_hashes.values())
+            or hashlib.sha256(json.dumps(
+                {"type": hypothesis["type"], "field_sha256s": field_hashes},
+                sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() != hypothesis.get("content_sha256")
+        ):
+            return False
+        seen_ids.add(experiment["identity_sha256"])
+        if experiment["identity_sha256"] == selected_id:
+            selected = experiment
+        for task in experiment["tasks"]:
+            if (
+                not isinstance(task, dict)
+                or task.get("branch") not in {"factor", "model"}
+                or not isinstance(task.get("type"), str)
+                or not isinstance(task.get("field_names"), list)
+                or task.get("field_names") != sorted(set(task.get("field_names")))
+                or not isinstance(task.get("field_sha256s"), dict)
+                or sorted(task["field_sha256s"]) != task["field_names"]
+                or any(not re.fullmatch(r"[0-9a-f]{64}", str(item)) for item in task["field_sha256s"].values())
+                or hashlib.sha256(json.dumps(
+                    {"type": task["type"], "field_sha256s": task["field_sha256s"]},
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != task.get("content_sha256")
+            ):
+                return False
+            task_identity = {
+                "type": task["type"], "field_names": task["field_names"],
+                "field_sha256s": task["field_sha256s"], "content_sha256": task["content_sha256"],
+                "branch": task["branch"],
+            }
+            if hashlib.sha256(json.dumps(
+                task_identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() != task.get("identity_sha256"):
+                return False
+        template = experiment.get("experiment_template")
+        if (
+            not isinstance(template, dict)
+            or template.get("status") not in {"OBSERVED", "UNAVAILABLE"}
+            or not isinstance(template.get("files"), list)
+        ):
+            return False
+        if template["status"] == "OBSERVED":
+            template_files = []
+            prior_template_path = ""
+            for item in template["files"]:
+                if (
+                    not isinstance(item, dict)
+                    or not _safe_relative_evidence_path(item.get("relative_path"))
+                    or item["relative_path"] <= prior_template_path
+                    or not _safe_relative_evidence_path(item.get("workspace_relative_path"))
+                    or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                    or type(item.get("size_bytes")) is not int or item["size_bytes"] < 0
+                    or observed_workspace.get(item["workspace_relative_path"]) != item["sha256"]
+                ):
+                    return False
+                prior_template_path = item["relative_path"]
+                template_files.append({
+                    key: item[key] for key in ("relative_path", "size_bytes", "sha256")
+                })
+            stable_template = {
+                "task_identity_sha256": template.get("task_identity_sha256"),
+                "files": template_files,
+            }
+            if (
+                not isinstance(template.get("type"), str)
+                or not template_files
+                or (template.get("task_identity_sha256") is not None and
+                    not re.fullmatch(r"[0-9a-f]{64}", str(template.get("task_identity_sha256"))))
+                or not re.fullmatch(r"[0-9a-f]{64}", str(template.get("identity_sha256", "")))
+                or hashlib.sha256(json.dumps(
+                    stable_template, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != template["identity_sha256"]
+            ):
+                return False
+        elif template.get("identity_sha256") is not None or template["files"]:
+            return False
+        for based in experiment["based_experiments"]:
+            if (
+                not isinstance(based, dict)
+                or not re.fullmatch(r"[0-9a-f]{64}", str(based.get("identity_sha256", "")))
+                or (based.get("task_identity_sha256") is not None and
+                    not re.fullmatch(r"[0-9a-f]{64}", str(based.get("task_identity_sha256"))))
+                or not isinstance(based.get("files"), list)
+            ):
+                return False
+            based_files = []
+            for item in based["files"]:
+                if (
+                    not isinstance(item, dict)
+                    or not _safe_relative_evidence_path(item.get("relative_path"))
+                    or not _safe_relative_evidence_path(item.get("workspace_relative_path"))
+                    or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                    or type(item.get("size_bytes")) is not int or item["size_bytes"] < 0
+                    or observed_workspace.get(item["workspace_relative_path"]) != item["sha256"]
+                ):
+                    return False
+                based_files.append({key: item[key] for key in ("relative_path", "size_bytes", "sha256")})
+            based_identity = {
+                "task_identity_sha256": based.get("task_identity_sha256"),
+                "files": based_files,
+            }
+            if hashlib.sha256(json.dumps(
+                based_identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() != based["identity_sha256"]:
+                return False
+        lineage = experiment["lineage"]
+        if lineage.get("status") == "OBSERVED":
+            parents = lineage.get("parent_experiment_ids")
+            based_ids = [item["identity_sha256"] for item in experiment["based_experiments"]]
+            if (
+                not isinstance(parents, list)
+                or any(parent not in seen_ids for parent in parents)
+                or not re.fullmatch(r"[0-9a-f]{64}", str(lineage.get("identity_sha256", "")))
+                or hashlib.sha256(json.dumps(
+                    {"parent_experiment_identity_sha256s": parents,
+                     "based_experiment_identity_sha256s": based_ids},
+                    sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                ).encode("utf-8")).hexdigest() != lineage.get("identity_sha256")
+            ):
+                return False
+        elif lineage.get("status") != "UNAVAILABLE":
+            return False
+        generated = experiment.get("generated_code")
+        if not isinstance(generated, dict) or generated.get("status") not in {"OBSERVED", "UNAVAILABLE"}:
+            return False
+        files = generated.get("files")
+        if not isinstance(files, list) or generated.get("status") == "OBSERVED" and not files:
+            return False
+        stable_code_files = []
+        for item in files:
+            if (
+                not isinstance(item, dict)
+                or not _safe_relative_evidence_path(item.get("relative_path"))
+                or not _safe_relative_evidence_path(item.get("workspace_relative_path"))
+                or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                or type(item.get("size_bytes")) is not int
+                or item["size_bytes"] < 0
+                or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("task_identity_sha256", "")))
+                or observed_workspace.get(item["workspace_relative_path"]) != item["sha256"]
+            ):
+                return False
+            stable_code_files.append({
+                key: item[key] for key in
+                ("task_identity_sha256", "relative_path", "size_bytes", "sha256")
+            })
+        stable_code_files.sort(key=lambda entry: (
+            entry["task_identity_sha256"] or "", entry["relative_path"], entry["sha256"]
+        ))
+        if files:
+            if hashlib.sha256(json.dumps(
+                stable_code_files, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() != generated.get("manifest_sha256"):
+                return False
+        stable_experiment = {
+            "type": experiment.get("type"),
+            "hypothesis_sha256": hypothesis.get("content_sha256"),
+            "task_identity_sha256s": [task.get("identity_sha256") for task in experiment["tasks"]],
+            "experiment_template_identity_sha256": template.get("identity_sha256"),
+            "based_experiment_identity_sha256s": [
+                item.get("identity_sha256") for item in experiment["based_experiments"]
+            ],
+            "generated_code_manifest_sha256": generated.get("manifest_sha256"),
+            "feature_inputs_sha256": experiment.get("feature_inputs_sha256"),
+        }
+        if (
+            not isinstance(stable_experiment["type"], str)
+            or not re.fullmatch(r"[0-9a-f]{64}", str(stable_experiment["feature_inputs_sha256"] or ""))
+            or hashlib.sha256(json.dumps(
+                stable_experiment, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest() != experiment["identity_sha256"]
+        ):
+            return False
+    if selected_id is not None and selected is None:
+        return False
+    if payload.get("status") == "OBSERVED" and history_indexes != list(range(payload["trace_history_length"])):
+        return False
+    if selected_id is not None:
+        if selected is None or selected.get("trace_locator", {}).get("history_index") != payload["trace_history_length"] - 1:
+            return False
+    elif payload.get("status") != "PARTIAL" or payload["trace_history_length"] - 1 in history_indexes:
+        return False
+    binding = payload.get("qlib_recorder_binding")
+    if not isinstance(binding, dict) or binding.get("status") != "SEMANTIC_BINDING_PARTIAL":
+        return False
+    expected_status = (
+        "OBSERVED"
+        if payload.get("status") == "OBSERVED" and selected is not None
+        and selected.get("generated_code", {}).get("status") == "OBSERVED"
+        and selected.get("experiment_template", {}).get("status") == "OBSERVED"
+        else "PARTIAL"
+    )
+    return value.get("status") == expected_status
+
+
 def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
     qlib = value.get("qlib")
     rdagent = value.get("rdagent")
@@ -491,6 +763,41 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
         ).encode("utf-8")
         if hashlib.sha256(canonical_trace).hexdigest() != trace.get("manifest_sha256"):
             return False
+    workspace_manifest = rdagent.get("workspace_manifest")
+    if workspace_manifest is not None:
+        if (
+            not isinstance(workspace_manifest, dict)
+            or workspace_manifest.get("status") not in {"OBSERVED", "UNAVAILABLE"}
+            or not isinstance(workspace_manifest.get("files"), list)
+        ):
+            return False
+        workspace_files = workspace_manifest["files"]
+        prior_workspace_path = ""
+        for item in workspace_files:
+            if (
+                not isinstance(item, dict)
+                or not _safe_relative_evidence_path(item.get("relative_path"))
+                or item["relative_path"] <= prior_workspace_path
+                or not re.fullmatch(r"[0-9a-f]{64}", str(item.get("sha256", "")))
+                or type(item.get("size_bytes")) is not int
+                or item["size_bytes"] < 0
+            ):
+                return False
+            prior_workspace_path = item["relative_path"]
+        if workspace_manifest["status"] == "OBSERVED":
+            if not workspace_files:
+                return False
+            canonical_workspace = json.dumps(
+                workspace_files, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ).encode("utf-8")
+            if hashlib.sha256(canonical_workspace).hexdigest() != workspace_manifest.get("manifest_sha256"):
+                return False
+    semantic = rdagent.get("semantic_evidence")
+    if semantic is not None and not _semantic_evidence_shape_valid(
+        semantic, request_id=value.get("request_id", ""), attempt_id=value.get("attempt_id", ""),
+        trace_manifest=workspace_manifest,
+    ):
+        return False
     identity = effective.get("identity")
     llm_status = value.get("llm_evidence_status_observed")
     llm_digest = value.get("llm_evidence_sha256")
@@ -520,6 +827,8 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
             and research_identity.get("task_semantics", {}).get("status") == "OBSERVED"
             and research_identity.get("experiment_lineage", {}).get("status") == "OBSERVED"
             and research_identity.get("generated_code", {}).get("semantic_binding") == "OBSERVED"
+            and isinstance(research_identity.get("qlib_recorder_binding"), dict)
+            and research_identity["qlib_recorder_binding"].get("status") == "OBSERVED"
             and trace["status"] == "OBSERVED"
             and effective["status"] == "OBSERVED"
             and llm_status == "COMPLETE"

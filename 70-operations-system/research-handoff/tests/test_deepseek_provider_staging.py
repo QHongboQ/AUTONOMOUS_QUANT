@@ -54,7 +54,7 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn("profiles: [p12-owner-oneshot]", worker)
         self.assertIn("networks: [worker_proxy]", worker)
         self.assertNotIn("provider_egress", worker)
-        self.assertIn('command: ["fin_quant", "--loop-n", "1"]', worker)
+        self.assertIn('command: ["python", "/opt/aq/p3/binding/aq_rdagent_semantic_bridge.py", "--loop-n", "1"]', worker)
         self.assertIn('LITELLM_CHAT_MAX_TOKENS: "8192"', worker)
         config = (ROOT / "docker-rdagent-smoke" / "config.deepseek-staging.yaml").read_text()
         self.assertIn('db: "1"', config)
@@ -134,7 +134,8 @@ class DeepSeekProviderStagingTests(unittest.TestCase):
         self.assertIn("create_host_path: false", worker)
         self.assertIn("test -f /workspace/p12-attempt.json", worker)
         self.assertIn("owner-scoped paid Proxy key required", worker)
-        self.assertIn('exec rdagent "$@"', worker)
+        self.assertIn('exec "$@"', worker)
+        self.assertNotIn('exec rdagent "$@"', worker)
 
 
 if __name__ == "__main__":

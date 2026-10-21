@@ -11,13 +11,15 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 HANDOFF = ROOT / "70-operations-system/research-handoff"
 SMOKE = HANDOFF / "docker-rdagent-smoke"
 P4_DIR = ROOT / "40-certification-system/champion-challenger/p4-residual-thin-policy"
-for directory in (str(P4_DIR), str(HANDOFF), str(SMOKE)):
+BINDING_DIR = ROOT / "30-research-system/rd-agent/binding"
+for directory in (str(P4_DIR), str(HANDOFF), str(SMOKE), str(BINDING_DIR)):
     if directory not in sys.path:
         sys.path.insert(0, directory)
 
@@ -27,6 +29,7 @@ import owner_bootstrap_request as bootstrap  # noqa: E402
 import owner_oneshot_proxy_control as proxy_control  # noqa: E402
 import docker_rdagent_target  # noqa: E402
 import p12_mlflow_evidence as mlflow_evidence  # noqa: E402
+import aq_rdagent_semantic_bridge as semantic_bridge  # noqa: E402
 import standing_policy  # noqa: E402
 from native_experiment_budget import (  # noqa: E402
     OWNER_ONESHOT_MODELS,
@@ -1293,6 +1296,121 @@ class OwnerOneShotTests(unittest.TestCase):
             self.assertEqual(symlink_result["rdagent"]["trace_manifest"]["status"], "UNAVAILABLE")
             self.assertIn("SYMLINK", symlink_result["rdagent"]["trace_manifest"]["reason"])
 
+    def test_semantic_bridge_identity_is_bound_to_request_attempt_and_recorder_link_stays_partial(self):
+        request_id = identity("semantic-evidence-request")
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspaces"
+            source = root / "workspace-1"
+            source.mkdir(parents=True)
+            code = "feature = 'close momentum'\n"
+            (source / "factor.py").write_bytes(code.encode("utf-8"))
+
+            class FactorTask:
+                __module__ = "rdagent.components.coder.factor_coder.factor"
+                pass
+
+            task = FactorTask()
+            task.name = "synthetic-factor"
+            task.version = 1
+            task.description = "synthetic"
+            task.base_code = None
+            task.user_instructions = None
+            task.factor_name = "synthetic-factor"
+            task.factor_formulation = "$close"
+            task.variables = {"close": "$close"}
+            task.factor_resources = None
+            task.factor_implementation = False
+
+            class Hypothesis:
+                pass
+
+            hypothesis = Hypothesis()
+            hypothesis.hypothesis = "synthetic"
+            hypothesis.reason = "synthetic"
+            hypothesis.concise_reason = "synthetic"
+            hypothesis.concise_observation = "synthetic"
+            hypothesis.concise_justification = "synthetic"
+            hypothesis.concise_knowledge = "synthetic"
+            hypothesis.action = "factor"
+
+            class Workspace:
+                pass
+
+            workspace = Workspace()
+            workspace.target_task = task
+            workspace.workspace_path = source
+            workspace.file_dict = {"factor.py": code}
+            template_path = source / "template"
+            template_path.mkdir()
+            template_bytes = b"provider: pinned-qlib-template\n"
+            (template_path / "conf_baseline.yaml").write_bytes(template_bytes)
+            template_workspace = Workspace()
+            template_workspace.target_task = None
+            template_workspace.workspace_path = template_path
+            template_workspace.file_dict = {"conf_baseline.yaml": template_bytes.decode("utf-8")}
+
+            class Experiment:
+                pass
+
+            experiment = Experiment()
+            experiment.hypothesis = hypothesis
+            experiment.sub_tasks = [task]
+            experiment.sub_workspace_list = [workspace]
+            experiment.experiment_workspace = template_workspace
+            experiment.based_experiments = []
+            experiment.plan = {"features": {"close": "$close"}}
+            experiment.base_features = {"close": "$close"}
+            experiment.base_feature_codes = {}
+
+            payload = semantic_bridge.capture_trace_semantics(
+                SimpleNamespace(hist=[(experiment, None)], dag_parent=[()]),
+                request_id=request_id, attempt_id=attempt_id, workspace_root=root,
+            )
+            workspace_file = source / "factor.py"
+            workspace_manifest = {
+                "status": "OBSERVED",
+                "files": [
+                    {
+                        "relative_path": "workspace-1/factor.py",
+                        "size_bytes": workspace_file.stat().st_size,
+                        "sha256": hashlib.sha256(workspace_file.read_bytes()).hexdigest(),
+                    },
+                    {
+                        "relative_path": "workspace-1/template/conf_baseline.yaml",
+                        "size_bytes": (template_path / "conf_baseline.yaml").stat().st_size,
+                        "sha256": hashlib.sha256((template_path / "conf_baseline.yaml").read_bytes()).hexdigest(),
+                    },
+                ],
+            }
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode() + b"\n"
+        digest = hashlib.sha256(canonical).hexdigest()
+        bound = {"status": "OBSERVED", "sha256": digest, "payload": payload}
+        self.assertTrue(oneshot.p12._semantic_evidence_shape_valid(
+            bound, request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
+        ))
+        self.assertTrue(docker_rdagent_target._semantic_workspace_files_match(payload, workspace_manifest))
+        mismatched_workspace = json.loads(json.dumps(payload))
+        mismatched_workspace["experiments"][0]["experiment_template"]["files"][0]["sha256"] = "0" * 64
+        self.assertFalse(docker_rdagent_target._semantic_workspace_files_match(
+            mismatched_workspace, workspace_manifest,
+        ))
+        mismatched = dict(payload, attempt_id="different-attempt")
+        self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+            {"status": "OBSERVED", "sha256": digest, "payload": mismatched},
+            request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
+        ))
+        unproven_pair = json.loads(json.dumps(payload))
+        unproven_pair["qlib_recorder_binding"]["status"] = "OBSERVED"
+        unproven_canonical = json.dumps(
+            unproven_pair, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode() + b"\n"
+        self.assertFalse(oneshot.p12._semantic_evidence_shape_valid(
+            {"status": "OBSERVED", "sha256": hashlib.sha256(unproven_canonical).hexdigest(),
+             "payload": unproven_pair},
+            request_id=request_id, attempt_id=attempt_id, trace_manifest=workspace_manifest,
+        ))
+
     def test_native_research_evidence_terminal_hash_binding_and_replay_tamper_rejection(self):
         request_id = identity("terminal-native-evidence")
         attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
@@ -1402,7 +1520,8 @@ class OwnerOneShotTests(unittest.TestCase):
             inspection = {
                 "Image": PINNED_FINQUANT_IMAGE_ID,
                 "Config": {"Image": PINNED_FINQUANT_IMAGE, "Entrypoint": entrypoint,
-                           "Cmd": ["fin_quant", "--loop-n", "1"], "User": "10001:10001",
+                           "Cmd": ["python", docker_rdagent_target._SEMANTIC_BRIDGE_CONTAINER_PATH,
+                                   "--loop-n", "1"], "User": "10001:10001",
                            "Env": environment},
                 "State": {"Status": "exited", "ExitCode": 0},
                 "HostConfig": {"ReadonlyRootfs": True},
@@ -1411,6 +1530,9 @@ class OwnerOneShotTests(unittest.TestCase):
                     for target, source in FINQUANT_DATA_MOUNTS.items()
                 ] + [
                     {"Destination": "/workspace", "Source": str(output.resolve()), "RW": True, "Type": "bind"},
+                    {"Destination": docker_rdagent_target._SEMANTIC_BRIDGE_CONTAINER_PATH,
+                     "Source": str(docker_rdagent_target._SEMANTIC_BRIDGE_HOST_PATH.resolve()),
+                     "RW": False, "Type": "bind"},
                     {"Destination": "/qlib-artifacts", "Name": "aq-p12-owner-artifacts-0123456789abcdef", "Source": "/var/lib/docker/volumes/aq-p12-owner-artifacts-0123456789abcdef/_data", "RW": True, "Type": "volume"},
                 ],
                 "NetworkSettings": {"Networks": {PERSISTENT_LITELLM_NETWORK: {}}},
@@ -1421,6 +1543,7 @@ class OwnerOneShotTests(unittest.TestCase):
                 expected_artifact_volume="aq-p12-owner-artifacts-0123456789abcdef",
             )
             self.assertEqual(observed["return_code"], 0)
+            self.assertTrue(observed["semantic_bridge_mount_valid"])
             bad_name = json.loads(json.dumps(inspection))
             bad_name["Mounts"][-1]["Name"] = "wrong-volume"
             with self.assertRaises(Exception):
@@ -1450,7 +1573,8 @@ class OwnerOneShotTests(unittest.TestCase):
     def test_compose_worker_uses_full_loop_pinned_proxy_and_static_token_cap(self):
         compose = (SMOKE / "compose.deepseek-staging.yaml").read_text()
         worker = compose.split("  rdagent-owner-oneshot-worker:", 1)[1].split("secrets:", 1)[0]
-        self.assertIn('command: ["fin_quant", "--loop-n", "1"]', worker)
+        self.assertIn('command: ["python", "/opt/aq/p3/binding/aq_rdagent_semantic_bridge.py", "--loop-n", "1"]', worker)
+        self.assertIn("aq_rdagent_semantic_bridge.py", worker)
         self.assertNotIn("--step-n", worker)
         self.assertIn('LITELLM_CHAT_MAX_TOKENS: "8192"', worker)
         self.assertIn('LITELLM_CHAT_MODEL_MAP: "{}"', worker)
