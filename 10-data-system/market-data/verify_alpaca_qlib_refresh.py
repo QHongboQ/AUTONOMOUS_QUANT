@@ -12,7 +12,7 @@ import os
 import pathlib
 import re
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import numpy as np
@@ -241,6 +241,47 @@ def last_completed_xnys_session(now_utc: str) -> dict:
     return {**base, "status": status, "session": session.strftime("%Y-%m-%d"), "close_utc": close.isoformat().replace("+00:00", "Z")}
 
 
+def completed_xnys_sessions(start_date: str, now_utc: str, close_buffer_minutes: int = 15) -> dict:
+    """List anchored XNYS sessions whose scheduled close plus buffer has passed."""
+    try:
+        start = date.fromisoformat(start_date)
+        now = datetime.fromisoformat(now_utc.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("XNYS_SESSION_RANGE_INVALID") from exc
+    if start.isoformat() != start_date:
+        raise ValueError("XNYS_SESSION_START_DATE_INVALID")
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("XNYS_NOW_UTC_MUST_BE_TIMEZONE_AWARE")
+    if not 0 <= close_buffer_minutes <= 120:
+        raise ValueError("XNYS_CLOSE_BUFFER_MINUTES_INVALID")
+    now = now.astimezone(timezone.utc)
+    market_day = now.astimezone(ZoneInfo("America/New_York")).date()
+    if start > market_day:
+        sessions: list[str] = []
+    else:
+        import exchange_calendars as xcals
+
+        # Keep the calendar's supported range beyond the local market date; on
+        # weekends/holidays the requested end is not itself an XNYS session.
+        calendar = xcals.get_calendar("XNYS", start=start.isoformat())
+        sessions = []
+        for session in calendar.sessions_in_range(start.isoformat(), market_day.isoformat()):
+            close = calendar.session_close(session).to_pydatetime().astimezone(timezone.utc)
+            if close + timedelta(minutes=close_buffer_minutes) <= now:
+                sessions.append(session.strftime("%Y-%m-%d"))
+    return {
+        "calendar": "XNYS",
+        "package": "exchange_calendars",
+        "version": importlib.metadata.version("exchange-calendars"),
+        "status": "SESSIONS_READY" if sessions else "NO_COMPLETED_SESSIONS",
+        "start_date": start.isoformat(),
+        "market_date": market_day.isoformat(),
+        "close_buffer_minutes": close_buffer_minutes,
+        "observed_at_utc": now.isoformat().replace("+00:00", "Z"),
+        "sessions": sessions,
+    }
+
+
 def _read_calendar(path: pathlib.Path, start: str, end: str) -> list[str]:
     calendar = json.loads(path.read_text(encoding="utf-8"))
     if calendar.get("calendar") != "XNYS" or calendar.get("package") != "exchange_calendars":
@@ -441,6 +482,10 @@ def main(argv: list[str] | None = None) -> int:
     calendar_parser.add_argument("--end", required=True)
     session_parser = sub.add_parser("xnys-last-completed")
     session_parser.add_argument("--now-utc", required=True)
+    sessions_parser = sub.add_parser("xnys-completed-sessions")
+    sessions_parser.add_argument("--start-date", required=True)
+    sessions_parser.add_argument("--now-utc", required=True)
+    sessions_parser.add_argument("--close-buffer-minutes", type=int, default=15)
     forward_parser = sub.add_parser("forward-raw-only")
     forward_parser.add_argument("--raw", type=pathlib.Path, required=True)
     forward_parser.add_argument("--output-id", required=True)
@@ -453,6 +498,8 @@ def main(argv: list[str] | None = None) -> int:
             result = make_calendar(args.start, args.end)
         elif args.command == "xnys-last-completed":
             result = last_completed_xnys_session(args.now_utc)
+        elif args.command == "xnys-completed-sessions":
+            result = completed_xnys_sessions(args.start_date, args.now_utc, args.close_buffer_minutes)
         elif args.command == "prepare":
             result = prepare(args.raw, args.csv, args.calendar, args.start, args.end)
         elif args.command == "verify":
