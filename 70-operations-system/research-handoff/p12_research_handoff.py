@@ -218,7 +218,7 @@ def _owner_litellm_evidence_path(request_id: str, attempt_id: str) -> tuple[Path
 
 
 def _read_owner_litellm_evidence(
-    request_id: str, attempt_id: str, budget_identity: str,
+    request_id: str, attempt_id: str, budget_identity: str, *, verify_runtime_identity: bool = True,
 ) -> tuple[dict[str, Any], str, str]:
     """Read and hash the one expected immutable evidence file without following symlinks."""
     path, relative = _owner_litellm_evidence_path(request_id, attempt_id)
@@ -260,15 +260,33 @@ def _read_owner_litellm_evidence(
         raise ValueError("P12 evidence key identity malformed")
     if value["evidence_status"] == "COMPLETE":
         calls = value.get("calls")
-        config_path = REPO_ROOT / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
-        expected_config_sha256 = hashlib.sha256(config_path.read_bytes()).hexdigest()
+        # Runtime identity is compared to the currently approved deployment only
+        # when first sealing a terminal. Replays verify the immutable values that
+        # were sealed in the evidence file and its terminal-bound digest, without
+        # making historical evidence depend on today's config/image/model list.
+        runtime_identity = (
+            isinstance(value.get("proxy_config_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", value["proxy_config_sha256"]) is not None
+            and value.get("litellm_proxy_version") == "1.105.1"
+            and isinstance(value.get("litellm_proxy_image"), str)
+            and bool(value["litellm_proxy_image"])
+            and isinstance(value.get("configured_allowed_models"), list)
+            and bool(value["configured_allowed_models"])
+            and all(isinstance(model, str) and model for model in value["configured_allowed_models"])
+        )
+        if verify_runtime_identity:
+            config_path = REPO_ROOT / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+            expected_config_sha256 = hashlib.sha256(config_path.read_bytes()).hexdigest()
+            runtime_identity = (
+                runtime_identity
+                and value.get("proxy_config_sha256") == expected_config_sha256
+                and value.get("litellm_proxy_image") == OWNER_LITELLM_PROXY_IMAGE
+                and value.get("configured_allowed_models") == list(OWNER_ONESHOT_MODELS)
+            )
         if (
             value.get("native_experiment_user_id") != expected_user_id
             or value.get("scoped_key_identity") is None
-            or value.get("proxy_config_sha256") != expected_config_sha256
-            or value.get("litellm_proxy_version") != "1.105.1"
-            or value.get("litellm_proxy_image") != OWNER_LITELLM_PROXY_IMAGE
-            or value.get("configured_allowed_models") != list(OWNER_ONESHOT_MODELS)
+            or not runtime_identity
             or not isinstance(calls, list)
             or not calls
             or type(value.get("call_count")) is not int
@@ -359,7 +377,8 @@ def _verify_terminal_owner_litellm_binding(terminal: dict[str, Any]) -> bool:
         return False
     try:
         evidence, expected_relative, observed_digest = _read_owner_litellm_evidence(
-            terminal["request_id"], terminal["attempt_id"], terminal["research_budget_identity"]
+            terminal["request_id"], terminal["attempt_id"], terminal["research_budget_identity"],
+            verify_runtime_identity=False,
         )
         return (
             relative == expected_relative

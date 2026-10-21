@@ -59,6 +59,33 @@ def completed_owner_evidence(return_code: int = 0):
     }
 
 
+def complete_litellm_evidence_payload(request_id: str, attempt_id: str, budget_identity: str):
+    config_path = oneshot.p12.REPO_ROOT / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+    return {
+        "format_version": "P12_LITELLM_CALL_EVIDENCE_V1",
+        "request_id": request_id,
+        "attempt_id": attempt_id,
+        "evidence_status": "COMPLETE",
+        "native_experiment_user_id": oneshot.p12.experiment_user_id(budget_identity),
+        "scoped_key_identity": identity("scoped-key"),
+        "proxy_config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        "litellm_proxy_version": "1.105.1",
+        "litellm_proxy_image": oneshot.p12.OWNER_LITELLM_PROXY_IMAGE,
+        "configured_allowed_models": list(proxy_control.OWNER_ONESHOT_MODELS),
+        "calls": [{
+            "spend_log_request_id": "native-row-1", "litellm_call_id": "native-call-1",
+            "attempted_fallbacks": 0, "attempted_retries": 0,
+            "status": "success", "call_type": "completion",
+            "routed_model_group": "deepseek/deepseek-flash",
+            "provider_model_identity_kind": "UNAVAILABLE",
+            "prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5,
+            "spend_usd": "0.25",
+        }],
+        "call_count": 1, "total_spend_usd": "0.25", "spend_logs_total_usd": "0.25",
+        "missing_fields": [],
+    }
+
+
 def owner_fixture(now: datetime | None = None):
     now = now or datetime.now(timezone.utc)
     sources = (identity("real-source-a"),)
@@ -661,30 +688,9 @@ class OwnerOneShotTests(unittest.TestCase):
             def target(attempt_id):
                 output = root / request.request_id.removeprefix("sha256:") / attempt_id
                 output.mkdir(parents=True)
-                payload = {
-                    "format_version": "P12_LITELLM_CALL_EVIDENCE_V1",
-                    "request_id": request.request_id,
-                    "attempt_id": attempt_id,
-                    "native_experiment_user_id": oneshot.p12.experiment_user_id(request.research_budget_identity),
-                    "scoped_key_identity": identity("scoped-key"),
-                    "proxy_config_sha256": hashlib.sha256(
-                        (oneshot.p12.REPO_ROOT / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml").read_bytes()
-                    ).hexdigest(),
-                    "litellm_proxy_version": "1.105.1",
-                    "litellm_proxy_image": oneshot.p12.OWNER_LITELLM_PROXY_IMAGE,
-                    "configured_allowed_models": list(proxy_control.OWNER_ONESHOT_MODELS),
-                    "calls": [{
-                        "spend_log_request_id": "native-row-1", "litellm_call_id": "native-call-1",
-                        "attempted_fallbacks": 0, "attempted_retries": 0,
-                        "status": "success", "call_type": "completion",
-                        "routed_model_group": "deepseek/deepseek-flash",
-                        "provider_model_identity_kind": "UNAVAILABLE",
-                        "prompt_tokens": 3, "completion_tokens": 2, "total_tokens": 5,
-                        "spend_usd": "0.25",
-                    }], "call_count": 1,
-                    "total_spend_usd": "0.25", "spend_logs_total_usd": "0.25",
-                    "missing_fields": [], "evidence_status": "COMPLETE",
-                }
+                payload = complete_litellm_evidence_payload(
+                    request.request_id, attempt_id, request.research_budget_identity
+                )
                 (output / "p12-litellm-call-evidence.json").write_text(json.dumps(payload))
                 return completed_owner_evidence()
             with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root):
@@ -694,6 +700,36 @@ class OwnerOneShotTests(unittest.TestCase):
                 )
             self.assertEqual(result["status"]["llm_provenance_evidence_status"], "COMPLETE")
             payload_path = root / result["status"]["llm_provenance_evidence_path"]
+            # A terminal replay is bound to its original immutable evidence, not
+            # to mutable deployment configuration or current image/model constants.
+            changed_repo = Path(tmp) / "upgraded-deployment"
+            changed_config = changed_repo / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+            changed_config.parent.mkdir(parents=True)
+            changed_config.write_text("changed deployment config")
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root), patch.object(
+                oneshot.p12, "REPO_ROOT", changed_repo
+            ), patch.object(oneshot.p12, "OWNER_LITELLM_PROXY_IMAGE", "new/proxy-image:future"), patch.object(
+                oneshot.p12, "OWNER_ONESHOT_MODELS", ("future-model",)
+            ):
+                historical_replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                    envelope, state_dir=state, policy_id=policy.policy_id,
+                )
+            self.assertEqual(historical_replay[1], 0)
+            self.assertEqual(historical_replay[0]["dispatch_count_added"], 0)
+            terminal_path = oneshot.p12._status_file(state, request.request_id)
+            sealed_terminal = oneshot.p12._read_json_nofollow(terminal_path)
+            altered_terminal = dict(sealed_terminal)
+            altered_terminal["llm_provenance_evidence_sha256"] = "0" * 64
+            terminal_path.write_text(json.dumps(altered_terminal))
+            digest_mismatch_replay = oneshot.p12.owner_oneshot_replay_if_claimed(
+                envelope, state_dir=state, policy_id=policy.policy_id,
+            )
+            terminal_path.write_text(json.dumps(sealed_terminal))
+            self.assertEqual(
+                digest_mismatch_replay[0]["classification"],
+                "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH",
+            )
+            self.assertEqual(digest_mismatch_replay[0]["dispatch_count_added"], 0)
             value = json.loads(payload_path.read_text())
             value["native_experiment_user_id"] = "foreign-user"
             payload_path.write_text(json.dumps(value))
@@ -703,6 +739,31 @@ class OwnerOneShotTests(unittest.TestCase):
                 )
         self.assertEqual(replay[0]["classification"], "BLOCKED_OWNER_ONESHOT_LITELLM_EVIDENCE_MISMATCH")
         self.assertEqual(replay[0]["dispatch_count_added"], 0)
+
+    def test_initial_terminal_seal_rejects_evidence_from_wrong_runtime_config(self):
+        envelope, request, _ = owner_fixture()
+        attempt_id = "d1feb58c-7b86-41f1-8eef-7bd54b1bffd1"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "output"
+            evidence_dir = root / request.request_id.removeprefix("sha256:") / attempt_id
+            evidence_dir.mkdir(parents=True)
+            evidence = complete_litellm_evidence_payload(
+                request.request_id, attempt_id, request.research_budget_identity
+            )
+            (evidence_dir / "p12-litellm-call-evidence.json").write_text(json.dumps(evidence))
+            changed_repo = Path(tmp) / "changed-deployment"
+            changed_config = changed_repo / "70-operations-system/research-handoff/docker-rdagent-smoke/config.deepseek-staging.yaml"
+            changed_config.parent.mkdir(parents=True)
+            changed_config.write_text("not the running config")
+            with patch.object(oneshot.p12, "OWNER_FINQUANT_OUTPUT_ROOT", root), patch.object(
+                oneshot.p12, "REPO_ROOT", changed_repo
+            ):
+                sealed = oneshot.p12._terminal_owner_litellm_binding(
+                    request.request_id, attempt_id, request.research_budget_identity
+                )
+        self.assertEqual(sealed["llm_provenance_evidence_status"], "PARTIAL")
+        self.assertIsNone(sealed["llm_provenance_evidence_path"])
+        self.assertEqual(sealed["llm_provenance_evidence_error_type"], "ValueError")
 
     def test_spendlog_projection_redacts_payload_and_preserves_fallback_unknown(self):
         now = datetime.now(timezone.utc)
