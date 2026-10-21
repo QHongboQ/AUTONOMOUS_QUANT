@@ -13,6 +13,10 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aq_rdagent_semantic_bridge import (
+    P12QlibCorrelationRecord,
+    _CURRENT_EXECUTION,
+    _correlation_config_text,
+    _install_qlib_execute_hook,
     build_semantic_loop_class,
     capture_trace_semantics,
     invoke_upstream_main,
@@ -181,7 +185,7 @@ class SemanticBridgeTests(unittest.TestCase):
             exp = self._experiment(root, "partial")
             result = capture_trace_semantics(SimpleNamespace(hist=[(exp, None)], dag_parent=[()]),
                                              request_id="r", attempt_id="a", workspace_root=root)
-        self.assertEqual(result["qlib_recorder_binding"]["status"], "SEMANTIC_BINDING_PARTIAL")
+        self.assertEqual(result["qlib_recorder_binding"]["status"], "PARTIAL")
 
     def test_experiment_and_recorder_pairing_is_explicitly_unproven_and_pickle_is_never_loaded(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -189,9 +193,121 @@ class SemanticBridgeTests(unittest.TestCase):
             exp = self._experiment(root, "unpaired")
             result = capture_trace_semantics(SimpleNamespace(hist=[(exp, None)], dag_parent=[()]),
                                              request_id="r", attempt_id="a", workspace_root=root)
-        self.assertEqual(result["qlib_recorder_binding"]["status"], "SEMANTIC_BINDING_PARTIAL")
-        self.assertIn("DOES_NOT_EXPOSE_RECORDER_ID", result["qlib_recorder_binding"]["reason"])
+        self.assertEqual(result["qlib_recorder_binding"]["status"], "PARTIAL")
+        self.assertIn("NO_NATIVE_QLIB_RECORDER_BINDING", result["qlib_recorder_binding"]["reason"])
         self.assertNotIn("pickle.load", inspect.getsource(capture_trace_semantics))
+
+    def test_qrun_native_record_hook_binds_the_active_recorder(self):
+        import os
+        import re
+        import json
+        import types
+        from pathlib import Path
+        from unittest.mock import patch
+
+        request_id = "sha256:" + hashlib.sha256(b"request").hexdigest()
+        attempt_id = "attempt-1"
+        experiment_identity = {
+            "identity_sha256": hashlib.sha256(b"experiment").hexdigest(),
+            "tasks": [{"identity_sha256": hashlib.sha256(b"task").hexdigest()}],
+            "generated_code": {"manifest_sha256": hashlib.sha256(b"code").hexdigest()},
+            "experiment_template": {"identity_sha256": hashlib.sha256(b"template").hexdigest()},
+        }
+        trace = SimpleNamespace(_p12_qlib_recorder_bindings=[])
+        context = {
+            "request_id": request_id, "attempt_id": attempt_id,
+            "experiment_identity": experiment_identity,
+            "execution_count": 0, "trace": trace,
+        }
+        config = "task:\n    record:\n        - class: Existing\n          module_path: existing.module\n"
+
+        class Client:
+            def __init__(self, tracking_uri):
+                self.uri = tracking_uri
+            def get_experiment_by_name(self, name):
+                return None
+            def create_experiment(self, name, artifact_location, tags):
+                self.name, self.location, self.tags = name, artifact_location, tags
+                return "exp-native-1"
+            def get_experiment(self, experiment_id):
+                return SimpleNamespace(
+                    name=self.name, artifact_location=self.location, tags=self.tags,
+                )
+
+        class Recorder:
+            info = {"experiment_id": "exp-native-1", "id": "run-native-1", "status": "RUNNING"}
+            tags = None
+            def set_tags(self, **tags):
+                self.tags = tags
+
+        recorder = Recorder()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "conf.yaml").write_bytes(config.encode("utf-8"))
+            workspace = SimpleNamespace(file_dict={"conf.yaml": config}, workspace_path=root)
+            client_module = types.ModuleType("mlflow.tracking")
+            client_module.MlflowClient = Client
+            mlflow_module = types.ModuleType("mlflow")
+            mlflow_module.tracking = client_module
+
+            def execute(_workspace, config_name, run_env, *args, **kwargs):
+                self.assertEqual(run_env, {"fixed": "env"})
+                augmented = (root / config_name).read_text(encoding="utf-8")
+                self.assertIn("class: Existing", augmented)
+                self.assertIn("class: P12QlibCorrelationRecord", augmented)
+                encoded = re.search(r"marker_json: (\".*\")", augmented).group(1)
+                marker_json = json.loads(encoded)
+                hook = P12QlibCorrelationRecord(recorder, marker_json, re.search(
+                    r"receipt_name: (\".*\")", augmented
+                ).group(1).strip('"'))
+                hook.generate()
+                return "native-qrun-result"
+
+            with patch.dict(os.environ, {
+                "QLIB_MLFLOW_URI": "sqlite:///test.db",
+                "P12_MLFLOW_ARTIFACT_VOLUME": "artifact-volume-1",
+            }), patch.dict(sys.modules, {"mlflow": mlflow_module, "mlflow.tracking": client_module}), \
+                 patch("pathlib.Path.cwd", return_value=root):
+                wrapped_execute = _install_qlib_execute_hook(execute)
+                token = _CURRENT_EXECUTION.set(context)
+                try:
+                    result = wrapped_execute(workspace, "conf.yaml", {"fixed": "env"})
+                    with self.assertRaisesRegex(ValueError, "QLIB_CONFIG_NAME_NOT_A_SAFE_BASENAME"):
+                        wrapped_execute(workspace, "../conf.yaml", {"fixed": "env"})
+                finally:
+                    _CURRENT_EXECUTION.reset(token)
+
+        self.assertEqual(result, "native-qrun-result")
+        self.assertEqual(len(trace._p12_qlib_recorder_bindings), 1)
+        binding = trace._p12_qlib_recorder_bindings[0]
+        self.assertEqual(binding["qlib_experiment_id"], "exp-native-1")
+        self.assertEqual(binding["qlib_recorder_run_id"], "run-native-1")
+        self.assertEqual(binding["request_id"], request_id)
+        self.assertEqual(binding["attempt_id"], attempt_id)
+        self.assertEqual(recorder.tags["aq.p12.correlation_sha256"], binding["marker_sha256"])
+        self.assertRegex(binding["receipt_sha256"], r"^[0-9a-f]{64}$")
+
+    def test_correlation_config_rejects_unbounded_or_ambiguous_yaml_shape(self):
+        marker = {"request_id": "r", "attempt_id": "a", "correlation_sha256": "0" * 64}
+        source = "task:\n    record:\n        - class: Existing\n"
+        augmented = _correlation_config_text(
+            source, experiment_name="aq-p12-test", marker=marker,
+            receipt_name=".p12-qlib-correlation-test.json",
+        )
+        self.assertIn('experiment_name: "aq-p12-test"', augmented)
+        self.assertIn("class: Existing", augmented)
+        self.assertIn("class: P12QlibCorrelationRecord", augmented)
+        with self.assertRaisesRegex(ValueError, "QLIB_CONFIG_ALREADY_HAS_RUNTIME_OVERRIDE"):
+            _correlation_config_text(
+                "experiment_name: existing\n" + source,
+                experiment_name="aq-p12-test", marker=marker,
+                receipt_name=".p12-qlib-correlation-test.json",
+            )
+        with self.assertRaisesRegex(ValueError, "QLIB_TASK_RECORD_LIST_UNAVAILABLE"):
+            _correlation_config_text(
+                "task:\n    model: {}\n", experiment_name="aq-p12-test",
+                marker=marker, receipt_name=".p12-qlib-correlation-test.json",
+            )
 
     def test_record_hook_keeps_super_order_and_failure_semantics(self):
         events = []
@@ -269,6 +385,58 @@ class SemanticBridgeTests(unittest.TestCase):
         self.assertEqual(extended.steps, QuantRDLoop.steps)
         self.assertEqual(extended.steps[-1], "record")
         self.assertEqual(extended.steps.count("record"), 1)
+
+    def test_pinned_qlib_config_loader_resolves_native_correlation_record(self):
+        try:
+            import yaml
+            from qlib.utils import init_instance_by_config
+        except ImportError:
+            self.skipTest("pinned Qlib runtime is not installed in this test interpreter")
+        import hashlib
+        from pathlib import Path
+        from unittest.mock import patch
+
+        marker_body = {
+            "request_id": "request-fixture", "attempt_id": "attempt-fixture",
+            "rdagent_experiment_identity_sha256": hashlib.sha256(b"experiment").hexdigest(),
+            "rdagent_task_identity_sha256s": [hashlib.sha256(b"task").hexdigest()],
+            "generated_code_manifest_sha256": hashlib.sha256(b"code").hexdigest(),
+            "experiment_template_identity_sha256": hashlib.sha256(b"template").hexdigest(),
+            "qlib_config_template_sha256": hashlib.sha256(b"config").hexdigest(),
+            "execution_index": 0,
+        }
+        marker = {
+            **marker_body,
+            "correlation_sha256": hashlib.sha256(json.dumps(
+                marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode()).hexdigest(),
+        }
+        source = "task:\n    record:\n        - class: Existing\n          module_path: existing.module\n"
+        rendered = _correlation_config_text(
+            source, experiment_name="aq-p12-runtime-test", marker=marker,
+            receipt_name=".p12-qlib-correlation-test.json",
+        )
+        parsed = yaml.safe_load(rendered)
+        self.assertEqual(parsed["experiment_name"], "aq-p12-runtime-test")
+        self.assertEqual(len(parsed["task"]["record"]), 2)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            class Recorder:
+                info = {"experiment_id": "exp", "id": "run", "status": "RUNNING"}
+                def set_tags(self, **tags):
+                    self.tags = tags
+            recorder = Recorder()
+            with patch("pathlib.Path.cwd", return_value=root):
+                record = init_instance_by_config(
+                    parsed["task"]["record"][-1], recorder=recorder,
+                    default_module="qlib.workflow.record_temp",
+                )
+                self.assertIsInstance(record, P12QlibCorrelationRecord)
+                record.generate()
+            receipt = json.loads((root / ".p12-qlib-correlation-test.json").read_text())
+            self.assertEqual(receipt["qlib_experiment_id"], "exp")
+            self.assertEqual(receipt["qlib_recorder_run_id"], "run")
+            self.assertEqual(recorder.tags["aq.p12.request_id"], "request-fixture")
 
 
 if __name__ == "__main__":

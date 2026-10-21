@@ -667,7 +667,64 @@ def _semantic_evidence_shape_valid(
     elif payload.get("status") != "PARTIAL" or payload["trace_history_length"] - 1 in history_indexes:
         return False
     binding = payload.get("qlib_recorder_binding")
-    if not isinstance(binding, dict) or binding.get("status") != "SEMANTIC_BINDING_PARTIAL":
+    if not isinstance(binding, dict) or binding.get("status") not in {
+        "PARTIAL", "REJECTED", "SEMANTIC_BINDING_PARTIAL",
+    }:
+        return False
+    matches = binding.get("matches")
+    if matches is None and binding.get("status") == "SEMANTIC_BINDING_PARTIAL":
+        # Backward compatibility for the pre-correlation semantic evidence shape.
+        matches = []
+    if not isinstance(matches, list):
+        return False
+    if binding["status"] == "REJECTED":
+        if len(matches) < 2 or selected is None:
+            return False
+    else:
+        if len(matches) > 1 or (matches and selected is None):
+            return False
+    selected_task_ids = (
+        [item.get("identity_sha256") for item in selected.get("tasks", [])]
+        if selected is not None else []
+    )
+    for match in matches:
+        if not isinstance(match, dict):
+            return False
+        marker = match.get("marker")
+        if (
+            match.get("status") != "RECORDER_CREATED_BY_NATIVE_QRUN"
+            or match.get("request_id") != request_id
+            or match.get("attempt_id") != attempt_id
+            or match.get("rdagent_experiment_identity_sha256") != selected_id
+            or match.get("recorder_status_at_hook") != "RUNNING"
+            or not isinstance(match.get("qlib_experiment_name"), str)
+            or not match["qlib_experiment_name"]
+            or not isinstance(match.get("qlib_experiment_id"), str)
+            or not match["qlib_experiment_id"]
+            or not isinstance(match.get("qlib_recorder_run_id"), str)
+            or not match["qlib_recorder_run_id"]
+            or not isinstance(match.get("artifact_volume"), str)
+            or not match["artifact_volume"]
+            or type(match.get("execution_index")) is not int
+            or match["execution_index"] < 0
+            or not isinstance(marker, dict)
+            or marker.get("request_id") != request_id
+            or marker.get("attempt_id") != attempt_id
+            or marker.get("rdagent_experiment_identity_sha256") != selected_id
+            or marker.get("rdagent_task_identity_sha256s") != selected_task_ids
+            or marker.get("correlation_sha256") != match.get("marker_sha256")
+            or not re.fullmatch(r"[0-9a-f]{64}", str(match.get("marker_sha256", "")))
+            or not re.fullmatch(r"[0-9a-f]{64}", str(match.get("receipt_sha256", "")))
+            or not re.fullmatch(r"[0-9a-f]{64}", str(marker.get("qlib_config_template_sha256", "")))
+        ):
+            return False
+        marker_body = dict(marker)
+        marker_digest = marker_body.pop("correlation_sha256", None)
+        if hashlib.sha256(json.dumps(
+            marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")).hexdigest() != marker_digest:
+            return False
+    if binding["status"] == "REJECTED" and not binding.get("reason"):
         return False
     expected_status = (
         "OBSERVED"
@@ -816,8 +873,62 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
     canonical_config = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     if hashlib.sha256(canonical_config).hexdigest() != effective["sha256"]:
         return False
+    research_identity = rdagent.get("research_identity")
+    recorder_binding = (
+        research_identity.get("qlib_recorder_binding")
+        if isinstance(research_identity, dict) else None
+    )
+    if recorder_binding is not None:
+        if not isinstance(recorder_binding, dict) or recorder_binding.get("status") not in {
+            "VERIFIED", "PARTIAL", "REJECTED", "OBSERVED",
+        }:
+            return False
+        if recorder_binding.get("status") == "VERIFIED":
+            semantic_payload = (semantic or {}).get("payload") if isinstance(semantic, dict) else None
+            matches = (
+                semantic_payload.get("qlib_recorder_binding", {}).get("matches", [])
+                if isinstance(semantic_payload, dict) else []
+            )
+            selected_id = semantic_payload.get("selected_experiment_identity_sha256") if isinstance(semantic_payload, dict) else None
+            match = matches[0] if isinstance(matches, list) and len(matches) == 1 else None
+            qlib_binding_ok = (
+                isinstance(match, dict)
+                and value.get("qlib_research_status") == "QLIB_RESEARCH_COMPLETE"
+                and recorder_binding.get("rdagent_experiment_identity_sha256") == selected_id
+                and recorder_binding.get("qlib_experiment_id") == qlib.get("experiment_id")
+                and recorder_binding.get("qlib_recorder_run_id") == qlib.get("recorder_id")
+                and recorder_binding.get("recorder_artifact_manifest") == qlib.get("artifact_manifest")
+                and match.get("qlib_experiment_id") == qlib.get("experiment_id")
+                and match.get("qlib_recorder_run_id") == qlib.get("recorder_id")
+                and match.get("marker_sha256") == recorder_binding.get("marker_sha256")
+                and match.get("receipt_sha256") == recorder_binding.get("receipt_sha256")
+            )
+            if not qlib_binding_ok:
+                return False
+            correlation_body = {
+                "request_id": value.get("request_id"),
+                "attempt_id": value.get("attempt_id"),
+                "rdagent_experiment_identity_sha256": selected_id,
+                "marker_sha256": match["marker_sha256"],
+                "receipt_sha256": match["receipt_sha256"],
+                "qlib_experiment_id": qlib.get("experiment_id"),
+                "qlib_recorder_run_id": qlib.get("recorder_id"),
+                "recorder_status": qlib.get("recorder_status"),
+                "artifact_manifest": qlib.get("artifact_manifest"),
+            }
+            expected_correlation_sha = hashlib.sha256(json.dumps(
+                correlation_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+            ).encode("utf-8")).hexdigest()
+            if (
+                recorder_binding.get("correlation_evidence_sha256") != expected_correlation_sha
+                or not re.fullmatch(r"[0-9a-f]{64}", expected_correlation_sha)
+            ):
+                return False
+        elif recorder_binding.get("status") in {"PARTIAL", "REJECTED"} and not isinstance(
+            recorder_binding.get("reason"), str
+        ):
+            return False
     if value["provenance_status"] == "COMPLETE":
-        research_identity = rdagent.get("research_identity")
         return (
             value["qlib_research_status"] == "QLIB_RESEARCH_COMPLETE"
             and value["rdagent_provenance_status"] == "COMPLETE"
@@ -828,7 +939,7 @@ def _native_research_evidence_shape_valid(value: dict[str, Any]) -> bool:
             and research_identity.get("experiment_lineage", {}).get("status") == "OBSERVED"
             and research_identity.get("generated_code", {}).get("semantic_binding") == "OBSERVED"
             and isinstance(research_identity.get("qlib_recorder_binding"), dict)
-            and research_identity["qlib_recorder_binding"].get("status") == "OBSERVED"
+            and research_identity["qlib_recorder_binding"].get("status") in {"VERIFIED", "OBSERVED"}
             and trace["status"] == "OBSERVED"
             and effective["status"] == "OBSERVED"
             and llm_status == "COMPLETE"

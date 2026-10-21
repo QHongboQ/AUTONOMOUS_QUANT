@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import stat
 from pathlib import PurePosixPath
 from pathlib import Path
@@ -306,6 +307,157 @@ def inspect_research_evidence(
     }
 
 
+def _read_semantic_correlation(path: Path, *, request_id: str, attempt_id: str) -> dict[str, Any]:
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(path, flags)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size > 8 * 1024 * 1024:
+            raise ValueError("SEMANTIC_CORRELATION_FILE_INVALID")
+        chunks = []
+        while True:
+            block = os.read(fd, 65536)
+            if not block:
+                break
+            chunks.append(block)
+    finally:
+        os.close(fd)
+    raw = b"".join(chunks)
+    value = json.loads(raw.decode("utf-8"))
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8") + b"\n"
+    if raw != canonical or value.get("request_id") != request_id or value.get("attempt_id") != attempt_id:
+        raise ValueError("SEMANTIC_CORRELATION_CANONICAL_OR_ATTEMPT_MISMATCH")
+    binding = value.get("qlib_recorder_binding")
+    selected = value.get("selected_experiment_identity_sha256")
+    matches = binding.get("matches") if isinstance(binding, dict) else None
+    if (
+        binding.get("status") != "PARTIAL" or not isinstance(matches, list) or len(matches) != 1
+        or not isinstance(selected, str)
+    ):
+        raise ValueError("SEMANTIC_CORRELATION_NOT_UNIQUE")
+    match = matches[0]
+    marker = match.get("marker") if isinstance(match, dict) else None
+    if (
+        match.get("status") != "RECORDER_CREATED_BY_NATIVE_QRUN"
+        or match.get("request_id") != request_id or match.get("attempt_id") != attempt_id
+        or match.get("rdagent_experiment_identity_sha256") != selected
+        or match.get("recorder_status_at_hook") != "RUNNING"
+        or not isinstance(marker, dict)
+        or marker.get("request_id") != request_id or marker.get("attempt_id") != attempt_id
+        or marker.get("rdagent_experiment_identity_sha256") != selected
+        or marker.get("correlation_sha256") != match.get("marker_sha256")
+        or not re.fullmatch(r"[0-9a-f]{64}", str(match.get("receipt_sha256", "")))
+    ):
+        raise ValueError("SEMANTIC_CORRELATION_BINDING_MISMATCH")
+    marker_body = dict(marker)
+    marker_digest = marker_body.pop("correlation_sha256", None)
+    if hashlib.sha256(json.dumps(marker_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest() != marker_digest:
+        raise ValueError("SEMANTIC_CORRELATION_MARKER_HASH_MISMATCH")
+    return {"payload": value, "binding": binding, "match": match, "marker": marker}
+
+
+def inspect_correlated_research_evidence(
+    client: Any, *, request_id: str, attempt_id: str, artifact_volume: str,
+    semantic_evidence_path: Path,
+) -> dict[str, Any]:
+    """Verify the exact Recorder tagged by Qlib's native record hook and hash its artifacts."""
+    try:
+        correlation = _read_semantic_correlation(
+            semantic_evidence_path, request_id=request_id, attempt_id=attempt_id,
+        )
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
+        return {"classification": "RESEARCH_EVIDENCE_INCOMPLETE", "reason": str(exc) or type(exc).__name__}
+    match = correlation["match"]
+    marker = correlation["marker"]
+    experiment_id = str(match.get("qlib_experiment_id", ""))
+    run_id = str(match.get("qlib_recorder_run_id", ""))
+    experiment = client.get_experiment(experiment_id)
+    if experiment is None or str(experiment.experiment_id) != experiment_id:
+        return {"classification": "RESEARCH_EVIDENCE_INCOMPLETE", "reason": "CORRELATED_EXPERIMENT_MISSING"}
+    expected_experiment_tags = _attempt_tags(request_id, attempt_id, artifact_volume)
+    if (
+        experiment.name != match.get("qlib_experiment_name")
+        or experiment.artifact_location != "file:///qlib-artifacts"
+        or any(experiment.tags.get(key) != value for key, value in expected_experiment_tags.items())
+    ):
+        return {"classification": "RESEARCH_EVIDENCE_INCOMPLETE", "reason": "CORRELATED_EXPERIMENT_IDENTITY_MISMATCH"}
+    runs = client.search_runs([experiment_id], max_results=1000)
+    if len(runs) != 1:
+        return {
+            "classification": "RESEARCH_EVIDENCE_INCOMPLETE",
+            "reason": "CORRELATED_EXPERIMENT_RECORDER_NOT_UNIQUE",
+            "experiment_id": experiment_id,
+            "recorder_ids": sorted(str(run.info.run_id) for run in runs),
+        }
+    run = runs[0]
+    if (
+        str(run.info.run_id) != run_id
+        or str(run.info.experiment_id) != experiment_id
+        or run.info.status != "FINISHED"
+        or not _artifact_uri_is_in_volume(run.info.artifact_uri, run_id)
+    ):
+        return {"classification": "RESEARCH_EVIDENCE_INCOMPLETE", "reason": "CORRELATED_RECORDER_NOT_FINISHED_OR_MISMATCHED"}
+    expected_run_tags = {
+        "aq.p12.request_id": request_id,
+        "aq.p12.attempt_id": attempt_id,
+        "aq.p12.rdagent_experiment_identity_sha256": marker["rdagent_experiment_identity_sha256"],
+        "aq.p12.correlation_sha256": marker["correlation_sha256"],
+    }
+    if any(run.data.tags.get(key) != value for key, value in expected_run_tags.items()):
+        return {"classification": "RESEARCH_EVIDENCE_INCOMPLETE", "reason": "CORRELATED_RECORDER_TAG_MISMATCH"}
+    try:
+        names = _artifact_files(client, run_id)
+        metrics = getattr(run.data, "metrics", {}) or {}
+        missing = [name for name, path in _REQUIRED_FILES.items() if path not in names]
+        if not _metrics_are_complete(metrics):
+            missing.append("native_signal_and_portfolio_metrics")
+        if missing:
+            return {
+                "classification": "RESEARCH_EVIDENCE_INCOMPLETE",
+                "reason": "CORRELATED_RECORDER_MISSING_REQUIRED_OUTPUTS",
+                "experiment_id": experiment_id, "recorder_id": run_id, "missing": missing,
+            }
+        artifact_manifest = {
+            logical_name: _artifact_content_identity(
+                run_id=run_id, artifact_uri=run.info.artifact_uri,
+                artifact_path=artifact_path, listed_files=names,
+            )
+            for logical_name, artifact_path in _REQUIRED_FILES.items()
+        }
+    except (OSError, ValueError, FileNotFoundError, ArtifactListingDepthExceeded) as exc:
+        return {"classification": "RESEARCH_EVIDENCE_INCOMPLETE", "reason": f"CORRELATED_ARTIFACT_VERIFICATION_FAILED:{type(exc).__name__}"}
+    correlation_body = {
+        "request_id": request_id, "attempt_id": attempt_id,
+        "rdagent_experiment_identity_sha256": marker["rdagent_experiment_identity_sha256"],
+        "marker_sha256": marker["correlation_sha256"],
+        "receipt_sha256": match["receipt_sha256"],
+        "qlib_experiment_id": experiment_id, "qlib_recorder_run_id": run_id,
+        "recorder_status": run.info.status,
+        "artifact_manifest": artifact_manifest,
+    }
+    correlation_digest = hashlib.sha256(
+        json.dumps(correlation_body, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    return {
+        "classification": "RESEARCH_EVIDENCE_COMPLETE",
+        "experiment_id": experiment_id,
+        "recorder_id": run_id,
+        "recorder_status": run.info.status,
+        "artifact_uri": run.info.artifact_uri,
+        "artifact_volume": artifact_volume,
+        "attempt_id": attempt_id,
+        "artifacts": sorted(names),
+        "artifact_manifest": artifact_manifest,
+        "metric_names": sorted(metrics),
+        "missing": [],
+        "correlation_binding": {
+            "status": "VERIFIED",
+            **correlation_body,
+            "correlation_evidence_sha256": correlation_digest,
+        },
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tracking-uri", required=True)
@@ -350,10 +502,17 @@ def main() -> int:
             "artifact_volume": args.artifact_volume,
         }, sort_keys=True))
         return 0
-    result = inspect_research_evidence(
-        client, request_id=args.request_id, attempt_id=args.attempt_id,
-        artifact_volume=args.artifact_volume,
-    )
+    semantic_path = Path("/workspace/p12-rdagent-semantic-evidence.json")
+    if semantic_path.exists():
+        result = inspect_correlated_research_evidence(
+            client, request_id=args.request_id, attempt_id=args.attempt_id,
+            artifact_volume=args.artifact_volume, semantic_evidence_path=semantic_path,
+        )
+    else:
+        result = inspect_research_evidence(
+            client, request_id=args.request_id, attempt_id=args.attempt_id,
+            artifact_volume=args.artifact_volume,
+        )
     print(json.dumps(result, sort_keys=True))
     return 0 if result["classification"] == "RESEARCH_EVIDENCE_COMPLETE" else 2
 
